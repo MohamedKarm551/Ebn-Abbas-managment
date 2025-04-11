@@ -274,23 +274,57 @@
         document.getElementById('calculate-total').addEventListener('click', function () {
             let totalDueFromCompany = 0;
             let totalDueToHotel = 0;
+            let profitPerNight = 0;
+            let profitSoFar = 0;
+            let totalProfit = 0;
 
             // حساب عدد الليالي التي قضاها العميل حتى الآن
             let checkInDate = new Date("{{ $booking->check_in }}");
+            let checkOutDate = new Date("{{ $booking->check_out }}");
             let today = new Date();
+
             let nightsStayed = Math.min(
                 Math.max(0, Math.ceil((today - checkInDate) / (1000 * 60 * 60 * 24))),
                 {{ $booking->days }}
             );
 
+            // حساب عدد الليالي الإجمالية
+            let totalNights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
             // حساب الإجمالي
             totalDueFromCompany += nightsStayed * {{ $booking->rooms }} * {{ $booking->sale_price }};
             totalDueToHotel += nightsStayed * {{ $booking->rooms }} * {{ $booking->cost_price }};
 
+            // حساب المكسب
+            profitPerNight = ({{ $booking->sale_price }} - {{ $booking->cost_price }}) * {{ $booking->rooms }};
+            profitSoFar = profitPerNight * nightsStayed;
+            totalProfit = profitPerNight * totalNights;
+
+            // المبالغ المدفوعة
+            let amountPaidByCompany = {{ $booking->amount_paid_by_company }};
+            let amountPaidToHotel = {{ $booking->amount_paid_to_hotel }};
+
+            // حساب المبالغ المتبقية
+            let remainingFromCompany = totalDueFromCompany - amountPaidByCompany;
+            let remainingToHotel = totalDueToHotel - amountPaidToHotel;
+
             // عرض المعادلة بالتفصيل
             showAlert(`💲 الإجمالي حتى الآن: 💲
 ما لك من الشركة: ${nightsStayed} ليلة * ${ {{ $booking->rooms }} } غرفة * ${ {{ $booking->sale_price }} } سعر الليلة = ${totalDueFromCompany} ريال
-ما عليك للفندق: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق = ${totalDueToHotel} ريال`, 'info');
+ما عليك للفندق: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق = ${totalDueToHotel} ريال
+
+💰 المكسب:
+- المكسب لكل ليلة: ${profitPerNight} ريال
+- المكسب حتى الآن: ${profitSoFar} ريال
+- المكسب الإجمالي: ${totalProfit} ريال
+
+💳 المبالغ المدفوعة:
+- المدفوع من الشركة: ${amountPaidByCompany} ريال
+- المدفوع للفندق: ${amountPaidToHotel} ريال
+
+⚖️ المبالغ المتبقية:
+- المتبقي من الشركة: ${remainingFromCompany} ريال
+- المتبقي للفندق: ${remainingToHotel} ريال`, 'info');
         });
 
         function showAlert(message, type) {
