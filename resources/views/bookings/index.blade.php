@@ -126,31 +126,7 @@
         </table>
     </div>
 
-    <div class="text-center mt-4">
-        <button id="calculate-total" class="btn btn-info">حساب الإجمالي</button>
-    </div>
+  
 </div>
 @endsection
 
-<script>
-    document.getElementById('calculate-total').addEventListener('click', function () {
-        let totalDueFromCompany = 0;
-        let totalDueToHotel = 0;
-
-        @foreach ($bookings as $booking)
-            // حساب عدد الليالي التي قضاها العميل حتى الآن
-            let checkInDate = new Date("{{ $booking->check_in }}");
-            let today = new Date();
-            let nightsStayed = Math.min(
-                Math.max(0, Math.ceil((today - checkInDate) / (1000 * 60 * 60 * 24))),
-                {{ $booking->days }}
-            );
-
-            // حساب الإجمالي
-            totalDueFromCompany += nightsStayed * {{ $booking->rooms }} * {{ $booking->sale_price }};
-            totalDueToHotel += nightsStayed * {{ $booking->rooms }} * {{ $booking->cost_price }};
-        @endforeach
-
-        alert(`الإجمالي حتى الآن:\nما لك من الشركة: ${totalDueFromCompany} جنيه\nما عليك للفندق: ${totalDueToHotel} جنيه`);
-    });
-</script>
