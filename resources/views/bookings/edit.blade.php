@@ -47,9 +47,10 @@
             <label for="room_type" class="form-label">نوع الغرفة</label>
             <input type="text" class="form-control" id="room_type" name="room_type" value="{{ $booking->room_type }}" required>
         </div>
+        
         <div class="mb-3">
             <label for="check_in" class="form-label">تاريخ الدخول</label>
-            <input type="text" class="form-control" id="check_in" name="check_in" value="{{ $booking->check_in->format('d/m/Y') }}" required>
+            <input type="text" class="form-control" id="check_in" name="check_in" value="{{ $booking->check_in->format('d/m/Y') }}" required >
         </div>
         <div class="mb-3">
             <label for="check_out" class="form-label">تاريخ الخروج</label>

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            $table->integer('days')->nullable()->change(); // جعل الحقل قابلًا لأن يكون فارغًا
+            
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            $table->integer('days')->nullable(false)->change(); // إعادة الحقل إلى حالته الأصلية
+            //
         });
     }
 };

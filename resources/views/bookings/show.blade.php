@@ -7,6 +7,7 @@
 @section('content')
 @php
     $total_nights = \Carbon\Carbon::parse($booking->check_in)->diffInDays(\Carbon\Carbon::parse($booking->check_out));
+    $editLogs = \App\Models\EditLog::where('booking_id', $id)->orderBy('created_at', 'desc')->get();
 @endphp
 
 <div class="container">
@@ -126,7 +127,70 @@
     </table>
 
     <h3>سجل التعديلات</h3>
-    <ul id="editLog"></ul>
+    @if ($editLogs->isEmpty())
+        <p>لا توجد تعديلات مسجلة لهذا الحجز.</p>
+    @else
+    @php
+    $fieldNames = [
+        'id' => '#',
+        'client_name' => 'اسم العميل',
+        'company_id' => 'الشركة',
+        'agent_id' => 'جهة الحجز',
+        'hotel_id' => 'الفندق',
+        'room_type' => 'نوع الغرفة',
+        'check_in' => 'تاريخ الدخول',
+        'check_out' => 'تاريخ الخروج',
+        'days' => 'عدد الأيام',
+        'rooms' => 'عدد الغرف',
+        'cost_price' => 'سعر الفندق',
+        'amount_due_to_hotel' => 'المبلغ المستحق للفندق',
+        'amount_paid_to_hotel' => 'المدفوع للفندق',
+        'sale_price' => 'سعر البيع',
+        'employee_id' => 'الموظف المسؤول',
+        'amount_due_from_company' => 'المبلغ المستحق من الشركة',
+        'amount_paid_by_company' => 'المدفوع من الشركة',
+        'payment_status' => 'حالة السداد',
+        'notes' => 'الملاحظات',
+        'created_at' => 'تاريخ الإنشاء',
+        'updated_at' => 'آخر تعديل',
+    ];
+    @endphp
+        <table class="table table-dark table-hover table-bordered text-center ">
+            <thead>
+                <tr>
+                    <th>الحقل المعدل</th>
+                    <th>القيمة القديمة</th>
+                    <th>القيمة الجديدة</th>
+                    <th>تاريخ التعديل</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($editLogs as $log)
+                    <tr>
+                        <td>{{ $fieldNames[$log->field] ?? $log->field }}</td>
+
+                        <td>
+                            @if (in_array($log->field, ['check_in', 'check_out']))
+                                {{ \Carbon\Carbon::parse($log->old_value)->format('d/m/Y') }}
+                            @else
+                                {{ $log->old_value }}
+                            @endif
+                        </td>
+                        <td>
+                            @if (in_array($log->field, ['check_in', 'check_out']))
+                                {{ \Carbon\Carbon::parse($log->new_value)->format('d/m/Y') }}
+                            @else
+                                {{ $log->new_value }}
+                            @endif
+                        </td>
+                        <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+    {{-- <ul id="editLog"></ul>
+    <pre>{{ print_r($editLogs->toArray()) }}</pre> --}}
 </div>
 
 

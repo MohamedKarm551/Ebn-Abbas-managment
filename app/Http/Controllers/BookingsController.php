@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
 use App\Models\EditLog; // استيراد موديل EditLog
+use Illuminate\Support\Facades\File;
 
 class BookingsController extends Controller
 {
@@ -20,18 +21,18 @@ class BookingsController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where('client_name', 'like', '%' . $search . '%')
-                  ->orWhereHas('employee', function ($q) use ($search) {
-                      $q->where('name', 'like', '%' . $search . '%');
-                  })
-                  ->orWhereHas('company', function ($q) use ($search) {
-                      $q->where('name', 'like', '%' . $search . '%');
-                  })
-                  ->orWhereHas('agent', function ($q) use ($search) {
-                      $q->where('name', 'like', '%' . $search . '%');
-                  })
-                  ->orWhereHas('hotel', function ($q) use ($search) {
-                      $q->where('name', 'like', '%' . $search . '%');
-                  });
+                ->orWhereHas('employee', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhereHas('company', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhereHas('agent', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhereHas('hotel', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                });
         }
 
         // فلترة بالتاريخ
@@ -70,7 +71,57 @@ class BookingsController extends Controller
 
         $bookings = $query->get();
 
-        return view('bookings.index', compact('bookings'));
+        // حساب الإجماليات
+        $totalDueFromCompany = 0;
+        $totalPaidByCompany = 0;
+        $remainingFromCompany = 0;
+
+        $totalDueToHotels = 0;
+        $totalPaidToHotels = 0;
+        $remainingToHotels = 0;
+
+        $bookingDetails = $bookings->map(function ($booking) use (&$totalDueFromCompany, &$totalPaidByCompany, &$remainingFromCompany, &$totalDueToHotels, &$totalPaidToHotels, &$remainingToHotels) {
+            $dueFromCompany = $booking->days * $booking->rooms * $booking->sale_price;
+            $paidByCompany = $booking->amount_paid_by_company;
+            $remainingFromCompany += $dueFromCompany - $paidByCompany;
+
+            $dueToHotel = $booking->days * $booking->rooms * $booking->cost_price;
+            $paidToHotel = $booking->amount_paid_to_hotel;
+            $remainingToHotels += $dueToHotel - $paidToHotel;
+
+            $totalDueFromCompany += $dueFromCompany;
+            $totalPaidByCompany += $paidByCompany;
+
+            $totalDueToHotels += $dueToHotel;
+            $totalPaidToHotels += $paidToHotel;
+
+            return [
+                'client_name' => $booking->client_name,
+                'check_in' => $booking->check_in->format('d/m/Y'),
+                'check_out' => $booking->check_out->format('d/m/Y'),
+                'days' => $booking->days,
+                'rooms' => $booking->rooms,
+                'sale_price' => $booking->sale_price,
+                'cost_price' => $booking->cost_price,
+                'due_from_company' => $dueFromCompany,
+                'paid_by_company' => $paidByCompany,
+                'remaining_from_company' => $dueFromCompany - $paidByCompany,
+                'due_to_hotel' => $dueToHotel,
+                'paid_to_hotel' => $paidToHotel,
+                'remaining_to_hotel' => $dueToHotel - $paidToHotel,
+            ];
+        });
+
+        return view('bookings.index', compact(
+            'bookings',
+            'totalDueFromCompany',
+            'totalPaidByCompany',
+            'remainingFromCompany',
+            'totalDueToHotels',
+            'totalPaidToHotels',
+            'remainingToHotels',
+            'bookingDetails'
+        ));
     }
 
     public function create()
@@ -91,8 +142,8 @@ class BookingsController extends Controller
             'agent_id' => 'required|exists:agents,id',
             'hotel_id' => 'required|exists:hotels,id',
             'room_type' => 'nullable|string|max:255',
-            'check_in' => 'required|date_format:d/m/Y', // التحقق من صيغة يوم/شهر/سنة
-            'check_out' => 'required|date_format:d/m/Y|after_or_equal:check_in',
+            'check_in' => 'required|date',
+            'check_out' => 'required|date|after_or_equal:check_in',
             'rooms' => 'required|integer|min:1',
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
@@ -100,22 +151,113 @@ class BookingsController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // تحويل التواريخ إلى الصيغة المطلوبة (YYYY-MM-DD)
-        $validatedData['check_in'] = \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['check_in'])->format('Y-m-d');
-        $validatedData['check_out'] = \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['check_out'])->format('Y-m-d');
+        // تحويل التواريخ والحسابات
+        try {
+            $checkIn = \Carbon\Carbon::createFromFormat('Y-m-d', $request->check_in);
+            $checkOut = \Carbon\Carbon::createFromFormat('Y-m-d', $request->check_out);
 
+            $validatedData['check_in'] = $checkIn->format('Y-m-d');
+            $validatedData['check_out'] = $checkOut->format('Y-m-d');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['date_error' => 'صيغة التاريخ غير صحيحة']);
+        }
         // حساب عدد الأيام
-        $checkIn = \Carbon\Carbon::parse($validatedData['check_in']);
-        $checkOut = \Carbon\Carbon::parse($validatedData['check_out']);
+
+
+
         $validatedData['days'] = $checkIn->diffInDays($checkOut);
 
         // حساب المبالغ
+
         $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'];
 
         // حساب المبلغ المستحق من الشركة
+
         $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'];
 
-        Booking::create($validatedData);
+        // إنشاء الحجز
+        $booking = Booking::create($validatedData);
+
+        // تجهيز البيانات للباك اب
+        $booking->load(['company', 'agent', 'hotel', 'employee']);
+
+        // محتوى ملف النصوص
+        $textContent = sprintf(
+            "
+    === حجز جديد بتاريخ %s ===
+    اسم العميل: %s
+    الشركة: %s
+    جهة الحجز: %s
+    الفندق: %s
+    تاريخ الدخول: %s
+    تاريخ الخروج: %s
+    عدد الغرف: %d
+    عدد الأيام: %d
+    سعر الفندق: %.2f
+    سعر البيع: %.2f
+    المبلغ المستحق للفندق: %.2f
+    المبلغ المستحق من الشركة: %.2f
+    الموظف: %s
+    ملاحظات: %s
+    =====================================\n\n",
+            now()->format('d/m/Y H:i:s'),
+            $booking->client_name,
+            $booking->company->name,
+            $booking->agent->name,
+            $booking->hotel->name,
+            \Carbon\Carbon::parse($booking->check_in)->format('d/m/Y'),
+            \Carbon\Carbon::parse($booking->check_out)->format('d/m/Y'),
+            $booking->rooms,
+            $booking->days,
+            $booking->cost_price,
+            $booking->sale_price,
+            $booking->amount_due_to_hotel,
+            $booking->amount_due_from_company,
+            $booking->employee->name,
+            $booking->notes ?? 'لا يوجد'
+        );
+
+        // محتوى ملف CSV
+        $csvContent = implode(',', [
+            now()->format('d/m/Y H:i:s'),
+            '"' . $booking->client_name . '"',
+            '"' . $booking->company->name . '"',
+            '"' . $booking->agent->name . '"',
+            '"' . $booking->hotel->name . '"',
+            '"' . \Carbon\Carbon::parse($booking->check_in)->format('d/m/Y') . '"',
+            '"' . \Carbon\Carbon::parse($booking->check_out)->format('d/m/Y') . '"',
+            $booking->rooms,
+            $booking->days,
+            $booking->cost_price,
+            $booking->sale_price,
+            $booking->amount_due_to_hotel,
+            $booking->amount_due_from_company,
+            '"' . $booking->employee->name . '"',
+            '"' . ($booking->notes ?? '') . '"'
+        ]) . "\n";
+
+        // التأكد من وجود المجلدات
+        $backupPath = storage_path('backups');
+        if (!File::exists($backupPath)) {
+            File::makeDirectory($backupPath);
+            File::makeDirectory($backupPath . '/txt');
+            File::makeDirectory($backupPath . '/csv');
+        }
+
+        // حفظ الملفات
+        $txtPath = $backupPath . '/txt/bookings.txt';
+        $csvPath = $backupPath . '/csv/bookings.csv';
+
+        // إضافة العناوين للـ CSV لو مش موجود
+        if (!File::exists($csvPath)) {
+            File::put($csvPath, "التاريخ,العميل,الشركة,جهة الحجز,الفندق,تاريخ الدخول,تاريخ الخروج,عدد الغرف,عدد الأيام,سعر الفندق,سعر البيع,المستحق للفندق,المستحق من الشركة,الموظف,ملاحظات\n");
+        }
+
+        // حفظ البيانات
+        File::append($txtPath, $textContent);
+        File::append($csvPath, $csvContent);
 
         return redirect()->route('bookings.index')->with('success', 'تم إنشاء الحجز بنجاح!');
     }
@@ -210,27 +352,119 @@ class BookingsController extends Controller
         // حساب المبالغ
         $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'];
         $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'];
+        // تسجيل التعديلات
+        foreach ($validatedData as $field => $newValue) {
+            $oldValue = $booking->$field;
 
+            //لو الحقل اللي تعدل هو التاريخ ابقا قارنه بعد التنسيق لانه كان بيعتبر كل مرة تغيير في التاريخ حتى لو انا معملتش تعديل
+            if (in_array($field, ['check_in', 'check_out'])) {
+                $oldValueFormatted = \Carbon\Carbon::parse($oldValue)->format('Y-m-d');
+                $newValueFormatted = \Carbon\Carbon::parse($newValue)->format('Y-m-d');
+
+                if ($oldValueFormatted != $newValueFormatted) {
+                    \App\Models\EditLog::create([
+                        'booking_id' => $booking->id,
+                        'field' => $field,
+                        'old_value' => $oldValueFormatted,
+                        'new_value' => $newValueFormatted,
+                    ]);
+                }
+            } else {
+                if ($oldValue != $newValue) {
+                    \App\Models\EditLog::create([
+                        'booking_id' => $booking->id,
+                        'field' => $field,
+                        'old_value' => $oldValue,
+                        'new_value' => $newValue,
+                    ]);
+                }
+            }
+        }
         $booking->update($validatedData);
-
+        // إضافة سجل التحديث للباك اب
+    $textContent = sprintf(
+        "\n=== تحديث حجز بتاريخ %s ===\nرقم الحجز: %d\n%s\n=====================================\n",
+        now()->format('d/m/Y H:i:s'),
+        $booking->id,
+        json_encode($validatedData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+    );
+    
+    File::append(storage_path('backups/txt/bookings_updates.txt'), $textContent);
+    
+    // تحديث في CSV
+    $csvContent = implode(',', [
+        now()->format('d/m/Y H:i:s'),
+        'تحديث - ' . $booking->client_name,
+        $booking->company->name,
+        $booking->agent->name,
+        $booking->hotel->name,
+        $checkIn->format('d/m/Y'),
+        $checkOut->format('d/m/Y'),
+        $booking->rooms,
+        $booking->days,
+        $booking->cost_price,
+        $booking->sale_price,
+        $booking->amount_due_to_hotel,
+        $booking->amount_due_from_company,
+        $booking->employee->name,
+        $booking->notes ?? ''
+    ]) . "\n";
+    
+    File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
+        // روح على الرئيسية 
         return redirect()->route('bookings.index')->with('success', 'تم تحديث الحجز بنجاح!');
     }
 
     public function destroy($id)
     {
-        $booking = Booking::findOrFail($id);
-        $booking->delete();
+        $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
+    
+    // تسجيل الحذف في الباك اب
+    $textContent = sprintf(
+        "\n=== حذف حجز بتاريخ %s ===\nرقم الحجز: %d\nاسم العميل: %s\nالشركة: %s\nالفندق: %s\n=====================================\n",
+        now()->format('d/m/Y H:i:s'),
+        $booking->id,
+        $booking->client_name,
+        $booking->company->name,
+        $booking->hotel->name
+    );
+    
+    File::append(storage_path('backups/txt/bookings_deleted.txt'), $textContent);
+    
+    // تسجيل الحذف في CSV
+    $csvContent = implode(',', [
+        now()->format('d/m/Y H:i:s'),
+        'محذوف - ' . $booking->client_name,
+        $booking->company->name,
+        $booking->agent->name,
+        $booking->hotel->name,
+        $booking->check_in->format('d/m/Y'),
+        $booking->check_out->format('d/m/Y'),
+        $booking->rooms,
+        $booking->days,
+        $booking->cost_price,
+        $booking->sale_price,
+        $booking->amount_due_to_hotel,
+        $booking->amount_due_from_company,
+        $booking->employee->name,
+        'تم الحذف'
+    ]) . "\n";
+    
+    File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
 
-        return redirect()->route('bookings.index')->with('success', 'Booking deleted successfully!');
+    $booking->delete();
+
+    return redirect()->route('bookings.index')->with('success', 'تم حذف الحجز بنجاح!');
     }
 
     public function show($id)
     {
-        // جلب بيانات الحجز مع تفاصيل الشركة والموظف
-        $booking = Booking::with(['company', 'employee'])->findOrFail($id);
-         // طباعة بيانات الحجز للتأكد من صحتها:
-         
-        return view('bookings.show', compact('booking'));
+        $booking = Booking::with(['company', 'employee', 'agent', 'hotel'])->findOrFail($id);
+
+        // جلب سجل التعديلات المرتبطة بالحجز
+        $editLogs = \App\Models\EditLog::where('booking_id', $id)->orderBy('created_at', 'desc')->get();
+
+        return view('bookings.show', compact('booking', 'editLogs', 'id'));
     }
 
     public function getEdits($id)

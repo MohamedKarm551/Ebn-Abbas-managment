@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BookingsController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HotelController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/bookings', [BookingsController::class, 'index'])->name('bookings.index');
 Route::get('/bookings/create', [BookingsController::class, 'create'])->name('bookings.create');
@@ -43,6 +44,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/hotels/{id}/edit', [HotelController::class, 'edit'])->name('editHotel'); // مسار صفحة التعديل
     Route::put('/hotels/{id}', [HotelController::class, 'update'])->name('updateHotel'); // مسار التحديث
 });
+
+// إضافة هذه الروتس
+Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
+Route::get('/reports/company/{id}/bookings', [ReportController::class, 'companyBookings'])->name('reports.company.bookings');
+Route::get('/reports/agent/{id}/bookings', [ReportController::class, 'agentBookings'])->name('reports.agent.bookings');
+Route::get('/reports/hotel/{id}/bookings', [ReportController::class, 'hotelBookings'])->name('reports.hotel.bookings');
+Route::post('/reports/company/payment', [ReportController::class, 'storePayment'])->name('reports.company.payment');
+Route::post('/reports/agent/payment', [ReportController::class, 'storeAgentPayment'])->name('reports.agent.payment');
 
 Route::get('/', function () {
     return view('welcome');

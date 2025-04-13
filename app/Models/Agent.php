@@ -14,4 +14,9 @@ class Agent extends Model
     {
         return $this->hasMany(Booking::class);
     }
+
+    public function payments()
+    {
+        return $this->hasMany(AgentPayment::class);
+    }
 }

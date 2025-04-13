@@ -19,25 +19,18 @@ class Booking extends Model
         'days',
         'rooms',
         'cost_price',
-        'amount_due_to_hotel',
-        'amount_paid_to_hotel',
         'sale_price',
-        'amount_due_from_company',
-        'amount_paid_by_company',
         'employee_id',
-        'payment_status',
-        'notes',
+        'notes'
     ];
 
     protected $casts = [
         'check_in' => 'date',
         'check_out' => 'date',
         'cost_price' => 'float',
-        'amount_due_to_hotel' => 'float',
-        'amount_paid_to_hotel' => 'float',
         'sale_price' => 'float',
-        'amount_due_from_company' => 'float',
-        'amount_paid_by_company' => 'float',
+        'days' => 'integer',
+        'rooms' => 'integer'
     ];
 
     public function company()
@@ -58,5 +51,10 @@ class Booking extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+    public function editLogs()
+    {
+        return $this->hasMany(EditLog::class);
     }
 }
