@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
+        // حسابات جهات الحجز
         Schema::create('agent_payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('agent_id')->constrained()->onDelete('cascade');
