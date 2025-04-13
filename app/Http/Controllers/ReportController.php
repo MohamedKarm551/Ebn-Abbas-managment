@@ -99,6 +99,19 @@ $hotelsReport = Hotel::withCount('bookings')
         return view('reports.agent_bookings', compact('agent', 'bookings'));
     }
 
+    public function hotelBookings($id)
+    {
+        $hotel = Hotel::findOrFail($id);
+        $bookings = Booking::where('hotel_id', $id)
+                      ->with(['company', 'agent'])
+                      ->get();
+
+        return view('reports.hotel_bookings', [
+            'hotel' => $hotel,
+            'bookings' => $bookings
+        ]);
+    }
+
     public function storePayment(Request $request)
     {
         $validated = $request->validate([
