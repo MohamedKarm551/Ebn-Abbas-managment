@@ -8,7 +8,7 @@ use App\Models\Booking;
 use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
-use App\Models\EditLog; // استيراد موديل EditLog
+use App\Models\EditLog; 
 use Illuminate\Support\Facades\File;
 
 class BookingsController extends Controller
