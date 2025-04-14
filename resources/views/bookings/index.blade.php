@@ -2,7 +2,7 @@
 {{-- دي الصفحة الرئيسية للحجوزات، بتورث التصميم من صفحة app.blade.php --}}
 
 @section('content')
-    <div class="container">
+    <div class="container-fluid">
         <h1>كل الحجوزات</h1>
 
         <!-- الأزرار بتاعة الإدارة - كل زر بيوديك لصفحة إدارة حاجة معينة -->
@@ -106,26 +106,26 @@
 
         <div class="table-responsive" id="bookingsTable">
             <table class="table table-bordered table-hover">
-                <thead>
+                <thead class="table-dark"> {{-- Use a dark header for better contrast --}}
                     <tr>
-                        <th>م</th>
+                        <th class="text-center" style="width: 5%;">م</th>
                         <th>العميل</th>
                         <th>الشركة</th>
                         <th>جهة الحجز</th>
                         <th>الفندق</th>
-                        <th>تاريخ الدخول</th>
-                        <th>تاريخ الخروج</th>
-                        <th>عدد الأيام</th>
-                        <th>عدد الغرف</th>
+                        <th style="min-width: 100px;">تاريخ الدخول</th> {{-- تحديد عرض أدنى للتواريخ --}}
+                        <th style="min-width: 100px;">تاريخ الخروج</th>
+                        {{-- <th>عدد الأيام</th> --}}
+                        <th class="text-center">غرف</th> {{-- اختصار "عدد الغرف" --}}
                         @if (!request('company_id'))
-                            <th>المبلغ المستحق للفندق</th>
-                            <th>السداد مني للفندق</th>
+                            <th style="120px;"> المستحق للفندق</th>
+                            {{-- <th>السداد مني للفندق</th> --}}
                         @endif
-                        <th>المبلغ المستحق من الشركة</th>
-                        <th>السداد من الشركة</th>
+                        <th style="min-width: 120px;"> المستحق من الشركة</th>
+                        {{-- <th>السداد من الشركة</th> --}}
                         <th>الموظف المسؤول</th>
-                        <th>الملاحظات</th>
-                        <th>الإجراءات</th>
+                        <th class="text-center">الملاحظات</th>
+                        <th style="min-width: 130px;">الإجراءات</th> {{-- تحديد عرض أدنى لضمان ظهور الأزرار --}}
                     </tr>
                 </thead>
                 <tbody>
@@ -157,34 +157,50 @@
                             </td>
                             <td class="text-center align-middle">{{ $booking->check_in->format('d/m/Y') }}</td>
                             <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
-                            <td class="text-center align-middle">{{ $booking->days }}</td>
+                            {{-- <td class="text-center align-middle">{{ $booking->days }}</td> --}}
                             <td class="text-center align-middle">{{ $booking->rooms }}</td>
                             <td class="text-center align-middle"
                                 title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق)">
                                 {{ $booking->amount_due_to_hotel }}
                             </td>
-                            <td class="text-center align-middle">{{ $booking->amount_paid_to_hotel }}</td>
+                            {{-- <td class="text-center align-middle">{{ $booking->amount_paid_to_hotel }}</td> --}}
                             <td class="text-center align-middle"
                                 title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة)">
                                 {{ $booking->amount_due_from_company }}
                             </td>
-                            <td class="text-center align-middle">{{ $booking->amount_paid_by_company }}</td>
+                            {{-- <td class="text-center align-middle">{{ $booking->amount_paid_by_company }}</td> --}}
                             <td class="text-center align-middle">
                                 <a href="{{ route('bookings.index', ['employee_id' => $booking->employee->id]) }}"
                                     class="text-primary">
                                     {{ $booking->employee->name }}
                                 </a>
                             </td>
-                            <td class="text-center align-middle">{{ $booking->notes }}</td>
+                            <td class="text-center align-middle">
+                                {{-- Notes Popover Implementation --}}
+                                @if (!empty($booking->notes))
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="popover"
+                                        data-bs-trigger="hover focus" {{-- Show on hover or focus --}} data-bs-placement="left"
+                                        data-bs-custom-class="notes-popover" title="الملاحظات"
+                                        data-bs-content="{{ nl2br(e($booking->notes)) }}">
+                                        <i class="fas fa-info-circle"></i> {{-- Font Awesome icon --}}
+                                    </button>
+                                @else
+                                    <span class="text-muted small">--</span> {{-- Indicate no notes --}}
+                                @endif
+                            </td>
 
                             <td class="text-center align-middle">
-                                <a href="{{ route('bookings.edit', $booking->id) }}"
-                                    class="btn btn-warning btn-sm">تعديل</a>
+                                {{-- Action Buttons with Icons --}}
+                                <a href="{{ route('bookings.show', $booking->id) }}" class="btn btn-sm btn-info me-1"
+                                    title="التفاصيل"><i class="fas fa-eye"></i></a>
+                                <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-sm btn-warning me-1"
+                                    title="تعديل"><i class="fas fa-edit"></i></a>
                                 <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST"
-                                    style="display:inline;">
+                                    style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-danger btn-sm">حذف</button>
+                                    <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i
+                                            class="fas fa-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -247,6 +263,31 @@
             }
         </script>
     @endsection
+    @push('styles')
+        {{-- Optional: Add custom styles for the popover --}}
+        <style>
+            .notes-popover {
+                max-width: 350px;
+                /* Adjust max width */
+                font-size: 0.9rem;
+                /* Slightly smaller font */
+            }
+
+            .popover-body {
+                white-space: pre-wrap;
+                /* Preserve line breaks */
+                max-height: 200px;
+                /* Limit height and make scrollable if needed */
+                overflow-y: auto;
+            }
+
+            /* Ensure table cells have consistent vertical alignment */
+            .table td,
+            .table th {
+                vertical-align: middle;
+            }
+        </style>
+    @endpush
 
     @push('scripts')
         <!-- بنستدعي مكتبة html2canvas اللي هتساعدنا نحول الجدول لصورة -->
@@ -254,6 +295,12 @@
         <script>
             // بنستني لما الصفحة تحمل كلها
             document.addEventListener('DOMContentLoaded', function() {
+                var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                    return new bootstrap.Popover(popoverTriggerEl, {
+                        html: true // Allow HTML content in the popover (needed for nl2br)
+                    })
+                });
                 // بنجيب زرار التصوير من الصفحة
                 const captureBtn = document.getElementById('captureBtn');
 
