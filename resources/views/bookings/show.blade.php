@@ -165,28 +165,64 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($editLogs as $log)
-                    <tr>
-                        <td>{{ $fieldNames[$log->field] ?? $log->field }}</td>
+    @foreach ($editLogs as $log)
+        @if (trim($log->old_value) !== trim($log->new_value)) <!-- تجاهل الحقول غير المعدلة -->
+            <tr>
+                <!-- عرض اسم الحقل المعدل -->
+                <td>{{ $fieldNames[$log->field] ?? $log->field }}</td>
 
-                        <td>
-                            @if (in_array($log->field, ['check_in', 'check_out']))
-                                {{ \Carbon\Carbon::parse($log->old_value)->format('d/m/Y') }}
-                            @else
-                                {{ $log->old_value }}
-                            @endif
-                        </td>
-                        <td>
-                            @if (in_array($log->field, ['check_in', 'check_out']))
-                                {{ \Carbon\Carbon::parse($log->new_value)->format('d/m/Y') }}
-                            @else
-                                {{ $log->new_value }}
-                            @endif
-                        </td>
-                        <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i') }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
+                <!-- عرض القيمة القديمة -->
+                <td>
+                    @if ($log->field === 'employee_id') 
+                        <!-- إذا كان الحقل هو الموظف المسؤول، جلب اسم الموظف بدلاً من الـ ID -->
+                        {{ \App\Models\Employee::find($log->old_value)?->name ?? $log->old_value }}
+                    @elseif ($log->field === 'company_id') 
+                        <!-- إذا كان الحقل هو الشركة، جلب اسم الشركة بدلاً من الـ ID -->
+                        {{ \App\Models\Company::find($log->old_value)?->name ?? $log->old_value }}
+                    @elseif ($log->field === 'hotel_id') 
+                        <!-- إذا كان الحقل هو الفندق، جلب اسم الفندق بدلاً من الـ ID -->
+                        {{ \App\Models\Hotel::find($log->old_value)?->name ?? $log->old_value }}
+                    @elseif ($log->field === 'agent_id') 
+                        <!-- إذا كان الحقل هو جهة الحجز، جلب اسم جهة الحجز بدلاً من الـ ID -->
+                        {{ \App\Models\Agent::find($log->old_value)?->name ?? $log->old_value }}
+                    @elseif (in_array($log->field, ['check_in', 'check_out']))
+                        <!-- إذا كان الحقل هو تاريخ، تنسيق التاريخ لعرضه بشكل مناسب -->
+                        {{ $log->old_value ? \Carbon\Carbon::parse($log->old_value)->format('d/m/Y') : 'غير محدد' }}
+                    @else
+                        <!-- عرض القيمة القديمة كما هي إذا لم تكن من الحقول الخاصة -->
+                        {{ $log->old_value ?: 'غير محدد' }}
+                    @endif
+                </td>
+
+                <!-- عرض القيمة الجديدة -->
+                <td>
+                    @if ($log->field === 'employee_id') 
+                        <!-- إذا كان الحقل هو الموظف المسؤول، جلب اسم الموظف الجديد بدلاً من الـ ID -->
+                        {{ \App\Models\Employee::find($log->new_value)?->name ?? $log->new_value }}
+                    @elseif ($log->field === 'company_id') 
+                        <!-- إذا كان الحقل هو الشركة، جلب اسم الشركة الجديد بدلاً من الـ ID -->
+                        {{ \App\Models\Company::find($log->new_value)?->name ?? $log->new_value }}
+                    @elseif ($log->field === 'hotel_id') 
+                        <!-- إذا كان الحقل هو الفندق، جلب اسم الفندق الجديد بدلاً من الـ ID -->
+                        {{ \App\Models\Hotel::find($log->new_value)?->name ?? $log->new_value }}
+                    @elseif ($log->field === 'agent_id') 
+                        <!-- إذا كان الحقل هو جهة الحجز، جلب اسم جهة الحجز الجديد بدلاً من الـ ID -->
+                        {{ \App\Models\Agent::find($log->new_value)?->name ?? $log->new_value }}
+                    @elseif (in_array($log->field, ['check_in', 'check_out']))
+                        <!-- إذا كان الحقل هو تاريخ، تنسيق التاريخ الجديد لعرضه بشكل مناسب -->
+                        {{ $log->new_value ? \Carbon\Carbon::parse($log->new_value)->format('d/m/Y') : 'غير محدد' }}
+                    @else
+                        <!-- عرض القيمة الجديدة كما هي إذا لم تكن من الحقول الخاصة -->
+                        {{ $log->new_value ?: 'غير محدد' }}
+                    @endif
+                </td>
+
+                <!-- عرض تاريخ التعديل -->
+                <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i') }}</td>
+            </tr>
+        @endif
+    @endforeach
+</tbody>
         </table>
     @endif
     {{-- <ul id="editLog"></ul>

@@ -8,7 +8,7 @@ use App\Models\Booking;
 use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
-use App\Models\EditLog; 
+use App\Models\EditLog;
 use Illuminate\Support\Facades\File;
 
 class BookingsController extends Controller
@@ -356,6 +356,11 @@ class BookingsController extends Controller
         foreach ($validatedData as $field => $newValue) {
             $oldValue = $booking->$field;
 
+            // تجاهل الحقول المحسوبة ديناميكيًا
+
+            if (in_array($field, ['amount_due_to_hotel', 'amount_due_from_company'])) {
+                continue;
+            }
             //لو الحقل اللي تعدل هو التاريخ ابقا قارنه بعد التنسيق لانه كان بيعتبر كل مرة تغيير في التاريخ حتى لو انا معملتش تعديل
             if (in_array($field, ['check_in', 'check_out'])) {
                 $oldValueFormatted = \Carbon\Carbon::parse($oldValue)->format('Y-m-d');
@@ -382,35 +387,35 @@ class BookingsController extends Controller
         }
         $booking->update($validatedData);
         // إضافة سجل التحديث للباك اب
-    $textContent = sprintf(
-        "\n=== تحديث حجز بتاريخ %s ===\nرقم الحجز: %d\n%s\n=====================================\n",
-        now()->format('d/m/Y H:i:s'),
-        $booking->id,
-        json_encode($validatedData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-    );
-    
-    File::append(storage_path('backups/txt/bookings_updates.txt'), $textContent);
-    
-    // تحديث في CSV
-    $csvContent = implode(',', [
-        now()->format('d/m/Y H:i:s'),
-        'تحديث - ' . $booking->client_name,
-        $booking->company->name,
-        $booking->agent->name,
-        $booking->hotel->name,
-        $checkIn->format('d/m/Y'),
-        $checkOut->format('d/m/Y'),
-        $booking->rooms,
-        $booking->days,
-        $booking->cost_price,
-        $booking->sale_price,
-        $booking->amount_due_to_hotel,
-        $booking->amount_due_from_company,
-        $booking->employee->name,
-        $booking->notes ?? ''
-    ]) . "\n";
-    
-    File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
+        $textContent = sprintf(
+            "\n=== تحديث حجز بتاريخ %s ===\nرقم الحجز: %d\n%s\n=====================================\n",
+            now()->format('d/m/Y H:i:s'),
+            $booking->id,
+            json_encode($validatedData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+        );
+
+        File::append(storage_path('backups/txt/bookings_updates.txt'), $textContent);
+
+        // تحديث في CSV
+        $csvContent = implode(',', [
+            now()->format('d/m/Y H:i:s'),
+            'تحديث - ' . $booking->client_name,
+            $booking->company->name,
+            $booking->agent->name,
+            $booking->hotel->name,
+            $checkIn->format('d/m/Y'),
+            $checkOut->format('d/m/Y'),
+            $booking->rooms,
+            $booking->days,
+            $booking->cost_price,
+            $booking->sale_price,
+            $booking->amount_due_to_hotel,
+            $booking->amount_due_from_company,
+            $booking->employee->name,
+            $booking->notes ?? ''
+        ]) . "\n";
+
+        File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
         // روح على الرئيسية 
         return redirect()->route('bookings.index')->with('success', 'تم تحديث الحجز بنجاح!');
     }
@@ -418,43 +423,43 @@ class BookingsController extends Controller
     public function destroy($id)
     {
         $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
-    
-    // تسجيل الحذف في الباك اب
-    $textContent = sprintf(
-        "\n=== حذف حجز بتاريخ %s ===\nرقم الحجز: %d\nاسم العميل: %s\nالشركة: %s\nالفندق: %s\n=====================================\n",
-        now()->format('d/m/Y H:i:s'),
-        $booking->id,
-        $booking->client_name,
-        $booking->company->name,
-        $booking->hotel->name
-    );
-    
-    File::append(storage_path('backups/txt/bookings_deleted.txt'), $textContent);
-    
-    // تسجيل الحذف في CSV
-    $csvContent = implode(',', [
-        now()->format('d/m/Y H:i:s'),
-        'محذوف - ' . $booking->client_name,
-        $booking->company->name,
-        $booking->agent->name,
-        $booking->hotel->name,
-        $booking->check_in->format('d/m/Y'),
-        $booking->check_out->format('d/m/Y'),
-        $booking->rooms,
-        $booking->days,
-        $booking->cost_price,
-        $booking->sale_price,
-        $booking->amount_due_to_hotel,
-        $booking->amount_due_from_company,
-        $booking->employee->name,
-        'تم الحذف'
-    ]) . "\n";
-    
-    File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
 
-    $booking->delete();
+        // تسجيل الحذف في الباك اب
+        $textContent = sprintf(
+            "\n=== حذف حجز بتاريخ %s ===\nرقم الحجز: %d\nاسم العميل: %s\nالشركة: %s\nالفندق: %s\n=====================================\n",
+            now()->format('d/m/Y H:i:s'),
+            $booking->id,
+            $booking->client_name,
+            $booking->company->name,
+            $booking->hotel->name
+        );
 
-    return redirect()->route('bookings.index')->with('success', 'تم حذف الحجز بنجاح!');
+        File::append(storage_path('backups/txt/bookings_deleted.txt'), $textContent);
+
+        // تسجيل الحذف في CSV
+        $csvContent = implode(',', [
+            now()->format('d/m/Y H:i:s'),
+            'محذوف - ' . $booking->client_name,
+            $booking->company->name,
+            $booking->agent->name,
+            $booking->hotel->name,
+            $booking->check_in->format('d/m/Y'),
+            $booking->check_out->format('d/m/Y'),
+            $booking->rooms,
+            $booking->days,
+            $booking->cost_price,
+            $booking->sale_price,
+            $booking->amount_due_to_hotel,
+            $booking->amount_due_from_company,
+            $booking->employee->name,
+            'تم الحذف'
+        ]) . "\n";
+
+        File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
+
+        $booking->delete();
+
+        return redirect()->route('bookings.index')->with('success', 'تم حذف الحجز بنجاح!');
     }
 
     public function show($id)
