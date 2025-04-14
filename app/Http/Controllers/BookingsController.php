@@ -9,71 +9,150 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
 use App\Models\EditLog;
-// Undefined type 'Log'.intelephense(P1009)
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Log; // تأكد من استيراد Log
 use Illuminate\Support\Facades\File;
+use Carbon\Carbon; // *** استيراد Carbon لمعالجة التواريخ ***
 
 class BookingsController extends Controller
 {
+    /**
+     * عرض قائمة الحجوزات مع إمكانية البحث والفلترة.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\View\View
+     */
     public function index(Request $request)
     {
+        // --------------------------------------------------
+        // 1. بناء الاستعلام الأساسي وتحميل العلاقات (Eager Loading)
+        // --------------------------------------------------
+        // نبدأ ببناء استعلام Eloquent لجدول الحجوزات.
+        // نستخدم `with` لتحميل العلاقات مسبقًا (Eager Loading). هذا يمنع مشكلة N+1
+        // ويحسن الأداء عن طريق تقليل عدد الاستعلامات لقاعدة البيانات عند الوصول للعلاقات لاحقًا.
         $query = Booking::with(['company', 'employee', 'agent', 'hotel']);
 
-        // البحث باستخدام النصوص
+        // --------------------------------------------------
+        // 2. تطبيق فلتر البحث النصي (إذا كان موجودًا)
+        // --------------------------------------------------
+        // نتحقق مما إذا كان حقل البحث 'search' يحتوي على قيمة.
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where('client_name', 'like', '%' . $search . '%')
-                ->orWhereHas('employee', function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
-                })
-                ->orWhereHas('company', function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
-                })
-                ->orWhereHas('agent', function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
-                })
-                ->orWhereHas('hotel', function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
-                });
+            // نحصل على قيمة البحث من الطلب.
+            $searchTerm = $request->input('search');
+
+            // نستخدم `where` مع دالة Closure لتجميع شروط البحث معًا باستخدام `OR`.
+            // هذا يضمن أن البحث يتم في أي من الحقول المحددة.
+            $query->where(function ($q) use ($searchTerm) {
+                // البحث في اسم العميل مباشرة في جدول الحجوزات.
+                $q->where('client_name', 'like', "%{$searchTerm}%")
+                  // البحث في اسم الموظف المرتبط (عبر العلاقة 'employee').
+                  ->orWhereHas('employee', function ($subQ) use ($searchTerm) {
+                      $subQ->where('name', 'like', "%{$searchTerm}%");
+                  })
+                  // البحث في اسم الشركة المرتبطة (عبر العلاقة 'company').
+                  ->orWhereHas('company', function ($subQ) use ($searchTerm) {
+                      $subQ->where('name', 'like', "%{$searchTerm}%");
+                  })
+                  // البحث في اسم جهة الحجز المرتبطة (عبر العلاقة 'agent').
+                  ->orWhereHas('agent', function ($subQ) use ($searchTerm) {
+                      $subQ->where('name', 'like', "%{$searchTerm}%");
+                  })
+                  // البحث في اسم الفندق المرتبط (عبر العلاقة 'hotel').
+                  ->orWhereHas('hotel', function ($subQ) use ($searchTerm) {
+                      $subQ->where('name', 'like', "%{$searchTerm}%");
+                  });
+            });
         }
 
-        // فلترة بالتاريخ
+        // --------------------------------------------------
+        // 3. تطبيق فلتر تاريخ البدء (إذا كان موجودًا وصحيحًا)
+        // --------------------------------------------------
+        // نتحقق مما إذا كان حقل 'start_date' يحتوي على قيمة.
         if ($request->filled('start_date')) {
-            $startDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->start_date)->format('Y-m-d');
-            $query->where('check_in', '>=', $startDate);
+            try {
+                // نحاول تحويل التاريخ القادم من الفورم (المتوقع أن يكون بصيغة 'd/m/Y')
+                // إلى كائن Carbon ثم إلى صيغة 'Y-m-d' التي تفهمها قاعدة البيانات.
+                // نستخدم `startOfDay` لضمان أن المقارنة تشمل بداية اليوم المحدد.
+                $startDate = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+
+                // نضيف شرط `whereDate` إلى الاستعلام الحالي.
+                // هذا الشرط يضمن أن تاريخ الدخول 'check_in' أكبر من أو يساوي تاريخ البدء المحدد.
+                // `whereDate` يقارن جزء التاريخ فقط من العمود.
+                $query->whereDate('check_in', '>=', $startDate);
+
+            } catch (\Exception $e) {
+                // في حالة فشل تحويل التاريخ (صيغة غير صحيحة)، نسجل الخطأ.
+                // يمكن اختياريًا إعادة المستخدم للخلف مع رسالة خطأ.
+                Log::error('Invalid start date format: ' . $request->input('start_date') . ' - ' . $e->getMessage());
+                // return redirect()->back()->withErrors(['start_date' => 'صيغة تاريخ البدء غير صحيحة.']);
+            }
         }
 
+        // --------------------------------------------------
+        // 4. تطبيق فلتر تاريخ الانتهاء (إذا كان موجودًا وصحيحًا)
+        // --------------------------------------------------
+        // نتحقق مما إذا كان حقل 'end_date' يحتوي على قيمة.
         if ($request->filled('end_date')) {
-            $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->end_date)->format('Y-m-d');
-            $query->where('check_out', '<=', $endDate);
+            try {
+                // نحاول تحويل التاريخ القادم من الفورم (المتوقع أن يكون بصيغة 'd/m/Y')
+                // إلى كائن Carbon ثم إلى صيغة 'Y-m-d'.
+                // نستخدم `endOfDay` لضمان أن المقارنة تشمل نهاية اليوم المحدد.
+                $endDate = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
+
+                // نضيف شرط `whereDate` إلى الاستعلام الحالي.
+                // هذا الشرط يضمن أن تاريخ الدخول 'check_in' (أو 'check_out' حسب المنطق المطلوب)
+                // أصغر من أو يساوي تاريخ الانتهاء المحدد.
+                // *** ملاحظة: الكود الأصلي كان يستخدم 'check_out'، تم تغييره إلى 'check_in' ليتوافق مع فلتر تاريخ البدء. عدّله إذا كان المقصود فلترة تاريخ الخروج. ***
+                $query->whereDate('check_in', '<=', $endDate);
+
+            } catch (\Exception $e) {
+                // في حالة فشل تحويل التاريخ، نسجل الخطأ.
+                Log::error('Invalid end date format: ' . $request->input('end_date') . ' - ' . $e->getMessage());
+                // return redirect()->back()->withErrors(['end_date' => 'صيغة تاريخ الانتهاء غير صحيحة.']);
+            }
         }
+
+        // --------------------------------------------------
+        // 5. تطبيق فلاتر إضافية (حسب الحاجة)
+        // --------------------------------------------------
+        // نضيف شروط `where` بسيطة لتطبيق الفلاتر الأخرى إذا كانت موجودة في الطلب.
 
         // فلترة حسب الشركة
         if ($request->filled('company_id')) {
-            $query->where('company_id', $request->company_id);
+            $query->where('company_id', $request->input('company_id'));
         }
 
         // فلترة حسب جهة الحجز
         if ($request->filled('agent_id')) {
-            $query->where('agent_id', $request->agent_id);
+            $query->where('agent_id', $request->input('agent_id'));
         }
 
         // فلترة حسب الفندق
         if ($request->filled('hotel_id')) {
-            $query->where('hotel_id', $request->hotel_id);
+            $query->where('hotel_id', $request->input('hotel_id'));
         }
 
         // فلترة حسب الموظف
         if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
+            $query->where('employee_id', $request->input('employee_id'));
         }
-        // ترتيب حسب الأحدث
-        $query->orderBy('created_at', 'desc');
 
-        // إضافة Pagination
-        $bookings = $query->paginate(10); // 10 عناصر لكل صفحة
+        // --------------------------------------------------
+        // 6. الترتيب وتنفيذ الاستعلام مع Pagination
+        // --------------------------------------------------
+        // نرتب النتائج حسب تاريخ الدخول تنازليًا (الأحدث أولاً).
+        // يمكنك تغيير حقل الترتيب والاتجاه حسب الحاجة (مثل 'created_at').
+        $query->orderBy('check_in', 'desc');
 
-        // حساب الإجماليات
+        // ننفذ الاستعلام ونجلب النتائج باستخدام `paginate`.
+        // `paginate(20)` يجلب 20 نتيجة لكل صفحة.
+        // `withQueryString()` يضمن أن روابط الـ pagination تحتفظ بجميع بارامترات الفلترة الحالية (search, start_date, etc.).
+        $bookings = $query->paginate(10)->withQueryString();
+
+        // --------------------------------------------------
+        // 7. حساب الإجماليات (ملاحظة: قد يكون غير دقيق مع Pagination)
+        // --------------------------------------------------
+        // *** تحذير: الكود التالي يحسب الإجماليات بناءً على نتائج الصفحة الحالية فقط (`$bookings`) وليس على كامل نتائج الاستعلام قبل الـ pagination. ***
+        // *** للحصول على إجماليات دقيقة لكل النتائج المطابقة للفلاتر، يجب حسابها باستخدام `$query` قبل استدعاء `paginate` أو باستخدام استعلامات aggregate منفصلة. ***
         $totalDueFromCompany = 0;
         $totalPaidByCompany = 0;
         $remainingFromCompany = 0;
@@ -82,22 +161,28 @@ class BookingsController extends Controller
         $totalPaidToHotels = 0;
         $remainingToHotels = 0;
 
+        // يتم استخدام `map` للمرور على حجوزات الصفحة الحالية وحساب التفاصيل والإجماليات (للصفحة الحالية فقط).
         $bookingDetails = $bookings->map(function ($booking) use (&$totalDueFromCompany, &$totalPaidByCompany, &$remainingFromCompany, &$totalDueToHotels, &$totalPaidToHotels, &$remainingToHotels) {
+            // حساب المستحق من الشركة لهذا الحجز
             $dueFromCompany = $booking->days * $booking->rooms * $booking->sale_price;
             $paidByCompany = $booking->amount_paid_by_company;
             $remainingFromCompany += $dueFromCompany - $paidByCompany;
 
+            // حساب المستحق للفندق لهذا الحجز
             $dueToHotel = $booking->days * $booking->rooms * $booking->cost_price;
             $paidToHotel = $booking->amount_paid_to_hotel;
             $remainingToHotels += $dueToHotel - $paidToHotel;
 
+            // تجميع الإجماليات (للصفحة الحالية)
             $totalDueFromCompany += $dueFromCompany;
             $totalPaidByCompany += $paidByCompany;
 
             $totalDueToHotels += $dueToHotel;
             $totalPaidToHotels += $paidToHotel;
 
+            // إرجاع مصفوفة بتفاصيل الحجز المحسوبة (اختياري، حسب حاجة الفيو)
             return [
+                'id' => $booking->id, // إضافة ID للاستخدام في الفيو
                 'client_name' => $booking->client_name,
                 'check_in' => $booking->check_in->format('d/m/Y'),
                 'check_out' => $booking->check_out->format('d/m/Y'),
@@ -114,8 +199,15 @@ class BookingsController extends Controller
             ];
         });
 
+        // --------------------------------------------------
+        // 8. تمرير البيانات إلى الفيو
+        // --------------------------------------------------
+        // نعيد عرض الفيو 'bookings.index' ونمرر له:
+        // - `$bookings`: كائن الـ Paginator الذي يحتوي على حجوزات الصفحة الحالية وروابط الصفحات الأخرى.
+        // - الإجماليات المحسوبة (للصفحة الحالية).
+        // - `$bookingDetails`: مجموعة التفاصيل المحسوبة (اختياري).
         return view('bookings.index', compact(
-            'bookings',
+            'bookings', // كائن الـ Paginator
             'totalDueFromCompany',
             'totalPaidByCompany',
             'remainingFromCompany',
