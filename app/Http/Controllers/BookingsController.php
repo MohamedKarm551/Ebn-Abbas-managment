@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
 use App\Models\EditLog;
+// Undefined type 'Log'.intelephense(P1009)
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File;
 
 class BookingsController extends Controller
@@ -97,8 +99,7 @@ class BookingsController extends Controller
 
             return [
                 'client_name' => $booking->client_name,
-                'check_in' => $booking->check_in->format('d/m/Y'),
-                'check_out' => $booking->check_out->format('d/m/Y'),
+                'check_in' => $booking->check_in->format('d/m/Y'), 'check_out' => $booking->check_out->format('d/m/Y'),
                 'days' => $booking->days,
                 'rooms' => $booking->rooms,
                 'sale_price' => $booking->sale_price,
@@ -169,17 +170,27 @@ class BookingsController extends Controller
 
         $validatedData['days'] = $checkIn->diffInDays($checkOut);
 
-        // حساب المبالغ
+        // حساب القيم المالية
+            // التحقق من القيم قبل الحساب
+    if ($validatedData['days'] <= 0 || $validatedData['rooms'] <= 0 || $validatedData['cost_price'] <= 0 || $validatedData['sale_price'] <= 0) {
+        return redirect()->back()
+            ->withInput()
+            ->withErrors(['calculation_error' => 'تأكد من إدخال قيم صحيحة للحساب']);
+    }
+    // حساب المبالغ
+    $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'] * $validatedData['days'];
+    $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $validatedData['days'];
 
-        $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'];
-
-        // حساب المبلغ المستحق من الشركة
-
-        $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'];
-
+     // تتبع القيم المحسوبة
+     Log::info('القيم المحسوبة:', [
+        'amount_due_to_hotel' => $validatedData['amount_due_to_hotel'],
+        'amount_due_from_company' => $validatedData['amount_due_from_company'],
+    ]);
+    // dd($validatedData);
         // إنشاء الحجز
         $booking = Booking::create($validatedData);
-
+    // تتبع القيم المحفوظة
+Log::info('القيم المحفوظة في قاعدة البيانات:', $booking->toArray());
         // تجهيز البيانات للباك اب
         $booking->load(['company', 'agent', 'hotel', 'employee']);
 
@@ -198,7 +209,7 @@ class BookingsController extends Controller
     سعر الفندق: %.2f
     سعر البيع: %.2f
     المبلغ المستحق للفندق: %.2f
-    المبلغ المستحق من الشركة: %.2f
+     المبلغ المستحق من الشركة: %.2f
     الموظف: %s
     ملاحظات: %s
     =====================================\n\n",
@@ -298,7 +309,6 @@ class BookingsController extends Controller
             // إنشاء الحجز
             Booking::create($validated);
         }
-
         return redirect()->route('bookings.index')->with('success', 'Bookings imported successfully!');
     }
 
@@ -350,8 +360,8 @@ class BookingsController extends Controller
         $validatedData['days'] = $checkIn->diffInDays($checkOut);
 
         // حساب المبالغ
-        $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'];
-        $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'];
+        $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'] * $validatedData['days'];
+        $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $validatedData['days'];
         // تسجيل التعديلات
         foreach ($validatedData as $field => $newValue) {
             $oldValue = $booking->$field;

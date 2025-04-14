@@ -321,7 +321,7 @@
 </style>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', function () {
         const copyButton = document.getElementById('copyBookingDetails');
         if (copyButton) {
             copyButton.addEventListener('click', function () {
@@ -443,4 +443,3 @@
     });
 </script>
 @endsection
-

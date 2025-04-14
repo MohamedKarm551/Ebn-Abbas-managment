@@ -16,12 +16,14 @@ class Booking extends Model
         'room_type',
         'check_in',
         'check_out',
-        'days',
         'rooms',
         'cost_price',
         'sale_price',
         'employee_id',
-        'notes'
+        'notes',
+        'days',
+        'amount_due_to_hotel',
+        'amount_due_from_company',
     ];
 
     protected $casts = [
