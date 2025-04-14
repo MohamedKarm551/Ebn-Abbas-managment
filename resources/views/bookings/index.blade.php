@@ -102,7 +102,7 @@
         <table class="table table-bordered table-hover">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th>م</th>
                     <th>العميل</th>
                     <th>الشركة</th>
                     <th>جهة الحجز</th>
