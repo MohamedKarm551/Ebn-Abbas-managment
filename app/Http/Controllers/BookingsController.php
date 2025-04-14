@@ -128,10 +128,17 @@ class BookingsController extends Controller
 
     public function create()
     {
-        $companies = Company::all(); // جلب بيانات الشركات
-        $agents = Agent::all(); // جلب بيانات جهات الحجز
-        $hotels = Hotel::all(); // جلب بيانات الفنادق
-        $employees = Employee::all(); // جلب بيانات الموظفين
+        // ترتيب الشركات تصاعديًا حسب الاسم
+        $companies = Company::orderBy('name', 'asc')->get();
+
+        // ترتيب جهات الحجز تصاعديًا حسب الاسم
+        $agents = Agent::orderBy('name', 'asc')->get();
+
+        // ترتيب الفنادق تصاعديًا حسب الاسم
+        $hotels = Hotel::orderBy('name', 'asc')->get();
+
+        // ترتيب الموظفين تصاعديًا حسب الاسم
+        $employees = Employee::orderBy('name', 'asc')->get();
 
         return view('bookings.create', compact('companies', 'agents', 'hotels', 'employees'));
     }
