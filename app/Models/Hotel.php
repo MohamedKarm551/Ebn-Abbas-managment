@@ -12,6 +12,13 @@ class Hotel extends Model
 
     public function bookings()
     {
-        return $this->hasMany(Booking::class);
+        return $this->hasMany(Booking::class,'hotel_id');
     }
+    public function getTotalDueAttribute()
+{
+    // حساب إجمالي المستحق من الحجوزات
+    return $this->bookings->sum(function ($booking) {
+        return $booking->cost_price * $booking->rooms * $booking->days;
+    });
+}
 }

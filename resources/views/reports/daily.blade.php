@@ -45,16 +45,15 @@
                             <tr>
                                 <td>{{ $company->name }}</td>
                                 <td>{{ $company->bookings_count }}</td>
-                                <td>{{ number_format($company->total_due) }}</td>
-                                <td>{{ number_format($company->total_paid) }}</td>
-                                <td>{{ number_format($company->total_due - $company->total_paid) }}</td>
+                                <td>{{ number_format($company->total_due) }} ريال</td>
+                                <td>{{ number_format($company->total_paid) }} ريال</td>
+                                <td>{{ number_format($company->remaining) }} ريال</td>
                                 <td>
-                                    <a href="{{ route('reports.company.bookings', $company->id) }}"
-                                        class="btn btn-info btn-sm">عرض الحجوزات</a>
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#paymentModal{{ $company->id }}">
+                                    <a href="{{ route('reports.company.bookings', $company->id) }}" class="btn btn-info btn-sm">عرض الحجوزات</a>
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#paymentModal{{ $company->id }}">
                                         تسجيل دفعة
                                     </button>
+                                    <a href="{{ route('reports.company.payments', $company->id) }}" class="btn btn-primary btn-sm">عرض السجل</a>
                                 </td>
                             </tr>
                         @endforeach
@@ -86,14 +85,15 @@
                         <tr>
                             <td>{{ $agent->name }}</td>
                             <td>{{ $agent->bookings_count }}</td>
-                            <td>{{ number_format($agent->total_amount) }}</td>
+                            <td>{{ number_format($agent->total_due) }}</td>
                             <td>{{ number_format($agent->total_paid) }}</td>
-                            <td>{{ number_format($agent->total_amount - $agent->total_paid) }}</td>
+                            <td>{{ number_format($agent->remaining) }}</td>
                             <td>
                                 <a href="{{ route('reports.agent.bookings', $agent->id) }}" class="btn btn-info btn-sm">عرض الحجوزات</a>
                                 <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#agentPaymentModal{{ $agent->id }}">
                                     تسجيل دفعة
                                 </button>
+                                <a href="{{ route('reports.agent.payments', $agent->id) }}" class="btn btn-primary btn-sm">عرض السجل</a>
                             </td>
                         </tr>
                         @endforeach

@@ -15,58 +15,36 @@ class ReportController extends Controller
 {
     public function daily()
     {
-        $today = Carbon::today();
-        
-        $todayBookings = Booking::whereDate('check_in', $today)->get();
-        
-        $companiesReport = Company::withCount('bookings')
-            ->get()
-            ->map(function ($company) {
-                // Calculate total due from company's bookings
-                $totalDue = $company->bookings->sum(function ($booking) {
-                    return $booking->sale_price * $booking->rooms * $booking->days;
-                });
-                
-                // Get total paid from payments
-                $totalPaid = $company->payments()->sum('amount');
-                
-                $company->total_due = $totalDue;
-                $company->total_paid = $totalPaid;
-                return $company;
-            });
+        $today = Carbon::today(); // ده بيجيب تاريخ النهارده عشان نستخدمه في الفلترة
 
-        // Add agents report calculation
-        $agentsReport = Agent::withCount('bookings')
-        ->get()
-        ->map(function ($agent) {
-            // حساب إجمالي المبالغ
-            $totalAmount = $agent->bookings->sum(function ($booking) {
-                return $booking->sale_price * $booking->rooms * $booking->days;
-            });
-            
-            // حساب إجمالي المدفوع
-            $totalPaid = $agent->payments()->sum('amount');
-            
-            $agent->total_amount = $totalAmount;
-            $agent->total_paid = $totalPaid;
-            return $agent;
-        });
+        $todayBookings = Booking::whereDate('check_in', $today)->get(); // بيجيب الحجوزات اللي تاريخ الدخول بتاعها النهارده
+
+        $companiesReport = Company::withCount('bookings') 
+            ->get(); // بيجيب الشركات وعدد الحجوزات المرتبطة بكل شركة
+           
+
+
+        // نفس الفكرة مع جهات الحجز
+        $agentsReport = Agent::withCount('bookings') // بيجيب جهات الحجز وعدد الحجوزات المرتبطة بكل جهة
+            ->get();
+
+             
+
+        // حساب إجمالي المستحق من الشركات
         $totalDueFromCompanies = $companiesReport->sum('total_due');
-        $totalPaidToHotels = Booking::get()->sum(function ($booking) {
-            return $booking->cost_price * $booking->rooms * $booking->days;
-        });
-// إضافة حسابات الفنادق
-$hotelsReport = Hotel::withCount('bookings')
-->get()
-->map(function ($hotel) {
-    $totalDue = $hotel->bookings->sum(function ($booking) {
-        return $booking->cost_price * $booking->rooms * $booking->days;
-    });
-    
-    $hotel->total_due = $totalDue;
-    return $hotel;
-});
 
+        // حساب إجمالي المدفوع للفنادق
+        $totalPaidToHotels = Booking::get()->sum(function ($booking) {
+            return $booking->cost_price * $booking->rooms * $booking->days; // تكلفة الحجز × عدد الغرف × عدد الأيام
+        });
+
+        // حساب إجمالي المستحق على الفنادق
+        $hotelsReport = Hotel::withCount('bookings') // بيجيب الفنادق وعدد الحجوزات المرتبطة بكل فندق
+            ->get();
+
+             
+
+        // رجّع البيانات للـ View
         return view('reports.daily', compact(
             'todayBookings',
             'companiesReport',
@@ -103,8 +81,8 @@ $hotelsReport = Hotel::withCount('bookings')
     {
         $hotel = Hotel::findOrFail($id);
         $bookings = Booking::where('hotel_id', $id)
-                      ->with(['company', 'agent'])
-                      ->get();
+            ->with(['company', 'agent'])
+            ->get();
 
         return view('reports.hotel_bookings', [
             'hotel' => $hotel,
@@ -114,68 +92,90 @@ $hotelsReport = Hotel::withCount('bookings')
 
     public function storePayment(Request $request)
     {
+        // التحقق من صحة البيانات اللي جاية من الفورم
         $validated = $request->validate([
-            'company_id' => 'required|exists:companies,id',
-            'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string'
+            'company_id' => 'required|exists:companies,id', // لازم الشركة تكون موجودة
+            'amount' => 'required|numeric|min:0', // المبلغ لازم يكون رقم ومش أقل من صفر
+            'notes' => 'nullable|string', // الملاحظات اختيارية
+            'payment_date' => 'nullable|date', // تاريخ الدفع اختياري
         ]);
 
-        $company = Company::findOrFail($validated['company_id']);
+        // جلب بيانات الشركة
+        $company = Company::findOrFail($validated['company_id']); // لو الشركة مش موجودة هيعمل خطأ
+
         
-        // نجيب كل الحجوزات بتاعت الشركة ونحسب المبالغ المستحقة والمدفوعة
-        $bookings = $company->bookings()
-            ->orderBy('check_in')
-            ->get();
-
-        $remainingAmount = $validated['amount'];
-        $coveredBookings = [];
-
-        foreach ($bookings as $booking) {
-            // نحسب المبلغ المستحق للحجز ده
-            $dueAmount = $booking->sale_price * $booking->rooms * $booking->days;
-            
-            // نشوف المدفوع قبل كده
-            $paidAmount = Payment::whereJsonContains('bookings_covered', $booking->id)
-                                ->sum('amount');
-            
-            // لو فيه مبلغ متبقي
-            $unpaidAmount = $dueAmount - $paidAmount;
-            if ($unpaidAmount > 0) {
-                if ($remainingAmount <= 0) break;
-
-                $paymentForThisBooking = min($remainingAmount, $unpaidAmount);
-                $remainingAmount -= $paymentForThisBooking;
-                $coveredBookings[] = $booking->id;
-            }
-        }
-
-        // نسجل الدفعة
+        // تسجيل الدفعة في جدول المدفوعات
         Payment::create([
-            'company_id' => $validated['company_id'],
-            'amount' => $validated['amount'],
-            'payment_date' => now(),
-            'notes' => $validated['notes'],
-            'bookings_covered' => $coveredBookings
+            'company_id' => $validated['company_id'], // الشركة المرتبطة
+            'amount' => $validated['amount'], // المبلغ المدفوع
+            'notes' => $validated['notes'] ?? null, // الملاحظات
+            'payment_date' => $validated['payment_date'] ?? now(), // تاريخ الدفع
         ]);
 
-        return redirect()->back()->with('success', 'تم تسجيل الدفعة بنجاح');
+        // رجوع للصفحة مع رسالة نجاح
+        return redirect()->back()->with('success', 'تم تسجيل الدفعة بنجاح!');
     }
 
     public function storeAgentPayment(Request $request)
     {
+        // التحقق من صحة البيانات اللي جاية من الفورم
         $validated = $request->validate([
-            'agent_id' => 'required|exists:agents,id',
-            'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string'
+            'agent_id' => 'required|exists:agents,id', // لازم جهة الحجز تكون موجودة
+            'amount' => 'required|numeric|min:0', // المبلغ لازم يكون رقم ومش أقل من صفر
+            'notes' => 'nullable|string', // الملاحظات اختيارية
         ]);
 
+        // تسجيل الدفعة في جدول AgentPayment
         $payment = AgentPayment::create([
-            'agent_id' => $validated['agent_id'],
-            'amount' => $validated['amount'],
-            'payment_date' => now(),
-            'notes' => $validated['notes']
+            'agent_id' => $validated['agent_id'], // جهة الحجز المرتبطة
+            'amount' => $validated['amount'], // المبلغ المدفوع
+            'payment_date' => now(), // تاريخ الدفع
+            'notes' => $validated['notes'], // الملاحظات
         ]);
 
+        // رجوع للصفحة مع رسالة نجاح
         return redirect()->back()->with('success', 'تم تسجيل الدفعة بنجاح');
+    }
+
+    // عرض سجل المدفوعات للشركات
+    public function companyPayments($id)
+    {
+        $company = Company::findOrFail($id);
+        $payments = Payment::where('company_id', $id)->orderBy('payment_date', 'desc')->get();
+
+        return view('reports.company_payments', compact('company', 'payments'));
+    }
+
+    // عرض سجل المدفوعات لجهات الحجز
+    public function agentPayments($id)
+    {
+        $agent = Agent::findOrFail($id);
+        $payments = AgentPayment::where('agent_id', $id)->orderBy('payment_date', 'desc')->get();
+
+        return view('reports.agent_payments', compact('agent', 'payments'));
+    }
+
+    public function editPayment($id)
+    {
+        $payment = AgentPayment::findOrFail($id);
+        return view('reports.edit_payment', compact('payment'));
+    }
+
+    public function updatePayment(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'notes' => 'nullable|string',
+        ]);
+            // جلب الدفعة وتحديثها
+        $payment = AgentPayment::findOrFail($id);
+        $payment->update($validated);
+
+        // إعادة تحميل العلاقات الخاصة بـ Agent
+    $agent = $payment->agent;
+    $agent->load('payments', 'bookings'); // إعادة تحميل العلاقات للتأكد من تحديث القيم الديناميكية
+
+    return redirect()->route('reports.agent.payments', $agent->id)
+                     ->with('success', 'تم تعديل الدفعة بنجاح!');
     }
 }

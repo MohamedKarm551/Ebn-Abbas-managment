@@ -17,9 +17,12 @@ class AgentPayment extends Model
         'payment_date' => 'datetime',
         'amount' => 'float'
     ];
-
+    
     public function agent()
     {
-        return $this->belongsTo(Agent::class);
+        return $this->belongsTo(Agent::class ,'agent_id');
+        // كل دفعة مرتبطة بجهة حجز واحدة
     }
+
+    
 }

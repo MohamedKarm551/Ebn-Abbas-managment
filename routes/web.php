@@ -53,6 +53,17 @@ Route::get('/reports/hotel/{id}/bookings', [ReportController::class, 'hotelBooki
 Route::post('/reports/company/payment', [ReportController::class, 'storePayment'])->name('reports.company.payment');
 Route::post('/reports/agent/payment', [ReportController::class, 'storeAgentPayment'])->name('reports.agent.payment');
 
+// عرض سجل المدفوعات للشركات
+Route::get('reports/company/{id}/payments', [ReportController::class, 'companyPayments'])->name('reports.company.payments');
+
+// عرض سجل المدفوعات لجهات الحجز
+Route::get('reports/agent/{id}/payments', [ReportController::class, 'agentPayments'])->name('reports.agent.payments');
+
+// تعديل الدفعات
+Route::get('reports/payment/{id}/edit', [ReportController::class, 'editPayment'])->name('reports.payment.edit');
+Route::put('reports/payment/{id}', [ReportController::class, 'updatePayment'])->name('reports.payment.update');
+Route::get('reports/agent/payment/{id}/edit', [ReportController::class, 'editPayment'])->name('reports.agent.payment.edit');
+
 Route::get('/', function () {
     return view('welcome');
 });
