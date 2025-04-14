@@ -147,6 +147,14 @@ class BookingsController extends Controller
         // `paginate(20)` يجلب 20 نتيجة لكل صفحة.
         // `withQueryString()` يضمن أن روابط الـ pagination تحتفظ بجميع بارامترات الفلترة الحالية (search, start_date, etc.).
         $bookings = $query->paginate(10)->withQueryString();
+        // فحص إذا كان الطلب AJAX
+    if ($request->wantsJson()) {
+        // إرجاع جزء HTML من الجدول وروابط الـ pagination
+        return response()->json([
+            'table' => view('bookings._table', ['bookings' => $bookings])->render(),
+            'pagination' => $bookings->links()->toHtml(),
+        ]);
+    }
 
         // --------------------------------------------------
         // 7. حساب الإجماليات (ملاحظة: قد يكون غير دقيق مع Pagination)
