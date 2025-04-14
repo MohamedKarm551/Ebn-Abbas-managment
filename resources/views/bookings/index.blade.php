@@ -16,7 +16,7 @@
         <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
         <div class="p-4 mb-4" style="background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ddd;">
             <h3 class="mb-3">عملية البحث والفلترة</h3>
-            <form method="GET" action="{{ route('bookings.index') }}">
+            <form id="filterForm" method="GET" action="{{ route('bookings.index') }}">
                 <div class="row align-items-center text-center">
                     <div class="col-md-4 mb-2">
                         <label for="search" class="form-label">بحث باسم العميل، الموظف، الشركة، جهة الحجز، أو
@@ -37,6 +37,8 @@
                 </div>
                 <div class="text-center mt-3">
                     <button type="submit" class="btn btn-primary">فلترة</button>
+                    {{-- زر إعادة التعيين لإلغاء الفلاتر --}}
+                    <a href="{{ route('bookings.index') }}" class="btn btn-outline-secondary">إعادة تعيين</a>
                 </div>
             </form>
         </div>
@@ -178,9 +180,9 @@
                             <td class="text-center align-middle">
                                 {{-- Notes Popover Implementation --}}
                                 @if (!empty($booking->notes))
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="popover"
-                                        data-bs-trigger="hover focus" {{-- Show on hover or focus --}} data-bs-placement="left"
-                                        data-bs-custom-class="notes-popover" title="الملاحظات"
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-bs-toggle="popover" data-bs-trigger="hover focus" {{-- Show on hover or focus --}}
+                                        data-bs-placement="left" data-bs-custom-class="notes-popover" title="الملاحظات"
                                         data-bs-content="{{ nl2br(e($booking->notes)) }}">
                                         <i class="fas fa-info-circle"></i> {{-- Font Awesome icon --}}
                                     </button>
@@ -214,81 +216,8 @@
             {{ $bookings->onEachSide(1)->links('vendor.pagination.bootstrap-4') }}
         </div>
 
-    @section('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script>
-            // كود النسخ
-            const copyBtn = document.getElementById('copyBtn');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', function() {
-                    let copyText = "تقرير الحجوزات\n\n";
-                    copyText += "إجماليات:\n";
-                    copyText += `عدد الحجوزات: {{ $bookings->count() }} حجز\n`;
-                    copyText += `إجمالي المستحق من الشركة: {{ $totalDueFromCompany }} ريال\n`;
-                    copyText += `إجمالي المدفوع من الشركة: {{ $totalPaidByCompany }} ريال\n`;
-                    copyText += `إجمالي المتبقي على الشركة: {{ $remainingFromCompany }} ريال\n\n`;
-
-                    copyText += "تفاصيل الحجوزات:\n";
-                    @foreach ($bookings as $booking)
-                        copyText += `------------------------------------------------\n`;
-                        copyText += `العميل: {{ $booking->client_name }}\n`;
-                        copyText += `تاريخ الدخول: {{ $booking->check_in->format('d/m/Y') }}\n`;
-                        copyText += `تاريخ الخروج: {{ $booking->check_out->format('d/m/Y') }}\n`;
-                        copyText += `عدد الأيام: {{ $booking->days }}\n`;
-                        copyText += `عدد الغرف: {{ $booking->rooms }}\n`;
-                        copyText += `المبلغ المستحق من الشركة: {{ $booking->amount_due_from_company }} ريال\n`;
-                        copyText += `المبلغ المدفوع من الشركة: {{ $booking->amount_paid_by_company }} ريال\n`;
-                    @endforeach
-
-                    navigator.clipboard.writeText(copyText).then(() => {
-                        alert('تم نسخ البيانات بنجاح!');
-                    }).catch(() => {
-                        alert('حدث خطأ أثناء نسخ البيانات');
-                    });
-                });
-            }
-
-            // كود تغيير نص الزر
-            const bookingDetails = document.getElementById('bookingDetails');
-            const toggleDetails = document.getElementById('toggleDetails');
-
-            if (bookingDetails && toggleDetails) {
-                bookingDetails.addEventListener('show.bs.collapse', function() {
-                    toggleDetails.textContent = 'غلق تفاصيل الحجوزات';
-                });
-
-                bookingDetails.addEventListener('hide.bs.collapse', function() {
-                    toggleDetails.textContent = 'عرض تفاصيل الحجوزات';
-                });
-            }
-        </script>
-    @endsection
-    @push('styles')
-        {{-- Optional: Add custom styles for the popover --}}
-        <style>
-            .notes-popover {
-                max-width: 350px;
-                /* Adjust max width */
-                font-size: 0.9rem;
-                /* Slightly smaller font */
-            }
-
-            .popover-body {
-                white-space: pre-wrap;
-                /* Preserve line breaks */
-                max-height: 200px;
-                /* Limit height and make scrollable if needed */
-                overflow-y: auto;
-            }
-
-            /* Ensure table cells have consistent vertical alignment */
-            .table td,
-            .table th {
-                vertical-align: middle;
-            }
-        </style>
-    @endpush
-
+ 
+  
     @push('scripts')
         <!-- بنستدعي مكتبة html2canvas اللي هتساعدنا نحول الجدول لصورة -->
         <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -352,6 +281,34 @@
             }
         </script>
     @endpush
+    @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> {{-- إضافة Axios --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterForm = document.getElementById('filterForm');
+            const bookingsTable = document.getElementById('bookingsTable'); // Assuming your table has this ID
+            const paginationContainer = document.querySelector('.d-flex.justify-content-center'); // Pagination container
+
+            filterForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // منع الإرسال التقليدي
+
+                const formData = new FormData(filterForm);
+                const params = new URLSearchParams(formData).toString(); // تحويل بيانات الفورم إلى query string
+
+                axios.get('{{ route('bookings.index') }}?' + params) // إرسال طلب AJAX
+                    .then(function(response) {
+                        // تحديث الجدول بالمحتوى الجديد
+                        bookingsTable.innerHTML = response.data.table; // Assuming the response contains the table HTML
+                        paginationContainer.innerHTML = response.data.pagination; // Update pagination links
+                    })
+                    .catch(function(error) {
+                        console.error('Error fetching data:', error);
+                        alert('حدث خطأ أثناء جلب البيانات.');
+                    });
+            });
+        });
+    </script>
+@endpush
 </div>
 
 @endsection
