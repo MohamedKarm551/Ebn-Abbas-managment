@@ -51,7 +51,10 @@
         </div>
         <div class="mb-3">
             <label for="room_type" class="form-label">نوع الغرفة</label>
-            <input type="text" class="form-control" id="room_type" name="room_type">
+            <input type="text" class="form-control @error('room_type') is-invalid @enderror" id="room_type" name="room_type" value="{{ old('room_type') }}" required>
+            @error('room_type')
+            <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
         </div>
         <div class="mb-3">
             <label for="check_in" class="form-label">تاريخ الدخول</label>

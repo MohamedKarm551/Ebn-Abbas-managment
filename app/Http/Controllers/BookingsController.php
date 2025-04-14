@@ -141,7 +141,7 @@ class BookingsController extends Controller
             'company_id' => 'required|exists:companies,id',
             'agent_id' => 'required|exists:agents,id',
             'hotel_id' => 'required|exists:hotels,id',
-            'room_type' => 'nullable|string|max:255',
+            'room_type' => 'required|string|max:255',
             'check_in' => 'required|date',
             'check_out' => 'required|date|after_or_equal:check_in',
             'rooms' => 'required|integer|min:1',
