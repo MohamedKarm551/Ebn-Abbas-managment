@@ -195,7 +195,7 @@
 
         <!-- عرض أزرار Pagination -->
         <div class="d-flex justify-content-center mt-4">
-            {{ $bookings->links() }}
+            {{ $bookings->onEachSide(1)->links('vendor.pagination.bootstrap-4') }}
         </div>
 
     @section('scripts')
