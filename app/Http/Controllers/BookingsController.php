@@ -67,11 +67,11 @@ class BookingsController extends Controller
         if ($request->filled('employee_id')) {
             $query->where('employee_id', $request->employee_id);
         }
+        // ترتيب حسب الأحدث
+        $query->orderBy('created_at', 'desc');
 
-        // ترتيب تصاعدي
-        $query->orderBy('check_in', 'asc');
-
-        $bookings = $query->get();
+        // إضافة Pagination
+        $bookings = $query->paginate(10); // 10 عناصر لكل صفحة
 
         // حساب الإجماليات
         $totalDueFromCompany = 0;
@@ -99,7 +99,8 @@ class BookingsController extends Controller
 
             return [
                 'client_name' => $booking->client_name,
-                'check_in' => $booking->check_in->format('d/m/Y'), 'check_out' => $booking->check_out->format('d/m/Y'),
+                'check_in' => $booking->check_in->format('d/m/Y'),
+                'check_out' => $booking->check_out->format('d/m/Y'),
                 'days' => $booking->days,
                 'rooms' => $booking->rooms,
                 'sale_price' => $booking->sale_price,
@@ -171,26 +172,26 @@ class BookingsController extends Controller
         $validatedData['days'] = $checkIn->diffInDays($checkOut);
 
         // حساب القيم المالية
-            // التحقق من القيم قبل الحساب
-    if ($validatedData['days'] <= 0 || $validatedData['rooms'] <= 0 || $validatedData['cost_price'] <= 0 || $validatedData['sale_price'] <= 0) {
-        return redirect()->back()
-            ->withInput()
-            ->withErrors(['calculation_error' => 'تأكد من إدخال قيم صحيحة للحساب']);
-    }
-    // حساب المبالغ
-    $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'] * $validatedData['days'];
-    $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $validatedData['days'];
+        // التحقق من القيم قبل الحساب
+        if ($validatedData['days'] <= 0 || $validatedData['rooms'] <= 0 || $validatedData['cost_price'] <= 0 || $validatedData['sale_price'] <= 0) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['calculation_error' => 'تأكد من إدخال قيم صحيحة للحساب']);
+        }
+        // حساب المبالغ
+        $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'] * $validatedData['days'];
+        $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $validatedData['days'];
 
-     // تتبع القيم المحسوبة
-     Log::info('القيم المحسوبة:', [
-        'amount_due_to_hotel' => $validatedData['amount_due_to_hotel'],
-        'amount_due_from_company' => $validatedData['amount_due_from_company'],
-    ]);
-    // dd($validatedData);
+        // تتبع القيم المحسوبة
+        Log::info('القيم المحسوبة:', [
+            'amount_due_to_hotel' => $validatedData['amount_due_to_hotel'],
+            'amount_due_from_company' => $validatedData['amount_due_from_company'],
+        ]);
+        // dd($validatedData);
         // إنشاء الحجز
         $booking = Booking::create($validatedData);
-    // تتبع القيم المحفوظة
-Log::info('القيم المحفوظة في قاعدة البيانات:', $booking->toArray());
+        // تتبع القيم المحفوظة
+        Log::info('القيم المحفوظة في قاعدة البيانات:', $booking->toArray());
         // تجهيز البيانات للباك اب
         $booking->load(['company', 'agent', 'hotel', 'employee']);
 
