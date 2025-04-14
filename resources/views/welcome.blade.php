@@ -260,17 +260,17 @@
         @if (Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
         @endif
-        <footer class="bg-light py-3 mt-4 border-top">
+        <footer class="py-3 mt-4 border-top">
             <div class="container text-center">
-                <p class="mb-0">
-                    :تم التطوير بواسطة 
+                <p class="mb-0 text-white">
+                    <span class="heart-icon">❤️</span> تم التطوير بواسطة 
                     <a href="https://github.com/MohamedKarm551" 
                        target="_blank" 
-                       class="text-decoration-none">
+                       class="text-decoration-none text-primary">
                         محمد كرم
                         <i class="bi bi-github"></i>
                     </a>
-                    ❤️
+                    <span class="heart-icon">❤️</span>
                 </p>
             </div>
         </footer>
@@ -300,6 +300,23 @@
                     background-position: 0% 50%;
                 }
             }
+            .heart-icon {
+        display: inline-block;
+        animation: spin-heart 2s linear infinite;
+        transform-origin: center; /* تحديد نقطة الدوران */
+    }
+
+    @keyframes spin-heart {
+        0% {
+            transform: rotateY(0deg); /* البداية */
+        }
+        50% {
+            transform: rotateY(180deg); /* منتصف الدوران (الظهر) */
+        }
+        100% {
+            transform: rotateY(360deg); /* العودة إلى الوجه */
+        }
+    }
         </style>
     </body>
 </html>
