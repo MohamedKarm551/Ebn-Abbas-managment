@@ -11,7 +11,7 @@
             {{-- <th>عدد الأيام</th> --}}
             <th class="text-center">غرف</th> {{-- اختصار "عدد الغرف" --}}
             @if (!request('company_id'))
-                <th style="120px;"> المستحق للفندق</th>
+                <th style="min-width: 120px;"> المستحق للفندق</th> {{-- Adjusted width --}}
                 {{-- <th>السداد مني للفندق</th> --}}
             @endif
             <th style="min-width: 120px;"> المستحق من الشركة</th>
@@ -52,10 +52,12 @@
                 <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
                 {{-- <td class="text-center align-middle">{{ $booking->days }}</td> --}}
                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
+                @if (!request('company_id')) {{-- Add the same condition here --}}
                 <td class="text-center align-middle"
                     title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق)">
                     {{ $booking->amount_due_to_hotel }}
                 </td>
+                @endif {{-- End the condition --}}
                 {{-- <td class="text-center align-middle">{{ $booking->amount_paid_to_hotel }}</td> --}}
                 <td class="text-center align-middle"
                     title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة)">
