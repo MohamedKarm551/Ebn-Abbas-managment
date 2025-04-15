@@ -452,8 +452,8 @@ class BookingsController extends Controller
             'check_in' => 'required|date_format:d/m/Y', // التحقق من صيغة يوم/شهر/سنة
             'check_out' => 'required|date_format:d/m/Y|after_or_equal:check_in',
             'rooms' => 'required|integer|min:1',
-            'cost_price' => 'required|numeric|min:0',
-            'sale_price' => 'required|numeric|min:0',
+            'cost_price' => 'required|numeric',// لو الحجز اتكنسل ادخل عدل السعر صفر هيقبل
+            'sale_price' => 'required|numeric', //لو الحجز اتكنسل دلوقت تعمل تعديل السعر بصفر
             'employee_id' => 'required|exists:employees,id',
             'notes' => 'nullable|string',
         ]);

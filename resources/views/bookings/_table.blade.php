@@ -1,5 +1,5 @@
-<table class="table table-bordered table-hover">
-    <thead class="table-dark"> {{-- Use a dark header for better contrast --}}
+<table class="table table-bordered table-hover table-striped">
+    <thead class="table-dark"> {{-- Use a dark header for better contrast striped يعني مخطط عشان العين تلاحظ كل صف لوحده بلون--}}
         <tr>
             <th class="text-center" style="width: 5%;">م</th>
             <th>العميل</th>
