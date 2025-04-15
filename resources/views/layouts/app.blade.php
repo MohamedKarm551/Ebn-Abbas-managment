@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة الحجوزات</title>
+    <title>@yield('title', 'نظام إدارة الحجوزات')</title>
+    @yield('favicon')
     {{-- تنسيق خاص لصفحة كل الحجوزات أنا رابطه بالصفحة هنا --}}
     <link rel="stylesheet" href="{{ asset('css/bookingsStyle.css') }}">
     <!-- إضافة Bootstrap RTL -->

@@ -115,99 +115,103 @@
             {{ $bookings->onEachSide(1)->links('vendor.pagination.bootstrap-4') }}
         </div>
 
- 
-  
-    @push('scripts')
-        <!-- بنستدعي مكتبة html2canvas اللي هتساعدنا نحول الجدول لصورة -->
-        <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-        <script>
-            // بنستني لما الصفحة تحمل كلها
-            document.addEventListener('DOMContentLoaded', function() {
-                var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-                var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
-                    return new bootstrap.Popover(popoverTriggerEl, {
-                        html: true // Allow HTML content in the popover (needed for nl2br)
-                    })
-                });
-                // بنجيب زرار التصوير من الصفحة
-                const captureBtn = document.getElementById('captureBtn');
 
-                // لما حد يدوس على الزرار
-                captureBtn.addEventListener('click', function() {
-                    // بنجيب الجدول اللي عايزين نصوره
-                    const element = document.getElementById('bookingsTable');
 
-                    // بنقول للمستخدم استنى شوية
-                    alert('جاري تجهيز الصورة، من فضلك انتظر...');
+        @push('scripts')
+            <!-- بنستدعي مكتبة html2canvas اللي هتساعدنا نحول الجدول لصورة -->
+            <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+            <script>
+                // بنستني لما الصفحة تحمل كلها
+                document.addEventListener('DOMContentLoaded', function() {
+                    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                    var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                        return new bootstrap.Popover(popoverTriggerEl, {
+                            html: true // Allow HTML content in the popover (needed for nl2br)
+                        })
+                    });
+                    // بنجيب زرار التصوير من الصفحة
+                    const captureBtn = document.getElementById('captureBtn');
 
-                    // بنحول الجدول لصورة
-                    html2canvas(element).then(canvas => {
-                        // بنعمل رابط وهمي عشان نحمل بيه الصورة
-                        const link = document.createElement('a');
-                        // بنحط اسم للملف
-                        link.download = 'تقرير-الحجوزات.png';
-                        // بنحول الصورة لصيغة يقدر المتصفح يفهمها
-                        link.href = canvas.toDataURL();
-                        // بنضغط على الرابط تلقائي عشان يبدأ التحميل
-                        link.click();
+                    // لما حد يدوس على الزرار
+                    captureBtn.addEventListener('click', function() {
+                        // بنجيب الجدول اللي عايزين نصوره
+                        const element = document.getElementById('bookingsTable');
+
+                        // بنقول للمستخدم استنى شوية
+                        alert('جاري تجهيز الصورة، من فضلك انتظر...');
+
+                        // بنحول الجدول لصورة
+                        html2canvas(element).then(canvas => {
+                            // بنعمل رابط وهمي عشان نحمل بيه الصورة
+                            const link = document.createElement('a');
+                            // بنحط اسم للملف
+                            link.download = 'تقرير-الحجوزات.png';
+                            // بنحول الصورة لصيغة يقدر المتصفح يفهمها
+                            link.href = canvas.toDataURL();
+                            // بنضغط على الرابط تلقائي عشان يبدأ التحميل
+                            link.click();
+                        });
                     });
                 });
-            });
 
-            function copyFilteredData() {
-                let copyText = "تقرير الحجوزات\n\n";
-                copyText += "إجماليات:\n";
-                copyText += `عدد الحجوزات: {{ $bookings->count() }} حجز\n`;
-                copyText += `إجمالي المستحق من الشركة: {{ $totalDueFromCompany }} ريال\n`;
-                copyText += `إجمالي المدفوع من الشركة: {{ $totalPaidByCompany }} ريال\n`;
-                copyText += `إجمالي المتبقي على الشركة: {{ $remainingFromCompany }} ريال\n\n`;
+                function copyFilteredData() {
+                    let copyText = "تقرير الحجوزات\n\n";
+                    copyText += "إجماليات:\n";
+                    copyText += `عدد الحجوزات: {{ $bookings->count() }} حجز\n`;
+                    copyText += `إجمالي المستحق من الشركة: {{ $totalDueFromCompany }} ريال\n`;
+                    copyText += `إجمالي المدفوع من الشركة: {{ $totalPaidByCompany }} ريال\n`;
+                    copyText += `إجمالي المتبقي على الشركة: {{ $remainingFromCompany }} ريال\n\n`;
 
-                copyText += "تفاصيل الحجوزات:\n";
-                @foreach ($bookings as $booking)
-                    copyText += `------------------------------------------------\n`;
-                    copyText += `العميل: {{ $booking->client_name }}\n`;
-                    copyText += `تاريخ الدخول: {{ $booking->check_in->format('d/m/Y') }}\n`;
-                    copyText += `تاريخ الخروج: {{ $booking->check_out->format('d/m/Y') }}\n`;
-                    copyText += `عدد الأيام: {{ $booking->days }}\n`;
-                    copyText += `عدد الغرف: {{ $booking->rooms }}\n`;
-                    copyText += `المبلغ المستحق من الشركة: {{ $booking->amount_due_from_company }} ريال\n`;
-                    copyText += `المبلغ المدفوع من الشركة: {{ $booking->amount_paid_by_company }} ريال\n`;
-                @endforeach
+                    copyText += "تفاصيل الحجوزات:\n";
+                    @foreach ($bookings as $booking)
+                        copyText += `------------------------------------------------\n`;
+                        copyText += `العميل: {{ $booking->client_name }}\n`;
+                        copyText += `تاريخ الدخول: {{ $booking->check_in->format('d/m/Y') }}\n`;
+                        copyText += `تاريخ الخروج: {{ $booking->check_out->format('d/m/Y') }}\n`;
+                        copyText += `عدد الأيام: {{ $booking->days }}\n`;
+                        copyText += `عدد الغرف: {{ $booking->rooms }}\n`;
+                        copyText += `المبلغ المستحق من الشركة: {{ $booking->amount_due_from_company }} ريال\n`;
+                        copyText += `المبلغ المدفوع من الشركة: {{ $booking->amount_paid_by_company }} ريال\n`;
+                    @endforeach
 
-                navigator.clipboard.writeText(copyText).then(() => {
-                    alert('تم نسخ البيانات بنجاح!');
-                });
-            }
-        </script>
-    @endpush
-    @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> {{-- إضافة Axios --}}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterForm = document.getElementById('filterForm');
-            const bookingsTable = document.getElementById('bookingsTable'); // Assuming your table has this ID
-            const paginationContainer = document.querySelector('.d-flex.justify-content-center'); // Pagination container
-
-            filterForm.addEventListener('submit', function(event) {
-                event.preventDefault(); // منع الإرسال التقليدي
-
-                const formData = new FormData(filterForm);
-                const params = new URLSearchParams(formData).toString(); // تحويل بيانات الفورم إلى query string
-
-                axios.get('{{ route('bookings.index') }}?' + params) // إرسال طلب AJAX
-                    .then(function(response) {
-                        // تحديث الجدول بالمحتوى الجديد
-                        bookingsTable.innerHTML = response.data.table; // Assuming the response contains the table HTML
-                        paginationContainer.innerHTML = response.data.pagination; // Update pagination links
-                    })
-                    .catch(function(error) {
-                        console.error('Error fetching data:', error);
-                        alert('حدث خطأ أثناء جلب البيانات.');
+                    navigator.clipboard.writeText(copyText).then(() => {
+                        alert('تم نسخ البيانات بنجاح!');
                     });
-            });
-        });
-    </script>
-@endpush
-</div>
+                }
+            </script>
+        @endpush
+        @push('scripts')
+            <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> {{-- إضافة Axios --}}
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const filterForm = document.getElementById('filterForm');
+                    const bookingsTable = document.getElementById('bookingsTable'); // Assuming your table has this ID
+                    const paginationContainer = document.querySelector(
+                    '.d-flex.justify-content-center'); // Pagination container
+
+                    filterForm.addEventListener('submit', function(event) {
+                        event.preventDefault(); // منع الإرسال التقليدي
+
+                        const formData = new FormData(filterForm);
+                        const params = new URLSearchParams(formData)
+                    .toString(); // تحويل بيانات الفورم إلى query string
+
+                        axios.get('{{ route('bookings.index') }}?' + params) // إرسال طلب AJAX
+                            .then(function(response) {
+                                // تحديث الجدول بالمحتوى الجديد
+                                bookingsTable.innerHTML = response.data
+                                .table; // Assuming the response contains the table HTML
+                                paginationContainer.innerHTML = response.data
+                                .pagination; // Update pagination links
+                            })
+                            .catch(function(error) {
+                                console.error('Error fetching data:', error);
+                                alert('حدث خطأ أثناء جلب البيانات.');
+                            });
+                    });
+                });
+            </script>
+        @endpush
+    </div>
 
 @endsection

@@ -83,43 +83,49 @@
                 <td> السعر من الفندق <i class="fas fa-money-bill-wave text-success"></i></td>
                 <td>{{ $booking->cost_price }} ريال</td>
             </tr>
-            <tr>
+            <!-- صف المستحق للفندق المحسوب ديناميكياً -->
+            <tr id="hotel-due-row">
                 <td>11</td>
+                <td>المستحق للفندق <i class="fas fa-hand-holding-usd text-info"></i></td>
+                <td id="hotel-due-value">{{ $total_nights * $booking->rooms * $booking->cost_price }} ريال</td>
+            </tr>
+            <tr>
+                <td>12</td>
                 <td> المبلغ المدفوع للفندق <i class="fas fa-money-check-alt text-primary"></i></td>
                 <td>{{ $booking->amount_paid_to_hotel }} ريال</td>
             </tr>
             <tr>
-                <td>12</td>
+                <td>13</td>
                 <td> الباقي للفندق <i class="fas fa-money-check text-danger"></i></td>
                 <td>{{ $booking->amount_due_to_hotel - $booking->amount_paid_to_hotel }} ريال</td>
             </tr>
             <tr>
-                <td>13</td>
+                <td>14</td>
                 <td> سعر البيع للشركة <i class="fas fa-tag text-warning"></i> </td>
                 <td>{{ $booking->sale_price }} ريال</td>
             </tr>
             <tr>
-                <td>14</td>
+                <td>15</td>
                 <td>المبلغ المستحق من الشركة <i class="fas fa-hand-holding-usd text-success"></i> </td>
                 <td>{{ $booking->amount_due_from_company }} ريال</td>
             </tr>
             <tr>
-                <td>15</td>
+                <td>16</td>
                 <td> المبلغ المدفوع من الشركة<i class="fas fa-wallet text-info"></i>  </td>
                 <td>{{ $booking->amount_paid_by_company }} ريال</td>
             </tr>
             <tr>
-                <td>16</td>
+                <td>17</td>
                 <td>الباقي من الشركة <i class="fas fa-balance-scale text-danger"></i> </td>
                 <td>{{ $booking->amount_due_from_company - $booking->amount_paid_by_company }} ريال</td>
             </tr>
             <tr>
-                <td>17</td>
+                <td>18</td>
                 <td> الموظف المسؤول <i class="fas fa-user text-primary"></i> </td>
                 <td>{{ $booking->employee->name ?? 'غير محدد' }}</td>
             </tr>
             <tr>
-                <td>18</td>
+                <td>19</td>
                 <td> الملاحظات <i class="fas fa-sticky-note text-warning"></i> </td>
                 <td>{{ $booking->notes }}</td>
             </tr>
@@ -345,6 +351,7 @@
                                 else if (title.includes('عدد الليالي')) emoji = '🌙';
                                 else if (title.includes('الأيام المتبقية حتى الخروج')) emoji = '⏳';
                                 else if (title.includes('السعر من الفندق')) emoji = '💵';
+                                else if (title.includes('المستحق للفندق')) emoji = '💶'; // إضافة إيموجي للمستحق للفندق
                                 else if (title.includes('المبلغ المدفوع للفندق')) emoji = '💳';
                                 else if (title.includes('الباقي للفندق')) emoji = '💸';
                                 else if (title.includes('سعر البيع للشركة')) emoji = '💵';
@@ -371,6 +378,7 @@
             });
         }
 
+        // عند الضغط على زر "calculate-total"
         document.getElementById('calculate-total').addEventListener('click', function () {
             let totalDueFromCompany = 0;
             let totalDueToHotel = 0;
@@ -391,9 +399,12 @@
             // حساب عدد الليالي الإجمالية
             let totalNights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
 
-            // حساب الإجمالي
-            totalDueFromCompany += nightsStayed * {{ $booking->rooms }} * {{ $booking->sale_price }};
-            totalDueToHotel += nightsStayed * {{ $booking->rooms }} * {{ $booking->cost_price }};
+            // حساب الإجمالي من الشركة والفندق
+            totalDueFromCompany = nightsStayed * {{ $booking->rooms }} * {{ $booking->sale_price }};
+            totalDueToHotel = nightsStayed * {{ $booking->rooms }} * {{ $booking->cost_price }};
+
+            // تحديث صف "المستحق للفندق" بالقيمة المحسوبة
+            document.getElementById('hotel-due-value').innerText = totalDueToHotel + ' ريال';
 
             // حساب المكسب
             profitPerNight = ({{ $booking->sale_price }} - {{ $booking->cost_price }}) * {{ $booking->rooms }};
@@ -408,9 +419,10 @@
             let remainingFromCompany = totalDueFromCompany - amountPaidByCompany;
             let remainingToHotel = totalDueToHotel - amountPaidToHotel;
 
-            // عرض المعادلة بالتفصيل
-            showAlert(`💲 الإجمالي حتى الآن: 💲
-ما لك من الشركة: ${nightsStayed} ليلة * ${ {{ $booking->rooms }} } غرفة * ${ {{ $booking->sale_price }} } سعر الليلة = ${totalDueFromCompany} ريال
+            // بناء رسالة التنبيه بالتفاصيل بما في ذلك المستحق للفندق
+            let alertMessage = `💲 الإجمالي حتى الآن: 💲
+            
+ما لك من الشركة: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة = ${totalDueFromCompany} ريال
 ما عليك للفندق: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق = ${totalDueToHotel} ريال
 
 💰 المكسب:
@@ -424,7 +436,9 @@
 
 ⚖️ المبالغ المتبقية:
 - المتبقي من الشركة: ${remainingFromCompany} ريال
-- المتبقي للفندق: ${remainingToHotel} ريال`, 'info');
+- المتبقي للفندق: ${remainingToHotel} ريال`;
+
+            showAlert(alertMessage, 'info');
         });
 
         function showAlert(message, type) {

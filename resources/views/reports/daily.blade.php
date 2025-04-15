@@ -1,5 +1,8 @@
 @extends('layouts.app')
-
+@section('title', 'التقارير اليومية')
+@section('favicon')
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/cover.jpg') }}">
+@endsection
 @section('content')
     <div class="container">
         <h1>التقرير اليومي - {{ \Carbon\Carbon::now()->format('d/m/Y') }}</h1>
@@ -29,7 +32,9 @@
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTable')">نسخ الجدول</button>
             </div>
             <div class="card-body">
-                <table class="table table-bordered" id="companiesTable">
+                <div class="table-responsive">
+
+                <table class="table table-bordered table-striped" id="companiesTable">
                     <thead>
                         <tr>
                             <th>الشركة</th>
@@ -49,17 +54,23 @@
                                 <td>{{ number_format($company->total_paid) }} ريال</td>
                                 <td>{{ number_format($company->remaining) }} ريال</td>
                                 <td>
+                                        <!-- بنستخدم div بتقسيم مرن علشان الأزرار تجي مترتبة ومتباعدة -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+        <!-- زر عرض الحجوزات مع مسافة margin-end -->
+
                                     <a href="{{ route('reports.company.bookings', $company->id) }}" class="btn btn-info btn-sm">عرض الحجوزات</a>
                                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#paymentModal{{ $company->id }}">
                                         تسجيل دفعة
                                     </button>
                                     <a href="{{ route('reports.company.payments', $company->id) }}" class="btn btn-primary btn-sm">عرض السجل</a>
+    </div>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
+        </div>
         </div>
 
         <!-- جدول جهات الحجز -->
@@ -69,7 +80,8 @@
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
             </div>
             <div class="card-body">
-                <table class="table table-bordered" id="agentsTable">
+                <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="agentsTable">
                     <thead>
                         <tr>
                             <th>جهة الحجز</th>
@@ -89,11 +101,16 @@
                             <td>{{ number_format($agent->total_paid) }}</td>
                             <td>{{ number_format($agent->remaining) }}</td>
                             <td>
+                                    <!-- بنستخدم div بتقسيم مرن علشان الأزرار تجي مترتبة ومتباعدة -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+        <!-- زر عرض الحجوزات مع مسافة margin-end -->
+
                                 <a href="{{ route('reports.agent.bookings', $agent->id) }}" class="btn btn-info btn-sm">عرض الحجوزات</a>
                                 <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#agentPaymentModal{{ $agent->id }}">
                                     تسجيل دفعة
                                 </button>
                                 <a href="{{ route('reports.agent.payments', $agent->id) }}" class="btn btn-primary btn-sm">عرض السجل</a>
+    </div>
                             </td>
                         </tr>
                         @endforeach
@@ -101,6 +118,7 @@
                 </table>
             </div>
         </div>
+    </div>
 
         <!-- نماذج تسجيل الدفعات لجهات الحجز -->
         @foreach($agentsReport as $agent)
@@ -194,7 +212,8 @@
                 <h3>حسابات الفنادق</h3>
             </div>
             <div class="card-body">
-                <table class="table table-bordered">
+                <div class="table-responsive">
+                <table class="table table-bordered table-striped">
                     <thead>
                         <tr>
                             <th>الفندق</th>
@@ -219,4 +238,31 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- إضافة تنسيقات CSS في القسم الخاص بالستيلات -->
+<style>
+  /* تنسيق الجدول على الشاشات الصغيرة */
+  @media (max-width: 768px) {
+      /* نعدل حجم الخط داخل الجدول عشان يكون أصغر ومناسب */
+      .table-responsive table {
+          font-size: 14px;
+      }
+      /* لو محتاجين نحدد عرض أدنى للجدول علشان تظهر الأعمدة كلها */
+      .table-responsive table {
+          min-width: 600px;
+      }
+      /* تقليل الحشوة في خلايا الجدول */
+      .table-responsive th,
+      .table-responsive td {
+          padding: 8px 5px;
+          text-align: center; /* أو اضبط حسب المطلوب */
+      }
+      /* ممكن تحاول تخلي عناوين الجدول تظهر بخط واضح وتكون محاذاة مركز */
+      .table-responsive thead th {
+          background: #f8f9fa;
+          font-weight: bold;
+      }
+  }
+</style>
 @endsection
