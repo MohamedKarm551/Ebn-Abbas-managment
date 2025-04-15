@@ -185,33 +185,251 @@
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
                     const filterForm = document.getElementById('filterForm');
-                    const bookingsTable = document.getElementById('bookingsTable'); // Assuming your table has this ID
-                    const paginationContainer = document.querySelector(
-                    '.d-flex.justify-content-center'); // Pagination container
+                    const bookingsTable = document.getElementById('bookingsTable');
+                    const paginationContainer = document.querySelector('.d-flex.justify-content-center.mt-4');
 
                     filterForm.addEventListener('submit', function(event) {
-                        event.preventDefault(); // منع الإرسال التقليدي
+                        event.preventDefault();
 
                         const formData = new FormData(filterForm);
-                        const params = new URLSearchParams(formData)
-                    .toString(); // تحويل بيانات الفورم إلى query string
+                        const params = new URLSearchParams(formData).toString();
 
-                        axios.get('{{ route('bookings.index') }}?' + params) // إرسال طلب AJAX
+                        axios.get('{{ route('bookings.index') }}?' + params)
                             .then(function(response) {
                                 // تحديث الجدول بالمحتوى الجديد
-                                bookingsTable.innerHTML = response.data
-                                .table; // Assuming the response contains the table HTML
-                                paginationContainer.innerHTML = response.data
-                                .pagination; // Update pagination links
+                                bookingsTable.innerHTML = response.data.table;
+                                
+                                // معالجة HTML الخاص بأزرار الصفحات بطريقة أفضل
+                                if (paginationContainer) {
+                                    // إنشاء عنصر مؤقت للتحليل
+                                    const tempDiv = document.createElement('div');
+                                    tempDiv.innerHTML = response.data.pagination.trim();
+                                    
+                                    // التأكد من أن العنصر المؤقت يحتوي على أزرار الصفحات
+                                    const newPagination = tempDiv.querySelector('ul.pagination');
+                                    
+                                    if (newPagination) {
+                                        // الحفاظ على div الحاوي وتغيير محتواه فقط
+                                        const currentPaginationUl = paginationContainer.querySelector('ul.pagination');
+                                        if (currentPaginationUl) {
+                                            currentPaginationUl.replaceWith(newPagination);
+                                        } else {
+                                            paginationContainer.innerHTML = '';
+                                            paginationContainer.appendChild(newPagination);
+                                        }
+                                    } else {
+                                        // إذا لم يكن هناك أزرار صفحات، قم بإفراغ الحاوي
+                                        paginationContainer.innerHTML = '';
+                                    }
+                                }
+                                
+                                // إعادة تهيئة popovers وأي عناصر Bootstrap أخرى
+                                var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                                var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                                    return new bootstrap.Popover(popoverTriggerEl, {
+                                        html: true
+                                    });
+                                });
                             })
                             .catch(function(error) {
                                 console.error('Error fetching data:', error);
                                 alert('حدث خطأ أثناء جلب البيانات.');
                             });
                     });
+
+                    // إضافة معالج لأزرار الصفحات التي تظهر بعد تحديث AJAX
+                    document.addEventListener('click', function(e) {
+                        const paginationLink = e.target.closest('.pagination a');
+                        if (paginationLink) {
+                            e.preventDefault();
+                            const url = paginationLink.href;
+                            
+                            axios.get(url)
+                                .then(function(response) {
+                                    bookingsTable.innerHTML = response.data.table;
+                                    
+                                    // نفس منطق تحديث الصفحات أعلاه
+                                    if (paginationContainer) {
+                                        const tempDiv = document.createElement('div');
+                                        tempDiv.innerHTML = response.data.pagination.trim();
+                                        
+                                        const newPagination = tempDiv.querySelector('ul.pagination');
+                                        
+                                        if (newPagination) {
+                                            const currentPaginationUl = paginationContainer.querySelector('ul.pagination');
+                                            if (currentPaginationUl) {
+                                                currentPaginationUl.replaceWith(newPagination);
+                                            } else {
+                                                paginationContainer.innerHTML = '';
+                                                paginationContainer.appendChild(newPagination);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // إعادة تهيئة popovers
+                                    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                                    var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                                        return new bootstrap.Popover(popoverTriggerEl, {
+                                            html: true
+                                        });
+                                    });
+                                })
+                                .catch(function(error) {
+                                    console.error('Error fetching page:', error);
+                                    alert('حدث خطأ أثناء جلب البيانات.');
+                                });
+                        }
+                    });
                 });
             </script>
         @endpush
+        @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> {{-- إضافة مكتبة Axios للتعامل مع طلبات HTTP --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ============= تعريف المتغيرات الأساسية =============
+            
+            // نموذج الفلترة: يحتوي على حقول البحث وحقول التاريخ
+            const filterForm = document.getElementById('filterForm');
+            
+            // حاوية جدول الحجوزات: العنصر الذي سيتم تحديثه بنتائج البحث
+            const bookingsTable = document.getElementById('bookingsTable');
+            
+            // حاوية أزرار التنقل بين الصفحات: تحتوي على أرقام الصفحات والأسهم
+            const paginationContainer = document.querySelector('.d-flex.justify-content-center.mt-4');
+
+
+            // ============= معالجة حدث تقديم نموذج الفلترة =============
+            
+            // عند الضغط على زر "فلترة" في النموذج
+            filterForm.addEventListener('submit', function(event) {
+                // منع السلوك الافتراضي لإرسال النموذج (تحميل الصفحة من جديد)
+                event.preventDefault();
+
+                // استخراج بيانات النموذج وتحويلها إلى سلسلة نصية للإرسال
+                const formData = new FormData(filterForm);
+                const params = new URLSearchParams(formData).toString();
+
+                // إرسال طلب GET باستخدام Axios إلى نفس مسار الصفحة مع إضافة معلمات البحث
+                axios.get('{{ route('bookings.index') }}?' + params)
+                    .then(function(response) {
+                        // ============= تحديث الجدول بالنتائج الجديدة =============
+                        
+                        // تحديث محتوى جدول الحجوزات بالبيانات المستلمة من الخادم
+                        bookingsTable.innerHTML = response.data.table;
+                        
+                        // ============= تحديث أزرار التنقل بين الصفحات بطريقة سليمة =============
+                        
+                        // التأكد من وجود حاوية أزرار التنقل قبل محاولة تحديثها
+                        if (paginationContainer) {
+                            // إنشاء عنصر DOM مؤقت في الذاكرة لتحليل HTML المستلم
+                            const tempDiv = document.createElement('div');
+                            // وضع HTML الخاص بأزرار التنقل في العنصر المؤقت بعد إزالة المسافات الزائدة
+                            tempDiv.innerHTML = response.data.pagination.trim();
+                            
+                            // البحث عن قائمة أزرار التنقل داخل العنصر المؤقت
+                            const newPagination = tempDiv.querySelector('ul.pagination');
+                            
+                            // إذا تم العثور على أزرار تنقل في البيانات المستلمة
+                            if (newPagination) {
+                                // البحث عن قائمة أزرار التنقل الحالية في الصفحة
+                                const currentPaginationUl = paginationContainer.querySelector('ul.pagination');
+                                
+                                // إذا كانت موجودة بالفعل، نستبدلها بالقائمة الجديدة
+                                if (currentPaginationUl) {
+                                    currentPaginationUl.replaceWith(newPagination);
+                                } else {
+                                    // إذا لم تكن موجودة، نفرغ الحاوية ثم نضيف القائمة الجديدة
+                                    paginationContainer.innerHTML = '';
+                                    paginationContainer.appendChild(newPagination);
+                                }
+                            } else {
+                                // إذا لم يكن هناك أزرار تنقل (مثلاً في حالة وجود صفحة واحدة)، نفرغ الحاوية
+                                paginationContainer.innerHTML = '';
+                            }
+                        }
+                        
+                        // ============= إعادة تهيئة عناصر Bootstrap التفاعلية =============
+                        
+                        // إعادة تهيئة tooltips الخاصة بـ Bootstrap (مثل popover)
+                        // هذه الخطوة ضرورية لأن العناصر الجديدة المضافة بواسطة JavaScript تحتاج لتهيئة
+                        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                        var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                            return new bootstrap.Popover(popoverTriggerEl, {
+                                html: true  // السماح بمحتوى HTML داخل الـ popover
+                            });
+                        });
+                    })
+                    .catch(function(error) {
+                        // طباعة أي خطأ في وحدة التحكم للمطور
+                        console.error('Error fetching data:', error);
+                        // عرض رسالة للمستخدم في حالة حدوث خطأ
+                        alert('حدث خطأ أثناء جلب البيانات.');
+                    });
+            });
+
+            // ============= معالجة النقر على أزرار التنقل بين الصفحات =============
+            
+            // إضافة مستمع أحداث على مستوى المستند للتعامل مع العناصر التي تضاف ديناميكياً
+            document.addEventListener('click', function(e) {
+                // البحث عن أقرب رابط داخل عناصر pagination تم النقر عليه أو داخله
+                const paginationLink = e.target.closest('.pagination a');
+                
+                // إذا تم العثور على رابط pagination، نعالج الحدث
+                if (paginationLink) {
+                    // منع السلوك الافتراضي للرابط (تحميل صفحة جديدة)
+                    e.preventDefault();
+                    // الحصول على عنوان URL الخاص بالرابط
+                    const url = paginationLink.href;
+                    
+                    // إرسال طلب GET باستخدام Axios إلى عنوان URL المحدد
+                    axios.get(url)
+                        .then(function(response) {
+                            // تحديث محتوى جدول الحجوزات
+                            bookingsTable.innerHTML = response.data.table;
+                            
+                            // ============= تحديث أزرار التنقل بين الصفحات =============
+                            // (نفس منطق التحديث المستخدم سابقاً)
+                            
+                            if (paginationContainer) {
+                                // إنشاء عنصر مؤقت لتحليل HTML المستلم
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = response.data.pagination.trim();
+                                
+                                // البحث عن أزرار التنقل في البيانات المستلمة
+                                const newPagination = tempDiv.querySelector('ul.pagination');
+                                
+                                // تحديث أو استبدال أزرار التنقل في الصفحة
+                                if (newPagination) {
+                                    const currentPaginationUl = paginationContainer.querySelector('ul.pagination');
+                                    if (currentPaginationUl) {
+                                        currentPaginationUl.replaceWith(newPagination);
+                                    } else {
+                                        paginationContainer.innerHTML = '';
+                                        paginationContainer.appendChild(newPagination);
+                                    }
+                                }
+                            }
+                            
+                            // إعادة تهيئة popovers
+                            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                            var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                                return new bootstrap.Popover(popoverTriggerEl, {
+                                    html: true
+                                });
+                            });
+                        })
+                        .catch(function(error) {
+                            // طباعة أي خطأ في وحدة التحكم للمطور
+                            console.error('Error fetching page:', error);
+                            // عرض رسالة للمستخدم في حالة حدوث خطأ
+                            alert('حدث خطأ أثناء جلب البيانات.');
+                        });
+                }
+            });
+        });
+    </script>
+@endpush
     </div>
 
 @endsection

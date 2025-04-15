@@ -35,9 +35,8 @@
                 <select class="form-control" id="agent_id" name="agent_id" required>
                     <option value="" disabled selected>اختر جهة الحجز</option>
                     @foreach ($agents as $agent)
-                        <option value="{{ $agent->id }}"
-                            {{ isset($booking) && $agent->id == $booking->agent_id ? 'selected' : '' }}>
-                            {{ $agent->name }}
+                        <option value="{{ $agent->id }}" {{ old('agent_id') == $agent->id ? 'selected' : '' }}>
+                            {{ isset($booking) && $agent->id == $booking->agent_id ? 'selected' : '' }}{{ $agent->name }}
                         </option>
                     @endforeach
                 </select>
@@ -47,10 +46,8 @@
                 <select class="form-control" id="hotel_id" name="hotel_id" required>
                     <option value="" disabled selected>اختر الفندق</option>
                     @foreach ($hotels as $hotel)
-                        <option value="{{ $hotel->id }}"
-                            {{ isset($booking) && $hotel->id == $booking->hotel_id ? 'selected' : '' }}>
-                            {{ $hotel->name }}
-                        </option>
+                        <option value="{{ $hotel->id }}" {{ old('hotel_id') == $hotel->id ? 'selected' : '' }}>
+                            {{ isset($booking) && $hotel->id == $booking->hotel_id ? 'selected' : '' }}{{ $hotel->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -119,7 +116,7 @@
             </div>
             <div class="mb-3">
                 <label for="notes" class="form-label">الملاحظات</label>
-                <textarea class="form-control" id="notes" name="notes"></textarea>
+                <textarea class="form-control" id="notes" name="notes">{{ old('notes') }}</textarea>
             </div>
             <button type="submit" class="btn btn-primary">إضافة الحجز</button>
         </form>
