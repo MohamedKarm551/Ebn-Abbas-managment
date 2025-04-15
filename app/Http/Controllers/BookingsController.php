@@ -44,72 +44,76 @@ class BookingsController extends Controller
             $query->where(function ($q) use ($searchTerm) {
                 // البحث في اسم العميل مباشرة في جدول الحجوزات.
                 $q->where('client_name', 'like', "%{$searchTerm}%")
-                  // البحث في اسم الموظف المرتبط (عبر العلاقة 'employee').
-                  ->orWhereHas('employee', function ($subQ) use ($searchTerm) {
-                      $subQ->where('name', 'like', "%{$searchTerm}%");
-                  })
-                  // البحث في اسم الشركة المرتبطة (عبر العلاقة 'company').
-                  ->orWhereHas('company', function ($subQ) use ($searchTerm) {
-                      $subQ->where('name', 'like', "%{$searchTerm}%");
-                  })
-                  // البحث في اسم جهة الحجز المرتبطة (عبر العلاقة 'agent').
-                  ->orWhereHas('agent', function ($subQ) use ($searchTerm) {
-                      $subQ->where('name', 'like', "%{$searchTerm}%");
-                  })
-                  // البحث في اسم الفندق المرتبط (عبر العلاقة 'hotel').
-                  ->orWhereHas('hotel', function ($subQ) use ($searchTerm) {
-                      $subQ->where('name', 'like', "%{$searchTerm}%");
-                  });
+                    // البحث في اسم الموظف المرتبط (عبر العلاقة 'employee').
+                    ->orWhereHas('employee', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    })
+                    // البحث في اسم الشركة المرتبطة (عبر العلاقة 'company').
+                    ->orWhereHas('company', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    })
+                    // البحث في اسم جهة الحجز المرتبطة (عبر العلاقة 'agent').
+                    ->orWhereHas('agent', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    })
+                    // البحث في اسم الفندق المرتبط (عبر العلاقة 'hotel').
+                    ->orWhereHas('hotel', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    });
             });
         }
 
         // --------------------------------------------------
-        // 3. تطبيق فلتر تاريخ البدء (إذا كان موجودًا وصحيحًا)
+        // 3 & 4. تطبيق فلترة التواريخ (بالمنطق الجديد)
         // --------------------------------------------------
-        // نتحقق مما إذا كان حقل 'start_date' يحتوي على قيمة.
-        if ($request->filled('start_date')) {
+        $startDate = null;
+        $endDate = null;
+        $startDateFilled = $request->filled('start_date');
+        $endDateFilled = $request->filled('end_date');
+
+        // بنحاول نقرا التواريخ لو موجودة
+        if ($startDateFilled) {
             try {
-                // نحاول تحويل التاريخ القادم من الفورم (المتوقع أن يكون بصيغة 'd/m/Y')
-                // إلى كائن Carbon ثم إلى صيغة 'Y-m-d' التي تفهمها قاعدة البيانات.
-                // نستخدم `startOfDay` لضمان أن المقارنة تشمل بداية اليوم المحدد.
                 $startDate = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
-
-                // نضيف شرط `whereDate` إلى الاستعلام الحالي.
-                // هذا الشرط يضمن أن تاريخ الدخول 'check_in' أكبر من أو يساوي تاريخ البدء المحدد.
-                // `whereDate` يقارن جزء التاريخ فقط من العمود.
-                $query->whereDate('check_in', '>=', $startDate);
-
+                Log::info('[فلتر التواريخ] تاريخ البداية المطلوب: ' . $startDate->toDateString());
             } catch (\Exception $e) {
-                // في حالة فشل تحويل التاريخ (صيغة غير صحيحة)، نسجل الخطأ.
-                // يمكن اختياريًا إعادة المستخدم للخلف مع رسالة خطأ.
-                Log::error('Invalid start date format: ' . $request->input('start_date') . ' - ' . $e->getMessage());
-                // return redirect()->back()->withErrors(['start_date' => 'صيغة تاريخ البدء غير صحيحة.']);
+                Log::error('[فلتر التواريخ] تنسيق تاريخ البداية غير صحيح: ' . $request->input('start_date') . ' - ' . $e->getMessage());
+                $startDateFilled = false; // بنعتبره مش موجود لو التنسيق غلط
             }
         }
-
-        // --------------------------------------------------
-        // 4. تطبيق فلتر تاريخ الانتهاء (إذا كان موجودًا وصحيحًا)
-        // --------------------------------------------------
-        // نتحقق مما إذا كان حقل 'end_date' يحتوي على قيمة.
-        if ($request->filled('end_date')) {
+        if ($endDateFilled) {
             try {
-                // نحاول تحويل التاريخ القادم من الفورم (المتوقع أن يكون بصيغة 'd/m/Y')
-                // إلى كائن Carbon ثم إلى صيغة 'Y-m-d'.
-                // نستخدم `endOfDay` لضمان أن المقارنة تشمل نهاية اليوم المحدد.
-                $endDate = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
-
-                // نضيف شرط `whereDate` إلى الاستعلام الحالي.
-                // هذا الشرط يضمن أن تاريخ الدخول 'check_in' (أو 'check_out' حسب المنطق المطلوب)
-                // أصغر من أو يساوي تاريخ الانتهاء المحدد.
-                // *** ملاحظة: الكود الأصلي كان يستخدم 'check_out'، تم تغييره إلى 'check_in' ليتوافق مع فلتر تاريخ البدء. عدّله إذا كان المقصود فلترة تاريخ الخروج. ***
-                $query->whereDate('check_in', '<=', $endDate);
-
+                $endDate = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay(); // بنستخدم endOfDay هنا عشان يشمل اليوم كله
+                Log::info('[فلتر التواريخ] تاريخ النهاية المطلوب: ' . $endDate->toDateString());
             } catch (\Exception $e) {
-                // في حالة فشل تحويل التاريخ، نسجل الخطأ.
-                Log::error('Invalid end date format: ' . $request->input('end_date') . ' - ' . $e->getMessage());
-                // return redirect()->back()->withErrors(['end_date' => 'صيغة تاريخ الانتهاء غير صحيحة.']);
+                Log::error('[فلتر التواريخ] تنسيق تاريخ النهاية غير صحيح: ' . $request->input('end_date') . ' - ' . $e->getMessage());
+                $endDateFilled = false; // بنعتبره مش موجود لو التنسيق غلط
             }
         }
+
+        // بنطبق الفلترة حسب الحالات المختلفة
+        if ($startDateFilled && $endDateFilled) {
+            // *** الحالة 1: المستخدم دخل تاريخ بداية ونهاية (المنطق الجديد للأوفرلاب) ***
+            Log::info('[فلتر التواريخ] تطبيق فلتر الأوفرلاب من ' . $startDate->toDateString() . ' إلى ' . $endDate->toDateString());
+        
+            // الشرط الأول: تاريخ بداية الحجز يكون قبل أو يساوي نهاية الفترة
+            $query->whereDate('check_in', '<=', $endDate);
+        
+            // الشرط الثاني: تاريخ نهاية الحجز يكون بعد أو يساوي بداية الفترة
+            $query->whereDate('check_out', '>=', $startDate);
+        
+        } elseif ($startDateFilled) { // <--- بداية الحالة التانية (دي متغيرة)
+            // *** الحالة 2: المستخدم دخل تاريخ بداية بس (عايزين اللي بدأ في اليوم ده بالظبط) ***
+            Log::info('[فلتر التواريخ] تطبيق فلتر تاريخ الدخول = ' . $startDate->toDateString());
+            $query->whereDate('check_in', '=', $startDate);
+        
+        } elseif ($endDateFilled) { // <--- بداية الحالة التالتة (دي متغيرة)
+            // *** الحالة 3: المستخدم دخل تاريخ نهاية بس (عايزين اللي خلص في اليوم ده بالظبط) ***
+            Log::info('[فلتر التواريخ] تطبيق فلتر تاريخ الخروج = ' . $endDate->toDateString());
+            $query->whereDate('check_out', '=', $endDate->startOfDay()); // بنقارن بتاريخ اليوم بس
+        }
+        
+     
 
         // --------------------------------------------------
         // 5. تطبيق فلاتر إضافية (حسب الحاجة)
@@ -148,13 +152,18 @@ class BookingsController extends Controller
         // `withQueryString()` يضمن أن روابط الـ pagination تحتفظ بجميع بارامترات الفلترة الحالية (search, start_date, etc.).
         $bookings = $query->paginate(10)->withQueryString();
         // فحص إذا كان الطلب AJAX
-    if ($request->wantsJson()) {
-        // إرجاع جزء HTML من الجدول وروابط الـ pagination
-        return response()->json([
-            'table' => view('bookings._table', ['bookings' => $bookings])->render(),
-            'pagination' => $bookings->links()->toHtml(),
-        ]);
-    }
+        if ($request->wantsJson() || $request->ajax()) {
+            // الحفاظ على معلمات البحث في روابط الصفحات وتحديد قالب bootstrap-4 بشكل صريح
+            $paginationLinks = $bookings->appends($request->all())
+                ->onEachSide(1)
+                ->links('vendor.pagination.bootstrap-4')
+                ->toHtml();
+
+            return response()->json([
+                'table' => view('bookings._table', ['bookings' => $bookings])->render(),
+                'pagination' => $paginationLinks
+            ]);
+        }
 
         // --------------------------------------------------
         // 7. حساب الإجماليات (ملاحظة: قد يكون غير دقيق مع Pagination)
@@ -452,7 +461,7 @@ class BookingsController extends Controller
             'check_in' => 'required|date_format:d/m/Y', // التحقق من صيغة يوم/شهر/سنة
             'check_out' => 'required|date_format:d/m/Y|after_or_equal:check_in',
             'rooms' => 'required|integer|min:1',
-            'cost_price' => 'required|numeric',// لو الحجز اتكنسل ادخل عدل السعر صفر هيقبل
+            'cost_price' => 'required|numeric', // لو الحجز اتكنسل ادخل عدل السعر صفر هيقبل
             'sale_price' => 'required|numeric', //لو الحجز اتكنسل دلوقت تعمل تعديل السعر بصفر
             'employee_id' => 'required|exists:employees,id',
             'notes' => 'nullable|string',
