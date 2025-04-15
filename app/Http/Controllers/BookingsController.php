@@ -95,25 +95,23 @@ class BookingsController extends Controller
         if ($startDateFilled && $endDateFilled) {
             // *** الحالة 1: المستخدم دخل تاريخ بداية ونهاية (المنطق الجديد للأوفرلاب) ***
             Log::info('[فلتر التواريخ] تطبيق فلتر الأوفرلاب من ' . $startDate->toDateString() . ' إلى ' . $endDate->toDateString());
-        
+
             // الشرط الأول: تاريخ بداية الحجز يكون قبل أو يساوي نهاية الفترة
             $query->whereDate('check_in', '<=', $endDate);
-        
+
             // الشرط الثاني: تاريخ نهاية الحجز يكون بعد أو يساوي بداية الفترة
             $query->whereDate('check_out', '>=', $startDate);
-        
         } elseif ($startDateFilled) { // <--- بداية الحالة التانية (دي متغيرة)
             // *** الحالة 2: المستخدم دخل تاريخ بداية بس (عايزين اللي بدأ في اليوم ده بالظبط) ***
             Log::info('[فلتر التواريخ] تطبيق فلتر تاريخ الدخول = ' . $startDate->toDateString());
             $query->whereDate('check_in', '=', $startDate);
-        
         } elseif ($endDateFilled) { // <--- بداية الحالة التالتة (دي متغيرة)
             // *** الحالة 3: المستخدم دخل تاريخ نهاية بس (عايزين اللي خلص في اليوم ده بالظبط) ***
             Log::info('[فلتر التواريخ] تطبيق فلتر تاريخ الخروج = ' . $endDate->toDateString());
             $query->whereDate('check_out', '=', $endDate->startOfDay()); // بنقارن بتاريخ اليوم بس
         }
-        
-     
+
+
 
         // --------------------------------------------------
         // 5. تطبيق فلاتر إضافية (حسب الحاجة)
@@ -147,9 +145,37 @@ class BookingsController extends Controller
         // يمكنك تغيير حقل الترتيب والاتجاه حسب الحاجة (مثل 'created_at').
         $query->orderBy('created_at', 'desc');
 
-        // ننفذ الاستعلام ونجلب النتائج باستخدام `paginate`.
-        // `paginate(20)` يجلب 20 نتيجة لكل صفحة.
-        // `withQueryString()` يضمن أن روابط الـ pagination تحتفظ بجميع بارامترات الفلترة الحالية (search, start_date, etc.).
+        // ==================================================
+        // *** بداية الكود الجديد لحساب الإجماليات الدقيقة ***
+        // ==================================================
+        // 1. بنعمل نسخة من الاستعلام قبل الـ pagination
+        $queryForTotals = clone $query;
+
+        // 2. بنحسب الإجماليات على النسخة دي
+        $totalCount = $queryForTotals->count();
+        // **مهم:** تأكد إن أسماء الأعمدة دي صح في جدول bookings
+        $totalDueFromCompanyAccurate = $queryForTotals->sum('amount_due_from_company') ?? 0;
+        $totalPaidByCompanyAccurate = $queryForTotals->sum('amount_paid_by_company') ?? 0;
+        $remainingFromCompanyAccurate = $totalDueFromCompanyAccurate - $totalPaidByCompanyAccurate;
+
+        // 3. بنحسب إجماليات الفنادق بس لو مش بنفلتر بشركة
+        $totalDueToHotelsAccurate = 0;
+        $totalPaidToHotelsAccurate = 0;
+        $remainingToHotelsAccurate = 0;
+        if (!$request->filled('company_id')) {
+            // **مهم:** تأكد إن أسماء الأعمدة دي صح في جدول bookings
+            $totalDueToHotelsAccurate = $queryForTotals->sum('amount_due_to_hotel') ?? 0;
+            $totalPaidToHotelsAccurate = $queryForTotals->sum('amount_paid_to_hotel') ?? 0;
+            $remainingToHotelsAccurate = $totalDueToHotelsAccurate - $totalPaidToHotelsAccurate;
+        }
+
+        // 4. (اختياري) بنسجل الإجماليات في الـ log عشان نتأكد
+        Log::info('[الإجماليات المحسوبة قبل Paginate] العدد: ' . $totalCount . ', مستحق من الشركة: ' . $totalDueFromCompanyAccurate);
+        // ==================================================
+        // *** نهاية الكود الجديد لحساب الإجماليات الدقيقة ***
+        // ==================================================
+
+
         $bookings = $query->paginate(10)->withQueryString();
         // فحص إذا كان الطلب AJAX
         if ($request->wantsJson() || $request->ajax()) {
@@ -161,7 +187,17 @@ class BookingsController extends Controller
 
             return response()->json([
                 'table' => view('bookings._table', ['bookings' => $bookings])->render(),
-                'pagination' => $paginationLinks
+                'pagination' => $paginationLinks,
+                'totals' => [ // بنضيف مفتاح جديد اسمه totals
+                    'count' => $totalCount,
+                    'due_from_company' => $totalDueFromCompanyAccurate,
+                    'paid_by_company' => $totalPaidByCompanyAccurate,
+                    'remaining_from_company' => $remainingFromCompanyAccurate,
+                    // بنرجع إجماليات الفنادق بس لو اتحسبت (يعني مش بنفلتر بشركة)
+                    'due_to_hotels' => $request->filled('company_id') ? null : $totalDueToHotelsAccurate,
+                    'paid_to_hotels' => $request->filled('company_id') ? null : $totalPaidToHotelsAccurate,
+                    'remaining_to_hotels' => $request->filled('company_id') ? null : $remainingToHotelsAccurate,
+                ]
             ]);
         }
 
@@ -170,51 +206,7 @@ class BookingsController extends Controller
         // --------------------------------------------------
         // *** تحذير: الكود التالي يحسب الإجماليات بناءً على نتائج الصفحة الحالية فقط (`$bookings`) وليس على كامل نتائج الاستعلام قبل الـ pagination. ***
         // *** للحصول على إجماليات دقيقة لكل النتائج المطابقة للفلاتر، يجب حسابها باستخدام `$query` قبل استدعاء `paginate` أو باستخدام استعلامات aggregate منفصلة. ***
-        $totalDueFromCompany = 0;
-        $totalPaidByCompany = 0;
-        $remainingFromCompany = 0;
-
-        $totalDueToHotels = 0;
-        $totalPaidToHotels = 0;
-        $remainingToHotels = 0;
-
-        // يتم استخدام `map` للمرور على حجوزات الصفحة الحالية وحساب التفاصيل والإجماليات (للصفحة الحالية فقط).
-        $bookingDetails = $bookings->map(function ($booking) use (&$totalDueFromCompany, &$totalPaidByCompany, &$remainingFromCompany, &$totalDueToHotels, &$totalPaidToHotels, &$remainingToHotels) {
-            // حساب المستحق من الشركة لهذا الحجز
-            $dueFromCompany = $booking->days * $booking->rooms * $booking->sale_price;
-            $paidByCompany = $booking->amount_paid_by_company;
-            $remainingFromCompany += $dueFromCompany - $paidByCompany;
-
-            // حساب المستحق للفندق لهذا الحجز
-            $dueToHotel = $booking->days * $booking->rooms * $booking->cost_price;
-            $paidToHotel = $booking->amount_paid_to_hotel;
-            $remainingToHotels += $dueToHotel - $paidToHotel;
-
-            // تجميع الإجماليات (للصفحة الحالية)
-            $totalDueFromCompany += $dueFromCompany;
-            $totalPaidByCompany += $paidByCompany;
-
-            $totalDueToHotels += $dueToHotel;
-            $totalPaidToHotels += $paidToHotel;
-
-            // إرجاع مصفوفة بتفاصيل الحجز المحسوبة (اختياري، حسب حاجة الفيو)
-            return [
-                'id' => $booking->id, // إضافة ID للاستخدام في الفيو
-                'client_name' => $booking->client_name,
-                'check_in' => $booking->check_in->format('d/m/Y'),
-                'check_out' => $booking->check_out->format('d/m/Y'),
-                'days' => $booking->days,
-                'rooms' => $booking->rooms,
-                'sale_price' => $booking->sale_price,
-                'cost_price' => $booking->cost_price,
-                'due_from_company' => $dueFromCompany,
-                'paid_by_company' => $paidByCompany,
-                'remaining_from_company' => $dueFromCompany - $paidByCompany,
-                'due_to_hotel' => $dueToHotel,
-                'paid_to_hotel' => $paidToHotel,
-                'remaining_to_hotel' => $dueToHotel - $paidToHotel,
-            ];
-        });
+       
 
         // --------------------------------------------------
         // 8. تمرير البيانات إلى الفيو
@@ -223,16 +215,17 @@ class BookingsController extends Controller
         // - `$bookings`: كائن الـ Paginator الذي يحتوي على حجوزات الصفحة الحالية وروابط الصفحات الأخرى.
         // - الإجماليات المحسوبة (للصفحة الحالية).
         // - `$bookingDetails`: مجموعة التفاصيل المحسوبة (اختياري).
-        return view('bookings.index', compact(
-            'bookings', // كائن الـ Paginator
-            'totalDueFromCompany',
-            'totalPaidByCompany',
-            'remainingFromCompany',
-            'totalDueToHotels',
-            'totalPaidToHotels',
-            'remainingToHotels',
-            'bookingDetails'
-        ));
+        return view('bookings.index', [
+            'bookings' => $bookings, // كائن الـ Paginator
+            'totalBookingsCount' => $totalCount, // العدد الكلي
+            'totalDueFromCompany' => $totalDueFromCompanyAccurate,
+            'totalPaidByCompany' => $totalPaidByCompanyAccurate,
+            'remainingFromCompany' => $remainingFromCompanyAccurate,
+            'totalDueToHotels' => $totalDueToHotelsAccurate, // هتبقى صفر لو فلترنا بشركة
+            'totalPaidToHotels' => $totalPaidToHotelsAccurate, // هتبقى صفر لو فلترنا بشركة
+            'remainingToHotels' => $remainingToHotelsAccurate, // هتبقى صفر لو فلترنا بشركة
+            // ممكن تشيل 'bookingDetails' لو مش بتستخدمها في الفيو بعد ما شيلنا الـ map
+        ]);
     }
 
     public function create()

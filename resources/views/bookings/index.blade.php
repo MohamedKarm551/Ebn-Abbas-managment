@@ -41,6 +41,21 @@
                     <a href="{{ route('bookings.index') }}" class="btn btn-outline-secondary">إعادة تعيين</a>
                 </div>
             </form>
+
+            {{-- حقول مخفية لتخزين الإجماليات عشان الجافاسكريبت يقراها --}}
+            <input type="hidden" id="hidden-total-count" value="{{ $totalBookingsCount ?? 0 }}">
+            <input type="hidden" id="hidden-total-due-from-company" value="{{ $totalDueFromCompany ?? 0 }}">
+            <input type="hidden" id="hidden-total-paid-by-company" value="{{ $totalPaidByCompany ?? 0 }}">
+            <input type="hidden" id="hidden-total-remaining-from-company" value="{{ $remainingFromCompany ?? 0 }}">
+            {{-- بنضيف حقول الفنادق بس لو مش بنفلتر بشركة --}}
+            @if (!request('company_id'))
+                <input type="hidden" id="hidden-total-due-to-hotels" value="{{ $totalDueToHotels ?? 0 }}">
+                <input type="hidden" id="hidden-total-paid-to-hotels" value="{{ $totalPaidToHotels ?? 0 }}">
+                <input type="hidden" id="hidden-total-remaining-to-hotels" value="{{ $remainingToHotels ?? 0 }}">
+            @endif
+
+
+
         </div>
 
         <!-- لو في فلترة شغالة (يعني اختار شركة أو فندق أو جهة حجز) هنظهر التفاصيل دي -->
@@ -118,360 +133,273 @@
 
 
         @push('scripts')
-            <!-- بنستدعي مكتبة html2canvas اللي هتساعدنا نحول الجدول لصورة -->
+            {{-- 1. بنستدعي مكتبة Axios --}}
+            <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+            {{-- 2. بنستدعي مكتبة html2canvas --}}
             <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+            {{-- 3. الكود الأساسي بتاعنا --}}
             <script>
-                // بنستني لما الصفحة تحمل كلها
-                document.addEventListener('DOMContentLoaded', function() {
-                    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                // ==========================================================
+                // دالة تهيئة مكونات Bootstrap (زي الـ Popovers)
+                // ==========================================================
+                function initBootstrapComponents() {
+                    console.log('بنهيئ مكونات Bootstrap...');
+                    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
                     var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
-                        return new bootstrap.Popover(popoverTriggerEl, {
-                            html: true // Allow HTML content in the popover (needed for nl2br)
-                        })
-                    });
-                    // بنجيب زرار التصوير من الصفحة
+                        // بنتأكد إن الـ popover مش متفعل قبل كده
+                        if (!bootstrap.Popover.getInstance(popoverTriggerEl)) {
+                            return new bootstrap.Popover(popoverTriggerEl, {
+                                html: true
+                            });
+                        }
+                        return null;
+                    }).filter(Boolean); // بنشيل الـ nulls
+                }
+
+                // ==========================================================
+                // دالة تصوير الجدول باستخدام html2canvas
+                // ==========================================================
+                function captureTableImage() {
+                    const element = document.getElementById('bookingsTable'); // الـ div اللي جواه الجدول
                     const captureBtn = document.getElementById('captureBtn');
-
-                    // لما حد يدوس على الزرار
-                    captureBtn.addEventListener('click', function() {
-                        // بنجيب الجدول اللي عايزين نصوره
-                        const element = document.getElementById('bookingsTable');
-
-                        // بنقول للمستخدم استنى شوية
-                        alert('جاري تجهيز الصورة، من فضلك انتظر...');
-
-                        // بنحول الجدول لصورة
-                        html2canvas(element).then(canvas => {
-                            // بنعمل رابط وهمي عشان نحمل بيه الصورة
-                            const link = document.createElement('a');
-                            // بنحط اسم للملف
-                            link.download = 'تقرير-الحجوزات.png';
-                            // بنحول الصورة لصيغة يقدر المتصفح يفهمها
-                            link.href = canvas.toDataURL();
-                            // بنضغط على الرابط تلقائي عشان يبدأ التحميل
-                            link.click();
-                        });
-                    });
-                });
-
-                function copyFilteredData() {
-                    let copyText = "تقرير الحجوزات\n\n";
-                    copyText += "إجماليات:\n";
-                    copyText += `عدد الحجوزات: {{ $bookings->count() }} حجز\n`;
-                    copyText += `إجمالي المستحق من الشركة: {{ $totalDueFromCompany }} ريال\n`;
-                    copyText += `إجمالي المدفوع من الشركة: {{ $totalPaidByCompany }} ريال\n`;
-                    copyText += `إجمالي المتبقي على الشركة: {{ $remainingFromCompany }} ريال\n\n`;
-
-                    copyText += "تفاصيل الحجوزات:\n";
-                    @foreach ($bookings as $booking)
-                        copyText += `------------------------------------------------\n`;
-                        copyText += `العميل: {{ $booking->client_name }}\n`;
-                        copyText += `تاريخ الدخول: {{ $booking->check_in->format('d/m/Y') }}\n`;
-                        copyText += `تاريخ الخروج: {{ $booking->check_out->format('d/m/Y') }}\n`;
-                        copyText += `عدد الأيام: {{ $booking->days }}\n`;
-                        copyText += `عدد الغرف: {{ $booking->rooms }}\n`;
-                        copyText += `المبلغ المستحق من الشركة: {{ $booking->amount_due_from_company }} ريال\n`;
-                        copyText += `المبلغ المدفوع من الشركة: {{ $booking->amount_paid_by_company }} ريال\n`;
-                    @endforeach
-
-                    navigator.clipboard.writeText(copyText).then(() => {
-                        alert('تم نسخ البيانات بنجاح!');
-                    });
-                }
-            </script>
-        @endpush
-        @push('scripts')
-        {{-- 1. بنستدعي مكتبة Axios عشان نبعت طلبات للـ Controller من غير ما الصفحة تحمل --}}
-        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
-        {{-- 2. بنستدعي مكتبة html2canvas عشان ناخد صورة من الجدول --}}
-        <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    
-        {{-- 3. الكود الأساسي بتاعنا --}}
-        <script>
-            // ==========================================================
-            // دالة عشان نهيئ مكونات Bootstrap زي الـ Popovers
-            // بنعملها هنا عشان نقدر نستدعيها أكتر من مرة
-            // ==========================================================
-            function initBootstrapComponents() {
-                console.log('بنهيئ مكونات Bootstrap...'); // رسالة عشان نتأكد إنها شغالة
-    
-                // بنجيب كل العناصر اللي عليها popover
-                var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-    
-                // بنلف على كل عنصر ونفعل الـ popover بتاعه
-                var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
-                    // بنتأكد الأول إن الـ popover ده مش متفعل قبل كده عشان ميحصلش تكرار أو مشاكل
-                    if (!bootstrap.Popover.getInstance(popoverTriggerEl)) {
-                        // لو مش متفعل، بنفعله وبنسمح بمحتوى HTML جواه
-                        return new bootstrap.Popover(popoverTriggerEl, {
-                            html: true
-                        });
+                    if (!element || !captureBtn) {
+                        alert('مش لاقي الجدول أو زرار التصوير!');
+                        return;
                     }
-                    return null; // لو متفعل قبل كده، بنرجع null
-                }).filter(Boolean); // بنشيل أي null من النتيجة عشان يبقى عندنا قايمة بالـ popovers الجديدة بس
-    
-                // ممكن نضيف هنا تهيئة لأي مكونات تانية زي tooltips لو محتاجين
-                // مثال: var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                // var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) });
-            }
-    
-            // ==========================================================
-            // دالة عشان ناخد صورة من الجدول ونحملها
-            // ==========================================================
-            function captureTableImage() {
-                // بنجيب الجدول اللي عايزين نصوره
-                const element = document.getElementById('bookingsTable');
-                // بنجيب الزرار عشان نغير شكله مؤقتاً
-                const captureBtn = document.getElementById('captureBtn');
-    
-                // بنتأكد إن الجدول موجود
-                if (!element) {
-                    alert('مش لاقي الجدول عشان أصوره!');
-                    return;
-                }
-                // بنتأكد إن الزرار موجود
-                if (!captureBtn) {
-                     alert('مش لاقي زرار التصوير!');
-                     return;
-                }
-    
-                // بنغير نص الزرار ونخليه غير قابل للضغط مؤقتاً
-                const originalBtnText = captureBtn.innerText;
-                captureBtn.innerText = 'جاري التجهيز...';
-                captureBtn.disabled = true;
-    
-                // بنقول للمستخدم يستنى
-                console.log('جاري تجهيز الصورة...');
-    
-                // بنستخدم مكتبة html2canvas عشان نحول الجدول لصورة
-                html2canvas(element, {
-                    scale: 2, // ممكن نزود الجودة شوية
-                    useCORS: true // لو فيه صور خارجية في الجدول
-                }).then(canvas => {
-                    // بنعمل رابط وهمي عشان نحمل بيه الصورة
-                    const link = document.createElement('a');
-                    // بنحط اسم للملف
-                    link.download = 'تقرير-الحجوزات-' + new Date().toISOString().slice(0, 10) + '.png'; // بنضيف تاريخ اليوم للاسم
-                    // بنحول الصورة لصيغة يقدر المتصفح يفهمها
-                    link.href = canvas.toDataURL('image/png'); // بنحدد الصيغة png
-                    // بنضغط على الرابط تلقائي عشان يبدأ التحميل
-                    link.click();
-    
-                    // بنرجع الزرار لحالته الطبيعية بعد ما التحميل يخلص (أو يحصل خطأ)
-                    captureBtn.innerText = originalBtnText;
-                    captureBtn.disabled = false;
-                    console.log('تم تحميل الصورة بنجاح.');
-    
-                }).catch(err => {
-                    // لو حصل خطأ بنعرضه في الكونسول ونرجع الزرار لحالته
-                    console.error('خطأ أثناء تصوير الجدول:', err);
-                    alert('حصل خطأ أثناء تجهيز الصورة.');
-                    captureBtn.innerText = originalBtnText;
-                    captureBtn.disabled = false;
-                });
-            }
-    
-            // ==========================================================
-            // دالة عشان ننسخ بيانات الفلترة (لو موجودة)
-            // ==========================================================
-            function copyFilteredData() {
-                // بنجهز النص اللي هيتنسخ
-                let copyText = "تقرير الحجوزات (فلترة)\n\n";
-                copyText += "إجماليات:\n";
-                // بنجيب القيم من الـ Blade (لازم تكون القيم دي موجودة في الصفحة لما الفلترة تشتغل)
-                copyText += `عدد الحجوزات: {{ isset($bookings) ? $bookings->count() : 0 }} حجز\n`; // بنتأكد إن المتغير موجود
-                copyText += `إجمالي المستحق من الشركة: {{ isset($totalDueFromCompany) ? $totalDueFromCompany : 0 }} ريال\n`;
-                copyText += `إجمالي المدفوع من الشركة: {{ isset($totalPaidByCompany) ? $totalPaidByCompany : 0 }} ريال\n`;
-                copyText += `إجمالي المتبقي على الشركة: {{ isset($remainingFromCompany) ? $remainingFromCompany : 0 }} ريال\n`;
-                @if (!request('company_id')) // بنضيف الإجماليات دي لو مش بنفلتر بشركة معينة
-                    copyText += `إجمالي المستحق للفنادق: {{ isset($totalDueToHotels) ? $totalDueToHotels : 0 }} ريال\n`;
-                    copyText += `إجمالي المدفوع للفنادق: {{ isset($totalPaidToHotels) ? $totalPaidToHotels : 0 }} ريال\n`;
-                    copyText += `إجمالي المتبقي للفنادق: {{ isset($remainingToHotels) ? $remainingToHotels : 0 }} ريال\n`;
-                @endif
-                copyText += "\n";
-    
-                copyText += "تفاصيل الحجوزات (لو معروضة):\n";
-                // بنجيب تفاصيل الحجوزات من الجزء اللي بيظهر ويختفي (لو موجود)
-                const bookingDetailsContainer = document.getElementById('bookingDetails');
-                if (bookingDetailsContainer && bookingDetailsContainer.classList.contains('show')) { // بنتأكد إنه ظاهر
-                    // بنلف على كل تفصيلة حجز جوه الـ div
-                    bookingDetailsContainer.querySelectorAll('.border-bottom').forEach(bookingDiv => {
-                        copyText += `------------------------------------------------\n`;
-                        // بنجيب كل برجراف جواه ونضيفه للنص
-                        bookingDiv.querySelectorAll('p').forEach(p => {
-                            copyText += p.innerText.trim() + '\n'; // بناخد النص بس وبنشيل المسافات الزيادة
-                        });
+                    const originalBtnText = captureBtn.innerText;
+                    captureBtn.innerText = 'جاري التجهيز...';
+                    captureBtn.disabled = true;
+                    console.log('جاري تجهيز الصورة...');
+
+                    html2canvas(element, {
+                        scale: 2,
+                        useCORS: true
+                    }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = 'تقرير-الحجوزات-' + new Date().toISOString().slice(0, 10) + '.png';
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        captureBtn.innerText = originalBtnText;
+                        captureBtn.disabled = false;
+                        console.log('تم تحميل الصورة بنجاح.');
+                    }).catch(err => {
+                        console.error('خطأ أثناء تصوير الجدول:', err);
+                        alert('حصل خطأ أثناء تجهيز الصورة.');
+                        captureBtn.innerText = originalBtnText;
+                        captureBtn.disabled = false;
                     });
-                } else {
-                    copyText += "(التفاصيل غير معروضة حالياً)\n";
                 }
-    
-    
-                // بنستخدم الـ Clipboard API عشان ننسخ النص
-                navigator.clipboard.writeText(copyText).then(() => {
-                    alert('تم نسخ بيانات الفلترة بنجاح!');
-                }).catch(err => {
-                    console.error('خطأ أثناء نسخ البيانات:', err);
-                    alert('فشل نسخ البيانات.');
-                });
-            }
-    
-    
-            // ==========================================================
-            // الكود الأساسي اللي بيشتغل لما الصفحة تحمل
-            // ==========================================================
-            document.addEventListener('DOMContentLoaded', function() {
-    
-                // --- 1. تعريف المتغيرات اللي هنستخدمها كتير ---
-                const filterForm = document.getElementById('filterForm'); // الفورم بتاع الفلترة
-                const bookingsTableContainer = document.getElementById('bookingsTable'); // الـ div اللي جواه الجدول
-                const paginationContainer = document.querySelector('.d-flex.justify-content-center.mt-4'); // الـ div اللي جواه أزرار الصفحات
-                const captureBtn = document.getElementById('captureBtn'); // زرار التصوير
-                const copyBtn = document.getElementById('copyBtn'); // زرار النسخ (لو موجود)
-    
-                // --- 2. تهيئة مكونات Bootstrap أول ما الصفحة تفتح ---
-                initBootstrapComponents();
-    
-                // --- 3. إضافة حدث لزرار التصوير (لو موجود) ---
-                if (captureBtn) {
-                    captureBtn.addEventListener('click', captureTableImage);
+
+                // ==========================================================
+                // دالة تحديث قيم الحقول المخفية بتاعة الإجماليات
+                // ==========================================================
+                function updateHiddenTotals(totals) {
+                    const countEl = document.getElementById('hidden-total-count');
+                    const dueCompanyEl = document.getElementById('hidden-total-due-from-company');
+                    const paidCompanyEl = document.getElementById('hidden-total-paid-by-company');
+                    const remainingCompanyEl = document.getElementById('hidden-total-remaining-from-company');
+                    const dueHotelsEl = document.getElementById('hidden-total-due-to-hotels');
+                    const paidHotelsEl = document.getElementById('hidden-total-paid-to-hotels');
+                    const remainingHotelsEl = document.getElementById('hidden-total-remaining-to-hotels');
+
+                    // بنحدث القيم لو العناصر موجودة والبيانات موجودة
+                    if (countEl && totals.count !== undefined) countEl.value = totals.count;
+                    if (dueCompanyEl && totals.due_from_company !== undefined) dueCompanyEl.value = totals.due_from_company;
+                    if (paidCompanyEl && totals.paid_by_company !== undefined) paidCompanyEl.value = totals.paid_by_company;
+                    if (remainingCompanyEl && totals.remaining_from_company !== undefined) remainingCompanyEl.value = totals
+                        .remaining_from_company;
+
+                    // بنحدث قيم الفنادق بس لو العناصر موجودة والبيانات موجودة (مش null)
+                    if (dueHotelsEl && totals.due_to_hotels !== null && totals.due_to_hotels !== undefined) dueHotelsEl.value =
+                        totals.due_to_hotels;
+                    if (paidHotelsEl && totals.paid_to_hotels !== null && totals.paid_to_hotels !== undefined) paidHotelsEl.value =
+                        totals.paid_to_hotels;
+                    if (remainingHotelsEl && totals.remaining_to_hotels !== null && totals.remaining_to_hotels !== undefined)
+                        remainingHotelsEl.value = totals.remaining_to_hotels;
+
+                    console.log('تم تحديث الإجماليات المخفية.');
                 }
-    
-                 // --- 4. إضافة حدث لزرار النسخ (لو موجود) ---
-                 // لاحظ: زرار النسخ ده معمول عليه onclick في الـ HTML، فمش محتاجين نضيف event listener هنا
-                 // بس لو شيلت الـ onclick من الـ HTML، ممكن تضيف الكود ده:
-                 // if (copyBtn) {
-                 //     copyBtn.addEventListener('click', copyFilteredData);
-                 // }
-    
-    
-                // --- 5. دالة موحدة عشان نجيب البيانات بالـ AJAX ---
+
+                // ==========================================================
+                // دالة نسخ بيانات الفلترة (بتقرا من الحقول المخفية)
+                // ==========================================================
+                function copyFilteredData() {
+                    let copyText = "تقرير الحجوزات (فلترة)\n\n";
+                    copyText += "إجماليات:\n";
+
+                    // *** بنقرا القيم من الحقول المخفية ***
+                    const totalCount = document.getElementById('hidden-total-count')?.value ?? 0;
+                    const totalDueFromCompany = document.getElementById('hidden-total-due-from-company')?.value ?? 0;
+                    const totalPaidByCompany = document.getElementById('hidden-total-paid-by-company')?.value ?? 0;
+                    const remainingFromCompany = document.getElementById('hidden-total-remaining-from-company')?.value ?? 0;
+
+                    copyText += `عدد الحجوزات: ${totalCount} حجز\n`;
+                    copyText += `إجمالي المستحق من الشركة: ${totalDueFromCompany} ريال\n`;
+                    copyText += `إجمالي المدفوع من الشركة: ${totalPaidByCompany} ريال\n`;
+                    copyText += `إجمالي المتبقي على الشركة: ${remainingFromCompany} ريال\n`;
+
+                    // بنجيب عناصر الفنادق المخفية
+                    const dueHotelsEl = document.getElementById('hidden-total-due-to-hotels');
+                    const paidHotelsEl = document.getElementById('hidden-total-paid-to-hotels');
+                    const remainingHotelsEl = document.getElementById('hidden-total-remaining-to-hotels');
+
+                    // بنضيف إجماليات الفنادق بس لو الحقول بتاعتها موجودة (يعني مش بنفلتر بشركة)
+                    if (dueHotelsEl && paidHotelsEl && remainingHotelsEl) {
+                        const totalDueToHotels = dueHotelsEl.value ?? 0;
+                        const totalPaidToHotels = paidHotelsEl.value ?? 0;
+                        const remainingToHotels = remainingHotelsEl.value ?? 0;
+                        copyText += `إجمالي المستحق للفنادق: ${totalDueToHotels} ريال\n`;
+                        copyText += `إجمالي المدفوع للفنادق: ${totalPaidToHotels} ريال\n`;
+                        copyText += `إجمالي المتبقي للفنادق: ${remainingToHotels} ريال\n`;
+                    }
+                    copyText += "\n";
+
+                    copyText += "تفاصيل الحجوزات (غير مدعومة حالياً في النسخ بعد الفلترة)\n";
+
+                    // بنستخدم الـ Clipboard API عشان ننسخ النص
+                    navigator.clipboard.writeText(copyText).then(() => {
+                        alert('تم نسخ إجماليات الفلترة بنجاح!');
+                    }).catch(err => {
+                        console.error('خطأ أثناء نسخ البيانات:', err);
+                        alert('فشل نسخ البيانات.');
+                    });
+                }
+
+                // ==========================================================
+                // دالة جلب البيانات بالـ AJAX (بتحدث الجدول والصفحات والإجماليات)
+                // ==========================================================
                 function fetchData(url) {
-                    console.log('بنجيب بيانات من:', url); // رسالة عشان نعرف إنه بيطلب بيانات
-    
-                    // بنستخدم Axios عشان نبعت طلب GET للـ URL ده
+                    console.log('بنجيب بيانات من:', url);
+                    // بنعرف المتغيرات دي جوه الدالة عشان نضمن إنها بتجيب العناصر الحالية بعد التحديث
+                    const bookingsTableContainer = document.getElementById('bookingsTable');
+                    const paginationContainer = document.querySelector('.d-flex.justify-content-center.mt-4');
+
                     axios.get(url, {
-                            headers: { // بنضيف الهيدر ده عشان Laravel يعرف إنه طلب AJAX
+                            headers: {
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
                         })
                         .then(function(response) {
-                            console.log('البيانات وصلت:', response.data); // بنشوف البيانات اللي رجعت
-    
+                            console.log('البيانات وصلت:', response.data);
+
                             // أ. تحديث محتوى الجدول
-                            if (bookingsTableContainer && response.data.table !== undefined) { // بنتأكد إن العنصر موجود وإن البيانات رجعت
+                            if (bookingsTableContainer && response.data.table !== undefined) {
                                 bookingsTableContainer.innerHTML = response.data.table;
                             } else {
                                 console.warn('مش لاقي حاوية الجدول أو بيانات الجدول مرجعتش.');
                             }
-    
+
                             // ب. تحديث أزرار التنقل بين الصفحات
-                            if (paginationContainer && response.data.pagination !== undefined) { // بنتأكد إن العنصر موجود وإن البيانات رجعت
-                                // بنعمل عنصر div مؤقت عشان نحلل الـ HTML اللي راجع
+                            if (paginationContainer && response.data.pagination !== undefined) {
                                 const tempDiv = document.createElement('div');
-                                tempDiv.innerHTML = response.data.pagination.trim(); // بنحط الـ HTML جواه
-    
-                                // بندور على قايمة الـ pagination جوه العنصر المؤقت
+                                tempDiv.innerHTML = response.data.pagination.trim();
                                 const newPagination = tempDiv.querySelector('ul.pagination');
-    
                                 if (newPagination) {
-                                    // لو لقينا قايمة جديدة، بنبدل القديمة بيها أو بنضيفها لو مفيش قديمة
                                     const currentPaginationUl = paginationContainer.querySelector('ul.pagination');
                                     if (currentPaginationUl) {
-                                        currentPaginationUl.replaceWith(newPagination); // بنبدل القديمة بالجديدة
+                                        currentPaginationUl.replaceWith(newPagination);
                                     } else {
-                                        paginationContainer.innerHTML = ''; // بنفضي الحاوية الأول
-                                        paginationContainer.appendChild(newPagination); // بنضيف الجديدة
+                                        paginationContainer.innerHTML = '';
+                                        paginationContainer.appendChild(newPagination);
                                     }
                                     console.log('تم تحديث أزرار الصفحات.');
                                 } else {
-                                    // لو مرجعش pagination (يعني صفحة واحدة أو مفيش نتايج)، بنفضي الحاوية
-                                    paginationContainer.innerHTML = '';
+                                    paginationContainer.innerHTML = ''; // مفيش صفحات جديدة، بنفضي الحاوية
                                     console.log('مفيش أزرار صفحات، الحاوية فضيت.');
                                 }
                             } else {
-                                 console.warn('مش لاقي حاوية أزرار الصفحات أو بيانات الصفحات مرجعتش.');
-                                 // لو الحاوية موجودة بس مفيش بيانات، نفضيها برضه احتياطي
-                                 if(paginationContainer) paginationContainer.innerHTML = '';
+                                console.warn('مش لاقي حاوية أزرار الصفحات أو بيانات الصفحات مرجعتش.');
+                                if (paginationContainer) paginationContainer.innerHTML = ''; // بنفضيها احتياطي
                             }
-    
-                            // ج. إعادة تهيئة مكونات Bootstrap (زي الـ Popovers) بعد ما ضفنا عناصر جديدة للصفحة
+
+                            // *** ج. تحديث الإجماليات المخفية ***
+                            if (response.data.totals) { // بنتأكد إن الـ Controller بعت الإجماليات
+                                updateHiddenTotals(response.data.totals);
+                            } else {
+                                console.warn('الإجماليات لم يتم إرجاعها في استجابة الـ AJAX.');
+                            }
+
+                            // د. إعادة تهيئة مكونات Bootstrap (زي الـ Popovers) بعد التحديث
                             initBootstrapComponents();
-    
                         })
                         .catch(function(error) {
-                            // لو حصل أي خطأ في الطلب بنعرضه في الكونسول ونقول للمستخدم
                             console.error('خطأ في جلب البيانات:', error.response || error.message || error);
                             alert('حصل مشكلة واحنا بنجيب البيانات. حاول تاني أو شوف الكونسول.');
                         });
                 }
-    
-    
-                // --- 6. إضافة حدث لنموذج الفلترة (لو موجود) ---
-                if (filterForm) {
-                    filterForm.addEventListener('submit', function(event) {
-                        event.preventDefault(); // بنمنع الفورم إنه يعمل تحميل للصفحة
-    
-                        // بنجهز بيانات الفورم عشان نبعتها في الـ URL
-                        const formData = new FormData(filterForm);
-                        // بنشيل أي قيم فاضية عشان الـ URL ميبقاش طويل عالفاضي
-                        const params = new URLSearchParams();
-                        formData.forEach((value, key) => {
-                            if (value) { // بنضيف بس لو فيه قيمة
-                                params.append(key, value);
-                            }
-                        });
-                        const queryString = params.toString();
-    
-                        // بنكون الـ URL الجديد بالفلترة
-                        const filterUrl = '{{ route('bookings.index') }}' + (queryString ? '?' + queryString : ''); // بنضيف علامة الاستفهام بس لو فيه باراميترز
-    
-                        // بنستخدم الـ History API عشان نغير الـ URL في المتصفح من غير تحميل
-                        // ده بيخلي المستخدم يقدر يعمل bookmark للفلترة أو يستخدم زرار الـ back
-                        window.history.pushState({ path: filterUrl }, '', filterUrl);
-    
-                        // بنستدعي الدالة اللي بتجيب البيانات بالـ URL الجديد
-                        fetchData(filterUrl);
-                    });
-                }
-    
-    
-                // --- 7. إضافة حدث للنقر على أزرار التنقل بين الصفحات (Pagination) ---
-                // بنستخدم event delegation عشان نصطاد النقرات على الأزرار حتى لو اتضافت بعد تحميل الصفحة
-                document.addEventListener('click', function(e) {
-                    // بنشوف هل العنصر اللي اتداس عليه (أو أبوه المباشر) هو رابط جوه الـ pagination
-                    const paginationLink = e.target.closest('.pagination a');
-    
-                    // لو هو رابط pagination
-                    if (paginationLink) {
-                        e.preventDefault(); // بنمنع الرابط إنه يفتح صفحة جديدة
-    
-                        // بنجيب الـ URL بتاع الرابط اللي اتداس عليه
-                        const url = paginationLink.href;
-    
-                        // بنستخدم الـ History API عشان نغير الـ URL في المتصفح
-                        window.history.pushState({ path: url }, '', url);
-    
-                        // بنستدعي الدالة اللي بتجيب البيانات بالـ URL الجديد بتاع الصفحة المطلوبة
-                        fetchData(url);
+
+                // ==========================================================
+                // الكود الأساسي اللي بيشتغل لما الصفحة تحمل (DOMContentLoaded)
+                // ==========================================================
+                document.addEventListener('DOMContentLoaded', function() {
+
+                    // --- 1. تعريف المتغيرات الأساسية ---
+                    const filterForm = document.getElementById('filterForm');
+                    const captureBtn = document.getElementById('captureBtn');
+                    // مش محتاجين نعرف copyBtn هنا طالما بنستخدم onclick في الـ HTML
+
+                    // --- 2. تهيئة Bootstrap أول مرة ---
+                    initBootstrapComponents();
+
+                    // --- 3. إضافة حدث لزرار التصوير ---
+                    if (captureBtn) {
+                        captureBtn.addEventListener('click', captureTableImage);
                     }
-                });
-    
-                 // --- 8. التعامل مع زرار الـ Back/Forward في المتصفح ---
-                 window.addEventListener('popstate', function(event) {
-                    // لما المستخدم يدوس back أو forward، بنجيب الـ URL من الـ state أو الـ location
-                    const url = event.state ? event.state.path : location.href;
-                    console.log('زرار الـ Back/Forward اتداس، بنجيب بيانات:', url);
-                    // بنستدعي الدالة اللي بتجيب البيانات بالـ URL ده
-                    fetchData(url);
-                });
-    
-            }); // نهاية الـ DOMContentLoaded
-        </script>
-    @endpush
-    
-      
+
+                    // --- 4. إضافة حدث لنموذج الفلترة ---
+                    if (filterForm) {
+                        filterForm.addEventListener('submit', function(event) {
+                            event.preventDefault(); // بنمنع تحميل الصفحة
+                            const formData = new FormData(filterForm);
+                            const params = new URLSearchParams();
+                            // بنشيل القيم الفاضية
+                            formData.forEach((value, key) => {
+                                if (value) {
+                                    params.append(key, value);
+                                }
+                            });
+                            const queryString = params.toString();
+                            const filterUrl = '{{ route('bookings.index') }}' + (queryString ? '?' + queryString :
+                                '');
+                            // بنحدث الـ URL في المتصفح
+                            window.history.pushState({
+                                path: filterUrl
+                            }, '', filterUrl);
+                            // بنجيب البيانات الجديدة بالـ AJAX
+                            fetchData(filterUrl);
+                        });
+                    }
+
+                    // --- 5. إضافة حدث للنقر على أزرار الـ Pagination (باستخدام Event Delegation) ---
+                    document.addEventListener('click', function(e) {
+                        const paginationLink = e.target.closest('.pagination a');
+                        if (paginationLink) {
+                            e.preventDefault(); // بنمنع تحميل الصفحة
+                            const url = paginationLink.href;
+                            // بنحدث الـ URL في المتصفح
+                            window.history.pushState({
+                                path: url
+                            }, '', url);
+                            // بنجيب بيانات الصفحة الجديدة بالـ AJAX
+                            fetchData(url);
+                        }
+                    });
+
+                    // --- 6. التعامل مع زرار الـ Back/Forward ---
+                    window.addEventListener('popstate', function(event) {
+                        // بنجيب الـ URL من الـ state أو الـ location الحالي
+                        const url = event.state ? event.state.path : location.href;
+                        console.log('زرار الـ Back/Forward اتداس، بنجيب بيانات:', url);
+                        // بنجيب البيانات بالـ AJAX
+                        fetchData(url);
+                    });
+
+                }); // نهاية الـ DOMContentLoaded
+            </script>
+        @endpush
+
     </div>
 
 @endsection
