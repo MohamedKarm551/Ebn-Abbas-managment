@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
+use App\Models\Booking;
+use App\Models\ArchivedBooking; // <--- 1. نضيف ArchivedBooking
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB; // <--- 2. نضيف DB
+use Illuminate\Support\Facades\Log; // <--- 3. نضيف Log
 
 class HotelController extends Controller
 {

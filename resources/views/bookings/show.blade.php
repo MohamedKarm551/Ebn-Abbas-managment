@@ -1,4 +1,7 @@
 @extends('layouts.app')
+{{-- *** بداية الكود الجديد: تحديد عنوان الصفحة *** --}}
+@section('title', 'تفاصيل حجز: ' . $booking->client_name)
+{{-- *** نهاية الكود الجديد *** --}}
 
 <head>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">

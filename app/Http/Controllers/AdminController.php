@@ -5,7 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Company;
 use App\Models\Agent;
+use App\Models\Hotel;
+use App\Models\Booking;
+use App\Models\ArchivedBooking; // <--- 2. نضيف ArchivedBooking
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
@@ -128,4 +133,6 @@ class AdminController extends Controller
 
         return redirect()->route('admin.agents')->with('success', 'تم حذف جهة الحجز بنجاح!');
     }
+
+    
 }

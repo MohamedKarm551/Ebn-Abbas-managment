@@ -43,6 +43,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::delete('/hotels/{id}', [HotelController::class, 'destroy'])->name('deleteHotel');
     Route::get('/hotels/{id}/edit', [HotelController::class, 'edit'])->name('editHotel'); // مسار صفحة التعديل
     Route::put('/hotels/{id}', [HotelController::class, 'update'])->name('updateHotel'); // مسار التحديث
+    // مسار صفحة الأرشيف:
+    // Route::get('/archived-bookings', [AdminController::class, 'showArchivedBookings'])->name('archived_bookings');
 });
 
 // إضافة هذه الروتس

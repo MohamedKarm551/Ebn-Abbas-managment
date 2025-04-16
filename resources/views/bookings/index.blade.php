@@ -1,6 +1,9 @@
 @extends('layouts.app')
 {{-- دي الصفحة الرئيسية للحجوزات، بتورث التصميم من صفحة app.blade.php --}}
-
+@section('title', 'كل الحجوزات : ' )
+@section('favicon')
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/cover.jpg') }}">
+@endsection
 @section('content')
     <div class="container-fluid">
         <h1>كل الحجوزات</h1>
@@ -11,6 +14,7 @@
             <a href="{{ route('admin.companies') }}" class="btn btn-secondary">إدارة الشركات</a>
             <a href="{{ route('admin.agents') }}" class="btn btn-secondary">إدارة جهات الحجز</a>
             <a href="{{ route('admin.hotels') }}" class="btn btn-secondary">إدارة الفنادق</a>
+            {{-- <a href="{{ route('admin.archived_bookings') }}" class="btn btn-secondary">أرشيف الحجوزات</a> --}}
         </div>
 
         <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
@@ -102,6 +106,14 @@
                                 </p>
                                 <p><strong>المبلغ المدفوع من الشركة:</strong> {{ $booking->amount_paid_by_company }} ريال
                                 </p>
+                                {{-- جوه ملف bookings/_table.blade.php غالبًا --}}
+                                <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" onsubmit="return confirm('تحذير! هل أنت متأكد من أرشفة هذا الحجز؟');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash-alt"></i> حذف
+                                    </button>
+                                </form>
                             </div>
                         @endforeach
                     </div>

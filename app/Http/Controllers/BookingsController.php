@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
 use App\Models\EditLog;
+use App\Models\ArchivedBooking; // <--- 1. نتأكد من إضافة ArchivedBooking
+use Illuminate\Support\Facades\DB;  // <--- 2. نضيف DB للـ Transactions
 use Illuminate\Support\Facades\Log; // تأكد من استيراد Log
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon; // *** استيراد Carbon لمعالجة التواريخ ***
@@ -206,7 +208,7 @@ class BookingsController extends Controller
         // --------------------------------------------------
         // *** تحذير: الكود التالي يحسب الإجماليات بناءً على نتائج الصفحة الحالية فقط (`$bookings`) وليس على كامل نتائج الاستعلام قبل الـ pagination. ***
         // *** للحصول على إجماليات دقيقة لكل النتائج المطابقة للفلاتر، يجب حسابها باستخدام `$query` قبل استدعاء `paginate` أو باستخدام استعلامات aggregate منفصلة. ***
-       
+
 
         // --------------------------------------------------
         // 8. تمرير البيانات إلى الفيو
@@ -307,22 +309,22 @@ class BookingsController extends Controller
         // محتوى ملف النصوص
         $textContent = sprintf(
             "
-    === حجز جديد بتاريخ %s ===
-    اسم العميل: %s
-    الشركة: %s
-    جهة الحجز: %s
-    الفندق: %s
-    تاريخ الدخول: %s
-    تاريخ الخروج: %s
-    عدد الغرف: %d
-    عدد الأيام: %d
-    سعر الفندق: %.2f
-    سعر البيع: %.2f
-    المبلغ المستحق للفندق: %.2f
-     المبلغ المستحق من الشركة: %.2f
-    الموظف: %s
-    ملاحظات: %s
-    =====================================\n\n",
+        === حجز جديد بتاريخ %s ===
+        اسم العميل: %s
+        الشركة: %s
+        جهة الحجز: %s
+        الفندق: %s
+        تاريخ الدخول: %s
+        تاريخ الخروج: %s
+        عدد الغرف: %d
+        عدد الأيام: %d
+        سعر الفندق: %.2f
+        سعر البيع: %.2f
+        المبلغ المستحق للفندق: %.2f
+        المبلغ المستحق من الشركة: %.2f
+        الموظف: %s
+        ملاحظات: %s
+        =====================================\n\n",
             now()->format('d/m/Y H:i:s'),
             $booking->client_name,
             $booking->company->name,
@@ -542,6 +544,7 @@ class BookingsController extends Controller
 
     public function destroy($id)
     {
+        // انا مستخدم أحدث تقنية من لاارافيل 12 عشان أحمل كل العلاقات مرة واحدة لتوفير أداء وسرعة
         $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
 
         // تسجيل الحذف في الباك اب
