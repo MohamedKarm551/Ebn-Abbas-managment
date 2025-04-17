@@ -97,3 +97,24 @@ footer,
   color:            var(--text)   !important;
   border-top:       1px solid var(--border) !important;
 }
+
+/* تنسيق مخصص للـ alert مع Scroll داخلي أنيق */
+.alert[style*="overflow-y: auto"], 
+.fixed-top.alert, 
+.alert-danger.shadow-lg {
+    scrollbar-width: thin;
+    scrollbar-color: #b71c1c #f8d7da !important;  /* لون المقبض والخلفية */
+}
+
+/* للمتصفحات المبنية على Webkit (كروم/إيدج/سفاري) */
+.alert[style*="overflow-y: auto"]::-webkit-scrollbar,
+.fixed-top.alert::-webkit-scrollbar {
+    width: 8px;
+    background: #f8d7da;
+    border-radius: 6px;
+}
+.alert[style*="overflow-y: auto"]::-webkit-scrollbar-thumb,
+.fixed-top.alert::-webkit-scrollbar-thumb {
+    background: #b71c1c !important;
+    border-radius: 6px;
+}

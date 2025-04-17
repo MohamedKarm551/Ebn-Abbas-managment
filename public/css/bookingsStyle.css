@@ -1,0 +1,88 @@
+/* Custom styles for the booking page */
+/* General styles */
+/* ─── Scrollbar Custom Global ─── */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #4f5d6a var(--bs-body-bg) !important;
+  }
+  *::-webkit-scrollbar {
+    width: 5px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: var(--bs-body-bg);
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--bs-primary);
+    border-radius: 4px;
+    border: 2px solid var(--bs-body-bg);
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--bs-primary-dark);
+  }
+  
+  /* Dark mode overrides */
+  html[data-theme="dark"] * {
+    scrollbar-color: var(--bs-info) var(--bg) !important;
+  }
+  html[data-theme="dark"] *::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  html[data-theme="dark"] *::-webkit-scrollbar-thumb {
+    background-color: var(--bs-info);
+    border: 2px solid var(--bg);
+  }
+  html[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--bs-info-dark);
+  }
+    .notes-popover {
+        max-width: 350px;
+        /* Adjust max width */
+        font-size: 0.9rem;
+        /* Slightly smaller font */
+    }
+
+    .popover-body {
+        white-space: pre-wrap;
+        /* Preserve line breaks */
+        max-height: 200px;
+        /* Limit height and make scrollable if needed */
+        overflow-y: auto;
+    }
+
+    /* Ensure table cells have consistent vertical alignment */
+    .table td,
+    .table th {
+        vertical-align: middle;
+    }
+
+/* ─── Scrollbar مخصص باستخدام ألوان Bootstrap ─── */
+
+/* الScrollbar في المتصفحات المدعومة */
+body,
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: var(--bs-primary) var(--bs-gray-100);
+}
+
+/* Webkit (Chrome, Edge, Safari) */
+body::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    background: var(--bs-gray-100);
+    border-radius: .5rem;
+}
+
+body::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb {
+    background-color: var(--bs-primary);
+    border-radius: .5rem;
+    border: 2px solid var(--bs-gray-100);
+}
+
+body::-webkit-scrollbar-thumb:hover,
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background-color: #0b5ed7; /* درجة أقوى من primary عند المرور */
+}
+
+

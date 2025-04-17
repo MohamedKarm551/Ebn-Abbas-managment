@@ -20,24 +20,27 @@ function showAlert(message, count, detailsTextArray, total) {
     // إنشاء عنصر div جديد للـ Alert
     globalAlertDiv = document.createElement('div');
     // بنحدد الكلاس علشان نستخدم الأنماط من Bootstrap والستايل المخصص
-    globalAlertDiv.className = 'alert alert-danger fixed-top shadow-lg';
+    globalAlertDiv.className = 'alert alert-danger shadow-lg d-flex flex-column align-items-center justify-content-center';
     // بنحدد الستايل مباشرة باستخدام cssText
     globalAlertDiv.style.cssText = `
-        position: fixed;    /* تثبيت العنصر في مكانه */
-        top: 10px;          /* مسافة 10px من فوق */
-        left: 50%;          /* في نص الصفحة أفقياً */
-        transform: translateX(-50%);  /* علشان العنصر يتتمركز تماماً */
-        width: 90%;         /* العرض 90% من الشاشة */
-        max-width: 700px;   /* أقصى عرض 700px */
-        padding: 25px;      /* حشوة داخلية 25px */
-        font-size: 16px;    /* حجم الخط */
-        z-index: 1050;      /* ترتيب ظهور العنصر فوق باقي العناصر */
-        background-color: rgba(220, 53, 69, 0.97); /* خلفية حمراء شفافة */
-        color: white;       /* لون النص أبيض */
-        direction: rtl;     /* اتجاه النص من اليمين لليسار */
-        border-radius: 12px; /* حواف دائرية */
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35); /* ظل حول العنصر */
-        text-align: right;  /* محاذاة النص لليمين */
+        position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95vw;
+    max-width: 600px;
+    max-height: 80vh;
+    padding: 25px;
+    font-size: 16px;
+    z-index: 1050;
+    background-color: rgba(220, 53, 69, 0.97);
+    color: white;
+    direction: rtl;
+    border-radius: 12px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+    text-align: right;
+    overflow-y: auto; /* هنا المهم */
+    overflow-x: hidden;
     `;
     // بنحط الرسالة HTML جوا العنصر
     globalAlertDiv.innerHTML = message;
@@ -319,7 +322,11 @@ function initializeBookingSelector(tableId, selectBtnId, resetBtnId) {
             // بناء رسالة التنبيه باستخدام HTML وتحديد أزرار النسخ والإغلاق باستخدام كلاس
             let alertMessage = `
                 <div class="d-flex flex-column align-items-center" style="direction: rtl;">
-                    <h5 class="mb-3">تم تحديد ${selectedCount} حجوزات</h5>
+                    <h5 class="mb-3" style="
+    padding: 2%;
+    margin: 2%;
+    margin-top: 30px;
+">تم تحديد ${selectedCount} حجوزات</h5>
                     <ul class="list-group list-group-flush w-100 mb-3" style="text-align: right;">
                         ${calculationDetails}
                     </ul>
