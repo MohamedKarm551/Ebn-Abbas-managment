@@ -16,8 +16,8 @@
             <small>المعادلة: ∑ (عدد الليالي الكلي × عدد الغرف × سعر الفندق) لكل الحجوزات</small>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-body">
+        <div class="  mb-4">
+            <div class="">
                 <table class="table table-bordered" id="agentBookingsTable"> {{-- ID للجدول --}}
                     <thead>
                         <tr>

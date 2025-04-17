@@ -13,8 +13,8 @@
             <small>المعادلة: ∑ (عدد الليالي المنتهية حتى اليوم × عدد الغرف × سعر البيع) للحجوزات التي دخلت ولم تُسدّد كليًا</small>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-body">
+        <div class="  mb-4">
+            <div class=" ">
                 <table class="table table-bordered" id="companyBookingsTable">
                     <thead>
                         <tr>

@@ -16,83 +16,129 @@ let globalAlertDiv = null; // متغير عام علشان نخزن العنصر
 function showAlert(message, count, detailsTextArray, total) {
     // لو كان عندنا Alert موجود قبل كده، نحذفه
     if (globalAlertDiv) globalAlertDiv.remove();
-    
+
     // إنشاء عنصر div جديد للـ Alert
     globalAlertDiv = document.createElement('div');
-    // بنحدد الكلاس علشان نستخدم الأنماط من Bootstrap والستايل المخصص
     globalAlertDiv.className = 'alert alert-danger shadow-lg d-flex flex-column align-items-center justify-content-center';
-    // بنحدد الستايل مباشرة باستخدام cssText
     globalAlertDiv.style.cssText = `
         position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 95vw;
-    max-width: 600px;
-    max-height: 80vh;
-    padding: 25px;
-    font-size: 16px;
-    z-index: 1050;
-    background-color: rgba(220, 53, 69, 0.97);
-    color: white;
-    direction: rtl;
-    border-radius: 12px;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
-    text-align: right;
-    overflow-y: auto; /* هنا المهم */
-    overflow-x: hidden;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        padding: 20px;
+        font-size: 14px;
+        z-index: 1050;
+        background-color: rgba(220, 53, 69, 0.97);
+        color: white;
+        direction: rtl;
+        border-radius: 12px;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+        text-align: right;
+        overflow-y: auto; /* السماح بالتمرير العمودي */
+        overflow-x: hidden; /* منع التمرير الأفقي */
     `;
+
+    // بناء الكاردات
+    const cardsHTML = detailsTextArray.map((detail, index) => {
+        const [clientName, hotelName, ...rest] = detail.split(' - ');
+        const fullDetails = detail; // التفاصيل الكاملة
+        return `
+            <div class="card text-white bg-transparent border-secondary m-2" 
+                 style="width: auto; cursor: pointer;" 
+                 title="اضغط لنسخ التفاصيل"
+                 data-bs-toggle="popover" 
+                 data-bs-trigger="hover focus" 
+                 data-bs-content="${fullDetails}">
+                <div class="card-body p-2 text-center">
+                    <h6 class="card-title mb-1">${index + 1}. ${clientName}</h6>
+                    <p class="card-subtitle text-muted small">${hotelName}</p>
+                    <p class="card-text d-none">${fullDetails}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+
     // بنحط الرسالة HTML جوا العنصر
-    globalAlertDiv.innerHTML = message;
+    globalAlertDiv.innerHTML = `
+        <div class="d-flex flex-column align-items-center">
+            <h5 class="mb-3">تم تحديد ${count} حجوزات</h5>
+            <div class="d-flex flex-wrap justify-content-center">
+                ${cardsHTML}
+            </div>
+            <h4 class="mb-3">الإجمالي: ${total.toFixed(2)} ر.س</h4>
+            <div class="d-flex justify-content-center mt-2">
+                <button type="button" class="btn btn-light btn-sm mx-2 copyAlertBtn">نسخ</button>
+                <button type="button" class="btn btn-outline-light btn-sm closeAlertBtn">إغلاق</button>
+            </div>
+        </div>
+    `;
+
     // بنضيف العنصر للـ body علشان يظهر في الصفحة
     document.body.appendChild(globalAlertDiv);
 
     // -------------------------------------------
     // التعامل مع زر إغلاق الـ Alert:
-    // بنستخدم class selector علشان نلاقي الزر اللي جوا الـ Alert
-    const closeAlertBtn = globalAlertDiv.querySelector('.closeAlertBtn'); 
-    if(closeAlertBtn) {
-        // بنضيف حدث click على زر الإغلاق علشان يشيل الـ Alert
-        closeAlertBtn.addEventListener('click', function() {
-            if(globalAlertDiv) globalAlertDiv.remove();
-            globalAlertDiv = null; // بنمسح المتغير بعد الحذف
+    const closeAlertBtn = globalAlertDiv.querySelector('.closeAlertBtn');
+    if (closeAlertBtn) {
+        closeAlertBtn.addEventListener('click', function () {
+            if (globalAlertDiv) globalAlertDiv.remove();
+            globalAlertDiv = null;
         });
     }
 
     // -------------------------------------------
     // التعامل مع زر النسخ (Copy) للـ Alert:
-    // بنستخدم كمان class selector للزر اللي له class اسمه copyAlertBtn
-    const copyAlertBtn = globalAlertDiv.querySelector('.copyAlertBtn'); 
-    if(copyAlertBtn) {
-        // بنضيف حدث click علشان ينفذ عملية النسخ
-        copyAlertBtn.addEventListener('click', function() {
+    const copyAlertBtn = globalAlertDiv.querySelector('.copyAlertBtn');
+    if (copyAlertBtn) {
+        copyAlertBtn.addEventListener('click', function () {
             let alertText = `تقرير الحجوزات (${count} حجز محدد)\n------------------------------------\n`;
-            // بنستخدم forEach علشان نمر على كل تفاصيل الحجوزات ونجمعها في النص
-            detailsTextArray.forEach((detail, index) => { 
-                alertText += `${index + 1}. ${detail}\n`; 
+            detailsTextArray.forEach((detail, index) => {
+                alertText += `${index + 1}. ${detail}\n`;
             });
             alertText += `------------------------------------\nالإجمالي: ${total.toFixed(2)} ريال`;
-            // بنستخدم الـ Clipboard API لنسخ النص
             navigator.clipboard.writeText(alertText).then(() => {
-                // بعد النسخ بنغير نص الزر ووضع تأثير بسيط للتأكيد
                 copyAlertBtn.textContent = 'تم النسخ!';
                 copyAlertBtn.classList.remove('btn-light');
                 copyAlertBtn.classList.add('btn-success');
-                // بنرجع النص بعد 2 ثانية
                 setTimeout(() => {
-                    // نتأكد لو الزر لسه موجود قبل التعديل
                     if (copyAlertBtn) {
                         copyAlertBtn.textContent = 'نسخ';
                         copyAlertBtn.classList.remove('btn-success');
                         copyAlertBtn.classList.add('btn-light');
                     }
                 }, 2000);
-            }).catch(err => { 
-                console.error('Failed to copy text: ', err); // لو فيه خطأ في النسخ
-                /* هنا ممكن تحط كود للتعامل مع الخطأ */
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
             });
         });
     }
+
+    // -------------------------------------------
+    // التعامل مع الكاردات (نسخ التفاصيل عند الضغط):
+    const cards = globalAlertDiv.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('click', function () {
+            const detailText = this.querySelector('.card-text').textContent;
+            navigator.clipboard.writeText(detailText).then(() => {
+                showNotification('تم نسخ التفاصيل!', 'success');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        });
+    });
+
+    // -------------------------------------------
+    // تفعيل الـ Popover باستخدام Bootstrap:
+    const popoverTriggerList = [].slice.call(globalAlertDiv.querySelectorAll('[data-bs-toggle="popover"]'));
+    popoverTriggerList.forEach(function (popoverTriggerEl) {
+        new bootstrap.Popover(popoverTriggerEl, {
+            html: true,
+            placement: 'top',
+        });
+    });
 }
 
 // -----------------------------------------------
@@ -265,19 +311,19 @@ function initializeBookingSelector(tableId, selectBtnId, resetBtnId) {
                 const computedDue = rooms * days * costPrice;
                 totalAmount += computedDue;
     
-                // بناء تفاصيل الحجز
+                // بناء تفاصيل الحجز بالشكل الجديد
                 bookingDetailsHTML.push(`
                     <li class="list-group-item d-flex justify-content-between align-items-start bg-transparent text-white border-secondary">
                         <span class="badge bg-light text-dark rounded-pill me-3">${index + 1}</span>
                         <div class="ms-0 me-auto text-start">
-                            <div class="fw-bold">${checkbox.dataset.clientName} - ${checkbox.dataset.hotelName}</div>
-                            <small>${rooms} غرف | دخول: ${checkInFormatted} | خروج: ${checkOutFormatted} | ${days} ليالي × ${costPrice.toFixed(2)} = ${computedDue.toFixed(2)} ر.س</small>
+                            <div class="fw-bold">(${checkbox.dataset.clientName}) - [[${checkbox.dataset.hotelName}]]</div>
+                            <small>{دخول: ${checkInFormatted} | خروج: ${checkOutFormatted}} | ${rooms} غرف | ${days} ليالي × ${costPrice.toFixed(2)} = ${computedDue.toFixed(2)} ر.س</small>
                         </div>
                     </li>
                 `);
     
                 bookingDetailsText.push(
-                    `${checkbox.dataset.clientName} - ${checkbox.dataset.hotelName} | ${rooms} غرف | دخول: ${checkInFormatted} | خروج: ${checkOutFormatted} | ${days} ليالي | ${costPrice.toFixed(2)} ريال | الإجمالي: ${computedDue.toFixed(2)}`
+                    `(${checkbox.dataset.clientName}) - [[${checkbox.dataset.hotelName}]] | {دخول: ${checkInFormatted} | خروج: ${checkOutFormatted}} | ${rooms} غرف | ${days} ليالي | ${costPrice.toFixed(2)} ريال | الإجمالي: ${computedDue.toFixed(2)}`
                 );
             } else {
                 row.classList.remove('selected-row');

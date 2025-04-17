@@ -85,4 +85,39 @@ body::-webkit-scrollbar-thumb:hover,
     background-color: #0b5ed7; /* درجة أقوى من primary عند المرور */
 }
 
+.card {
+    width: auto; /* العرض يتكيف مع المحتوى */
+    max-width: 150px; /* أقصى عرض للكارد */
+    background-color: rgba(255, 255, 255, 0.05); /* لون خلفية خفيف */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* حدود خفيفة */
+    border-radius: 8px; /* زوايا دائرية */
+    overflow: hidden; /* إخفاء المحتوى الزائد */
+    cursor: pointer; /* مؤشر الفأرة */
+    transition: transform 0.3s ease, background-color 0.3s ease; /* تأثير عند التفاعل */
+}
+
+.card:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* لون خلفية عند التمرير */
+    transform: scale(1.05); /* تكبير بسيط عند التمرير */
+}
+
+.card .card-title {
+    font-size: 0.8rem; /* حجم الخط لاسم الشخص */
+    font-weight: bold; /* خط عريض */
+    text-align: center; /* توسيط النص */
+    white-space: nowrap; /* منع النص من الالتفاف */
+    overflow: hidden; /* إخفاء النص الزائد */
+    text-overflow: ellipsis; /* إضافة "..." إذا كان النص طويلًا */
+}
+
+.card .card-subtitle {
+    font-size: 0.7rem; /* حجم الخط لاسم الفندق */
+    color: #ccc; /* لون خافت */
+    text-align: center; /* توسيط النص */
+    white-space: nowrap; /* منع النص من الالتفاف */
+    overflow: hidden; /* إخفاء النص الزائد */
+    text-overflow: ellipsis; /* إضافة "..." إذا كان النص طويلًا */
+}
+
+
 
