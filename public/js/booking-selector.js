@@ -218,19 +218,19 @@ function initializeBookingSelector(tableId, selectBtnId, resetBtnId) {
     function formatCombinedDate(dateString) {
         try {
             const date = new Date(dateString);
-            // لو التاريخ مش صحيح، نبعت رسالة خطأ
             if (isNaN(date.getTime())) {
                 return "تاريخ غير صالح";
             }
-            // تنسيق التاريخ الميلادي مع اسم الشهر بالعربي
+
+            // تنسيق التاريخ الميلادي
             const gregorianOptions = { day: 'numeric', month: 'long' };
             const gregorianFormatted = date.toLocaleDateString('ar-EG', gregorianOptions);
 
-            // تنسيق التاريخ الهجري بخيارات طويلة
-            const hijriOptions = { day: 'numeric', month: 'long', year: 'numeric', calendar: 'islamic' };
+            // تنسيق التاريخ الهجري
+            const hijriOptions = { day: 'numeric', month: 'long', calendar: 'islamic' };
             const hijriFormatted = date.toLocaleDateString('ar-SA-u-ca-islamic', hijriOptions);
-            
-            // بنرجع التاريخين مع بعض داخل نص واحد 
+
+            // دمج التاريخ الميلادي والهجري
             return `${gregorianFormatted} (${hijriFormatted})`;
         } catch (e) {
             console.error("Error formatting combined date:", dateString, e);
@@ -241,106 +241,66 @@ function initializeBookingSelector(tableId, selectBtnId, resetBtnId) {
     // دالة updateSelectedRows:
     // بتعمل تحديث للصفوف المختارة وتحسب الإجمالي وتعرض تفاصيل الحجوزات في تنبيه
     function updateSelectedRows() {
-        let totalAmount = 0; // متغير لتجميع المبلغ الإجمالي
-        let bookingDetailsHTML = []; // مصفوفة لتخزين تفاصيل الحجوزات (HTML)
-        let bookingDetailsText = []; // مصفوفة لتخزين تفاصيل الحجوزات (نص)
-        let selectedCount = 0; // عدد الصفوف/الحجوزات المختارة
-
-        // بنعدي على كل checkbox موجود في الجدول
+        let totalAmount = 0; // الإجمالي الكلي
+        let bookingDetailsHTML = []; // تفاصيل الحجوزات (HTML)
+        let bookingDetailsText = []; // تفاصيل الحجوزات (نص)
+        let selectedCount = 0; // عدد الحجوزات المحددة
+    
         checkboxes.forEach((checkbox, index) => {
-            const row = checkbox.closest('tr'); // بنجيب الصف الفى الذي فيه الـ checkbox
-            if (checkbox.checked) { // لو الـ checkbox متحدد
-                selectedCount++; // زيادة عدد المحددين
-                row.classList.add('selected-row'); // بنضيف كلاس علشان نغير مظهر الصف
-                // بقرا المبلغ المستحق من data-amount-due
-                const amountDue = parseFloat(checkbox.dataset.amountDue) || 0;
-                totalAmount += amountDue; // بنجمع المبالغ
-                const clientName = checkbox.dataset.clientName;
-                const hotelName = checkbox.dataset.hotelName || 'فندق غير محدد';
-                const checkInString = checkbox.dataset.checkIn;
-                const checkOutString = checkbox.dataset.checkOut;
-                const rooms = checkbox.dataset.rooms;
-                const days = checkbox.dataset.days;
-                const costPrice = checkbox.dataset.costPrice || 0;
-                // بننسق التاريخين باستخدام دالتنا السابقة
-                const checkInFormatted = formatCombinedDate(checkInString);
-                const checkOutFormatted = formatCombinedDate(checkOutString);
-
-                // بنبني عناصر HTML للتفاصيل علشان ننزلها في التنبيه
-                bookingDetailsHTML.push(
-                     `<li class="list-group-item d-flex justify-content-between align-items-start bg-transparent text-white border-secondary">
+            const row = checkbox.closest('tr');
+            if (checkbox.checked) {
+                selectedCount++;
+                row.classList.add('selected-row');
+    
+                // قراءة البيانات من الـ data-attributes
+                const rooms = parseInt(checkbox.dataset.rooms, 10) || 0;
+                const days = parseInt(checkbox.dataset.days, 10) || 0;
+                const costPrice = parseFloat(checkbox.dataset.costPrice) || 0;
+    
+                // تنسيق التواريخ
+                const checkInFormatted = formatCombinedDate(checkbox.dataset.checkIn);
+                const checkOutFormatted = formatCombinedDate(checkbox.dataset.checkOut);
+    
+                // حساب المستحق الكلي
+                const computedDue = rooms * days * costPrice;
+                totalAmount += computedDue;
+    
+                // بناء تفاصيل الحجز
+                bookingDetailsHTML.push(`
+                    <li class="list-group-item d-flex justify-content-between align-items-start bg-transparent text-white border-secondary">
                         <span class="badge bg-light text-dark rounded-pill me-3">${index + 1}</span>
                         <div class="ms-0 me-auto text-start">
-                            <div class="fw-bold">${clientName} - ${hotelName}</div>
-                            <small>${rooms} غرف | ${checkInFormatted} إلى ${checkOutFormatted} (${days} ليالي) | ${costPrice} ريال</small>
+                            <div class="fw-bold">${checkbox.dataset.clientName} - ${checkbox.dataset.hotelName}</div>
+                            <small>${rooms} غرف | دخول: ${checkInFormatted} | خروج: ${checkOutFormatted} | ${days} ليالي × ${costPrice.toFixed(2)} = ${computedDue.toFixed(2)} ر.س</small>
                         </div>
-                        <span class="badge bg-light text-dark rounded-pill ms-3">${amountDue.toFixed(2)}</span>
-                    </li>`
-                );
-                // بنبني تفاصيل نصية برضه
+                    </li>
+                `);
+    
                 bookingDetailsText.push(
-                    `${clientName} - ${hotelName} | ${rooms} غرف | ${checkInFormatted} إلى ${checkOutFormatted} (${days} ليالي) | ${costPrice} ريال | المستحق: ${amountDue.toFixed(2)}`
+                    `${checkbox.dataset.clientName} - ${checkbox.dataset.hotelName} | ${rooms} غرف | دخول: ${checkInFormatted} | خروج: ${checkOutFormatted} | ${days} ليالي | ${costPrice.toFixed(2)} ريال | الإجمالي: ${computedDue.toFixed(2)}`
                 );
             } else {
-                // لو مش متحدد، نتأكد إن الصف مش محمل بنمط التحديد
                 row.classList.remove('selected-row');
             }
         });
-
-        // تطبيق الأنماط على الصفوف بناءً على التحديد
-        table.querySelectorAll('tbody tr').forEach(row => {
-            if (row.classList.contains('selected-row')) {
-                row.style.backgroundColor = 'rgba(220, 53, 69, 0.3)';
-                row.style.color = '#fff';
-                row.style.fontWeight = 'bold';
-            } else {
-                if (!row.classList.contains('range-start') && !row.classList.contains('range-end')) {
-                    row.style.backgroundColor = '';
-                    row.style.color = '';
-                    row.style.fontWeight = '';
-                }
-            }
-        });
-
-        // بنضبط مظهر الصف اللي اتحدد كنقطة بداية أو نهاية
-        const startRow = table.querySelector('tr.range-start');
-        if (startRow) {
-            startRow.style.backgroundColor = 'rgba(255, 193, 7, 0.4)';
-            startRow.style.color = '#000';
-            startRow.style.fontWeight = 'bold';
-        }
-        const endRow = table.querySelector('tr.range-end');
-        if (endRow) {
-            endRow.style.backgroundColor = 'rgba(23, 162, 184, 0.4)';
-            endRow.style.color = '#000';
-            endRow.style.fontWeight = 'bold';
-        }
-
-        // منطق عرض أو إخفاء التنبيه بناءً على عدد المحددين
+    
+        // تحديث واجهة المستخدم
         if (selectedCount > 0) {
-            let calculationDetails = bookingDetailsHTML.join('');
-            // بناء رسالة التنبيه باستخدام HTML وتحديد أزرار النسخ والإغلاق باستخدام كلاس
-            let alertMessage = `
-                <div class="d-flex flex-column align-items-center" style="direction: rtl;">
-                    <h5 class="mb-3" style="
-    padding: 2%;
-    margin: 2%;
-    margin-top: 30px;
-">تم تحديد ${selectedCount} حجوزات</h5>
-                    <ul class="list-group list-group-flush w-100 mb-3" style="text-align: right;">
-                        ${calculationDetails}
+            const alertMessage = `
+                <div class="d-flex flex-column align-items-center">
+                    <h5 class="mb-3">تم تحديد ${selectedCount} حجوزات</h5>
+                    <ul class="list-group list-group-flush w-100 mb-3">
+                        ${bookingDetailsHTML.join('')}
                     </ul>
-                    <h4 class="mb-3">الإجمالي: ${totalAmount.toFixed(2)} ريال</h4>
+                    <h4 class="mb-3">الإجمالي: ${totalAmount.toFixed(2)} ر.س</h4>
                     <div class="d-flex justify-content-center mt-2">
                         <button type="button" class="btn btn-light btn-sm mx-2 copyAlertBtn">نسخ</button>
                         <button type="button" class="btn btn-outline-light btn-sm closeAlertBtn">إغلاق</button>
                     </div>
                 </div>
             `;
-            // بنستدعي دالة التنبيه العامة لعرض الرسالة
             showAlert(alertMessage, selectedCount, bookingDetailsText, totalAmount);
         } else {
-            // لو مفيش حاجة محددة، نتأكد إن التنبيه بيتشال
             if (globalAlertDiv) {
                 globalAlertDiv.remove();
                 globalAlertDiv = null;

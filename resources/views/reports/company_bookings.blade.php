@@ -27,8 +27,8 @@
                             <th>تاريخ الخروج</th>
                             <th>عدد الغرف</th>
                             <th>المبلغ المستحق</th>
-                            <th>المدفوع</th>
-                            <th>المتبقي</th>
+                            <th>السعر </th>
+                            <th>الكلي</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -36,19 +36,12 @@
                             <tr style="cursor: pointer;">
                                 <td>{{ $key + 1 }}</td> {{-- الترقيم --}}
                                 <td>
-                                    <label>
-                                        <input type="checkbox" class="booking-checkbox" data-booking-id="{{ $booking->id }}"
-                                            data-amount-due="{{ $booking->amount_due_from_company }}"
-                                            data-amount-paid="{{ $booking->amount_paid_by_company }}"
-                                            data-client-name="{{ $booking->client_name }}"
-                                            data-hotel-name="{{ $booking->hotel->name }}" {{-- التأكد من إضافة اسم الفندق --}}
-                                            data-check-in="{{ $booking->check_in->format('Y-m-d') }}" {{-- استخدام تنسيق Y-m-d --}}
-                                            data-check-out="{{ $booking->check_out->format('Y-m-d') }}"
-                                            {{-- استخدام تنسيق Y-m-d --}} data-rooms="{{ $booking->rooms }}"
-                                            data-days="{{ \Carbon\Carbon::parse($booking->check_in)->diffInDays(\Carbon\Carbon::parse($booking->check_out)) }}"
-                                            data-cost-price="{{ $booking->cost_price }}"
-                                            onclick="event.stopPropagation();">
-                                    </label>
+                                    @include('partials._booking_checkbox', [
+                                        'booking' => $booking,
+                                        'amountDueField' => 'due_to_company', // المستحق للشركة
+                                        'amountPaidField' => 'company_paid', // المدفوع للشركة
+                                        'costPriceField' => 'sale_price', // سعر البيع للشركة
+                                    ])
                                 </td> {{-- الـ Checkbox --}}
                                 <td>{{ $booking->client_name }}
                                     @if (!empty($booking->notes))
@@ -60,15 +53,13 @@
                                     @endif
                                 </td>
                                 <td>{{ $booking->agent->name ?? 'غير محدد' }}</td> {{-- خلية جهة الحجز الجديدة --}}
-
                                 <td>{{ $booking->hotel->name }}</td>
                                 <td>{{ $booking->check_in->format('d/m/Y') }}</td>
                                 <td>{{ $booking->check_out->format('d/m/Y') }}</td>
                                 <td>{{ $booking->rooms }}</td>
-                                <td>{{ number_format($booking->amount_due_from_company) }}</td>
-                                <td>{{ number_format($booking->amount_paid_by_company) }}</td>
-                                <td>{{ number_format($booking->amount_due_from_company - $booking->amount_paid_by_company) }}
-                                </td>
+                                <td>{{ number_format($booking->due_to_company, 2) }} ر.س</td>
+                                <td>{{ number_format($booking->sale_price, 2) }} ر.س</td> {{-- سعر البيع للشركة --}}
+                                <td>{{ number_format($booking->total_company_due, 2) }} ر.س</td> {{-- السعر الكلي المستحق --}}
                             </tr>
                         @endforeach
                     </tbody>
@@ -78,6 +69,8 @@
                 <button class="btn btn-secondary" id="companyResetRangeBtn">إعادة تعيين النطاق</button>
             </div>
         </div>
+
+    
     </div>
 @endsection
 

@@ -13,10 +13,7 @@
             <strong>ملخص الحساب:</strong><br>
             عدد الحجوزات المستحقة: {{ $dueCount }}<br>
             إجمالي المستحق: {{ number_format($totalDue) }} ر.س<br>
-            المدفوع: {{ number_format($totalPaid) }} ر.س<br>
-            المتبقي: {{ number_format($totalRemaining) }} ر.س<br>
-            <small>المعادلة: ∑ (عدد الليالي المنتهية حتى اليوم × عدد الغرف × سعر التكلفة) للحجوزات التي دخلت ولم تُسدّد
-                كليًا</small>
+            <small>المعادلة: ∑ (عدد الليالي الكلي × عدد الغرف × سعر الفندق) لكل الحجوزات</small>
         </div>
 
         <div class="card mb-4">
@@ -32,7 +29,8 @@
                             <th style="min-width: 100px;">تاريخ الدخول</th>
                             <th style="min-width: 100px;">تاريخ الخروج</th>
                             <th class="text-center">عدد الغرف</th>
-                            <th style="min-width: 110px;">المبلغ</th> {{-- المبلغ المستحق من الشركة (كمثال) --}}
+                            <th style="min-width: 110px;">سعر الفندق</th> {{-- العمود الجديد --}}
+                            <th style="min-width: 110px;">السعر الكلي المستحق</th> {{-- العمود الجديد --}}
                         </tr>
                     </thead>
                     <tbody>
@@ -40,12 +38,10 @@
                             <tr style="cursor: pointer;">
                                 <td class="text-center align-middle">{{ $key + 1 }}</td>
                                 <td class="text-center align-middle">
-                                    {{-- استخدم الـ Partial مع الحقول الصحيحة للوكيل --}}
-                                    {{-- المبلغ هنا هو المستحق من الشركة كمثال، قد تحتاج لتعديله إذا كان المقصود عمولة الوكيل --}}
                                     @include('partials._booking_checkbox', [
                                         'booking' => $booking,
-                                        'amountDueField' => 'due_to_agent', // أو خليه فاضية إن هتعتمد على JS
-                                        'amountPaidField' => 'agent_paid', // لعرض ما دفعه الوكيل
+                                        'amountDueField' => 'due_to_agent', // المستحق للوكيل
+                                        'amountPaidField' => 'agent_paid', // المدفوع للوكيل
                                         'costPriceField' => 'cost_price', // سعر الفندق
                                     ])
                                 </td>
@@ -63,9 +59,8 @@
                                 <td class="text-center align-middle">{{ $booking->check_in->format('d/m/Y') }}</td>
                                 <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
                                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
-                                <td class="text-center align-middle">{{ number_format($booking->amount_due_to_hotel) }}
-                                </td>
-                                {{-- تأكد من أن هذا هو الحقل الصحيح --}}
+                                <td class="text-center align-middle">{{ number_format($booking->cost_price, 2) }} ر.س</td> {{-- سعر الفندق --}}
+                                <td class="text-center align-middle">{{ number_format($booking->total_agent_due, 2) }} ر.س</td> {{-- السعر الكلي المستحق --}}
                             </tr>
                         @endforeach
                     </tbody>

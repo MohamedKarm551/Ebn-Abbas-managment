@@ -8,7 +8,6 @@
 
 <label>
     <input type="checkbox" class="booking-checkbox" data-booking-id="{{ $booking->id }}"
-        {{-- استخدام الحقول الديناميكية --}}
         data-amount-due="{{ $booking->{$amountDueField} ?? 0 }}"
         data-amount-paid="{{ $booking->{$amountPaidField} ?? 0 }}"
         data-client-name="{{ $booking->client_name }}"

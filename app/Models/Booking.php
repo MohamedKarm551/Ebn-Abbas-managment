@@ -125,4 +125,31 @@ class Booking extends Model
     {
         return $this->agent->agentPayments()->sum('amount');
     }
+
+    public function getTotalDueAttribute()
+    {
+        $totalNights = Carbon::parse($this->check_in)
+                        ->diffInDays(Carbon::parse($this->check_out));
+        return $totalNights * $this->rooms * $this->cost_price;
+        // عدد الليالي الكلي مضروب في سعر الفندق
+    }
+
+    /** عدد الليالي الكلي بين check_in و check_out */
+    public function getTotalNightsAttribute()
+    {
+        return Carbon::parse($this->check_in)
+                     ->diffInDays(Carbon::parse($this->check_out));
+    }
+
+    /** المستحق الكلي للشركة: ليالي × غرف × سعر البيع */
+    public function getTotalCompanyDueAttribute()
+    {
+        return $this->total_nights * $this->rooms * $this->sale_price;
+    }
+
+    /** المستحق الكلي للوكيل: ليالي × غرف × سعر الفندق */
+    public function getTotalAgentDueAttribute()
+    {
+        return $this->total_nights * $this->rooms * $this->cost_price;
+    }
 }
