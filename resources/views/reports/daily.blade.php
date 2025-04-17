@@ -7,7 +7,7 @@
     <div class="container">
         <h1>التقرير اليومي - {{ \Carbon\Carbon::now()->format('d/m/Y') }}</h1>
 
-        <div class="card mb-4">
+        <div class=" mb-4">
             <div class="card-header">
                 <h3>ملخص اليوم</h3>
             </div>
@@ -26,7 +26,7 @@
         </div>
 
         <!-- جدول الشركات -->
-        <div class="card mb-4">
+        <div class="  mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>حسابات الشركات</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTable')">نسخ الجدول</button>
@@ -74,7 +74,7 @@
         </div>
 
         <!-- جدول جهات الحجز -->
-        <div class="card mb-4">
+        <div class="  mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>حسابات جهات الحجز</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
@@ -207,7 +207,7 @@
         @endforeach
         
         <!-- جدول الفنادق -->
-        <div class="card mb-4">
+        <div class="  mb-4">
             <div class="card-header">
                 <h3>حسابات الفنادق</h3>
             </div>

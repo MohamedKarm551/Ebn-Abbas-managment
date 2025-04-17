@@ -3,7 +3,7 @@
 @section('content')
     <div class="container">
         <h1>حجوزات {{ $hotel->name }}</h1>
-        <div class="card mb-4">
+        <div class="  mb-4">
             <div class="card-body">
                 <table class="table table-bordered" id="hotelBookingsTable"> {{-- ID للجدول --}}
                     <thead>
