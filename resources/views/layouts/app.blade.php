@@ -18,7 +18,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
         integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+    <link href="{{ asset('css/dark-mode.css') }}" rel="stylesheet">
+    @stack('styles')    {{-- لازم تحطه هنا عشان يظهر اللي بتدفعه بـ @push --}}
+ 
 </head>
 
 <body class="d-flex flex-column min-vh-100">
@@ -42,6 +44,10 @@
                         <a class="nav-link" href="/reports/daily">التقارير اليومية</a>
                     </li>
                 </ul>
+                <div class="form-check form-switch ms-auto">
+                    <input class="form-check-input" type="checkbox" id="darkModeSwitch">
+                    <label class="form-check-label" for="darkModeSwitch">دارك مود</label>
+                </div>
             </div>
         </div>
     </nav>
@@ -73,9 +79,22 @@
     @stack('scripts')
     {{--  --}}
     @include('partials.footer')
- 
-
-
+    <script>
+        document.addEventListener('DOMContentLoaded',function(){
+          const html = document.documentElement;
+          const sw   = document.getElementById('darkModeSwitch');
+          // استرجاع الثيم
+          const theme = localStorage.getItem('theme') || 'light';
+          html.setAttribute('data-theme', theme);
+          sw.checked = (theme === 'dark');
+          // حدث التبديل
+          sw.addEventListener('change',()=>{
+            const t = sw.checked ? 'dark' : 'light';
+            html.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+          });
+        });
+    </script>
 </body>
 
 </html>

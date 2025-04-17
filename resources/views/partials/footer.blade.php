@@ -1,4 +1,4 @@
-<footer class="bg-light py-3 mt-4 border-top">
+<footer class=" py-3 mt-4 border-top">
     <div class="container text-center">
         <p class="mb-0">
             تم التطوير بواسطة 

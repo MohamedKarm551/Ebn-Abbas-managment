@@ -1,0 +1,94 @@
+/* ─── متغيرات الثيمين ─── */
+:root {
+  /* Light Mode */
+  --bg:            #ffffff;
+  --text:          #212529;
+  --nav-bg:        #f8f9fa;
+  --card-bg:       #ffffff;
+  --filter-bg:     #e9ecef;
+  --filter-border: #ced4da;
+  --border:        #dee2e6;
+}
+
+html[data-theme="dark"] {
+  /* Dark Mode */
+  --bg:            #121212;
+  --text:          #e0e0e0;
+  --nav-bg:        #1a1a1a;
+  --card-bg:       #1e1e1e;
+  --filter-bg:     #2a2a2a;
+  --filter-border: #444444;
+  --border:        #444444;
+}
+
+/* ─── تطبيق الألوان ─── */
+body {
+  background-color: var(--bg) !important;
+  color:            var(--text) !important;
+  transition:       background .3s, color .3s;
+}
+
+.navbar.bg-light {
+  background-color: var(--nav-bg) !important;
+}
+.navbar-light .navbar-brand,
+.navbar-light .nav-link {
+  color: var(--text) !important;
+}
+
+.card,
+.card-body,
+.filter-box {
+  background-color: var(--card-bg) !important;
+  color:            var(--text) !important;
+  border:           1px solid var(--border) !important;
+}
+.filter-box {
+  border-radius: 8px;
+  padding:       1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ─── الجداول ─── */
+.table,
+.table th,
+.table td {
+  background-color: var(--card-bg) !important;
+  color:            var(--text) !important;
+  border:           1px solid var(--border) !important;
+}
+
+/* stripe في Dark Mode فقط */
+html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd)  > *,
+html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > * {
+  color: var(--text) !important;
+}
+html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) {
+  background-color: rgba(255,255,255,0.02) !important;
+}
+
+/* ترويسة الجدول في صفحة index */
+html[data-theme="dark"] thead.table-dark {
+  background-color: var(--nav-bg) !important;
+}
+html[data-theme="dark"] thead.table-dark th {
+  color:       var(--text) !important;
+  border-color: var(--border)!important;
+}
+
+/* ترويسة جداول التقارير */
+html[data-theme="dark"] .table-responsive thead th {
+  background-color: var(--card-bg) !important;
+  color:            var(--text)   !important;
+}
+
+/* الفوتر */
+footer,
+.footer {
+  background-color: var(--card-bg) !important;
+  color:            var(--text)   !important;
+  border-top:       1px solid var(--border) !important;
+}

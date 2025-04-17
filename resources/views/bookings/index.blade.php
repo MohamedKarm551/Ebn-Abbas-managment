@@ -18,13 +18,13 @@
         </div>
 
         <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
-        <div class="p-4 mb-4" style="background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ddd;">
+        <div class="filter-box p-4 mb-4">
             <h3 class="mb-3">عملية البحث والفلترة</h3>
             <form id="filterForm" method="GET" action="{{ route('bookings.index') }}">
                 <div class="row align-items-center text-center">
                     <div class="col-md-4 mb-2">
-                        <label for="search" class="form-label">بحث باسم العميل، الموظف، الشركة، جهة الحجز، أو
-                            الفندق</label>
+                        <label for="search" class="form-label">بحث عن العميل، الموظف، الشركة، جهة حجز، 
+                            فندق</label>
                         <input type="text" name="search" id="search" class="form-control"
                             value="{{ request('search') }}">
                     </div>
@@ -124,6 +124,9 @@
                 @section('scripts')
                 @endsection
         @endif
+
+        {{-- مكان لعرض رسالة الفلترة بالتواريخ --}}
+        <div id="filterAlert"></div>
 
         <a href="{{ route('bookings.create') }}" class="btn btn-primary mb-3">+ إضافة حجز جديد</a>
 
@@ -335,11 +338,32 @@
 
                             // د. إعادة تهيئة مكونات Bootstrap (زي الـ Popovers) بعد التحديث
                             initBootstrapComponents();
+
+                            // 3) **تحديث الرسالة بناءً على URL الحالي**
+                            updateDateAlert();
                         })
                         .catch(function(error) {
                             console.error('خطأ في جلب البيانات:', error.response || error.message || error);
                             alert('حصل مشكلة واحنا بنجيب البيانات. حاول تاني أو شوف الكونسول.');
                         });
+                }
+
+                // ==========================================================
+                // helper لتحديث رسالة الفلترة بالتواريخ
+                // ==========================================================
+                function updateDateAlert() {
+                    const params = new URLSearchParams(window.location.search);
+                    const start = params.get('start_date'), end = params.get('end_date');
+                    const container = document.getElementById('filterAlert');
+                    if (start && end) {
+                        container.innerHTML = `
+                          <div class="alert alert-info">
+                            هذه الحجوزات التي تمت "دخلت أو خرجت" بين 
+                            <strong>${start}</strong> و <strong>${end}</strong>
+                          </div>`;
+                    } else {
+                        container.innerHTML = '';
+                    }
                 }
 
                 // ==========================================================
@@ -408,6 +432,9 @@
                         fetchData(url);
                     });
 
+                    // تحديث الرسالة عند أول تحميل (قبل أي Ajax)
+                    updateDateAlert();
+
                 }); // نهاية الـ DOMContentLoaded
             </script>
         @endpush
@@ -415,3 +442,31 @@
     </div>
 
 @endsection
+
+@push('styles')
+    <style>
+        .filter-box {
+            background-color: var(--filter-bg) !important;
+            border: 1px solid var(--filter-border) !important;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        :root {
+            --filter-bg: #e9ecef;
+            --filter-border: #ced4da;
+        }
+
+        html[data-theme="dark"] {
+            --filter-bg: #2a2a2a;
+            --filter-border: #444444;
+        }
+    </style>
+@endpush
+
+<head>
+  <link href="{{ asset('css/bootstrap.rtl.min.css') }}" rel="stylesheet">
+  <link href="{{ asset('css/dark-mode.css') }}" rel="stylesheet">
+  @stack('styles')    {{-- ← لازم يكون هنا عشان يُحقن الـ <style> اللي دفعتَه --}}
+</head>

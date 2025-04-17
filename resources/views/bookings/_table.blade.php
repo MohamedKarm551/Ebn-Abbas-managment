@@ -1,24 +1,24 @@
 <table class="table table-bordered table-hover table-striped">
     <thead class="table-dark"> {{-- Use a dark header for better contrast striped يعني مخطط عشان العين تلاحظ كل صف لوحده بلون--}}
         <tr>
-            <th class="text-center" style="width: 5%;">م</th>
+            <th class="text-center" style="width: 3%;">م</th>
             <th>العميل</th>
             <th>الشركة</th>
-            <th>جهة الحجز</th>
+            <th>جهة حجز</th>
             <th>الفندق</th>
-            <th style="min-width: 100px;">تاريخ الدخول</th> {{-- تحديد عرض أدنى للتواريخ --}}
-            <th style="min-width: 100px;">تاريخ الخروج</th>
+            <th style="min-width: 100px;"> الدخول</th> {{-- تحديد عرض أدنى للتواريخ --}}
+            <th style="min-width: 100px;"> الخروج</th>
             {{-- <th>عدد الأيام</th> --}}
             <th class="text-center">غرف</th> {{-- اختصار "عدد الغرف" --}}
             @if (!request('company_id'))
-                <th style="min-width: 120px;"> المستحق للفندق</th> {{-- Adjusted width --}}
+                <th style="min-width: 100px;"> المستحق للفندق</th> {{-- Adjusted width --}}
                 {{-- <th>السداد مني للفندق</th> --}}
             @endif
-            <th style="min-width: 120px;"> المستحق من الشركة</th>
+            <th style="min-width: 100px;"> مطلوب من الشركة</th>
             {{-- <th>السداد من الشركة</th> --}}
             <th>الموظف المسؤول</th>
             <th class="text-center">الملاحظات</th>
-            <th style="min-width: 130px;">الإجراءات</th> {{-- تحديد عرض أدنى لضمان ظهور الأزرار --}}
+            <th class="text-center" style="min-width: 130px;">الإجراءات</th> {{-- تحديد عرض أدنى لضمان ظهور الأزرار --}}
         </tr>
     </thead>
     <tbody>
