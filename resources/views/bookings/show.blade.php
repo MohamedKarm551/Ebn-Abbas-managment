@@ -1,10 +1,11 @@
 @extends('layouts.app')
 {{-- *** بداية الكود الجديد: تحديد عنوان الصفحة *** --}}
-@section('title', 'تفاصيل حجز: ' . $booking->client_name)
+@section('title', 'تفاصيل حجز :  ' . $booking->client_name )
 {{-- *** نهاية الكود الجديد *** --}}
 
 <head>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('icons/booking-details.svg') }}">
 </head>
 
 @section('content')
@@ -15,14 +16,14 @@
 
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="text-white">تفاصيل الحجز للعميل: {{ $booking->client_name }}</h1>
+        <h1 class="">تفاصيل الحجز للعميل: {{ $booking->client_name }}</h1>
         <div>
             <a href="{{ route('bookings.index') }}" class="btn btn-secondary">رجوع ➡</a>
             <button id="copyBookingDetails" class="btn btn-primary"> 📄نسخ بيانات الحجز 📋</button>
             <button id="calculate-total" class="btn btn-info"> 📝 الاجمالي📜</button>
         </div>
     </div>
-    <table class="table table-dark table-hover table-bordered text-center">
+    <table class="table  table-hover table-bordered text-center">
         <thead>
             <tr>
                 <th>#</th>

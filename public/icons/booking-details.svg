@@ -1,0 +1,12 @@
+<!-- احفظه كـ public/icons/booking-details.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
+  <rect x="6" y="10" width="36" height="32" rx="4" fill="#1976d2"/>
+  <rect x="10" y="14" width="28" height="24" rx="2" fill="#fff"/>
+  <rect x="14" y="18" width="20" height="4" rx="2" fill="#e3e3e3"/>
+  <rect x="14" y="24" width="12" height="4" rx="2" fill="#e3e3e3"/>
+  <rect x="14" y="30" width="8" height="4" rx="2" fill="#e3e3e3"/>
+  <circle cx="36" cy="34" r="7" fill="#43a047"/>
+  <path d="M33.5 34.5l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="14" y="4" width="4" height="8" rx="2" fill="#1976d2"/>
+  <rect x="30" y="4" width="4" height="8" rx="2" fill="#1976d2"/>
+</svg>
