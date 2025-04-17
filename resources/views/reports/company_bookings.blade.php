@@ -4,6 +4,15 @@
     <div class="container">
         <h1>حجوزات {{ $company->name }}</h1>
 
+        <div class="alert alert-info">
+            <strong>ملخص الحساب:</strong><br>
+            عدد الحجوزات المستحقة: {{ $dueCount }}<br>
+            إجمالي المستحق: {{ number_format($totalDue) }} ر.س<br>
+            المدفوع: {{ number_format($totalPaid) }} ر.س<br>
+            المتبقي: {{ number_format($totalRemaining) }} ر.س<br>
+            <small>المعادلة: ∑ (عدد الليالي المنتهية حتى اليوم × عدد الغرف × سعر البيع) للحجوزات التي دخلت ولم تُسدّد كليًا</small>
+        </div>
+
         <div class="card mb-4">
             <div class="card-body">
                 <table class="table table-bordered" id="companyBookingsTable">

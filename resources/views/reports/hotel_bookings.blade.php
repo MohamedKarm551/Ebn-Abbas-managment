@@ -31,7 +31,7 @@
                                         'booking' => $booking,
                                         'amountDueField' => 'amount_due_to_hotel', // الإجمالي المستحق للفندق
                                         'amountPaidField' => 'amount_paid_to_hotel', // المدفوع للفندق
-                                        'costPriceField' => 'cost_price', // سعر التكلفة (السعر سعر الفندق علينا)
+                                        'costPriceField' => 'sale_price', // سعر التكلفة (السعر سعر البيع للشركة  )
                                     ])
                                 </td>
                                 <td class="align-middle">{{ $booking->client_name }}

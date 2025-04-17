@@ -3,6 +3,22 @@
 @section('content')
     <div class="container">
         <h1>حجوزات {{ $agent->name }}</h1>
+
+        {{-- ملخص الحساب --}}
+        @php
+            $count = $bookings->count();
+            $totalDue = $bookings->sum('due_to_agent');
+        @endphp
+        <div class="alert alert-info">
+            <strong>ملخص الحساب:</strong><br>
+            عدد الحجوزات المستحقة: {{ $dueCount }}<br>
+            إجمالي المستحق: {{ number_format($totalDue) }} ر.س<br>
+            المدفوع: {{ number_format($totalPaid) }} ر.س<br>
+            المتبقي: {{ number_format($totalRemaining) }} ر.س<br>
+            <small>المعادلة: ∑ (عدد الليالي المنتهية حتى اليوم × عدد الغرف × سعر التكلفة) للحجوزات التي دخلت ولم تُسدّد
+                كليًا</small>
+        </div>
+
         <div class="card mb-4">
             <div class="card-body">
                 <table class="table table-bordered" id="agentBookingsTable"> {{-- ID للجدول --}}
@@ -28,9 +44,9 @@
                                     {{-- المبلغ هنا هو المستحق من الشركة كمثال، قد تحتاج لتعديله إذا كان المقصود عمولة الوكيل --}}
                                     @include('partials._booking_checkbox', [
                                         'booking' => $booking,
-                                        'amountDueField' => 'amount_due_from_company', // المبلغ المستحق من الشركة
-                                        'amountPaidField' => 'amount_paid_by_company', // المدفوع من الشركة
-                                        'costPriceField' => 'sale_price', // سعر البيع للعميل
+                                        'amountDueField' => 'due_to_agent', // أو خليه فاضية إن هتعتمد على JS
+                                        'amountPaidField' => 'agent_paid', // لعرض ما دفعه الوكيل
+                                        'costPriceField' => 'cost_price', // سعر الفندق
                                     ])
                                 </td>
                                 <td class="align-middle">{{ $booking->client_name }}
@@ -47,7 +63,8 @@
                                 <td class="text-center align-middle">{{ $booking->check_in->format('d/m/Y') }}</td>
                                 <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
                                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
-                                <td class="text-center align-middle">{{ number_format($booking->amount_due_to_hotel) }}</td>
+                                <td class="text-center align-middle">{{ number_format($booking->amount_due_to_hotel) }}
+                                </td>
                                 {{-- تأكد من أن هذا هو الحقل الصحيح --}}
                             </tr>
                         @endforeach
@@ -68,9 +85,11 @@
             initializeBookingSelector('agentBookingsTable', 'agentSelectRangeBtn', 'agentResetRangeBtn');
         });
         var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
             if (!bootstrap.Popover.getInstance(popoverTriggerEl)) {
-                return new bootstrap.Popover(popoverTriggerEl, { html: true });
+                return new bootstrap.Popover(popoverTriggerEl, {
+                    html: true
+                });
             }
             return null;
         }).filter(Boolean);

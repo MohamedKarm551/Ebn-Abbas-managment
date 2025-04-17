@@ -16,7 +16,7 @@ class Payment extends Model
 
     protected $casts = [
         'payment_date' => 'datetime',
-        'bookings_covered' => 'array'
+        'bookings_covered' => 'array'    // ← هنا
     ];
 
     public function company()

@@ -18,8 +18,13 @@
                 <td>{{ number_format($payment->amount, 2) }} ريال</td>
                 <td>{{ $payment->payment_date->format('Y-m-d') }}</td>
                 <td>{{ $payment->notes }}</td>
-                <td>
-                    <a href="{{ route('reports.payment.edit', $payment->id) }}" class="btn btn-warning btn-sm">تعديل</a>
+                <td class="d-flex gap-1">
+                    <a href="{{ route('reports.agent.payment.edit', $payment->id) }}" class="btn btn-warning btn-sm">تعديل</a>
+                    <form action="{{ route('reports.agent.payment.destroy', $payment->id) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف هذه الدفعة؟');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger btn-sm">حذف</button>
+                    </form>
                 </td>
             </tr>
             @endforeach

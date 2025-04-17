@@ -65,6 +65,26 @@ Route::get('reports/agent/{id}/payments', [ReportController::class, 'agentPaymen
 Route::get('reports/payment/{id}/edit', [ReportController::class, 'editPayment'])->name('reports.payment.edit');
 Route::put('reports/payment/{id}', [ReportController::class, 'updatePayment'])->name('reports.payment.update');
 Route::get('reports/agent/payment/{id}/edit', [ReportController::class, 'editPayment'])->name('reports.agent.payment.edit');
+Route::put('reports/agent/payment/{id}', [ReportController::class, 'updatePayment'])->name('reports.agent.payment.update');
+
+// صفحة تعديل دفعة شركة
+Route::get('reports/company/payment/{id}/edit', [ReportController::class, 'editCompanyPayment'])
+    ->name('reports.company.payment.edit');
+// معالجة تحديث دفعة شركة
+Route::put('reports/company/payment/{id}', [ReportController::class, 'updateCompanyPayment'])
+    ->name('reports.company.payment.update');
+
+// حذف دفعة شركة
+Route::delete('reports/company/payment/{id}', [ReportController::class, 'destroyCompanyPayment'])
+    ->name('reports.company.payment.destroy');
+
+// حذف دفعة وكيل
+Route::delete('reports/agent/payment/{id}', [ReportController::class, 'destroyAgentPayment'])
+    ->name('reports.agent.payment.destroy');
+
+// عرض دفعة شركة
+Route::get('reports/company/payment/{id}', [ReportController::class, 'showCompanyPayment'])
+    ->name('reports.company.payment.show');
 
 Route::get('/', function () {
     return view('welcome');
