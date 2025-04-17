@@ -93,6 +93,7 @@ body::-webkit-scrollbar-thumb:hover,
     border-radius: 8px; /* زوايا دائرية */
     overflow: hidden; /* إخفاء المحتوى الزائد */
     cursor: pointer; /* مؤشر الفأرة */
+    margin: 5px; /* تقليل المسافات بين الكاردات */
     transition: transform 0.3s ease, background-color 0.3s ease; /* تأثير عند التفاعل */
 }
 
@@ -119,5 +120,10 @@ body::-webkit-scrollbar-thumb:hover,
     text-overflow: ellipsis; /* إضافة "..." إذا كان النص طويلًا */
 }
 
+.alert {
+  max-height: 80vh; /* أقصى ارتفاع للـ Alert */
+  overflow-y: auto; /* السماح بالتمرير العمودي */
+  overflow-x: hidden; /* منع التمرير الأفقي */
+}
 
 

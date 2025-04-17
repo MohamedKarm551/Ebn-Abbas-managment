@@ -27,7 +27,7 @@ function showAlert(message, count, detailsTextArray, total) {
         transform: translate(-50%, -50%);
         width: 90%;
         max-width: 800px;
-        max-height: 80vh;
+        max-height: 80vh; /* أقصى ارتفاع */
         padding: 20px;
         font-size: 14px;
         z-index: 1050;
@@ -64,7 +64,7 @@ function showAlert(message, count, detailsTextArray, total) {
     // بنحط الرسالة HTML جوا العنصر
     globalAlertDiv.innerHTML = `
         <div class="d-flex flex-column align-items-center">
-            <h5 class="mb-3">تم تحديد ${count} حجوزات</h5>
+            <h5 class="mb-3" style="position: sticky; top: 0; background-color: rgba(220, 53, 69, 0.97); z-index: 10; padding: 10px; width: 100%;">تم تحديد ${count} حجوزات</h5>
             <div class="d-flex flex-wrap justify-content-center">
                 ${cardsHTML}
             </div>
