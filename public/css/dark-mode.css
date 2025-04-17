@@ -21,6 +21,11 @@ html[data-theme="dark"] {
   --border:        #444444;
 }
 
+/* Override للنص الأبيض في Dark Mode */
+html[data-theme="dark"] .text-white {
+  color: var(--text) !important;
+}
+
 /* ─── تطبيق الألوان ─── */
 body {
   background-color: var(--bg) !important;
