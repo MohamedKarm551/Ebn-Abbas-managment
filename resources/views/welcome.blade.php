@@ -32,7 +32,7 @@
                 style="background: linear-gradient(135deg, rgba(172, 44, 44, 0.9), rgba(255,255,255,0.7)); backdrop-filter: blur(10px);"
                  >
 
-                    <form method="POST" action="{{ route('login') }}">
+                    <form method="POST" action="{{ route('manual.login') }}">
                         @csrf
         
                         <div class="row mb-3">

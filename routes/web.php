@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 Route::middleware(['auth'])->group(function () {
 
 Route::get('/bookings', [BookingsController::class, 'index'])->name('bookings.index');
@@ -94,8 +95,20 @@ Route::get('/', function () {
     return view('welcome');
 });
 
- Auth::routes(); 
- Route::get('/login', function () {
-    return view('welcome');
-})->name('login');
-
+// مش راضي يشتغل على الهوستنجر عشان هما لسه لم يحدثوا الكومبوسر
+//  Auth::routes(); 
+//  Route::get('/login', function () {
+//     return view('welcome');
+// })->name('login');
+// حل يدوي
+Route::post('/manual-login', function (Request $request) {
+    $credentials = $request->only('email', 'password');
+    if (Auth::attempt($credentials, $request->filled('remember'))) {
+        return redirect()->intended('/bookings');
+    }
+    return back()->withErrors(['email' => 'بيانات الدخول غير صحيحة'])->withInput();
+})->name('manual.login');
+Route::post('/logout', function () {
+    Auth::logout();
+    return redirect('/');
+})->name('logout');
