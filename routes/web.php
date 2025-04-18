@@ -5,6 +5,8 @@ use App\Http\Controllers\BookingsController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\ReportController;
+use Illuminate\Support\Facades\Auth;
+Route::middleware(['auth'])->group(function () {
 
 Route::get('/bookings', [BookingsController::class, 'index'])->name('bookings.index');
 Route::get('/bookings/create', [BookingsController::class, 'create'])->name('bookings.create');
