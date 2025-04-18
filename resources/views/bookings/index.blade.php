@@ -143,9 +143,9 @@
         </div>
         <div class="alert alert-warning text-center mb-3">
             <span>
-                مجموع المستحق للفندق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
+                مجموع المستحق للفنادق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
                 <br>
-                مجموع المطلوب من الشركة (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
+                مجموع المطلوب من الشركات (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
             </span>
         </div>
         <div class="table-responsive" id="bookingsTable">

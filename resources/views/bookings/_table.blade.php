@@ -26,23 +26,23 @@
             <tr>
                 <td class="text-center align-middle">{{ $loop->iteration }}</td> <!-- رقم الصف -->
                 <td class="text-center align-middle">
-                    <a href="{{ route('bookings.show', $booking->id) }}" class="text-primary">
+                    <a href="{{ route('bookings.show', $booking->id) }}" class="text-primary text-decoration-none fw-bold">
                         {{ $booking->client_name }}
                     </a>
                 </td>
                 <td class="text-center align-middle">
                     <a href="{{ route('bookings.index', ['company_id' => $booking->company->id]) }}"
-                        class="text-primary">
+                        class="text-primary text-decoration-none">
                         {{ $booking->company->name }}
                     </a>
                 </td>
                 <td class="text-center align-middle">
-                    <a href="{{ route('bookings.index', ['agent_id' => $booking->agent->id]) }}" class="text-primary">
+                    <a href="{{ route('bookings.index', ['agent_id' => $booking->agent->id]) }}" class="text-primary text-decoration-none">
                         {{ $booking->agent->name }}
                     </a>
                 </td>
                 <td class="text-center align-middle">
-                    <a href="{{ route('bookings.index', ['hotel_id' => $booking->hotel->id]) }}" class="text-primary">
+                    <a href="{{ route('bookings.index', ['hotel_id' => $booking->hotel->id]) }}" class="text-primary text-decoration-none">
                         {{ $booking->hotel->name }}
                     </a>
                 </td>
@@ -58,14 +58,14 @@
                     </td>
                 @endif {{-- End the condition --}}
                 {{-- <td class="text-center align-middle">{{ $booking->amount_paid_to_hotel }}</td> --}}
-                <td class="text-center align-middle"
+                <td class="text-center align-middle "
                     title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة)">
                     {{ $booking->amount_due_from_company }}
                 </td>
                 {{-- <td class="text-center align-middle">{{ $booking->amount_paid_by_company }}</td> --}}
                 <td class="text-center align-middle">
                     <a href="{{ route('bookings.index', ['employee_id' => $booking->employee->id]) }}"
-                        class="text-primary">
+                        class="text-primary text-decoration-none">
                         {{ $booking->employee->name }}
                     </a>
                 </td>
@@ -89,12 +89,16 @@
                         title="التفاصيل"><i class="fas fa-eye"></i></a>
                     <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-sm btn-warning me-1"
                         title="تعديل"><i class="fas fa-edit"></i></a>
-                    <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" style="display:inline;"
+                        @auth
+                        @if(auth()->user()->role === 'Admin')
+                        <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" style="display:inline;"
                         onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i
                                 class="fas fa-trash"></i></button>
+                                @endif
+                                @endauth
                     </form>
                 </td>
             </tr>

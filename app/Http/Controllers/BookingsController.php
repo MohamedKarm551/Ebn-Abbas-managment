@@ -147,7 +147,18 @@ class BookingsController extends Controller
         // --------------------------------------------------
         // نرتب النتائج حسب تاريخ الدخول تنازليًا (الأحدث أولاً).
         // يمكنك تغيير حقل الترتيب والاتجاه حسب الحاجة (مثل 'created_at').
-        $query->orderBy('created_at', 'desc');
+        // $query->orderBy('created_at', 'desc');
+
+
+
+        // 6. الترتيب وتنفيذ الاستعلام مع Pagination
+        if ($startDateFilled || $endDateFilled || $request->filled('search') || $request->filled('company_id') || $request->filled('agent_id') || $request->filled('hotel_id') || $request->filled('employee_id')) {
+            // لو فيه فلترة، رتب حسب check_in تصاعدي
+            $query->orderBy('check_in', 'asc');
+        } else {
+            // لو مفيش فلترة، رتب حسب created_at تنازلي
+            $query->orderBy('created_at', 'desc');
+        }
 
         // ==================================================
         // *** بداية الكود الجديد لحساب الإجماليات الدقيقة ***

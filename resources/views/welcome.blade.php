@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Laravel</title>
+        <title>شركة ابن عباس</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -21,42 +21,83 @@
     </head>
     <body class="bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
         <header class="w-full lg:max-w-4xl max-w-[335px] text-sm mb-6 not-has-[nav]:hidden">
-            @if (Route::has('login'))
-                <nav class="flex items-center justify-end gap-4">
-                    @auth
-                        <a
-                            href="{{ url('/dashboard') }}"
-                            class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] border-[#19140035] hover:border-[#1915014a] border text-[#1b1b18] dark:border-[#3E3E3A] dark:hover:border-[#62605b] rounded-sm text-sm leading-normal"
-                        >
-                            Dashboard
-                        </a>
-                    @else
-                        <a
-                            href="{{ route('login') }}"
-                            class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] border border-transparent hover:border-[#19140035] dark:hover:border-[#3E3E3A] rounded-sm text-sm leading-normal"
-                        >
-                            Log in
-                        </a>
 
-                        @if (Route::has('register'))
-                            <a
-                                href="{{ route('register') }}"
-                                class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] border-[#19140035] hover:border-[#1915014a] border text-[#1b1b18] dark:border-[#3E3E3A] dark:hover:border-[#62605b] rounded-sm text-sm leading-normal">
-                                Register
-                            </a>
-                        @endif
-                    @endauth
-                </nav>
-            @endif
         </header>
         <div 
             class=" flex items-center justify-center w-full min-h-screen transition-opacity opacity-100 duration-750 lg:grow starting:opacity-0" 
-    style="background-image: url('/images/background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat;""">
+            style="background-image: url('/images/background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+            >
             <main class="flex max-w-[335px] w-full flex-col-reverse lg:max-w-4xl lg:flex-row">
+                <div id="loginForm" style="display: none; transition: opacity 0.5s;"  class="text-[13px] leading-[20px] flex-1 p-6 pb-12 lg:p-20 bg-white dark:bg-[#161615] dark:text-[#EDEDEC] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d] rounded-bl-lg rounded-br-lg lg:rounded-tl-lg lg:rounded-br-none" 
+                style="background: linear-gradient(135deg, rgba(172, 44, 44, 0.9), rgba(255,255,255,0.7)); backdrop-filter: blur(10px);"
+                 >
+
+                    <form method="POST" action="{{ route('login') }}">
+                        @csrf
+        
+                        <div class="row mb-3">
+                            <label for="email" class="col-md-4 col-form-label text-md-end">{{ __('Email Address') }}</label>
+        
+                            <div class="col-md-6">
+                                <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus style="border: 1px solid #ccc; border-radius: 4px;">
+        
+                                @error('email')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+        
+                        <div class="row mb-3">
+                            <label for="password" class="col-md-4 col-form-label text-md-end">{{ __('Password') }}</label>
+        
+                            <div class="col-md-6">
+                                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="current-password">
+        
+                                @error('password')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+        
+                        <div class="row mb-3">
+                            <div class="col-md-6 offset-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
+        
+                                    <label class="form-check-label" for="remember">
+                                        {{ __('Remember Me') }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+        
+                        <div class="row mb-0">
+                            <div class="col-md-8 offset-md-4">
+                                <button type="submit" 
+                                class="btn btn-primary"
+                                style="background-color: #dc2626; border-color: #dc2626; color: #fff; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+                                    {{ __('Login') }}
+                                </button>
+        <br>
+                                @if (Route::has('password.request'))
+                                    <a class="btn btn-link" href="{{ route('password.request') }}">
+                                        {{ __('Forgot Your Password?') }}
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </form>
+                    </div>
                 <div 
                 class="text-[13px] leading-[20px] flex-1 p-6 pb-12 lg:p-20 bg-white dark:bg-[#161615] dark:text-[#EDEDEC] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d] rounded-bl-lg rounded-br-lg lg:rounded-tl-lg lg:rounded-br-none" 
                 style="background: linear-gradient(135deg, rgba(172, 44, 44, 0.9), rgba(255,255,255,0.7)); backdrop-filter: blur(10px);"
+                id="left-side"
             >
+          
                 <h1 class="mb-1 font-medium text-xl">موقع إدارة حجوزات شركة ابن عباس</h1>
                 <p class="mb-2 text-[#706f6c] dark:text-[#A1A09A]">نظام متكامل لإدارة حجوزات الفنادق والشركات السياحية</p>
                 <ul class="flex flex-col mb-4 lg:mb-6">
@@ -79,9 +120,11 @@
                 </ul>
                 <ul class="flex gap-3 text-sm leading-normal">
                     <li>
-                        <a href="/bookings" class="inline-block dark:bg-[#eeeeec] dark:border-[#eeeeec] dark:text-[#1C1C1A] dark:hover:bg-white dark:hover:border-white hover:bg-black hover:border-black px-5 py-1.5 bg-[#1b1b18] rounded-sm border border-black text-white text-sm leading-normal">
-                            ابدأ الآن
-                        </a>
+                        <button id="showLoginBtn" type="button"
+                        class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] border border-transparent hover:border-[#19140035] dark:hover:border-[#3E3E3A] rounded-sm text-sm leading-normal"
+                        style="border: 1px solid">
+                        Log in
+                    </button>
                     </li>
                 </ul>
             </div>
@@ -301,10 +344,10 @@
                 }
             }
             .heart-icon {
-        display: inline-block;
-        animation: spin-heart 2s linear infinite;
-        transform-origin: center; /* تحديد نقطة الدوران */
-    }
+                display: inline-block;
+                animation: spin-heart 2s linear infinite;
+                transform-origin: center; /* تحديد نقطة الدوران */
+                }
 
     @keyframes spin-heart {
         0% {
@@ -316,7 +359,25 @@
         100% {
             transform: rotateY(360deg); /* العودة إلى الوجه */
         }
-    }
-        </style>
+            }
+            #loginForm { opacity: 0; }
+            </style>
+           <script>
+            document.getElementById('showLoginBtn').addEventListener('click', function() {
+                // اخفي الـ side بشكل سموزي
+                var leftSide = document.getElementById('left-side');
+                leftSide.style.transition = 'opacity 0.5s';
+                leftSide.style.opacity = 0;
+                setTimeout(function() {
+                    leftSide.style.display = 'none';
+                    // اظهر الفورم بشكل سموزي
+                    var loginForm = document.getElementById('loginForm');
+                    loginForm.style.display = 'block';
+                    setTimeout(function() {
+                        loginForm.style.opacity = 1;
+                    }, 10);
+                }, 500);
+            });
+            </script> 
     </body>
 </html>

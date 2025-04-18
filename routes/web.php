@@ -88,7 +88,14 @@ Route::delete('reports/agent/payment/{id}', [ReportController::class, 'destroyAg
 Route::get('reports/company/payment/{id}', [ReportController::class, 'showCompanyPayment'])
     ->name('reports.company.payment.show');
 
-
+});
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 Route::get('/', function () {
     return view('welcome');
 });
+
+ Auth::routes(); 
+ Route::get('/login', function () {
+    return view('welcome');
+})->name('login');
+

@@ -20,7 +20,13 @@
             <tr>
                 <th>#</th> <!-- عمود الترقيم -->
                 <th>اسم الموظف</th>
-                <th>الإجراءات</th>
+                <th>الإجراءات
+                    @auth 
+                        @if(auth()->user()->role != 'Admin')
+                          "تظهر للأدمن فقط"
+                        @endif
+                    @endauth
+                </th>
             </tr>
         </thead>
         <tbody>
@@ -31,11 +37,15 @@
                     <span class="editable" data-id="{{ $employee->id }}">{{ $employee->name }}</span>
                 </td>
                 <td>
+                    @auth
+    @if(auth()->user()->role === 'Admin')
                     <form action="{{ route('admin.deleteEmployee', $employee->id) }}" method="POST" style="display:inline;">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm">حذف</button>
                     </form>
+                    @endif
+                    @endauth
                 </td>
             </tr>
             @endforeach

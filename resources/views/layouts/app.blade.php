@@ -25,32 +25,7 @@
 
 <body class="d-flex flex-column min-vh-100">
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container">
-            <a class="navbar-brand" href="/">نظام إدارة الحجوزات</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/bookings">الحجوزات</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/bookings/create">إضافة حجز</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/reports/daily">التقارير اليومية</a>
-                    </li>
-                </ul>
-                <div class="form-check form-switch ms-auto">
-                    <input class="form-check-input" type="checkbox" id="darkModeSwitch">
-                    <label class="form-check-label" for="darkModeSwitch">دارك مود</label>
-                </div>
-            </div>
-        </div>
-    </nav>
+  @include('partials.navbar')
     <div class="container mt-4">
         @yield('content')
     </div>

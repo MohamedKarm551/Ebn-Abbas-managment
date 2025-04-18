@@ -15,12 +15,14 @@
 @endphp
 
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="">تفاصيل الحجز للعميل: {{ $booking->client_name }}</h1>
-        <div>
+    <div class="row align-items-center mb-3">
+        <div class="col-12 col-lg-7 mb-2 mb-lg-0">
+            <h1 class="h4 mb-0 text-center text-lg-start">تفاصيل الحجز للعميل: {{ $booking->client_name }}</h1>
+        </div>
+        <div class="col-12 col-lg-5 d-flex justify-content-center justify-content-lg-end gap-2">
             <a href="{{ route('bookings.index') }}" class="btn btn-secondary">رجوع ➡</a>
-            <button id="copyBookingDetails" class="btn btn-primary"> 📄نسخ بيانات الحجز 📋</button>
-            <button id="calculate-total" class="btn btn-info"> 📝 الاجمالي📜</button>
+            <button id="copyBookingDetails" class="btn btn-primary">📄 نسخ بيانات الحجز 📋</button>
+            <button id="calculate-total" class="btn btn-info">📝 الاجمالي 📜</button>
         </div>
     </div>
     <table class="table  table-hover table-bordered text-center">

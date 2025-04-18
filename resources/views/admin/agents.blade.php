@@ -30,11 +30,15 @@
                 <td>{{ $agent->name }}</td>
                 <td>
                     <a href="{{ route('admin.editAgent', $agent->id) }}" class="btn btn-warning btn-sm">تعديل</a>
+                    @auth
+    @if(auth()->user()->role === 'Admin')
                     <form action="{{ route('admin.deleteAgent', $agent->id) }}" method="POST" style="display:inline;">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm">حذف</button>
                     </form>
+                    @endif
+                    @endauth
                 </td>
             </tr>
             @endforeach
