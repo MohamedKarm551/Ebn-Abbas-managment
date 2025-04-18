@@ -139,10 +139,13 @@
             تم جلب: <strong>{{ $totalActiveBookingsCount }}</strong> حجز نشط
             ||
             <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
+         
+        </div>
+        <div class="alert alert-warning text-center mb-3">
             <span>
                 مجموع المستحق للفندق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
-                ||
-                مجموع مطلوب من الشركة (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
+                <br>
+                مجموع المطلوب من الشركة (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
             </span>
         </div>
         <div class="table-responsive" id="bookingsTable">
