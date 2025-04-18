@@ -83,11 +83,11 @@
                                     {{ __('Login') }}
                                 </button>
         <br>
-                                @if (Route::has('password.request'))
+                                {{-- @if (Route::has('password.request'))
                                     <a class="btn btn-link" href="{{ route('password.request') }}">
                                         {{ __('Forgot Your Password?') }}
                                     </a>
-                                @endif
+                                @endif --}}
                             </div>
                         </div>
                     </form>
@@ -299,10 +299,10 @@
                 </div>
             </main>
         </div>
-
+{{-- 
         @if (Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
-        @endif
+        @endif --}}
         <footer class="py-3 mt-4 border-top">
             <div class="container text-center">
                 <p class="mb-0 text-white">
