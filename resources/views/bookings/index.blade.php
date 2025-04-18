@@ -135,7 +135,11 @@
                 {{ session('success') }}
             </div>
         @endif
-
+        <div class="alert alert-info text-center mb-3">
+            تم جلب: <strong>{{ $totalActiveBookingsCount }}</strong> حجز نشط
+            ||
+            <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
+        </div>
         <div class="table-responsive" id="bookingsTable">
             @include('bookings._table')
         </div>
@@ -145,7 +149,7 @@
             {{ $bookings->onEachSide(1)->links('vendor.pagination.bootstrap-4') }}
         </div>
 
-
+       
 
         @push('scripts')
             {{-- 1. بنستدعي مكتبة Axios --}}

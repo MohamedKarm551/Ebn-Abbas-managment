@@ -184,7 +184,7 @@ class AdminController extends Controller
 
         if ($startDateFilled && $endDateFilled) {
             $query->whereDate('check_in', '<=', $endDate)
-                  ->whereDate('check_out', '>=', $startDate);
+                ->whereDate('check_out', '>=', $startDate);
         } elseif ($startDateFilled) {
             $query->whereDate('check_in', '=', $startDate);
         } elseif ($endDateFilled) {
@@ -225,7 +225,11 @@ class AdminController extends Controller
             $totalPaidToHotels = $queryForTotals->sum('amount_paid_to_hotel') ?? 0;
             $remainingToHotels = $totalDueToHotels - $totalPaidToHotels;
         }
+        // عدد الحجوزات المؤرشفة (بعد الفلترة)
+        $totalArchivedBookingsCount = (clone $query)->count();
 
+
+        
         $archivedBookings = $query->paginate(10)->withQueryString();
 
         // لو الطلب AJAX (للأجاكس)
@@ -260,6 +264,8 @@ class AdminController extends Controller
             'totalDueToHotels' => $totalDueToHotels,
             'totalPaidToHotels' => $totalPaidToHotels,
             'remainingToHotels' => $remainingToHotels,
+            'totalArchivedBookingsCount' => $totalArchivedBookingsCount,
+            
         ]);
     }
 }

@@ -211,6 +211,58 @@ class BookingsController extends Controller
         // *** تحذير: الكود التالي يحسب الإجماليات بناءً على نتائج الصفحة الحالية فقط (`$bookings`) وليس على كامل نتائج الاستعلام قبل الـ pagination. ***
         // *** للحصول على إجماليات دقيقة لكل النتائج المطابقة للفلاتر، يجب حسابها باستخدام `$query` قبل استدعاء `paginate` أو باستخدام استعلامات aggregate منفصلة. ***
 
+        // عدد الحجوزات النشطة (بعد الفلترة)
+        $totalActiveBookingsCount = (clone $query)->count();
+
+        // عدد الحجوزات المؤرشفة (بعد نفس الفلاتر)
+        $archivedQuery = Booking::with(['company', 'employee', 'agent', 'hotel'])
+            ->where('cost_price', 0)
+            ->where('sale_price', 0);
+
+        // طبق نفس الفلاتر على المؤرشفة
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $archivedQuery->where(function ($q) use ($searchTerm) {
+                $q->where('client_name', 'like', "%{$searchTerm}%")
+                    ->orWhereHas('employee', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhereHas('company', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhereHas('agent', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhereHas('hotel', function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                    });
+            });
+        }
+        if ($request->filled('company_id')) {
+            $archivedQuery->where('company_id', $request->input('company_id'));
+        }
+        if ($request->filled('agent_id')) {
+            $archivedQuery->where('agent_id', $request->input('agent_id'));
+        }
+        if ($request->filled('hotel_id')) {
+            $archivedQuery->where('hotel_id', $request->input('hotel_id'));
+        }
+        if ($request->filled('employee_id')) {
+            $archivedQuery->where('employee_id', $request->input('employee_id'));
+        }
+        if ($request->filled('start_date')) {
+            try {
+                $startDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+                $archivedQuery->whereDate('check_in', '>=', $startDate);
+            } catch (\Exception $e) {}
+        }
+        if ($request->filled('end_date')) {
+            try {
+                $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
+                $archivedQuery->whereDate('check_out', '<=', $endDate);
+            } catch (\Exception $e) {}
+        }
+        $totalArchivedBookingsCount = $archivedQuery->count();
 
         // --------------------------------------------------
         // 8. تمرير البيانات إلى الفيو
@@ -228,6 +280,8 @@ class BookingsController extends Controller
             'totalDueToHotels' => $totalDueToHotelsAccurate, // هتبقى صفر لو فلترنا بشركة
             'totalPaidToHotels' => $totalPaidToHotelsAccurate, // هتبقى صفر لو فلترنا بشركة
             'remainingToHotels' => $remainingToHotelsAccurate, // هتبقى صفر لو فلترنا بشركة
+            'totalActiveBookingsCount' => $totalActiveBookingsCount, // عدد الحجوزات النشطة
+            'totalArchivedBookingsCount' => $totalArchivedBookingsCount, // عدد الحجوزات المؤرشفة
             // ممكن تشيل 'bookingDetails' لو مش بتستخدمها في الفيو بعد ما شيلنا الـ map
         ]);
     }

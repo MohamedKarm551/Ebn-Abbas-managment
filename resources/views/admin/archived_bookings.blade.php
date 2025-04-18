@@ -43,7 +43,10 @@
                     <input type="hidden" id="hidden-total-remaining-to-hotels" value="{{ $remainingToHotels ?? 0 }}">
                 @endif
             </div>
-
+            <div class="alert alert-info text-center mb-3">
+                تم جلب: <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
+                
+            </div>
             <div class="table-responsive" id="archivedBookingsTable">
                 @include('admin._archived_table', ['archivedBookings' => $archivedBookings])
             </div>
