@@ -44,7 +44,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/hotels/{id}/edit', [HotelController::class, 'edit'])->name('editHotel'); // مسار صفحة التعديل
     Route::put('/hotels/{id}', [HotelController::class, 'update'])->name('updateHotel'); // مسار التحديث
     // مسار صفحة الأرشيف:
-    // Route::get('/archived-bookings', [AdminController::class, 'showArchivedBookings'])->name('archived_bookings');
+    Route::get('/archived-bookings', [AdminController::class, 'archivedBookings'])->name('archived_bookings');
 });
 
 // إضافة هذه الروتس
@@ -85,6 +85,7 @@ Route::delete('reports/agent/payment/{id}', [ReportController::class, 'destroyAg
 // عرض دفعة شركة
 Route::get('reports/company/payment/{id}', [ReportController::class, 'showCompanyPayment'])
     ->name('reports.company.payment.show');
+
 
 Route::get('/', function () {
     return view('welcome');

@@ -2,7 +2,12 @@
 
 @section('content')
 <div class="container">
-    <h1>تعديل الحجز</h1>
+    <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
+        <h1 class="mb-0">تعديل الحجز</h1>
+        <button type="button" id="cancel-booking-btn" class="btn btn-outline-danger btn-sm ms-2 mb-2 mb-md-0">
+            <i class="fas fa-ban"></i> إلغاء الحجز مؤقتا
+        </button>
+    </div>
     <form action="{{ route('bookings.update', $booking->id) }}" method="POST">
         @csrf
         @method('PUT')
@@ -98,6 +103,26 @@
         });
         flatpickr("#check_out", {
             dateFormat: "d/m/Y", // صيغة يوم/شهر/سنة
+        });
+
+        // زرار إلغاء الحجز مؤقتا
+        document.getElementById('cancel-booking-btn').onclick = function () {
+            let costInput = document.getElementById('cost_price');
+            let saleInput = document.getElementById('sale_price');
+            costInput.value = 0;
+            saleInput.value = 0;
+            costInput.classList.add('border', 'border-danger', 'fw-bold');
+            saleInput.classList.add('border', 'border-danger', 'fw-bold');
+            // Scroll للسعر
+            costInput.scrollIntoView({behavior: "smooth", block: "center"});
+        };
+
+        ['cost_price', 'sale_price'].forEach(function(id) {
+            document.getElementById(id).addEventListener('input', function() {
+                if (this.value != 0) {
+                    this.classList.remove('border-danger', 'fw-bold');
+                }
+            });
         });
     });
 </script>

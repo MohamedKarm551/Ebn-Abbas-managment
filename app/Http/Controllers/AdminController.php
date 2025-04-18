@@ -8,6 +8,7 @@ use App\Models\Agent;
 use App\Models\Hotel;
 use App\Models\Booking;
 use App\Models\ArchivedBooking; // <--- 2. نضيف ArchivedBooking
+use App\Models\EditLog; // فوق في أول الملف
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -134,5 +135,32 @@ class AdminController extends Controller
         return redirect()->route('admin.agents')->with('success', 'تم حذف جهة الحجز بنجاح!');
     }
 
-    
+    public function archivedBookings()
+    {
+        $archivedBookings = Booking::where('cost_price', 0)
+            ->where('sale_price', 0)
+            ->paginate(20);
+
+        foreach ($archivedBookings as $booking) {
+            // آخر رقم كان في cost_price قبل ما يتغير لصفر
+            $lastCost = EditLog::where('booking_id', $booking->id)
+                ->where('field', 'cost_price')
+                ->where('new_value', 0)
+                ->orderByDesc('created_at')
+                ->first();
+
+            $booking->old_cost_price = $lastCost ? $lastCost->old_value : null;
+
+            // آخر رقم كان في sale_price قبل ما يتغير لصفر
+            $lastSale = EditLog::where('booking_id', $booking->id)
+                ->where('field', 'sale_price')
+                ->where('new_value', 0)
+                ->orderByDesc('created_at')
+                ->first();
+
+            $booking->old_sale_price = $lastSale ? $lastSale->old_value : null;
+        }
+
+        return view('admin.archived_bookings', compact('archivedBookings'));
+    }
 }

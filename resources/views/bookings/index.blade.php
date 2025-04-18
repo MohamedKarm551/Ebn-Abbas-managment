@@ -10,11 +10,11 @@
 
         <!-- الأزرار بتاعة الإدارة - كل زر بيوديك لصفحة إدارة حاجة معينة -->
         <div class="mb-4">
-            <a href="{{ route('admin.employees') }}" class="btn btn-secondary">إدارة الموظفين</a>
-            <a href="{{ route('admin.companies') }}" class="btn btn-secondary">إدارة الشركات</a>
-            <a href="{{ route('admin.agents') }}" class="btn btn-secondary">إدارة جهات الحجز</a>
-            <a href="{{ route('admin.hotels') }}" class="btn btn-secondary">إدارة الفنادق</a>
-            {{-- <a href="{{ route('admin.archived_bookings') }}" class="btn btn-secondary">أرشيف الحجوزات</a> --}}
+            <a href="{{ route('admin.employees') }}" class="btn admin-gradient-btn">إدارة الموظفين</a>
+            <a href="{{ route('admin.companies') }}" class="btn admin-gradient-btn">إدارة الشركات</a>
+            <a href="{{ route('admin.agents') }}" class="btn admin-gradient-btn">إدارة جهات الحجز</a>
+            <a href="{{ route('admin.hotels') }}" class="btn admin-gradient-btn">إدارة الفنادق</a>
+            <a href="{{ route('admin.archived_bookings') }}" class="btn admin-gradient-btn">أرشيف الحجوزات</a>
         </div>
 
         <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
@@ -446,22 +446,107 @@
 @push('styles')
     <style>
         .filter-box {
+            position: relative;
             background-color: var(--filter-bg) !important;
-            border: 1px solid var(--filter-border) !important;
-            border-radius: 8px;
-            padding: 1rem;
+            border-radius: 16px;
+            padding: 1.5rem 1rem;
             margin-bottom: 1.5rem;
+            overflow: hidden;
+            z-index: 1;
+            box-shadow: inset 0px 0px 0px 1.5px rgba(26,26,0,0.16), 0 2px 8px 0 rgba(0,0,0,0.04);
+            border: none;
         }
 
-        :root {
-            --filter-bg: #e9ecef;
-            --filter-border: #ced4da;
+        .filter-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            border: 2px solid transparent;
+            background: linear-gradient(90deg, #f53003, #ff4433, #1b1b18, #f53003);
+            background-size: 300% 300%;
+            animation: border-spin 7s linear infinite;
+            z-index: 2;
+            pointer-events: none;
+            mask:
+              linear-gradient(#fff 0 0) content-box, 
+              linear-gradient(#fff 0 0);
+            -webkit-mask:
+              linear-gradient(#fff 0 0) content-box, 
+              linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            -webkit-mask-composite: xor;
+            padding: 2px;
+            opacity: 0.7;
         }
 
-        html[data-theme="dark"] {
-            --filter-bg: #2a2a2a;
-            --filter-border: #444444;
+        @keyframes border-spin {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
         }
+
+        html[data-theme="dark"] .filter-box {
+            box-shadow: inset 0px 0px 0px 1.5px #fffaed2d, 0 2px 8px 0 rgba(0,0,0,0.16);
+        }
+
+        html[data-theme="dark"] .filter-box::before {
+            background: linear-gradient(90deg, #fffaed2d, #f53003, #ff4433, #1b1b18, #f53003);
+        }
+        /* خلي الزرار فيه تدرج لوني في النص */
+.admin-gradient-btn {
+    position: relative;
+    background: transparent;
+    border: 1px solid #E81C2E;
+    font-weight: bold;
+    background-image: linear-gradient(90deg, #E81C2E, #202C45);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transition: color 0.2s, border-color 0.2s;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* الـ after بيعمل طبقة فوق الزرار */
+.admin-gradient-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(90deg, #E81C2E, #202C45);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: -1;
+    border-radius: 0.375rem;
+}
+
+/* لما تعمل هوفر الزرار كله يتلون */
+.admin-gradient-btn:hover,
+.admin-gradient-btn:focus {
+    border-color: #202C45;
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+}
+
+.admin-gradient-btn:hover::after,
+.admin-gradient-btn:focus::after {
+    opacity: 1;
+}
+
+/* لما الزرار يتلون بالكامل، النص يبقى أبيض */
+.admin-gradient-btn:hover,
+.admin-gradient-btn:focus {
+    background: linear-gradient(90deg, #E81C2E, #202C45);
+    -webkit-background-clip: border-box;
+    -webkit-text-fill-color: #fff;
+    color: #fff;
+    transition: background 0.2s, color 0.2s;
+}
     </style>
 @endpush
 

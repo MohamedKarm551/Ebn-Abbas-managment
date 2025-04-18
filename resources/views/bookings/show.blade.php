@@ -165,7 +165,7 @@
         'updated_at' => 'آخر تعديل',
     ];
     @endphp
-        <table class="table table-dark table-hover table-bordered text-center ">
+        <table class="table  table-hover table-bordered text-center ">
             <thead>
                 <tr>
                     <th>الحقل المعدل</th>
@@ -223,7 +223,7 @@
                         {{ $log->new_value ? \Carbon\Carbon::parse($log->new_value)->format('d/m/Y') : 'غير محدد' }}
                     @else
                         <!-- عرض القيمة الجديدة كما هي إذا لم تكن من الحقول الخاصة -->
-                        {{ $log->new_value ?: 'غير محدد' }}
+                        {{ ($log->new_value !== null && $log->new_value !== '') ? $log->new_value : 'غير محدد' }}
                     @endif
                 </td>
 
