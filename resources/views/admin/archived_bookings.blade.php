@@ -58,6 +58,17 @@
     </div>
 @endsection
 <script>
+    function initBootstrapComponents() {
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+        if (!bootstrap.Popover.getInstance(popoverTriggerEl)) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                html: true
+            });
+        }
+        return null;
+    }).filter(Boolean);
+}
 // ==========================================================
 // دالة جلب البيانات بالـ AJAX (بتحدث الجدول والصفحات والإجماليات)
 // ==========================================================
@@ -172,6 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // تحديث الرسالة عند أول تحميل (قبل أي Ajax)
     updateDateAlert();
+    
 
 }); // نهاية الـ DOMContentLoaded
 </script>

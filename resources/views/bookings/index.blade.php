@@ -139,6 +139,11 @@
             تم جلب: <strong>{{ $totalActiveBookingsCount }}</strong> حجز نشط
             ||
             <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
+            <span>
+                مجموع المستحق للفندق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
+                ||
+                مجموع مطلوب من الشركة (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
+            </span>
         </div>
         <div class="table-responsive" id="bookingsTable">
             @include('bookings._table')
@@ -149,7 +154,7 @@
             {{ $bookings->onEachSide(1)->links('vendor.pagination.bootstrap-4') }}
         </div>
 
-       
+
 
         @push('scripts')
             {{-- 1. بنستدعي مكتبة Axios --}}

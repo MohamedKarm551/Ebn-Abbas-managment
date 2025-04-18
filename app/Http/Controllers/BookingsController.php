@@ -180,6 +180,8 @@ class BookingsController extends Controller
         // ==================================================
 
 
+        $totalDueToHotelsAll = $queryForTotals->sum('amount_due_to_hotel') ?? 0;
+        $totalDueFromCompanyAll = $queryForTotals->sum('amount_due_from_company') ?? 0;
         $bookings = $query->paginate(10)->withQueryString();
         // فحص إذا كان الطلب AJAX
         if ($request->wantsJson() || $request->ajax()) {
@@ -254,15 +256,17 @@ class BookingsController extends Controller
             try {
                 $startDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
                 $archivedQuery->whereDate('check_in', '>=', $startDate);
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
         }
         if ($request->filled('end_date')) {
             try {
                 $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
                 $archivedQuery->whereDate('check_out', '<=', $endDate);
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
         }
-        $totalArchivedBookingsCount = $archivedQuery->count();
+        $totalArchivedBookingsCount = $archivedQuery->count(); // عدد الحجوزات المؤرشفة
 
         // --------------------------------------------------
         // 8. تمرير البيانات إلى الفيو
@@ -282,6 +286,8 @@ class BookingsController extends Controller
             'remainingToHotels' => $remainingToHotelsAccurate, // هتبقى صفر لو فلترنا بشركة
             'totalActiveBookingsCount' => $totalActiveBookingsCount, // عدد الحجوزات النشطة
             'totalArchivedBookingsCount' => $totalArchivedBookingsCount, // عدد الحجوزات المؤرشفة
+            'totalDueToHotelsAll' => $totalDueToHotelsAll,
+            'totalDueFromCompanyAll' => $totalDueFromCompanyAll,
             // ممكن تشيل 'bookingDetails' لو مش بتستخدمها في الفيو بعد ما شيلنا الـ map
         ]);
     }

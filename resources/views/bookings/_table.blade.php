@@ -1,5 +1,5 @@
 <table class="table table-bordered table-hover table-striped">
-    <thead class="table-dark"> {{-- Use a dark header for better contrast striped يعني مخطط عشان العين تلاحظ كل صف لوحده بلون--}}
+    <thead class="table-dark"> {{-- Use a dark header for better contrast striped يعني مخطط عشان العين تلاحظ كل صف لوحده بلون --}}
         <tr>
             <th class="text-center" style="width: 3%;">م</th>
             <th>العميل</th>
@@ -37,14 +37,12 @@
                     </a>
                 </td>
                 <td class="text-center align-middle">
-                    <a href="{{ route('bookings.index', ['agent_id' => $booking->agent->id]) }}"
-                        class="text-primary">
+                    <a href="{{ route('bookings.index', ['agent_id' => $booking->agent->id]) }}" class="text-primary">
                         {{ $booking->agent->name }}
                     </a>
                 </td>
                 <td class="text-center align-middle">
-                    <a href="{{ route('bookings.index', ['hotel_id' => $booking->hotel->id]) }}"
-                        class="text-primary">
+                    <a href="{{ route('bookings.index', ['hotel_id' => $booking->hotel->id]) }}" class="text-primary">
                         {{ $booking->hotel->name }}
                     </a>
                 </td>
@@ -52,11 +50,12 @@
                 <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
                 {{-- <td class="text-center align-middle">{{ $booking->days }}</td> --}}
                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
-                @if (!request('company_id')) {{-- Add the same condition here --}}
-                <td class="text-center align-middle"
-                    title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق)">
-                    {{ $booking->amount_due_to_hotel }}
-                </td>
+                @if (!request('company_id'))
+                    {{-- Add the same condition here --}}
+                    <td class="text-center align-middle"
+                        title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق)">
+                        {{ $booking->amount_due_to_hotel }}
+                    </td>
                 @endif {{-- End the condition --}}
                 {{-- <td class="text-center align-middle">{{ $booking->amount_paid_to_hotel }}</td> --}}
                 <td class="text-center align-middle"
@@ -73,9 +72,9 @@
                 <td class="text-center align-middle">
                     {{-- Notes Popover Implementation --}}
                     @if (!empty($booking->notes))
-                        <button type="button" class="btn btn-sm btn-outline-secondary"
-                            data-bs-toggle="popover" data-bs-trigger="hover focus" {{-- Show on hover or focus --}}
-                            data-bs-placement="left" data-bs-custom-class="notes-popover" title="الملاحظات"
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="popover"
+                            data-bs-trigger="hover focus" {{-- Show on hover or focus --}} data-bs-placement="left"
+                            data-bs-custom-class="notes-popover" title="الملاحظات"
                             data-bs-content="{{ nl2br(e($booking->notes)) }}">
                             <i class="fas fa-info-circle"></i> {{-- Font Awesome icon --}}
                         </button>
@@ -90,8 +89,8 @@
                         title="التفاصيل"><i class="fas fa-eye"></i></a>
                     <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-sm btn-warning me-1"
                         title="تعديل"><i class="fas fa-edit"></i></a>
-                    <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST"
-                        style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
+                    <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" style="display:inline;"
+                        onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i
@@ -100,5 +99,17 @@
                 </td>
             </tr>
         @endforeach
+        @php
+            $pageDueToHotels = $bookings->sum('amount_due_to_hotel');
+            $pageDueFromCompany = $bookings->sum('amount_due_from_company');
+        @endphp
+        <tr style="background: #f8f9fa; font-weight: bold;">
+            <td colspan="@if (!request('company_id')) 8 @else 7 @endif" class="text-end">المجموع في الصفحة:</td>
+            @if (!request('company_id'))
+                <td class="text-center">{{ $pageDueToHotels }}</td>
+            @endif
+            <td class="text-center">{{ $pageDueFromCompany }}</td>
+            <td colspan="3"></td>
+        </tr>
     </tbody>
 </table>
