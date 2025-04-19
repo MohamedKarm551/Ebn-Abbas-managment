@@ -141,6 +141,8 @@
             <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
          
         </div>
+        @auth
+        @if (auth()->user()->role === 'Admin') 
         <div class="alert alert-warning text-center mb-3">
             <span>
                 مجموع المستحق للفنادق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
@@ -148,6 +150,8 @@
                 مجموع المطلوب من الشركات (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
             </span>
         </div>
+        @endif
+        @endauth
         <div class="table-responsive" id="bookingsTable">
             @include('bookings._table')
         </div>

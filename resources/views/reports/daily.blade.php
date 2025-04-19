@@ -15,7 +15,12 @@
                 <div class="row">
                     <div class="col-md-6">
                         <ul class="list-unstyled">
-                            <li>عدد الحجوزات اليوم: {{ $todayBookings->count() }}</li>
+                            <li>
+                                <a href="{{ route('bookings.index', ['start_date' => now()->format('d/m/Y') ]) }}"
+                                   class="fw-bold text-decoration-none text-primary">
+                                    عدد الحجوزات اليوم: {{ $todayBookings->count() }}
+                                </a>
+                            </li>
                             <li>إجمالي المستحق من الشركات: {{ number_format($totalDueFromCompanies) }} ريال</li>
                             <li>إجمالي المدفوع للفنادق: {{ number_format($totalPaidToHotels) }} ريال</li>
                             <li>صافي الربح: {{ number_format($totalDueFromCompanies - $totalPaidToHotels) }} ريال</li>
@@ -28,7 +33,7 @@
         <!-- جدول الشركات -->
         <div class="  mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>حسابات الشركات</h3>
+                <h3>حساب المطلوب من الشركات</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTable')">نسخ الجدول</button>
             </div>
             <div class="card-body">
@@ -76,7 +81,7 @@
         <!-- جدول جهات الحجز -->
         <div class="  mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>حسابات جهات الحجز</h3>
+                <h3>حسابات  اللي علينا إلى جهات الحجز</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
             </div>
             <div class="card-body">

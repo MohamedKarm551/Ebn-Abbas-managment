@@ -28,9 +28,9 @@ class Agent extends Model
 
     public function getTotalDueAttribute()
     {
-        // حساب إجمالي المستحق من الحجوزات
+        // حساب إجمالي المستحق من الحجوزات كان في هنا غلطة المفروض أضرب في سعر الفندق
         return $this->bookings->sum(function ($booking) {
-            return $booking->sale_price * $booking->rooms * $booking->days;
+            return $booking->cost_price * $booking->rooms * $booking->days;
         });
     }
 

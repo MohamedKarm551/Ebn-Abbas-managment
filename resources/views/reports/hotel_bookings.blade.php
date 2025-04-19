@@ -17,7 +17,7 @@
                             <th style="min-width: 100px;">تاريخ الخروج</th>
                             <th class="text-center">عدد الأيام</th>
                             <th class="text-center">عدد الغرف</th>
-                            <th style="min-width: 90px;">السعر</th> {{-- سعر التكلفة للفندق --}}
+                            <th style="min-width: 90px;">السعر علينا </th> {{-- سعر التكلفة للفندق --}}
                             <th style="min-width: 110px;">الإجمالي</th> {{-- المستحق للفندق --}}
                         </tr>
                     </thead>
@@ -50,7 +50,8 @@
                                 <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
                                 <td class="text-center align-middle">{{ $booking->days }}</td>
                                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
-                                <td class="text-center align-middle">{{ number_format($booking->cost_price) }}</td>
+                                <td class="text-center align-middle">{{ number_format($booking->cost_price) }}</td> 
+                                {{-- سعر التكلفة للفندق --}}
                                 <td class="text-center align-middle">{{ number_format($booking->amount_due_to_hotel) }}
                                 </td>
                             </tr>

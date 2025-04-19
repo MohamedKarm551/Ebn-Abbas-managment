@@ -101,6 +101,10 @@ Route::get('/', function () {
 //     return view('welcome');
 // })->name('login');
 // حل يدوي
+// كان في هنا مشكلة لو راح على راوتر اسه لوجين مش هيلاقيه عملته يدوي عشان يويدني صح
+Route::get('/login', function () {
+    return redirect('/'); // أو أي صفحة أنت عايزها
+})->name('login');
 Route::post('/manual-login', function (Request $request) {
     $credentials = $request->only('email', 'password');
     if (Auth::attempt($credentials, $request->filled('remember'))) {
