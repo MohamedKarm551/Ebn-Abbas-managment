@@ -68,9 +68,10 @@ function showAlert(message, count, detailsTextArray, total) {
             <div class="d-flex flex-wrap justify-content-center">
                 ${cardsHTML}
             </div>
-            <h4 class="mb-3">الإجمالي: ${total.toFixed(2)} ر.س</h4>
+            <h4 class="mb-3"> إجمالي المطلوب  على هذه الحجوزات:
+             ${total.toFixed(2)} ر.س</h4>
             <div class="d-flex justify-content-center mt-2">
-                <button type="button" class="btn btn-light btn-sm mx-2 copyAlertBtn">نسخ</button>
+                <button type="button" class="btn btn-light btn-sm mx-2 copyAlertBtn">نسخ بيانات الحجوزات</button>
                 <button type="button" class="btn btn-outline-light btn-sm closeAlertBtn">إغلاق</button>
             </div>
         </div>

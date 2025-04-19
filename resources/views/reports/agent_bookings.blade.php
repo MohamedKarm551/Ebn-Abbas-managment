@@ -12,13 +12,15 @@
         <div class="alert alert-info">
             <strong>ملخص الحساب:</strong><br>
             عدد الحجوزات المستحقة: {{ $dueCount }}<br>
-            إجمالي المستحق: {{ number_format($totalDue) }} ر.س<br>
+            إجمالي اللي علينا: {{ number_format($totalDue) }} ر.س<br>
+            <div style="font-weight: bold;text-decoration: underline;"> المدفوع: {{ number_format($totalPaid) }} ر.س<br>
+            </div>
+            المتبقي: {{ number_format($totalRemaining) }} ر.س<br>
             <small>المعادلة: ∑ (عدد الليالي الكلي × عدد الغرف × سعر الفندق) لكل الحجوزات</small>
         </div>
-
         <div class="  mb-4">
             <div class="">
-                <table class="table table-bordered" id="agentBookingsTable"> {{-- ID للجدول --}}
+                <table class="table table-bordered" id="agentBookingsTable" data-type="agent"> {{-- ID للجدول --}}
                     <thead>
                         <tr>
                             <th style="width: 5%;">#</th> {{-- عمود الترقيم --}}
@@ -59,8 +61,10 @@
                                 <td class="text-center align-middle">{{ $booking->check_in->format('d/m/Y') }}</td>
                                 <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
                                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
-                                <td class="text-center align-middle">{{ number_format($booking->cost_price, 2) }} ر.س</td> {{-- سعر الفندق --}}
-                                <td class="text-center align-middle">{{ number_format($booking->total_agent_due, 2) }} ر.س</td> {{-- السعر الكلي المستحق --}}
+                                <td class="text-center align-middle">{{ number_format($booking->cost_price, 2) }} ر.س</td>
+                                {{-- سعر الفندق --}}
+                                <td class="text-center align-middle">{{ number_format($booking->total_agent_due, 2) }} ر.س
+                                </td> {{-- السعر الكلي المستحق --}}
                             </tr>
                         @endforeach
                     </tbody>

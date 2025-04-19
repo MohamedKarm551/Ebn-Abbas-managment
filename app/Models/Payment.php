@@ -23,4 +23,9 @@ class Payment extends Model
     {
         return $this->belongsTo(Company::class);
     }
+    // public function getCompanyPaidAttribute()
+    // {
+    //     $totalPaid = Payment::where('company_id', $this->company->id)->sum('amount');
+    // }
+    
 }

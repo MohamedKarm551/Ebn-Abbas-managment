@@ -3,19 +3,22 @@
 @section('content')
     <div class="container">
         <h1>حجوزات {{ $company->name }}</h1>
-
-        <div class="alert alert-info">
-            <strong>ملخص الحساب:</strong><br>
-            عدد الحجوزات المستحقة: {{ $dueCount }}<br>
-            إجمالي المستحق: {{ number_format($totalDue) }} ر.س<br>
-            المدفوع: {{ number_format($totalPaid) }} ر.س<br>
-            المتبقي: {{ number_format($totalRemaining) }} ر.س<br>
-            <small>المعادلة: ∑ (عدد الليالي المنتهية حتى اليوم × عدد الغرف × سعر البيع) للحجوزات التي دخلت ولم تُسدّد كليًا</small>
-        </div>
+        {{-- @php
+        $count = $bookings->count();
+        $totalDue = $bookings->sum('due_to_agent');
+    @endphp --}}
+       <div class="alert alert-info">
+        <strong>ملخص الحساب:</strong><br>
+        عدد الحجوزات: {{ $dueCount }}<br>
+        إجمالي المستحق: {{ number_format($totalDue) }} ر.س<br>
+        <div style="font-weight: bold;text-decoration: underline;"> المدفوع: {{ number_format($totalPaid) }} ر.س<br></div>
+        المتبقي: {{ number_format($totalRemaining) }} ر.س<br>
+        <small>المعادلة: (عدد الليالي الكلي × عدد الغرف × سعر البيع) ∑  لكل الحجوزات</small>
+    </div>
 
         <div class="  mb-4">
             <div class=" ">
-                <table class="table table-bordered" id="companyBookingsTable">
+                <table class="table table-bordered" id="companyBookingsTable" data-type="company">
                     <thead>
                         <tr>
                             <th>#</th> {{-- عمود الترقيم --}}
@@ -26,7 +29,7 @@
                             <th>تاريخ الدخول</th>
                             <th>تاريخ الخروج</th>
                             <th>عدد الغرف</th>
-                            <th>المبلغ المستحق</th>
+                            {{-- <th>المبلغ المستحق</th> --}}
                             <th>السعر </th>
                             <th>الكلي</th>
                         </tr>
@@ -57,7 +60,7 @@
                                 <td>{{ $booking->check_in->format('d/m/Y') }}</td>
                                 <td>{{ $booking->check_out->format('d/m/Y') }}</td>
                                 <td>{{ $booking->rooms }}</td>
-                                <td>{{ number_format($booking->due_to_company, 2) }} ر.س</td>
+                                {{-- <td>{{ number_format($booking->total_company_due, 2) }} ر.س</td> المبلغ المستحق للشركة --}}
                                 <td>{{ number_format($booking->sale_price, 2) }} ر.س</td> {{-- سعر البيع للشركة --}}
                                 <td>{{ number_format($booking->total_company_due, 2) }} ر.س</td> {{-- السعر الكلي المستحق --}}
                             </tr>

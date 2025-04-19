@@ -259,7 +259,7 @@
                                 <ul class="list-group list-group-flush mb-3">
                                     ${bookingDetails.join('')}
                                 </ul>
-                                <h4 class="mb-3">الإجمالي: ${totalAr} ر.س</h4>
+                                <h4 class="mb-3 totalAmount">الإجمالي: ${totalAr} ر.س</h4>
                                 <div class="d-flex justify-content-center">
                                     <button class="btn btn-light btn-sm copyAlertBtn mx-2">نسخ</button>
                                     <button class="btn btn-outline-light btn-sm closeAlertBtn">إغلاق</button>

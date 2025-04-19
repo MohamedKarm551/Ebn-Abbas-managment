@@ -49,7 +49,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // مسار صفحة الأرشيف:
     Route::get('/archived-bookings', [AdminController::class, 'archivedBookings'])->name('archived_bookings');
 });
-
+Route::get('/voucher', function () {
+    return view('bookings.voucher');
+})->name('voucher');
 // إضافة هذه الروتس
 Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
 Route::get('/reports/company/{id}/bookings', [ReportController::class, 'companyBookings'])->name('reports.company.bookings');
@@ -116,3 +118,4 @@ Route::post('/logout', function () {
     Auth::logout();
     return redirect('/');
 })->name('logout');
+

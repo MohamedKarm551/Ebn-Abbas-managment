@@ -72,34 +72,29 @@ class Booking extends Model
         return $end->diffInDays(Carbon::parse($this->check_in));
     }
 
-    /** المستحق لجهة الحجز (الي حتى اليوم) */
+    /** المستحق لجهة الحجز (     ) */
     public function getDueToAgentAttribute()
     {
-        return $this->lapsed_days * $this->rooms * $this->cost_price;
+        return $this->rooms * $this->days * $this->cost_price;
     }
 
-    /** المستحق للشركة (الي حتى اليوم) */
+    /** المستحق للشركة (الي    ) */
     public function getDueToCompanyAttribute()
     {
-        return $this->lapsed_days * $this->rooms * $this->sale_price;
+        return $this->days * $this->rooms * $this->sale_price;
     }
 
     /** مجموع ما دفعت جهة الحجز عبر دفعاتها حتى اليوم */
     public function getAgentPaidAttribute()
     {
         // استبدل agentPayments() بعلاقة payments() المعرفة في Agent
-        return $this->agent
-                    ->payments()                // ⚠️ هنا
-                    ->whereDate('payment_date', '<=', now())
-                    ->sum('amount');
+        return $this->agent->payments()->sum('amount');
     }
 
     /** مجموع ما دفعت الشركة عبر دفعاتها حتى اليوم */
     public function getCompanyPaidAttribute()
     {
-        return $this->company->payments()
-               ->whereDate('payment_date','<=', now())
-               ->sum('amount');
+        return $this->amount_paid_by_company ?? 0;
     }
 
     /** المتبقي على جهة الحجز */
