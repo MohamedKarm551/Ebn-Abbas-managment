@@ -14,7 +14,10 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <ul class="list-unstyled">
+                        <ul class="list-unstyled" style="
+    padding: 1%;
+    margin: 1%;
+">
                             <li>
                                 <a href="{{ route('bookings.index', ['start_date' => now()->format('d/m/Y')]) }}"
                                     class="fw-bold text-decoration-none text-primary">
@@ -22,9 +25,9 @@
                                 </a>
                             </li>
 
-                            <li>إجمالي المتبقي من الشركات: {{ number_format($totalRemainingFromCompanies) }} ريال</li>
-                            <li>إجمالي المتبقي للفنادق (جهات الحجز): {{ number_format($totalRemainingToHotels) }} ريال</li>
-                            <li>صافي الربح: {{ number_format($netProfit) }} ريال</li>
+                            <li class="fw-bold">إجمالي المتبقي من الشركات: {{ number_format($totalRemainingFromCompanies) }} ريال</li>
+                            <li class="fw-bold">إجمالي المتبقي للفنادق (جهات الحجز): {{ number_format($totalRemainingToHotels) }} ريال</li>
+                            <li class="fw-bold">صافي الربح: {{ number_format($netProfit) }} ريال</li>
                         </ul>
                     </div>
                 </div>
@@ -54,7 +57,7 @@
                         <tbody>
                             @foreach ($companiesReport as $company)
                                 <tr>
-                                    <td>{{ $company->name }}</td>
+                                    <td>{{ $loop->iteration }}. {{ $company->name }}</td>
                                     <td>{{ $company->bookings_count }}</td>
                                     <td>{{ number_format($company->total_due) }} ريال</td>
                                     <td>{{ number_format($company->total_paid) }} ريال</td>
@@ -104,7 +107,7 @@
                         <tbody>
                             @foreach ($agentsReport as $agent)
                                 <tr>
-                                    <td>{{ $agent->name }}</td>
+                                    <td>{{ $loop->iteration }}.{{ $agent->name }}  </td>
                                     <td>{{ $agent->bookings_count }}</td>
                                     <td>{{ number_format($agent->total_due) }}</td>
                                     <td>{{ number_format($agent->total_paid) }}</td>
@@ -237,7 +240,7 @@
                         <tbody>
                             @foreach ($hotelsReport as $hotel)
                                 <tr>
-                                    <td>{{ $hotel->name }}</td>
+                                    <td>{{ $loop->iteration }}. {{ $hotel->name }}</td>
                                     <td>{{ $hotel->bookings_count }}</td>
                                     <td>{{ number_format($hotel->total_due) }}</td>
                                     <td>

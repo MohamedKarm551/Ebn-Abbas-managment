@@ -27,11 +27,17 @@ class ReportController extends Controller
         // كل الحجوزات اللي بتبدأ النهاردة
         $todayBookings = Booking::whereDate('check_in', $today)->get();
 
-        // تقرير الشركات: كل شركة وعدد حجوزاتها
-        $companiesReport = Company::withCount('bookings')->get();
+        //  تقرير الشركات: كل شركة وعدد حجوزاتها وترتيب أعلى مستحق تنازليا
+        $companiesReport = Company::withCount('bookings')->get()
+            ->sortByDesc(function ($company) {
+                return $company->remaining;
+            })->values();
 
-        // تقرير الوكلاء: كل وكيل وعدد حجوزاته
-        $agentsReport = Agent::withCount('bookings')->get();
+        //  تقرير الوكلاء: كل وكيل وعدد حجوزاته وترتيبهم من الأعلى واحد مطلوب منه فلوس للأقل
+        $agentsReport = Agent::withCount('bookings')->get()
+            ->sortByDesc(function ($agent) {
+                return $agent->remaining;
+            })->values();
 
         // إجمالي المستحق من الشركات (كل اللي المفروض الشركات تدفعه بناءً على كل حجوزاتها)
         $totalDueFromCompanies = $companiesReport->sum('total_due');
@@ -42,7 +48,10 @@ class ReportController extends Controller
         });
 
         // تقرير الفنادق: كل فندق وعدد حجوزاته (قائمة الفنادق مع عدد الحجوزات لكل فندق)
-        $hotelsReport = Hotel::withCount('bookings')->get();
+        $hotelsReport = Hotel::withCount('bookings')->get()
+            ->sortByDesc(function ($hotel) {
+                return $hotel->total_due;
+            })->values();
 
         // تقرير الشركات: كل شركة وعدد حجوزاتها (قائمة الشركات مع عدد الحجوزات لكل شركة)
         $companiesReport = Company::withCount('bookings')->get();
@@ -112,7 +121,7 @@ class ReportController extends Controller
 
 
 
-      
+
         // رجع البيانات للواجهة
         return view('reports.company_bookings', compact(
             'company',
@@ -121,7 +130,7 @@ class ReportController extends Controller
             'totalDue',
             'totalPaid',
             'totalRemaining',
-           
+
         ));
     }
 
