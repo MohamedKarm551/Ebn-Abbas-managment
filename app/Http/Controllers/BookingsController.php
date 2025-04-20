@@ -455,9 +455,14 @@ class BookingsController extends Controller
         File::append($txtPath, $textContent);
         File::append($csvPath, $csvContent);
 
-        return redirect()->route('bookings.index')->with('success', 'تم إنشاء الحجز بنجاح!');
+        // return redirect()->route('bookings.index')->with('success', 'تم إنشاء الحجز بنجاح!');
+        return redirect()->route('bookings.voucher', $booking->id)->with('success', 'تم إنشاء الحجز بنجاح! يمكنك طباعة الفاتورة الآن.');
     }
-
+    public function voucher($id)
+    {
+        $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
+        return view('bookings.voucher', compact('booking'));
+    }
     public function import(Request $request)
     {
         // التحقق من رفع ملف CSV

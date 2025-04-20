@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -70,7 +71,8 @@
             margin-bottom: 20px;
         }
 
-        table th, table td {
+        table th,
+        table td {
             border: 1px solid black;
             padding: 10px;
             text-align: left;
@@ -95,13 +97,20 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
+
 <body>
     <div class="container my-3">
-        <div class="d-flex justify-content-end">
-            <button id="downloadVoucher" class="btn btn-success d-flex align-items-center gap-2">
-                <i class="bi bi-download fs-5"></i>
-                تحميل صورة الفاتورة
-            </button>
+        <div class="d-flex flex-wrap justify-content-between flex-row-reverse align-items-center">
+            <a href="{{ route('bookings.show', $booking->id) }}"
+                class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
+                رجوع ➡
+            </a>
+            <div class="mx-auto ">
+                <button id="downloadVoucher" class="btn btn-success d-flex align-items-center gap-2">
+                    <i class="bi bi-download fs-5"></i>
+                    تحميل صورة الفاتورة
+                </button>
+            </div>
         </div>
     </div>
     <div class="voucher-container">
@@ -109,7 +118,7 @@
         <div class="header">
             <img src="{{ asset('images/cover.jpg') }}" alt="Hotel Logo">
             <h1> شركة ابن عباس </h1>
-            <h2>لخدمات العمرة والحج    </h2>
+            <h2>لخدمات العمرة والحج </h2>
         </div>
 
         <hr>
@@ -117,50 +126,68 @@
         <table>
             <tr>
                 <td colspan="2">
-                    <span class="fw-bold">Hotel Name:</span> التيسير
+                    <span class="fw-bold">Hotel Name:</span> {{ $booking->hotel->name }}
                 </td>
                 <td>
-                    <span class="fw-bold">Voucher No:</span> 105401
+                    <span class="fw-bold">Voucher No: </span>{{ $booking->id }}-{{ $booking->agent_id }}-{{ $booking->hotel->id }}-{{ $booking->employee_id }}
+                    {{-- -{{$booking->agnet->name}} --}}
+                    {{-- {{ $booking->hotel->name }} --}}
+                    {{-- {{$booking->employee->name}} --}}
+
                 </td>
             </tr>
             <tr>
                 <td colspan="2">
-                    <span class="fw-bold">Hotel Rsrv:</span> <!-- هنا قيمة الحجز لو فيه -->
+                    <span class="fw-bold">Guest Name:</span> {{ $booking->client_name }}
                 </td>
                 <td>
-                    <span class="fw-bold">Client Req:</span> <!-- هنا قيمة الطلب لو فيه -->
+                    <span class="fw-bold">Company:</span> {{ $booking->company->name ?? '' }}
                 </td>
             </tr>
             <tr>
                 <td colspan="2">
-                    <span class="fw-bold">Check In:</span> 18/04/2025
+                    <span class="fw-bold">Check In:</span> {{ $booking->check_in->format('d/m/Y') }}
                 </td>
                 <td>
-                    <span class="fw-bold">Check Out:</span> 20/04/2025
+                    <span class="fw-bold">Check Out:</span> {{ $booking->check_out->format('d/m/Y') }}
                 </td>
             </tr>
             <tr>
                 <td colspan="2">
-                    <span class="fw-bold">Check In Time:</span> 04:00 PM
+                    <span class="fw-bold">Room Type:</span> {{ $booking->room_type }}
                 </td>
                 <td>
-                    <span class="fw-bold">Check Out Time:</span> 12:00 PM
+                    <span class="fw-bold">Qty:</span> {{ $booking->rooms }}
+                </td>
+            </tr>
+            {{-- <tr>
+                <td colspan="2">
+                    <span class="fw-bold">Total Cost:</span> {{ number_format($booking->amount_due_to_hotel, 2) }}
+                </td>
+                <td>
+                    <span class="fw-bold">Amount Paid to Hotel:</span> {{ number_format($booking->amount_paid_to_hotel, 2) }}
+                </td>
+            </tr> --}}
+            <tr>
+                <td colspan="2">
+                    <span class="fw-bold">Sale Price (per night):</span> {{ number_format($booking->sale_price, 2) }}
+                </td>
+                <td>
+                    <span class="fw-bold">Total Due from Company:</span>
+                    {{ number_format($booking->amount_due_from_company, 2) }}
                 </td>
             </tr>
             <tr>
                 <td colspan="2">
-                    <span class="fw-bold">Guest Name:</span> يسري السيد محمد فلا
+                    <span class="fw-bold">days:</span> {{ $booking->days }}
                 </td>
                 <td>
-                    <span class="fw-bold">Guest Number:</span> 01000000000
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <span class="fw-bold">Issue Date:</span> 16/04/2025
-                </td>
-                <td>
-                    <span class="fw-bold">Stamp And Signature:</span>
+                    <span class="fw-bold">Notes:</span>
+                    @if($booking->notes)
+                    has notes ..
+                    @else
+                        No Notes
+                    @endif
                 </td>
             </tr>
         </table>
@@ -182,10 +209,11 @@
         </table>
 
         <div class="remarks">Transportation:</div>
-        <div class="footer">Any Amount in Excess of the value of this order to be collected directly from the guest</div>
+        <div class="footer">Any Amount in Excess of the value of this order to be collected directly from the guest
+        </div>
     </div>
     <script>
-        document.getElementById('downloadVoucher').addEventListener('click', function () {
+        document.getElementById('downloadVoucher').addEventListener('click', function() {
             html2canvas(document.querySelector('.voucher-container')).then(function(canvas) {
                 var link = document.createElement('a');
                 link.download = 'voucher.png';
@@ -194,5 +222,23 @@
             });
         });
     </script>
+    <script>
+        // تعطيل كليك يمين
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        // تعطيل F12 وCtrl+Shift+I وCtrl+U
+        document.onkeydown = function(e) {
+            if (
+                e.keyCode == 123 // F12
+                ||
+                (e.ctrlKey && e.shiftKey && e.keyCode == 73) // Ctrl+Shift+I
+                ||
+                (e.ctrlKey && e.keyCode == 85) // Ctrl+U
+            ) {
+                return false;
+            }
+        };
+    </script>
 </body>
+
 </html>
