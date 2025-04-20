@@ -47,22 +47,31 @@
                     <option value="" disabled selected>اختر الفندق</option>
                     @foreach ($hotels as $hotel)
                         <option value="{{ $hotel->id }}" {{ old('hotel_id') == $hotel->id ? 'selected' : '' }}>
-                            {{ isset($booking) && $hotel->id == $booking->hotel_id ? 'selected' : '' }}{{ $hotel->name }}</option>
+                            {{ isset($booking) && $hotel->id == $booking->hotel_id ? 'selected' : '' }}{{ $hotel->name }}
+                        </option>
                     @endforeach
                 </select>
             </div>
             <div class="mb-3">
                 <label for="room_type" class="form-label">نوع الغرفة</label>
-                <input type="text" class="form-control @error('room_type') is-invalid @enderror" id="room_type"
-                    name="room_type" value="{{ old('room_type') }}" required>
+                <select class="form-control @error('room_type') is-invalid @enderror" id="room_type" name="room_type"
+                    required>
+                    <option value="" disabled selected>اختر نوع الغرفة</option>
+                    <option value="رباعي" {{ old('room_type') == 'رباعي' ? 'selected' : '' }}>رباعي</option>
+                    <option value="خماسي" {{ old('room_type') == 'خماسي' ? 'selected' : '' }}>خماسي</option>
+                </select>
                 @error('room_type')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
             <div class="mb-3">
+                @php
+                    $today = \Carbon\Carbon::today()->format('Y-m-d');
+                @endphp
                 <label for="check_in" class="form-label">تاريخ الدخول</label>
                 <input type="date" class="form-control @error('check_in') is-invalid @enderror" id="check_in"
-                    name="check_in" value="{{ old('check_in') }}" required>
+                    name="check_in" value="{{ old('check_in') }}"
+                    @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin') min="{{ $today }}" onkeydown="return false" @endif required>
                 @error('check_in')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
