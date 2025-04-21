@@ -31,9 +31,9 @@
                         @php
                             $unreadNotificationsCount = \App\Models\Notification::where('is_read', false)->count();
                         @endphp
-                        <li class="nav-item position-relative mx-2 list-unstyled">
-                            <a href="{{ route('admin.notifications') }}"
-                                class="nav-link position-relative d-flex align-items-center">
+                        <li class="nav-item dropdown position-relative mx-2 list-unstyled">
+                            <a class="nav-link position-relative d-flex align-items-center" href="#"
+                                id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-bell fs-4"></i>
                                 @if ($unreadNotificationsCount > 0)
                                     <span
@@ -42,6 +42,33 @@
                                     </span>
                                 @endif
                             </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2" aria-labelledby="notifDropdown"
+                                style="min-width: 320px; max-width: 90vw; direction: rtl;">
+                                <li class="dropdown-header fw-bold">آخر 5 إشعارات</li>
+                                @forelse($lastNotifications as $notification)
+                                    <li>
+                                        <div class="dropdown-item small {{ $notification->is_read ? 'opacity-50' : '' }} text-wrap"
+                                            style="white-space: normal;">
+                                            <span class="fw-bold">{{ $notification->type }}</span> -
+                                            {{ \Illuminate\Support\Str::limit($notification->message, 50) }}
+                                            <br>
+                                            <span
+                                                class="text-muted small">{{ $notification->created_at->diffForHumans() }}</span>
+                                        </div>
+                                    </li>
+                                @empty
+                                    <li><span class="dropdown-item text-muted small">لا توجد إشعارات</span></li>
+                                @endforelse
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-center text-primary"
+                                        href="{{ route('admin.notifications') }}">
+                                        عرض كل الإشعارات
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     @endif
                 @endauth

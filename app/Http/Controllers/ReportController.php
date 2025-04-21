@@ -67,7 +67,20 @@ class ReportController extends Controller
 
         // صافي الربح (الفرق بين اللي لسه الشركات هتدفعه لك واللي لسه عليك تدفعه للفنادق)
         $netProfit = $totalRemainingFromCompanies - $totalRemainingToHotels;
-
+        // إشعار خفيف على آخر شيء تم عليه تعديل 
+        // في نهاية دالة daily
+        $recentCompanyEdits = \App\Models\Notification::whereIn('type', [
+            'تعديل', 'تعديل دفعة', 'دفعة جديدة', 'حذف دفعة'
+        ])
+        ->where('created_at', '>=', now()->subDays(2))
+        ->get()
+        ->groupBy('message');
+        $resentAgentEdits = \App\Models\Notification::whereIn('type', [
+            'تعديل', 'تعديل دفعة', 'دفعة جديدة', 'حذف دفعة'
+        ])
+        ->where('created_at', '>=', now()->subDays(2))
+        ->get()
+        ->groupBy('message');
         // رجع كل البيانات للواجهة اليومية
         return view('reports.daily', compact(
             'todayBookings',
@@ -78,7 +91,9 @@ class ReportController extends Controller
             'totalPaidToHotels',
             'totalRemainingFromCompanies',
             'totalRemainingToHotels',
-            'netProfit'
+            'netProfit',
+            'recentCompanyEdits', // إشعار خفيف على آخر شركة تم عليها تعديل
+            'resentAgentEdits' // إشعار خفيف على آخر جهة حجز تم عليه تعديل
         ));
     }
 
@@ -320,7 +335,7 @@ class ReportController extends Controller
     {
         // هات الدفعة المطلوبة
         $payment = AgentPayment::findOrFail($id);
-        
+
         // رجع البيانات للواجهة
         return view('reports.edit_payment', compact('payment'));
     }
@@ -381,8 +396,8 @@ class ReportController extends Controller
             'notes'        => $validated['notes'],
         ]);
 
-          // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
-          Notification::create([
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
             'user_id' => Auth::user()->id,
             'message' => "  تعديل دفعة  لشركة   {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
             'type' => 'تعديل دفعة ',
@@ -419,7 +434,7 @@ class ReportController extends Controller
         // احذف سجل الدفعة
         $companyId = $payment->company_id;
         $payment->delete();
-              // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
         Notification::create([
             'user_id' => Auth::user()->id,
             'message' => "  حذف دفعة  لشركة   {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
@@ -440,12 +455,12 @@ class ReportController extends Controller
 
         // احذف الدفعة
         $payment->delete();
-                // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
-                Notification::create([
-                    'user_id' => Auth::user()->id,
-                    'message' => " حذف دفعة  لجهة حجز  {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
-                    'type' => 'حذف دفعة ',
-                ]);
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => " حذف دفعة  لجهة حجز  {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'type' => 'حذف دفعة ',
+        ]);
         // رجع للصفحة مع رسالة نجاح
         return redirect()
             ->route('reports.agent.payments', $agentId)

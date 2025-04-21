@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{-- حماية هذا يمنع تحميل أي سكريبت أو ستايل خارجي غير مصرح به.
+  --}}
+    {{-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"> --}}
     <title>@yield('title', 'نظام إدارة الحجوزات')</title>
     @yield('favicon')
     <!-- إضافة Bootstrap RTL -->

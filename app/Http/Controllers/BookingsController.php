@@ -373,6 +373,13 @@ class BookingsController extends Controller
             'amount_due_to_hotel' => $validatedData['amount_due_to_hotel'],
             'amount_due_from_company' => $validatedData['amount_due_from_company'],
         ]);
+        // تعقيم الملاحظات من أي أكواد HTML أو سكريبت
+        // تعقيم كل الحقول النصية
+        foreach (['notes', 'client_name'] as $field) {
+            if (isset($validatedData[$field])) {
+                $validatedData[$field] = htmlspecialchars($validatedData[$field], ENT_QUOTES, 'UTF-8');
+            }
+        }
         // dd($validatedData);
         // إنشاء الحجز
         $booking = Booking::create($validatedData);
@@ -613,7 +620,13 @@ class BookingsController extends Controller
                 }
             }
         }
-
+         // تعقيم الملاحظات من أي أكواد HTML أو سكريبت
+        // تعقيم كل الحقول النصية
+        foreach (['notes', 'client_name'] as $field) {
+            if (isset($validatedData[$field])) {
+                $validatedData[$field] = htmlspecialchars($validatedData[$field], ENT_QUOTES, 'UTF-8');
+            }
+        }
         $booking->update($validatedData);
         // بعد $booking->update($validatedData);
         // إشعار للادمن

@@ -57,7 +57,16 @@
                         <tbody>
                             @foreach ($companiesReport as $company)
                                 <tr>
-                                    <td>{{ $loop->iteration }}. {{ $company->name }}</td>
+                                    <td>{{ $loop->iteration }}. {{ $company->name }}
+                                        @php
+                                        $hasEdit = $recentCompanyEdits->filter(function($n) use ($company) {
+                                            return str_contains($n->first()->message, $company->name);
+                                        })->count() > 0;
+                                    @endphp
+                                    @if($hasEdit)
+                                        <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
+                                    @endif
+                                    </td>
                                     <td>{{ $company->bookings_count }}</td>
                                     <td>{{ number_format($company->total_due) }} ريال</td>
                                     <td>{{ number_format($company->total_paid) }} ريال</td>
@@ -107,7 +116,16 @@
                         <tbody>
                             @foreach ($agentsReport as $agent)
                                 <tr>
-                                    <td>{{ $loop->iteration }}.{{ $agent->name }}  </td>
+                                    <td>{{ $loop->iteration }}.{{ $agent->name }}  
+                                        @php
+                                        $hasEdit = $resentAgentEdits->filter(function($n) use ($agent) {
+                                            return str_contains($n->first()->message, $agent->name);
+                                        })->count() > 0;
+                                    @endphp
+                                    @if($hasEdit)
+                                        <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
+                                    @endif
+                                    </td>
                                     <td>{{ $agent->bookings_count }}</td>
                                     <td>{{ number_format($agent->total_due) }}</td>
                                     <td>{{ number_format($agent->total_paid) }}</td>
