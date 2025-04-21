@@ -70,5 +70,18 @@
           });
         });
     </script>
+    <script>
+        setInterval(function() {
+            fetch('/api/notifications/unread-count')
+                .then(res => res.json())
+                .then(data => {
+                    let badge = document.querySelector('.bi-bell').parentElement.querySelector('.badge');
+                    if (badge) {
+                        badge.innerText = data.count;
+                        badge.style.display = data.count > 0 ? 'inline-block' : 'none';
+                    }
+                });
+        }, 30000); // كل 30 ثانية
+        </script>
 </body>
 </html>

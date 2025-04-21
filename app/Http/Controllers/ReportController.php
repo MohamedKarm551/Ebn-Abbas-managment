@@ -6,6 +6,8 @@ use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Agent;
 use App\Models\AgentPayment;
+use App\Models\Notification;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Payment;
 use App\Models\Hotel;
 use Carbon\Carbon;
@@ -245,6 +247,12 @@ class ReportController extends Controller
                 $remaining -= $pay;
             });
 
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => " تم إضافة دفعة جديدة لشركة {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'type' => 'دفعة جديدة',
+        ]);
         // رجع للصفحة مع رسالة نجاح
         return redirect()
             ->route('reports.company.payments', $validated['company_id'])
@@ -267,6 +275,12 @@ class ReportController extends Controller
             'amount' => $validated['amount'],
             'payment_date' => now(),
             'notes' => $validated['notes'],
+        ]);
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => " تم إضافة دفعة جديدة لجهة حجز  {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'type' => 'دفعة جديدة',
         ]);
 
         // رجع للصفحة مع رسالة نجاح
@@ -306,7 +320,7 @@ class ReportController extends Controller
     {
         // هات الدفعة المطلوبة
         $payment = AgentPayment::findOrFail($id);
-
+        
         // رجع البيانات للواجهة
         return view('reports.edit_payment', compact('payment'));
     }
@@ -327,6 +341,13 @@ class ReportController extends Controller
         // حدث بيانات الوكيل عشان القيم تتحدث
         $agent = $payment->agent;
         $agent->load('payments', 'bookings');
+
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "تعديل دفعة لجهة حجز  {$agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'type' => 'تعديل دفعة ',
+        ]);
 
         // رجع للصفحة مع رسالة نجاح
         return redirect()->route('reports.agent.payments', $agent->id)
@@ -360,6 +381,12 @@ class ReportController extends Controller
             'notes'        => $validated['notes'],
         ]);
 
+          // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+          Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "  تعديل دفعة  لشركة   {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'type' => 'تعديل دفعة ',
+        ]);
         // رجع للصفحة مع رسالة نجاح
         return redirect()
             ->route('reports.company.payments', $payment->company_id)
@@ -392,7 +419,12 @@ class ReportController extends Controller
         // احذف سجل الدفعة
         $companyId = $payment->company_id;
         $payment->delete();
-
+              // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "  حذف دفعة  لشركة   {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'type' => 'حذف دفعة ',
+        ]);
         // رجع للصفحة مع رسالة نجاح
         return redirect()
             ->route('reports.company.payments', $companyId)
@@ -408,7 +440,12 @@ class ReportController extends Controller
 
         // احذف الدفعة
         $payment->delete();
-
+                // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+                Notification::create([
+                    'user_id' => Auth::user()->id,
+                    'message' => " حذف دفعة  لجهة حجز  {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+                    'type' => 'حذف دفعة ',
+                ]);
         // رجع للصفحة مع رسالة نجاح
         return redirect()
             ->route('reports.agent.payments', $agentId)

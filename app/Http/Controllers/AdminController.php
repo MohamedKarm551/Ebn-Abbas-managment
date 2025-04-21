@@ -10,11 +10,38 @@ use App\Models\Booking;
 use App\Models\ArchivedBooking; // <--- 2. نضيف ArchivedBooking
 use App\Models\EditLog; // فوق في أول الملف
 use Illuminate\Http\Request;
+use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+
 
 class AdminController extends Controller
 {
+
+    public function notifications()
+    {
+        $notifications = Notification::latest()->paginate(20); // عرض الإشعارات الأحدث أولاً آخر 20 
+return view('admin.notifications', compact('notifications'));
+    }
+    public function markNotificationRead($id)
+    {
+        $notification = \App\Models\Notification::findOrFail($id);
+        $notification->is_read = true;
+        $notification->save();
+
+        return redirect()->back()->with('success', 'تم تعليم الإشعار كمقروء');
+    }
+    public function markAllNotificationsRead()
+    {
+        $notifications = \App\Models\Notification::where('is_read', false)->get();
+        foreach ($notifications as $notification) {
+            $notification->is_read = true;
+            $notification->save();
+        }
+
+        return redirect()->back()->with('success', 'تم تعليم جميع الإشعارات كمقروءة');
+    }
     public function employees()
     {
         $employees = Employee::all();
@@ -25,12 +52,25 @@ class AdminController extends Controller
     {
         $request->validate(['name' => 'required|string|max:255']);
         Employee::create(['name' => $request->name]);
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "إضافة موظف جديد : {$request->name} ,",
+            'type' => 'جديد',
+        ]);
         return redirect()->back()->with('success', 'تم إضافة الموظف بنجاح!');
     }
 
     public function deleteEmployee($id)
-    {
-        Employee::findOrFail($id)->delete();
+    {   
+        $employee = Employee::findOrFail($id);
+        $employee->delete();
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "حذف موظف   : {$employee->name} ,",
+            'type' => 'عملية حذف',
+        ]);
+      
         return redirect()->back()->with('success', 'تم حذف الموظف بنجاح!');
     }
 
@@ -41,9 +81,14 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:employees,name,' . $employee->id,
         ]);
-
+        $oldName=$employee->name;
         $employee->update(['name' => $request->name]);
-
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "تعديل اسم موظف   :{$oldName} إلى: {  $employee->name} ,",
+            'type' => 'تحديث اسم',
+        ]);
         return response()->json(['success' => true]);
     }
 
@@ -60,7 +105,11 @@ class AdminController extends Controller
         ]);
 
         Company::create(['name' => $request->name]);
-
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "إضافة شركة: {  $request->name} ,",
+            'type' => 'شركة جديدة  ',
+        ]);
         return redirect()->route('admin.companies')->with('success', 'تم إضافة الشركة بنجاح!');
     }
 
@@ -77,9 +126,13 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:companies,name,' . $company->id,
         ]);
-
+        $oldName = $company->name;
         $company->update(['name' => $request->name]);
-
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "تحديث اسم شركة  {$oldName}  إلى {  $request->name} ,",
+            'type' => 'تحديث اسم اشركة ',
+        ]);
         return redirect()->route('admin.companies')->with('success', 'تم تعديل اسم الشركة بنجاح!');
     }
 
@@ -87,7 +140,11 @@ class AdminController extends Controller
     {
         $company = Company::findOrFail($id);
         $company->delete();
-
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "حذف شركة {$company->name },",
+            'type' => 'عملية حذف شركة!!!',
+        ]);
         return redirect()->route('admin.companies')->with('success', 'تم حذف الشركة بنجاح!');
     }
 
@@ -104,7 +161,11 @@ class AdminController extends Controller
         ]);
 
         Agent::create(['name' => $request->name]);
-
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "إضافة جهة حجز: {  $request->name} ,",
+            'type' => 'جهة حجز جديدة  ',
+        ]);
         return redirect()->route('admin.agents')->with('success', 'تم إضافة جهة الحجز بنجاح!');
     }
 
@@ -117,13 +178,18 @@ class AdminController extends Controller
     public function updateAgent(Request $request, $id)
     {
         $agent = Agent::findOrFail($id);
-
+        $oldName = $agent->name;
         $request->validate([
             'name' => 'required|string|max:255|unique:agents,name,' . $agent->id,
         ]);
 
         $agent->update(['name' => $request->name]);
 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "تحديث   جهة حجز  {$oldName}  إلى {  $request->name} ,",
+            'type' => 'تحديث  اسم جهة حجز', 
+        ]);
         return redirect()->route('admin.agents')->with('success', 'تم تعديل جهة الحجز بنجاح!');
     }
 
@@ -132,6 +198,11 @@ class AdminController extends Controller
         $agent = Agent::findOrFail($id);
         $agent->delete();
 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "حذف جهة ججز  {$agent->name },",
+            'type' => 'عملية حذف شركة!!!',
+        ]);
         return redirect()->route('admin.agents')->with('success', 'تم حذف جهة الحجز بنجاح!');
     }
 
@@ -229,7 +300,7 @@ class AdminController extends Controller
         $totalArchivedBookingsCount = (clone $query)->count();
 
 
-        
+
         $archivedBookings = $query->paginate(10)->withQueryString();
 
         // لو الطلب AJAX (للأجاكس)
@@ -265,7 +336,7 @@ class AdminController extends Controller
             'totalPaidToHotels' => $totalPaidToHotels,
             'remainingToHotels' => $remainingToHotels,
             'totalArchivedBookingsCount' => $totalArchivedBookingsCount,
-            
+
         ]);
     }
 }

@@ -27,6 +27,25 @@
                     <label class="form-check-label" for="darkModeSwitch">دارك مود</label>
                 </div>
                 @auth
+                    @if (auth()->user()->role === 'Admin')
+                        @php
+                            $unreadNotificationsCount = \App\Models\Notification::where('is_read', false)->count();
+                        @endphp
+                        <li class="nav-item position-relative mx-2 list-unstyled">
+                            <a href="{{ route('admin.notifications') }}"
+                                class="nav-link position-relative d-flex align-items-center">
+                                <i class="bi bi-bell fs-4"></i>
+                                @if ($unreadNotificationsCount > 0)
+                                    <span
+                                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ $unreadNotificationsCount }}
+                                    </span>
+                                @endif
+                            </a>
+                        </li>
+                    @endif
+                @endauth
+                @auth
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button"
                             id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">

@@ -170,11 +170,11 @@
             </tr> --}}
             <tr>
                 <td colspan="2">
-                    <span class="fw-bold">Sale Price (per night):</span> {{ number_format($booking->sale_price, 2) }}
+                    <span class="fw-bold">Hotel phone:  </span> +966 53 882 6016
                 </td>
                 <td>
-                    <span class="fw-bold">Total Due from Company:</span>
-                    {{ number_format($booking->amount_due_from_company, 2) }}
+                    <span class="fw-bold"> Customer phone : </span>010012023848        
+                     
                 </td>
             </tr>
             <tr>
@@ -207,9 +207,14 @@
                 <td>RO</td>
             </tr>
         </table>
-
-        <div class="remarks">Transportation:</div>
-        <div class="footer">Any Amount in Excess of the value of this order to be collected directly from the guest
+        <div class="remarks text-danger " style="
+    text-align: center;
+    font-size: 20px;
+    background: gold;
+    font-weight: bold;
+">ملحوظة مهمة : الدخول يبدأ من الساعة الثالثة</div>
+        <div class="remarks"> </div>
+        <div class="footer">  
         </div>
     </div>
     <script>

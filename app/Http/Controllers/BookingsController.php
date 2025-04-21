@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
 use App\Models\EditLog;
+use Illuminate\Support\Facades\Auth;
 use App\Models\ArchivedBooking; // <--- 1. نتأكد من إضافة ArchivedBooking
+use App\Models\Notification;
 use Illuminate\Support\Facades\DB;  // <--- 2. نضيف DB للـ Transactions
 use Illuminate\Support\Facades\Log; // تأكد من استيراد Log
 use Illuminate\Support\Facades\File;
@@ -454,7 +456,12 @@ class BookingsController extends Controller
         // حفظ البيانات
         File::append($txtPath, $textContent);
         File::append($csvPath, $csvContent);
-
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => "حجز جديد: {$booking->client_name}، الفندق: {$booking->hotel->name}، الشركة: {$booking->company->name}",
+            'type' => 'إضافة',
+        ]);
         // return redirect()->route('bookings.index')->with('success', 'تم إنشاء الحجز بنجاح!');
         return redirect()->route('bookings.voucher', $booking->id)->with('success', 'تم إنشاء الحجز بنجاح! يمكنك طباعة الفاتورة الآن.');
     }
@@ -585,7 +592,41 @@ class BookingsController extends Controller
                 }
             }
         }
+        // بعد حلقة foreach التي تسجل التعديلات في EditLog
+        $changedFields = [];
+        foreach ($validatedData as $field => $newValue) {
+            $oldValue = $booking->getOriginal($field);
+
+            if (in_array($field, ['amount_due_to_hotel', 'amount_due_from_company'])) {
+                continue;
+            }
+            if (in_array($field, ['check_in', 'check_out'])) {
+                $oldValueFormatted = \Carbon\Carbon::parse($oldValue)->format('Y-m-d');
+                $newValueFormatted = \Carbon\Carbon::parse($newValue)->format('Y-m-d');
+
+                if ($oldValueFormatted != $newValueFormatted) {
+                    $changedFields[] = "$field: من $oldValueFormatted إلى $newValueFormatted";
+                }
+            } else {
+                if ($oldValue != $newValue) {
+                    $changedFields[] = "$field: من $oldValue إلى $newValue";
+                }
+            }
+        }
+
         $booking->update($validatedData);
+        // بعد $booking->update($validatedData);
+        // إشعار للادمن
+        $isArchived = $booking->cost_price == 0 && $booking->sale_price == 0;
+        if ($isArchived) {
+            \App\Models\Notification::create([
+                'user_id' => Auth::user()->id,
+                'message' => "تم أرشفة حجز للعميل: {$booking->client_name}، الفندق: {$booking->hotel->name}، الشركة: {$booking->company->name}",
+                'type' => 'أرشفة حجز',
+            ]);
+        }
+        // شوف ايه اللي اتعدل وابعت إشعاره للأدمن : 
+
         // إضافة سجل التحديث للباك اب
         $textContent = sprintf(
             "\n=== تحديث حجز بتاريخ %s ===\nرقم الحجز: %d\n%s\n=====================================\n",
@@ -616,6 +657,16 @@ class BookingsController extends Controller
         ]) . "\n";
 
         File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
+
+
+        // إشعار عام إذا كان هناك تعديلات
+        if (count($changedFields)) {
+            Notification::create([
+                'user_id' => Auth::user()->id,
+                'message' => "تم تعديل حجز للعميل: {$booking->client_name}، التعديلات: " . implode(' | ', $changedFields),
+                'type' => 'تعديل حجز',
+            ]);
+        }
         // روح على الرئيسية 
         return redirect()->route('bookings.index')->with('success', 'تم تحديث الحجز بنجاح!');
     }
@@ -659,7 +710,12 @@ class BookingsController extends Controller
         File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
 
         $booking->delete();
-
+        // إشعار للأدمن 
+        Notification::create([
+            'user_id' => Auth::user()->id,
+            'message' => 'تم حذف حجز للعميل: ' . $booking->client_name . '، الفندق: ' . $booking->hotel->name . '، الشركة: ' . $booking->company->name,
+            'type' => 'عملية حذف',
+        ]);
         return redirect()->route('bookings.index')->with('success', 'تم حذف الحجز بنجاح!');
     }
 

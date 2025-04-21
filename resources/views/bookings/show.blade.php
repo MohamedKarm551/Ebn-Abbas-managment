@@ -13,7 +13,6 @@
     $total_nights = \Carbon\Carbon::parse($booking->check_in)->diffInDays(\Carbon\Carbon::parse($booking->check_out));
     $editLogs = \App\Models\EditLog::where('booking_id', $id)->orderBy('created_at', 'desc')->get();
 @endphp
-
 <div class="container">
     <div class="row align-items-center mb-3">
         <div class="col-12 col-lg-7 mb-2 mb-lg-0">
