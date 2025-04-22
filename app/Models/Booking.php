@@ -3,11 +3,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 
 class Booking extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes; // <-- أضف SoftDeletes هنا
+
 // عملت تعديلات كتير لازم أعدل كل المايجريشن دي
     protected $fillable = [
         'client_name',

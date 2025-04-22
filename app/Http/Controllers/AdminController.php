@@ -14,6 +14,8 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ArchivedBookingsExport;
 
 
 class AdminController extends Controller
@@ -22,7 +24,7 @@ class AdminController extends Controller
     public function notifications()
     {
         $notifications = Notification::latest()->paginate(20); // عرض الإشعارات الأحدث أولاً آخر 20 
-return view('admin.notifications', compact('notifications'));
+        return view('admin.notifications', compact('notifications'));
     }
     public function markNotificationRead($id)
     {
@@ -62,7 +64,7 @@ return view('admin.notifications', compact('notifications'));
     }
 
     public function deleteEmployee($id)
-    {   
+    {
         $employee = Employee::findOrFail($id);
         $employee->delete();
         Notification::create([
@@ -70,7 +72,7 @@ return view('admin.notifications', compact('notifications'));
             'message' => "حذف موظف   : {$employee->name} ,",
             'type' => 'عملية حذف',
         ]);
-      
+
         return redirect()->back()->with('success', 'تم حذف الموظف بنجاح!');
     }
 
@@ -81,7 +83,7 @@ return view('admin.notifications', compact('notifications'));
         $request->validate([
             'name' => 'required|string|max:255|unique:employees,name,' . $employee->id,
         ]);
-        $oldName=$employee->name;
+        $oldName = $employee->name;
         $employee->update(['name' => $request->name]);
         // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت
         Notification::create([
@@ -142,7 +144,7 @@ return view('admin.notifications', compact('notifications'));
         $company->delete();
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "حذف شركة {$company->name },",
+            'message' => "حذف شركة {$company->name},",
             'type' => 'عملية حذف شركة!!!',
         ]);
         return redirect()->route('admin.companies')->with('success', 'تم حذف الشركة بنجاح!');
@@ -188,7 +190,7 @@ return view('admin.notifications', compact('notifications'));
         Notification::create([
             'user_id' => Auth::user()->id,
             'message' => "تحديث   جهة حجز  {$oldName}  إلى {  $request->name} ,",
-            'type' => 'تحديث  اسم جهة حجز', 
+            'type' => 'تحديث  اسم جهة حجز',
         ]);
         return redirect()->route('admin.agents')->with('success', 'تم تعديل جهة الحجز بنجاح!');
     }
@@ -200,7 +202,7 @@ return view('admin.notifications', compact('notifications'));
 
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "حذف جهة ججز  {$agent->name },",
+            'message' => "حذف جهة ججز  {$agent->name},",
             'type' => 'عملية حذف شركة!!!',
         ]);
         return redirect()->route('admin.agents')->with('success', 'تم حذف جهة الحجز بنجاح!');
@@ -338,5 +340,15 @@ return view('admin.notifications', compact('notifications'));
             'totalArchivedBookingsCount' => $totalArchivedBookingsCount,
 
         ]);
+    }
+    // ... (use Maatwebsite\Excel\Facades\Excel; use App\Exports\ArchivedBookingsExport; use Illuminate\Http\Request;)
+
+    public function exportArchivedBookings(Request $request)
+    {
+        // اسم الملف الذي سيتم تحميله
+        $fileName = 'archived_bookings_' . now()->format('Ymd_His') . '.xlsx';
+
+        // استخدم الـ Export class مع تمرير الـ request الحالي للحفاظ على الفلاتر
+        return Excel::download(new ArchivedBookingsExport($request), $fileName);
     }
 }

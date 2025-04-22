@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Foundation\Auth\RegistersUsers;
+use App\Traits\RegistersUsers; // Ensure the trait exists in your application or adjust the namespace accordingly
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -68,5 +68,17 @@ class RegisterController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
+    }
+}
+
+namespace App\Traits;
+
+trait RegistersUsers
+{
+    // Add methods and logic for user registration here.
+    // Example placeholder method:
+    public function register()
+    {
+        // Registration logic
     }
 }

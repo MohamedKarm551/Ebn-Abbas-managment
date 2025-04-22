@@ -1,3 +1,10 @@
+ 
+<div class="mb-3 text-start">
+    <a href="{{ route('admin.archived_bookings.export', request()->query()) }}" class="btn btn-success">
+        <i class="fas fa-file-excel me-1"></i> تصدير إلى Excel
+    </a>
+</div>  
+
 <table class="table table-bordered table-hover align-middle text-center">
     {{-- رؤوس الأعمدة --}}
     <thead class="table-light">

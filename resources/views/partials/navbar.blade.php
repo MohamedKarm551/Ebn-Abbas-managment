@@ -42,7 +42,7 @@
                                     </span>
                                 @endif
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2" aria-labelledby="notifDropdown"
+                            <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2 notif-dropdown" aria-labelledby="notifDropdown"
                                 style="min-width: 320px; max-width: 90vw; direction: rtl;">
                                 <li class="dropdown-header fw-bold">آخر 5 إشعارات</li>
                                 @forelse($lastNotifications as $notification)
@@ -93,3 +93,61 @@
         </div>
     </div>
 </nav>
+<style>
+    /* Default styles for large screens */
+    .notif-dropdown {
+        width: 30vw; /* Adjust as needed for large screens */
+        min-width: 280px;
+        max-width: 380px;
+        max-height: 60vh;
+        overflow-y: auto;
+        direction: rtl;
+    }
+
+    /* Medium screens (tablets, etc.) */
+    @media (max-width: 992px) {
+        .notif-dropdown {
+            width: 60vw !important;
+            min-width: unset !important;
+            max-width: unset !important;
+            max-height: 50vh !important;
+            left: 50% !important;
+            right: auto !important;
+            transform: translateX(-50%) !important;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            padding: 0.2rem 0.1rem;
+        }
+        .notif-dropdown .dropdown-header,
+        .notif-dropdown .dropdown-item {
+            font-size: 0.98rem;
+            padding-right: 0.5rem;
+            padding-left: 0.5rem;
+            white-space: normal !important;
+            word-break: break-word;
+        }
+    }
+
+    /* Small screens (mobiles) */
+    @media (max-width: 576px) {
+        .notif-dropdown {
+            width: 60vw !important; /* تم تقليل العرض أكثر */
+            max-width: 70vw !important; /* تم تقليل العرض الأقصى */
+            max-height: 45vh !important;
+            left: 50% !important;
+            right: auto !important;
+            transform: translateX(-40%) !important; /* تم تعديل الإزاحة لليسار */
+            border-radius: 8px;
+            font-size: 0.9rem;
+            padding: 0.15rem 0.05rem;
+        }
+        .notif-dropdown .dropdown-header,
+        .notif-dropdown .dropdown-item {
+            font-size: 0.92rem;
+            padding-right: 0.4rem;
+            padding-left: 0.4rem;
+            white-space: normal !important;
+            word-break: break-word;
+        }
+    }
+</style>

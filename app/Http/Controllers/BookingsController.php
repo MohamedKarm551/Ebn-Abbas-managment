@@ -1,7 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use App\Models\Agent;
 use App\Models\Hotel;
 use App\Models\Booking;
@@ -16,6 +18,8 @@ use Illuminate\Support\Facades\DB;  // <--- 2. نضيف DB للـ Transactions
 use Illuminate\Support\Facades\Log; // تأكد من استيراد Log
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon; // *** استيراد Carbon لمعالجة التواريخ ***
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\BookingsExport;
 
 class BookingsController extends Controller
 {
@@ -515,6 +519,92 @@ class BookingsController extends Controller
         }
         return redirect()->route('bookings.index')->with('success', 'Bookings imported successfully!');
     }
+    // تصدير حجوزات الصفحة فقط أو الحجوزات المفلترة بواسطة المستخدم
+    public function exportBookings(Request $request)
+    {
+        // اسم الملف الذي سيتم تحميله
+        $fileName = 'bookings_' . now()->format('Ymd_His') . '.xlsx';
+
+        // استخدم الـ Export class مع تمرير الـ request الحالي للحفاظ على الفلاتر
+        return Excel::download(new BookingsExport($request), $fileName);
+    }
+    /**
+     * تصدير كل الحجوزات النشطة بدون أي فلترة باستخدام Anonymous Class.
+     */
+    public function exportAllBookings()
+    {
+        $fileName = 'all_active_bookings_' . now()->format('Ymd_His') . '.xlsx';
+
+        // 1. جلب كل الحجوزات النشطة مباشرة
+        $allBookings = Booking::with(['company', 'agent', 'hotel', 'employee'])
+            ->where('cost_price', '!=', 0) // استبعاد المؤرشفة
+            ->where('sale_price', '!=', 0) // استبعاد المؤرشفة
+            ->orderBy('created_at', 'desc') // أو أي ترتيب تفضله
+            ->get();
+
+        // 2. تعريف رؤوس الأعمدة
+        $headings = [
+            'م',
+            'العميل',
+            'الشركة',
+            'جهة حجز',
+            'الفندق',
+            'الدخول',
+            'الخروج',
+            'غرف',
+            'المستحق للفندق',
+            'مطلوب من الشركة',
+            'الموظف المسؤول',
+            'الملاحظات',
+            'تاريخ الإنشاء',
+        ];
+
+        // 3. إنشاء وتمرير Anonymous Class لـ Excel::download
+        return Excel::download(new class($allBookings, $headings) implements FromCollection, WithHeadings, WithMapping
+        {
+            protected $bookings;
+            protected $headings;
+            protected static $index = 0; // عداد للترقيم التسلسلي
+
+            public function __construct($bookings, $headings)
+            {
+                $this->bookings = $bookings;
+                $this->headings = $headings;
+                self::$index = 0; // إعادة تصفير العداد مع كل تصدير جديد
+            }
+
+            public function collection()
+            {
+                return $this->bookings;
+            }
+
+            public function headings(): array
+            {
+                return $this->headings;
+            }
+
+            public function map($booking): array
+            {
+                self::$index++; // زيادة العداد لكل صف
+                // نفس منطق تنسيق الصف الموجود في map بالـ Export Class
+                return [
+                    self::$index, // استخدام العداد
+                    $booking->client_name,
+                    $booking->company->name ?? '-',
+                    $booking->agent->name ?? '-',
+                    $booking->hotel->name ?? '-',
+                    $booking->check_in ? Carbon::parse($booking->check_in)->format('d/m/Y') : '-',
+                    $booking->check_out ? Carbon::parse($booking->check_out)->format('d/m/Y') : '-',
+                    $booking->rooms ?? '-',
+                    $booking->amount_due_to_hotel ?? '0',
+                    $booking->amount_due_from_company ?? '0',
+                    $booking->employee->name ?? '-',
+                    $booking->notes ?? '-',
+                    $booking->created_at ? $booking->created_at->format('Y-m-d H:i') : '-',
+                ];
+            }
+        }, $fileName);
+    }
 
     public function details($hotelId)
     {
@@ -620,7 +710,7 @@ class BookingsController extends Controller
                 }
             }
         }
-         // تعقيم الملاحظات من أي أكواد HTML أو سكريبت
+        // تعقيم الملاحظات من أي أكواد HTML أو سكريبت
         // تعقيم كل الحقول النصية
         foreach (['notes', 'client_name'] as $field) {
             if (isset($validatedData[$field])) {

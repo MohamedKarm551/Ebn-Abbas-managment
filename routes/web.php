@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\RegisterController;
 
 Route::middleware(['auth'])->group(function () {
+    // تصدير جدول الحجز
+    Route::get('/bookings/export', [BookingsController::class, 'exportBookings'])->name('bookings.export'); // <-- المسار الجديد للتصدير
+    Route::get('/bookings/export-all', [BookingsController::class, 'exportAllBookings'])->name('bookings.export.all'); // <-- المسار الجديد لتصدير الكل
 
     Route::get('/bookings', [BookingsController::class, 'index'])->name('bookings.index');
     Route::get('/bookings/create', [BookingsController::class, 'create'])->name('bookings.create');
@@ -20,7 +23,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/bookings/{id}/update', [BookingsController::class, 'update'])->name('bookings.update');
 
     Route::get('/bookings/{id}/edits', [BookingsController::class, 'getEdits']);
-
+    Route::get('/bookings/{id}/voucher', [BookingsController::class, 'voucher'])->name('bookings.voucher');
 
     Route::delete('/bookings/{id}', [BookingsController::class, 'destroy'])->name('bookings.destroy');
     Route::get('/bookings/{id}', [BookingsController::class, 'show'])->name('bookings.show');
@@ -50,9 +53,12 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/hotels/{id}', [HotelController::class, 'update'])->name('updateHotel'); // مسار التحديث
         // مسار صفحة الأرشيف:
         Route::get('/archived-bookings', [AdminController::class, 'archivedBookings'])->name('archived_bookings');
+
+        Route::get('/archived-bookings/export', [AdminController::class, 'exportArchivedBookings'])->name('archived_bookings.export'); // الاسم النهائي: admin.archived_bookings.export
+
     });
 
-    Route::get('/bookings/{id}/voucher', [BookingsController::class, 'voucher'])->name('bookings.voucher');
+
 
 
     // إضافة هذه الروتس

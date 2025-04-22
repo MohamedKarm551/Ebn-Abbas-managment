@@ -1,3 +1,13 @@
+<div class="mb-3 text-start">
+    {{-- تم تغيير الرابط هنا --}}
+    <a href="{{ route('bookings.export', request()->query()) }}" class="btn btn-success">
+        <i class="fas fa-file-excel me-1"></i>   الجدول المعروض فقط إلى Excel
+    </a>
+    {{-- الزر الجديد (يصدر كل الحجوزات النشطة) --}}
+    <a href="{{ route('bookings.export.all') }}" class="btn btn-info"> {{-- لون مختلف للتمييز --}}
+        <i class="fas fa-file-download me-1"></i> تصدير كل الحجوزات
+    </a>
+</div>
 <table class="table table-bordered table-hover table-striped">
     <thead class="table-dark"> {{-- Use a dark header for better contrast striped يعني مخطط عشان العين تلاحظ كل صف لوحده بلون --}}
         <tr>
