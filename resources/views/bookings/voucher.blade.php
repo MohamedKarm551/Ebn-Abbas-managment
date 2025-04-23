@@ -129,7 +129,8 @@
                     <span class="fw-bold">Hotel Name:</span> {{ $booking->hotel->name }}
                 </td>
                 <td>
-                    <span class="fw-bold">Voucher No: </span>{{ $booking->id }}-{{ $booking->agent_id }}-{{ $booking->hotel->id }}-{{ $booking->employee_id }}
+                    <span class="fw-bold">Voucher No:
+                    </span>{{ $booking->id }}-{{ $booking->agent_id }}-{{ $booking->hotel->id }}-{{ $booking->employee_id }}
                     {{-- -{{$booking->agnet->name}} --}}
                     {{-- {{ $booking->hotel->name }} --}}
                     {{-- {{$booking->employee->name}} --}}
@@ -170,11 +171,52 @@
             </tr> --}}
             <tr>
                 <td colspan="2">
-                    <span class="fw-bold">Hotel phone:  </span> +966 53 882 6016
+                    <span class="fw-bold">Hotel phone: </span> +966 53 882 6016
                 </td>
                 <td>
-                    <span class="fw-bold"> Customer phone : </span>010012023848        
-                     
+                    <span class="fw-bold"> Customer phone : </span> @php
+                        $customerPhone = null;
+                        if ($booking->notes) {
+                            // Regex Explanation:
+                            // Group 1: International Formats
+                            //   \+? : Optional leading +
+                            //   (?:966|971)\s?(5\d{8}|5\d\s?\d{3}\s?\d{4}) : KSA/UAE Mobile (+966/971 5xxxxxxxx or spaced)
+                            //   | (?:965)\s?([569]\d{7}|[569]\d{3}\s?\d{4}) : Kuwait Mobile (+965 [569]xxxxxxx or spaced)
+                            //   | (?:974)\s?([3567]\d{7}|[3567]\d{3}\s?\d{4}) : Qatar Mobile (+974 [3567]xxxxxxx or spaced)
+                            //   | (?:973)\s?([369]\d{7}|[369]\d{3}\s?\d{4}) : Bahrain Mobile (+973 [369]xxxxxxx or spaced)
+                            //   | (?:968)\s?(9\d{7}|9\d{3}\s?\d{4}) : Oman Mobile (+968 9xxxxxxx or spaced)
+                            //   | (?:20)\s?(1[0125]\d{8}|1[0125]\d\s?\d{3}\s?\d{4}) : Egypt Mobile (+20 1[0125]xxxxxxxx or spaced)
+                            // Group 2: Local Formats
+                            //   \b05\d{8}\b : KSA/UAE Local Mobile (05xxxxxxxx)
+                            //   | \b01[0125]\d{8}\b : Egypt Local Mobile (01[0125]xxxxxxxx)
+                            // تحديث النمط (Regex): تم توسيع النمط ليشمل:
+                            // الأرقام الدولية:
+                            // السعودية (+966) والإمارات (+971) تبدأ بـ 5 (مع أو بدون مسافات).
+                            // الكويت (+965) تبدأ بـ 5 أو 6 أو 9 (مع أو بدون مسافات).
+                            // قطر (+974) تبدأ بـ 3 أو 5 أو 6 أو 7 (مع أو بدون مسافات).
+                            // البحرين (+973) تبدأ بـ 3 أو 6 أو 9 (مع أو بدون مسافات).
+                            // عمان (+968) تبدأ بـ 9 (مع أو بدون مسافات).
+                            // مصر (+20) تبدأ بـ 10 أو 11 أو 12 أو 15 (مع أو بدون مسافات).
+                            // علامة + في البداية اختيارية.
+                            // الأرقام المحلية الشائعة:
+                            // السعودية/الإمارات تبدأ بـ 05 (10 أرقام).
+                            // مصر تبدأ بـ 010, 011, 012, 015 (11 رقمًا).
+                            // تنظيف الرقم: بعد العثور على تطابق في $matches[0], تم إضافة preg_replace('/\s+/', '', $matches[0]); لإزالة أي مسافات قد تكون موجودة داخل الرقم الذي تم العثور عليه لتوحيد شكله.
+
+                            $pattern =
+                                '/(?:\+?(?:(?:966|971)\s?(?:5\d{8}|5\d\s?\d{3}\s?\d{4})|(?:965)\s?(?:[569]\d{7}|[569]\d{3}\s?\d{4})|(?:974)\s?(?:[3567]\d{7}|[3567]\d{3}\s?\d{4})|(?:973)\s?(?:[369]\d{7}|[369]\d{3}\s?\d{4})|(?:968)\s?(?:9\d{7}|9\d{3}\s?\d{4})|(?:20)\s?(?:1[0125]\d{8}|1[0125]\d\s?\d{3}\s?\d{4})))|(?:\b05\d{8}\b|\b01[0125]\d{8}\b)/';
+
+                            preg_match($pattern, $booking->notes, $matches);
+
+                            if (!empty($matches[0])) {
+                                // Clean up the matched number (remove spaces)
+                                $customerPhone = preg_replace('/\s+/', '', $matches[0]);
+                            }
+                        }
+                    @endphp
+                    {{ $customerPhone ?? '' }} {{-- Display the found number or empty string --}}
+                </td>
+
                 </td>
             </tr>
             <tr>
@@ -183,8 +225,8 @@
                 </td>
                 <td>
                     <span class="fw-bold">Notes:</span>
-                    @if($booking->notes)
-                    has notes ..
+                    @if ($booking->notes)
+                        has notes ..
                     @else
                         No Notes
                     @endif
@@ -207,14 +249,16 @@
                 <td>RO</td>
             </tr>
         </table>
-        <div class="remarks text-danger " style="
+        <div class="remarks text-danger "
+            style="
     text-align: center;
     font-size: 20px;
     background: gold;
     font-weight: bold;
-">ملحوظة مهمة : الدخول يبدأ من الساعة الثالثة</div>
+">ملحوظة
+            مهمة : الدخول يبدأ من الساعة الثالثة</div>
         <div class="remarks"> </div>
-        <div class="footer">  
+        <div class="footer">
         </div>
     </div>
     <script>
