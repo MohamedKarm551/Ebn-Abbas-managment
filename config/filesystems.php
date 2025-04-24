@@ -60,6 +60,20 @@ return [
             'report' => false,
         ],
 
+        // --- إضافة إعدادات Google Drive هنا ---
+        'google' => [
+            'driver' => 'google',
+            'service_account_json_path' => env('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_PATH', storage_path('credentials/google-drive-service-account.json')),
+            'folder_id' => env('GOOGLE_DRIVE_FOLDER_ID', null), // معرف المجلد الرئيسي في Google Drive
+            'team_drive_id' => env('GOOGLE_DRIVE_TEAM_DRIVE_ID', null), // اتركه null إذا لم يكن Team Drive
+            'cache' => [ // اختياري: لتسريع الأداء
+                'store' => 'file', // أو 'redis', 'memcached'
+                'prefix' => 'google-drive-cache',
+                'expire' => 3600, // ساعة واحدة
+            ],
+        ],
+        // --- نهاية إضافة إعدادات Google Drive ---
+
     ],
 
     /*
@@ -76,5 +90,5 @@ return [
     'links' => [
         public_path('storage') => storage_path('app/public'),
     ],
-
+   
 ];

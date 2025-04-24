@@ -25,8 +25,10 @@
                                 </a>
                             </li>
 
-                            <li class="fw-bold">إجمالي المتبقي من الشركات: {{ number_format($totalRemainingFromCompanies) }} ريال</li>
-                            <li class="fw-bold">إجمالي المتبقي للفنادق (جهات الحجز): {{ number_format($totalRemainingToHotels) }} ريال</li>
+                            <li class="fw-bold">إجمالي المتبقي من الشركات: {{ number_format($totalRemainingFromCompanies) }}
+                                ريال</li>
+                            <li class="fw-bold">إجمالي المتبقي للفنادق (جهات الحجز):
+                                {{ number_format($totalRemainingToHotels) }} ريال</li>
                             <li class="fw-bold">صافي الربح: {{ number_format($netProfit) }} ريال</li>
                         </ul>
                     </div>
@@ -59,17 +61,24 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}. {{ $company->name }}
                                         @php
-                                        $hasEdit = $recentCompanyEdits->filter(function($n) use ($company) {
-                                            return str_contains($n->first()->message, $company->name);
-                                        })->count() > 0;
-                                    @endphp
-                                    @if($hasEdit)
-                                        <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
-                                    @endif
+                                            $hasEdit =
+                                                $recentCompanyEdits
+                                                    ->filter(function ($n) use ($company) {
+                                                        return str_contains($n->first()->message, $company->name);
+                                                    })
+                                                    ->count() > 0;
+                                        @endphp
+                                        @if ($hasEdit)
+                                            <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
+                                        @endif
                                     </td>
                                     <td>{{ $company->bookings_count }}</td>
                                     <td>{{ number_format($company->total_due) }} ريال</td>
-                                    <td>{{ number_format($company->total_paid) }} ريال</td>
+                                    <td
+                                        @if ($company->total_paid > $company->total_due) style="color: red !important; font-weight: bold;"
+                                            title="المبلغ المدفوع أكثر من المستحق" @endif>
+                                        {{ number_format($company->total_paid) }} ريال
+                                    </td>
                                     <td>{{ number_format($company->remaining) }} ريال</td>
                                     <td>
                                         <!-- بنستخدم div بتقسيم مرن علشان الأزرار تجي مترتبة ومتباعدة -->
@@ -116,19 +125,26 @@
                         <tbody>
                             @foreach ($agentsReport as $agent)
                                 <tr>
-                                    <td>{{ $loop->iteration }}.{{ $agent->name }}  
+                                    <td>{{ $loop->iteration }}.{{ $agent->name }}
                                         @php
-                                        $hasEdit = $resentAgentEdits->filter(function($n) use ($agent) {
-                                            return str_contains($n->first()->message, $agent->name);
-                                        })->count() > 0;
-                                    @endphp
-                                    @if($hasEdit)
-                                        <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
-                                    @endif
+                                            $hasEdit =
+                                                $resentAgentEdits
+                                                    ->filter(function ($n) use ($agent) {
+                                                        return str_contains($n->first()->message, $agent->name);
+                                                    })
+                                                    ->count() > 0;
+                                        @endphp
+                                        @if ($hasEdit)
+                                            <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
+                                        @endif
                                     </td>
                                     <td>{{ $agent->bookings_count }}</td>
                                     <td>{{ number_format($agent->total_due) }}</td>
-                                    <td>{{ number_format($agent->total_paid) }}</td>
+                                    <td
+                                        @if ($agent->total_paid > $agent->total_due) style="color: red !important; font-weight: bold;"
+                                            title="المبلغ المدفوع أكثر من المستحق" @endif>
+                                        {{ number_format($agent->total_paid) }}
+                                    </td>
                                     <td>{{ number_format($agent->remaining) }}</td>
                                     <td>
                                         <!-- بنستخدم div بتقسيم مرن علشان الأزرار تجي مترتبة ومتباعدة -->
@@ -158,7 +174,7 @@
             <div class="modal fade" id="agentPaymentModal{{ $agent->id }}" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <form action="{{ route('reports.agent.payment') }}" method="POST">
+                        <form action="{{ route('reports.agent.payment') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="agent_id" value="{{ $agent->id }}">
 
@@ -172,6 +188,16 @@
                                     <label class="form-label">المبلغ المدفوع</label>
                                     <input type="number" step="0.01" class="form-control" name="amount" required>
                                 </div>
+                                {{-- ***   حقل رفع الملف في مشكلة مع الكومبوسر وجوجل درايف  *** --}}
+                                {{-- <div class="mb-3">
+                                    <label for="receipt_file_agent_{{ $agent->id }}" class="form-label">إرفاق إيصال
+                                        (اختياري)</label>
+                                    <input class="form-control" type="file" id="receipt_file_agent_{{ $agent->id }}"
+                                        name="receipt_file">
+                                    <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
+                                        5MB)</small>
+                                </div> --}}
+                                {{-- *** نهاية حقل رفع الملف *** --}}
                                 <div class="mb-3">
                                     <label class="form-label">ملاحظات</label>
                                     <textarea class="form-control" name="notes"></textarea>
@@ -209,7 +235,7 @@
             <div class="modal fade" id="paymentModal{{ $company->id }}" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <form action="{{ route('reports.company.payment') }}" method="POST">
+                        <form action="{{ route('reports.company.payment') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="company_id" value="{{ $company->id }}">
 
@@ -223,55 +249,67 @@
                                     <label class="form-label">المبلغ المدفوع</label>
                                     <input type="number" step="0.01" class="form-control" name="amount" required>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">ملاحظات</label>
-                                    <textarea class="form-control" name="notes"></textarea>
-                                </div>
+                                {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
+                                {{-- <div class="mb-3">
+                                    <label for="receipt_file_company_{{ $company->id }}" class="form-label">إرفاق إيصال
+                                        (اختياري)
+                                    </label>
+                                    <input class="form-control" type="file"
+                                        id="receipt_file_company_{{ $company->id }}" name="receipt_file">
+                                  
+                                <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
+                                    5MB)</small>
+                            </div> --}}
+                            {{-- *** نهاية حقل رفع الملف *** --}}
+                            <div class="mb-3">
+                                <label class="form-label">ملاحظات <br>
+                                    (إن كانت معك صورة من التحويل ارفعها على درايف وضع الرابط هنا)</label>                                <textarea class="form-control" name="notes"></textarea>
                             </div>
-
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                                <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            </div>
-        @endforeach
 
-        <!-- جدول الفنادق -->
-        <div class="  mb-4">
-            <div class="card-header">
-                <h3>حسابات الفنادق</h3>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th>الفندق</th>
-                                <th>عدد الحجوزات</th>
-                                <th>إجمالي المستحق</th>
-                                <th>العمليات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($hotelsReport as $hotel)
-                                <tr>
-                                    <td>{{ $loop->iteration }}. {{ $hotel->name }}</td>
-                                    <td>{{ $hotel->bookings_count }}</td>
-                                    <td>{{ number_format($hotel->total_due) }}</td>
-                                    <td>
-                                        <a href="{{ route('reports.hotel.bookings', $hotel->id) }}"
-                                            class="btn btn-info btn-sm">عرض الحجوزات</a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                        <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
+                    </div>
+                    </form>
                 </div>
+            </div>
+    </div>
+    @endforeach
+
+    <!-- جدول الفنادق -->
+    <div class="  mb-4">
+        <div class="card-header">
+            <h3>حسابات الفنادق</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>الفندق</th>
+                            <th>عدد الحجوزات</th>
+                            <th>إجمالي المستحق</th>
+                            <th>العمليات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($hotelsReport as $hotel)
+                            <tr>
+                                <td>{{ $loop->iteration }}. {{ $hotel->name }}</td>
+                                <td>{{ $hotel->bookings_count }}</td>
+                                <td>{{ number_format($hotel->total_due) }}</td>
+                                <td>
+                                    <a href="{{ route('reports.hotel.bookings', $hotel->id) }}"
+                                        class="btn btn-info btn-sm">عرض الحجوزات</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- إضافة تنسيقات CSS في القسم الخاص بالستيلات -->

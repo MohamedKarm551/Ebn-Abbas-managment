@@ -36,7 +36,10 @@ class Agent extends Model
 
     public function getRemainingAttribute()
     {
-        // حساب المتبقي
-        return max($this->total_due - $this->total_paid, 0); // التأكد من أن المتبقي لا يكون أقل من صفر
+        //   المتبقي
+        // return max($this->total_due - $this->total_paid, 0); // التأكد من أن المتبقي لا يكون أقل من صفر
+          // حساب المتبقي بشكل صحيح (يسمح بالسالب)
+          return $this->total_due - $this->total_paid;
+
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\BookingsController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HotelController;

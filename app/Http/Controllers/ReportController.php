@@ -12,6 +12,8 @@ use App\Models\Payment;
 use App\Models\Hotel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage; // لرفع الملفات
+
 
 /**
  * ReportController
@@ -70,17 +72,23 @@ class ReportController extends Controller
         // إشعار خفيف على آخر شيء تم عليه تعديل 
         // في نهاية دالة daily
         $recentCompanyEdits = \App\Models\Notification::whereIn('type', [
-            'تعديل', 'تعديل دفعة', 'دفعة جديدة', 'حذف دفعة'
+            'تعديل',
+            'تعديل دفعة',
+            'دفعة جديدة',
+            'حذف دفعة'
         ])
-        ->where('created_at', '>=', now()->subDays(2))
-        ->get()
-        ->groupBy('message');
+            ->where('created_at', '>=', now()->subDays(2))
+            ->get()
+            ->groupBy('message');
         $resentAgentEdits = \App\Models\Notification::whereIn('type', [
-            'تعديل', 'تعديل دفعة', 'دفعة جديدة', 'حذف دفعة'
+            'تعديل',
+            'تعديل دفعة',
+            'دفعة جديدة',
+            'حذف دفعة'
         ])
-        ->where('created_at', '>=', now()->subDays(2))
-        ->get()
-        ->groupBy('message');
+            ->where('created_at', '>=', now()->subDays(2))
+            ->get()
+            ->groupBy('message');
         // رجع كل البيانات للواجهة اليومية
         return view('reports.daily', compact(
             'todayBookings',
@@ -236,7 +244,29 @@ class ReportController extends Controller
             'notes'            => 'nullable|string',
             'bookings_covered' => 'nullable|array',
             'bookings_covered.*' => 'exists:bookings,id',
+            // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // Optional, file type, max size 5MB
         ]);
+        // // *** بداية كود رفع الملف ***
+        // $receiptPath = null; // نهيئ متغير المسار
+
+        // // التعامل مع رفع الملف إذا كان موجودًا وصالحًا
+        // if ($request->hasFile('receipt_file') && $request->file('receipt_file')->isValid()) {
+        //     $file = $request->file('receipt_file');
+        //     // إنشاء مسار/اسم ملف فريد داخل مجلد Google Drive
+        //     $fileName = time() . '_' . $file->getClientOriginalName();
+        //     $filePath = 'company_payments/' . $fileName; // مجلد فرعي داخل المجلد الرئيسي في Drive
+
+        //     try {
+        //         // الرفع إلى Google Drive باستخدام الـ disk المحدد
+        //         Storage::disk('google')->put($filePath, file_get_contents($file));
+        //         $receiptPath = $filePath; // تخزين المسار المستخدم في Google Drive
+        //     } catch (\Exception $e) {
+        //         // تسجيل الخطأ أو العودة برسالة خطأ
+        //         // يمكنك استخدام Log::error(...) هنا لتسجيل تفاصيل الخطأ
+        //         return back()->with('error', 'فشل رفع الإيصال: ' . $e->getMessage())->withInput();
+        //     }
+        // }
+        // // *** نهاية كود رفع الملف ***
 
         // سجل الدفعة في جدول payments
         $payment = Payment::create([
@@ -245,6 +275,8 @@ class ReportController extends Controller
             'payment_date'     => $validated['payment_date'] ?? now(),
             'notes'            => $validated['notes'] ?? null,
             'bookings_covered' => json_encode($validated['bookings_covered'] ?? []),
+            // 'receipt_path'     => $receiptPath, // *** إضافة مسار الإيصال هنا ***
+            'employee_id'      => Auth::id(), // إضافة الموظف الذي سجل الدفعة
         ]);
 
         // وزع المبلغ على الحجوزات المفتوحة
@@ -282,7 +314,30 @@ class ReportController extends Controller
             'agent_id' => 'required|exists:agents,id',
             'amount'   => 'required|numeric|min:0',
             'notes'    => 'nullable|string',
+            // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // *** إضافة التحقق هنا ***
+
         ]);
+        // // *** بداية كود رفع الملف ***
+        // $receiptPath = null; // نهيئ متغير المسار
+
+        // // التعامل مع رفع الملف إذا كان موجودًا وصالحًا
+        // if ($request->hasFile('receipt_file') && $request->file('receipt_file')->isValid()) {
+        //     $file = $request->file('receipt_file');
+        //     // إنشاء مسار/اسم ملف فريد داخل مجلد Google Drive
+        //     $fileName = time() . '_' . $file->getClientOriginalName();
+        //     $filePath = 'agent_payments/' . $fileName; // مجلد فرعي مختلف
+
+        //     try {
+        //         // الرفع إلى Google Drive باستخدام الـ disk المحدد
+        //         Storage::disk('google')->put($filePath, file_get_contents($file));
+        //         $receiptPath = $filePath; // تخزين المسار المستخدم في Google Drive
+        //     } catch (\Exception $e) {
+        //         // تسجيل الخطأ أو العودة برسالة خطأ
+        //         return back()->with('error', 'فشل رفع الإيصال: ' . $e->getMessage())->withInput();
+        //     }
+        // }
+        // // *** نهاية كود رفع الملف ***
+
 
         // سجل الدفعة في جدول agent_payments
         $payment = AgentPayment::create([
@@ -290,12 +345,16 @@ class ReportController extends Controller
             'amount' => $validated['amount'],
             'payment_date' => now(),
             'notes' => $validated['notes'],
+            // 'receipt_path' => $receiptPath, // *** تأكد من إضافة هذا السطر هنا ***
+            'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة
         ]);
         // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
         Notification::create([
             'user_id' => Auth::user()->id,
             'message' => " تم إضافة دفعة جديدة لجهة حجز  {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
             'type' => 'دفعة جديدة',
+            // 'receipt_path' => $receiptPath, // *** إضافة مسار الإيصال هنا ***
+            'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة
         ]);
 
         // رجع للصفحة مع رسالة نجاح

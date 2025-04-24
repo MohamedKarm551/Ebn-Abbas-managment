@@ -35,7 +35,9 @@ class Company extends Model
             return $booking->sale_price * $booking->rooms * $booking->days;
         });
 
-        return max($totalDue - $this->total_paid, 0); // التأكد من أن المتبقي لا يكون أقل من صفر
+        // return max($totalDue - $this->total_paid, 0); // التأكد من أن المتبقي لا يكون أقل من صفر
+        // حساب المتبقي بشكل صحيح (يسمح بالسالب)
+        return $totalDue - $this->total_paid;
     }
 
     public function getTotalDueAttribute()
