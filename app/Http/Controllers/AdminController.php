@@ -52,12 +52,25 @@ class AdminController extends Controller
 
     public function storeEmployee(Request $request)
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        Employee::create(['name' => $request->name]);
-        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:employees,name',
+                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
+        ]);
+
+        // *** تطبيق التنقية هنا قبل الحفظ ***
+        $sanitizedName = strip_tags($request->input('name'));
+
+        $employee = Employee::create(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "إضافة موظف جديد : {$request->name} ,",
+            'message' => "إضافة موظف جديد : {$employee->name} ,", // استخدام الاسم من الموديل بعد الحفظ
             'type' => 'جديد',
         ]);
         return redirect()->back()->with('success', 'تم إضافة الموظف بنجاح!');
@@ -79,19 +92,34 @@ class AdminController extends Controller
     public function updateEmployee(Request $request, $id)
     {
         $employee = Employee::findOrFail($id);
+        $oldName = $employee->name; // حفظ الاسم القديم
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:employees,name,' . $employee->id,
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:employees,name,' . $employee->id, // تجاهل الموظف الحالي عند التحقق من التفرد
+                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
         ]);
-        $oldName = $employee->name;
-        $employee->update(['name' => $request->name]);
-        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت
+
+        // *** تطبيق التنقية هنا قبل التحديث ***
+        $sanitizedName = strip_tags($request->input('name'));
+
+        $employee->update(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "تعديل اسم موظف   :{$oldName} إلى: {  $employee->name} ,",
+            'message' => "تعديل اسم موظف   :{$oldName} إلى: {$employee->name} ,", // استخدام الاسم من الموديل بعد التحديث
             'type' => 'تحديث اسم',
         ]);
-        return response()->json(['success' => true]);
+        // ملاحظة: إذا كان هذا الطلب يأتي من AJAX كما يوحي return response()->json
+        // فتأكد من أن الواجهة تتعامل مع الاستجابة بشكل صحيح.
+        // إذا كان نموذجًا عاديًا، قد تحتاج إلى redirect بدلاً من json.
+        // سنفترض أنه AJAX بناءً على الكود الأصلي.
+        return response()->json(['success' => true, 'newName' => $employee->name]); // إرجاع الاسم الجديد قد يكون مفيدًا
     }
 
     public function companies()
@@ -103,13 +131,24 @@ class AdminController extends Controller
     public function storeCompany(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:companies,name',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:companies,name',
+                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
         ]);
 
-        Company::create(['name' => $request->name]);
+        // *** تطبيق التنقية هنا قبل الحفظ ***
+        $sanitizedName = strip_tags($request->input('name'));
+
+        $company = Company::create(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "إضافة شركة: {  $request->name} ,",
+            'message' => "إضافة شركة: {$company->name} ,", // استخدام الاسم من الموديل بعد الحفظ
             'type' => 'شركة جديدة  ',
         ]);
         return redirect()->route('admin.companies')->with('success', 'تم إضافة الشركة بنجاح!');
@@ -124,15 +163,27 @@ class AdminController extends Controller
     public function updateCompany(Request $request, $id)
     {
         $company = Company::findOrFail($id);
+        $oldName = $company->name; // حفظ الاسم القديم
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:companies,name,' . $company->id,
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:companies,name,' . $company->id, // تجاهل الشركة الحالية
+                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
         ]);
-        $oldName = $company->name;
-        $company->update(['name' => $request->name]);
+
+        // *** تطبيق التنقية هنا قبل التحديث ***
+        $sanitizedName = strip_tags($request->input('name'));
+
+        $company->update(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "تحديث اسم شركة  {$oldName}  إلى {  $request->name} ,",
+            'message' => "تحديث اسم شركة  {$oldName}  إلى {$company->name} ,", // استخدام الاسم من الموديل بعد التحديث
             'type' => 'تحديث اسم اشركة ',
         ]);
         return redirect()->route('admin.companies')->with('success', 'تم تعديل اسم الشركة بنجاح!');
@@ -159,13 +210,24 @@ class AdminController extends Controller
     public function storeAgent(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:agents,name',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:agents,name',
+                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
         ]);
 
-        Agent::create(['name' => $request->name]);
+        // *** تطبيق التنقية هنا قبل الحفظ ***
+        $sanitizedName = strip_tags($request->input('name'));
+
+        $agent = Agent::create(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "إضافة جهة حجز: {  $request->name} ,",
+            'message' => "إضافة جهة حجز: {$agent->name} ,", // استخدام الاسم من الموديل بعد الحفظ
             'type' => 'جهة حجز جديدة  ',
         ]);
         return redirect()->route('admin.agents')->with('success', 'تم إضافة جهة الحجز بنجاح!');
@@ -180,16 +242,27 @@ class AdminController extends Controller
     public function updateAgent(Request $request, $id)
     {
         $agent = Agent::findOrFail($id);
-        $oldName = $agent->name;
+        $oldName = $agent->name; // حفظ الاسم القديم
+
         $request->validate([
-            'name' => 'required|string|max:255|unique:agents,name,' . $agent->id,
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:agents,name,' . $agent->id, // تجاهل الجهة الحالية
+                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
         ]);
 
-        $agent->update(['name' => $request->name]);
+        // *** تطبيق التنقية هنا قبل التحديث ***
+        $sanitizedName = strip_tags($request->input('name'));
+
+        $agent->update(['name' => $sanitizedName]); // استخدام الاسم المنقّى
 
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "تحديث   جهة حجز  {$oldName}  إلى {  $request->name} ,",
+            'message' => "تحديث   جهة حجز  {$oldName}  إلى {$agent->name} ,", // استخدام الاسم من الموديل بعد التحديث
             'type' => 'تحديث  اسم جهة حجز',
         ]);
         return redirect()->route('admin.agents')->with('success', 'تم تعديل جهة الحجز بنجاح!');
@@ -203,7 +276,7 @@ class AdminController extends Controller
         Notification::create([
             'user_id' => Auth::user()->id,
             'message' => "حذف جهة ججز  {$agent->name},",
-            'type' => 'عملية حذف شركة!!!',
+            'type' => 'عملية حذف شركة!!!', // ربما تغيير النوع هنا؟
         ]);
         return redirect()->route('admin.agents')->with('success', 'تم حذف جهة الحجز بنجاح!');
     }

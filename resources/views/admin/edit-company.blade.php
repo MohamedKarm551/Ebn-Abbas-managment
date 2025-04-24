@@ -10,16 +10,23 @@
         @method('PUT')
         <div class="mb-3">
             <label for="name" class="form-label">اسم الشركة</label>
-            <input type="text" name="name" id="name" class="form-control" value="{{ old('name', $company->name) }}" required>
+            {{-- *** تعديل هنا: إضافة كلاس is-invalid *** --}}
+            <input type="text"
+                   name="name"
+                   id="name"
+                   class="form-control @error('name') is-invalid @enderror"
+                   value="{{ old('name', $company->name) }}"
+                   required>
+            {{-- *** تعديل هنا: تغيير كلاس div الخطأ إلى invalid-feedback *** --}}
             @error('name')
-                <div class="text-danger">{{ $message }}</div>
+                <div class="invalid-feedback">
+                    {{ $message }}
+                </div>
             @enderror
         </div>
         <button type="submit" class="btn btn-success">حفظ التعديلات</button>
         <a href="{{ route('admin.companies') }}" class="btn btn-secondary">إلغاء</a>
     </form>
-
-
 
 </div>
 @endsection

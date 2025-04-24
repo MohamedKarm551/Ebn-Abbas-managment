@@ -28,10 +28,20 @@ class HotelController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:hotels,name',
+            // *** تعديل قاعدة التحقق هنا ***
+            // يسمح بالحروف (بما في ذلك العربية)، الأرقام، المسافات، الشرطة، القوسين
+            'name' => [
+                'required',//مطلوب
+                'string', //نص
+                'max:255', //الحد الأقصى 255 حرف
+                'unique:hotels,name', //اسم الفندق فريد
+                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
         ]);
-
-        Hotel::create(['name' => $request->name]);
+         // *** تطبيق التنقية هنا قبل الحفظ ***
+         $sanitizedName = strip_tags($request->input('name'));
+        Hotel::create(['name' => $sanitizedName]);
         Notification::create([
             'user_id' => Auth::user()->id,
             'message' => "إضافة فندق جديد : {$request->name} ,",
@@ -51,10 +61,22 @@ class HotelController extends Controller
         $hotel = Hotel::findOrFail($id);
         $oldName = $hotel->name; // حفظ الاسم القديم
         $request->validate([
-            'name' => 'required|string|max:255|unique:hotels,name,' . $hotel->id,
+            // *** تعديل قاعدة التحقق هنا ***
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:hotels,name,' . $hotel->id,
+                 // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'regex:/^[\pL\pN\s\-()]+$/u'
+            ],
         ]);
+        
+        // *** تطبيق التنقية هنا قبل التحديث ***
+        $sanitizedName = strip_tags($request->input('name'));
 
-        $hotel->update(['name' => $request->name]);
+
+        $hotel->update(['name' => $sanitizedName]);
         // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت
         Notification::create([
             'user_id' => Auth::user()->id,
