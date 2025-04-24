@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -836,5 +837,39 @@ class BookingsController extends Controller
     {
         $edits = EditLog::where('booking_id', $id)->get(); // افترض أن لديك جدول لتسجيل التعديلات
         return response()->json($edits);
+    }
+
+
+    /**
+     * دالة عشان تجيب اقتراحات البحث للإكمال التلقائي
+     */
+    public function autocomplete(Request $request)
+    {
+        $term = $request->input('term');
+        $suggestions = collect();
+
+        if ($term) {
+            $term = '%' . $term . '%';
+
+            $clientSuggestions = Booking::where('client_name', 'LIKE', $term)
+                ->distinct()->limit(5)->pluck('client_name');
+            $suggestions = $suggestions->merge($clientSuggestions);
+
+            $companySuggestions = Company::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($companySuggestions);
+
+            $agentSuggestions = Agent::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($agentSuggestions);
+
+            $hotelSuggestions = Hotel::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($hotelSuggestions);
+
+            $employeeSuggestions = Employee::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($employeeSuggestions);
+
+            $suggestions = $suggestions->unique()->take(10)->values();
+        }
+
+        return response()->json($suggestions);
     }
 }

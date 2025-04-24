@@ -14,6 +14,8 @@ Route::middleware(['auth'])->group(function () {
     // تصدير جدول الحجز
     Route::get('/bookings/export', [BookingsController::class, 'exportBookings'])->name('bookings.export'); // <-- المسار الجديد للتصدير
     Route::get('/bookings/export-all', [BookingsController::class, 'exportAllBookings'])->name('bookings.export.all'); // <-- المسار الجديد لتصدير الكل
+        // Route جديد عشان يجيب اقتراحات البحث
+        Route::get('/bookings/autocomplete', [BookingsController::class, 'autocomplete'])->name('bookings.autocomplete');
 
     Route::get('/bookings', [BookingsController::class, 'index'])->name('bookings.index');
     Route::get('/bookings/create', [BookingsController::class, 'create'])->name('bookings.create');

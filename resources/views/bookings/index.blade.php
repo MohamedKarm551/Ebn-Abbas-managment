@@ -1,6 +1,6 @@
 @extends('layouts.app')
 {{-- دي الصفحة الرئيسية للحجوزات، بتورث التصميم من صفحة app.blade.php --}}
-@section('title', 'كل الحجوزات : ' )
+@section('title', 'كل الحجوزات : ')
 @section('favicon')
     <link rel="icon" type="image/jpeg" href="{{ asset('images/cover.jpg') }}">
 @endsection
@@ -23,7 +23,7 @@
             <form id="filterForm" method="GET" action="{{ route('bookings.index') }}">
                 <div class="row align-items-center text-center">
                     <div class="col-md-4 mb-2">
-                        <label for="search" class="form-label">بحث عن العميل، الموظف، الشركة، جهة حجز، 
+                        <label for="search" class="form-label">بحث عن العميل، الموظف، الشركة، جهة حجز،
                             فندق</label>
                         <input type="text" name="search" id="search" class="form-control"
                             value="{{ request('search') }}">
@@ -107,7 +107,8 @@
                                 <p><strong>المبلغ المدفوع من الشركة:</strong> {{ $booking->amount_paid_by_company }} ريال
                                 </p>
                                 {{-- جوه ملف bookings/_table.blade.php غالبًا --}}
-                                <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" onsubmit="return confirm('تحذير! هل أنت متأكد من أرشفة هذا الحجز؟');">
+                                <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST"
+                                    onsubmit="return confirm('تحذير! هل أنت متأكد من أرشفة هذا الحجز؟');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm">
@@ -139,18 +140,18 @@
             تم جلب: <strong>{{ $totalActiveBookingsCount }}</strong> حجز نشط
             ||
             <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
-         
+
         </div>
         @auth
-        @if (auth()->user()->role === 'Admin') 
-        <div class="alert alert-warning text-center mb-3">
-            <span>
-                مجموع المستحق للفنادق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
-                <br>
-                مجموع المطلوب من الشركات (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
-            </span>
-        </div>
-        @endif
+            @if (auth()->user()->role === 'Admin')
+                <div class="alert alert-warning text-center mb-3">
+                    <span>
+                        مجموع المستحق للفنادق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
+                        <br>
+                        مجموع المطلوب من الشركات (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
+                    </span>
+                </div>
+            @endif
         @endauth
         <div class="table-responsive" id="bookingsTable">
             @include('bookings._table')
@@ -369,7 +370,8 @@
                 // ==========================================================
                 function updateDateAlert() {
                     const params = new URLSearchParams(window.location.search);
-                    const start = params.get('start_date'), end = params.get('end_date');
+                    const start = params.get('start_date'),
+                        end = params.get('end_date');
                     const container = document.getElementById('filterAlert');
                     if (start && end) {
                         container.innerHTML = `
@@ -386,6 +388,109 @@
                 // الكود الأساسي اللي بيشتغل لما الصفحة تحمل (DOMContentLoaded)
                 // ==========================================================
                 document.addEventListener('DOMContentLoaded', function() {
+                    // --- كود الإكمال التلقائي (Autocomplete) ---
+                    const searchInput = document.getElementById('search');
+                    let suggestionsContainer = null;
+                    let debounceTimer;
+
+                    if (searchInput) {
+                        suggestionsContainer = document.createElement('div');
+                        suggestionsContainer.setAttribute('id', 'suggestions-list');
+                        suggestionsContainer.style.position = 'absolute';
+                        suggestionsContainer.style.border = '1px solid #ddd';
+                        suggestionsContainer.style.borderTop = 'none';
+                        suggestionsContainer.style.zIndex = '99';
+                        suggestionsContainer.style.backgroundColor = '#fff';
+                        suggestionsContainer.style.width = searchInput.offsetWidth + 'px';
+                        suggestionsContainer.style.maxHeight = '200px';
+                        suggestionsContainer.style.overflowY = 'auto';
+                        suggestionsContainer.style.display = 'none';
+
+                        const searchInputWrapper = searchInput.closest('.col-md-4');
+                        if (searchInputWrapper) {
+                            searchInputWrapper.style.position = 'relative';
+                            searchInputWrapper.appendChild(suggestionsContainer);
+                        }
+
+                        searchInput.addEventListener('input', function() {
+                            const term = this.value;
+                            clearTimeout(debounceTimer);
+
+                            if (suggestionsContainer) {
+                                suggestionsContainer.style.width = searchInput.offsetWidth + 'px';
+                            }
+
+                            if (term.length < 2) {
+                                if (suggestionsContainer) {
+                                    suggestionsContainer.innerHTML = '';
+                                    suggestionsContainer.style.display = 'none';
+                                }
+                                return;
+                            }
+
+                            debounceTimer = setTimeout(() => {
+                                axios.get('{{ route('bookings.autocomplete') }}', {
+                                        params: {
+                                            term: term
+                                        },
+                                        headers: {
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        }
+                                    })
+                                    .then(response => {
+                                        const suggestions = response.data;
+                                        if (suggestionsContainer) {
+                                            suggestionsContainer.innerHTML = '';
+                                            if (suggestions && suggestions.length > 0) {
+                                                suggestions.forEach(suggestion => {
+                                                    const item = document.createElement('div');
+                                                    item.textContent = suggestion;
+                                                    item.style.padding = '8px 12px';
+                                                    item.style.cursor = 'pointer';
+                                                    item.addEventListener('mouseenter', () =>
+                                                        item.style.backgroundColor =
+                                                        '#f0f0f0');
+                                                    item.addEventListener('mouseleave', () =>
+                                                        item.style.backgroundColor = '#fff');
+                                                    item.addEventListener('click', () => {
+                                                        searchInput.value = suggestion;
+                                                        suggestionsContainer.innerHTML =
+                                                            '';
+                                                        suggestionsContainer.style
+                                                            .display = 'none';
+                                                    });
+                                                    suggestionsContainer.appendChild(item);
+                                                });
+                                                suggestionsContainer.style.display = 'block';
+                                            } else {
+                                                suggestionsContainer.style.display = 'none';
+                                            }
+                                        }
+                                    })
+                                    .catch(error => {
+                                        if (suggestionsContainer) {
+                                            suggestionsContainer.innerHTML = '';
+                                            suggestionsContainer.style.display = 'none';
+                                        }
+                                    });
+                            }, 300);
+                        });
+
+                        document.addEventListener('click', function(event) {
+                            if (suggestionsContainer && !searchInput.contains(event.target) && !suggestionsContainer
+                                .contains(event.target)) {
+                                suggestionsContainer.style.display = 'none';
+                            }
+                        });
+
+                        searchInput.addEventListener('keydown', function(event) {
+                            if (event.key === 'Escape') {
+                                if (suggestionsContainer) {
+                                    suggestionsContainer.style.display = 'none';
+                                }
+                            }
+                        });
+                    }
 
                     // --- 1. تعريف المتغيرات الأساسية ---
                     const filterForm = document.getElementById('filterForm');
@@ -469,7 +574,7 @@
             margin-bottom: 1.5rem;
             overflow: hidden;
             z-index: 1;
-            box-shadow: inset 0px 0px 0px 1.5px rgba(26,26,0,0.16), 0 2px 8px 0 rgba(0,0,0,0.04);
+            box-shadow: inset 0px 0px 0px 1.5px rgba(26, 26, 0, 0.16), 0 2px 8px 0 rgba(0, 0, 0, 0.04);
             border: none;
         }
 
@@ -485,11 +590,11 @@
             z-index: 2;
             pointer-events: none;
             mask:
-              linear-gradient(#fff 0 0) content-box, 
-              linear-gradient(#fff 0 0);
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
             -webkit-mask:
-              linear-gradient(#fff 0 0) content-box, 
-              linear-gradient(#fff 0 0);
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
             mask-composite: exclude;
             -webkit-mask-composite: xor;
             padding: 2px;
@@ -500,74 +605,71 @@
             0% {
                 background-position: 0% 50%;
             }
+
             50% {
                 background-position: 100% 50%;
             }
+
             100% {
                 background-position: 0% 50%;
             }
         }
 
         html[data-theme="dark"] .filter-box {
-            box-shadow: inset 0px 0px 0px 1.5px #fffaed2d, 0 2px 8px 0 rgba(0,0,0,0.16);
+            box-shadow: inset 0px 0px 0px 1.5px #fffaed2d, 0 2px 8px 0 rgba(0, 0, 0, 0.16);
         }
 
         html[data-theme="dark"] .filter-box::before {
             background: linear-gradient(90deg, #fffaed2d, #f53003, #ff4433, #1b1b18, #f53003);
         }
+
         /* خلي الزرار فيه تدرج لوني في النص */
-.admin-gradient-btn {
-    position: relative;
-    background: transparent;
-    border: 1px solid #E81C2E;
-    font-weight: bold;
-    background-image: linear-gradient(90deg, #E81C2E, #202C45);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    transition: color 0.2s, border-color 0.2s;
-    overflow: hidden;
-    z-index: 1;
-}
+        .admin-gradient-btn {
+            position: relative;
+            background: transparent;
+            border: 1px solid #E81C2E;
+            font-weight: bold;
+            background-image: linear-gradient(90deg, #E81C2E, #202C45);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            transition: color 0.2s, border-color 0.2s;
+            overflow: hidden;
+            z-index: 1;
+        }
 
-/* الـ after بيعمل طبقة فوق الزرار */
-.admin-gradient-btn::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(90deg, #E81C2E, #202C45);
-    opacity: 0;
-    transition: opacity 0.3s;
-    z-index: -1;
-    border-radius: 0.375rem;
-}
+        /* الـ after بيعمل طبقة فوق الزرار */
+        .admin-gradient-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(90deg, #E81C2E, #202C45);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: -1;
+            border-radius: 0.375rem;
+        }
 
-/* لما تعمل هوفر الزرار كله يتلون */
-.admin-gradient-btn:hover,
-.admin-gradient-btn:focus {
-    border-color: #202C45;
-    color: #fff;
-    -webkit-text-fill-color: #fff;
-}
+        /* لما تعمل هوفر الزرار كله يتلون */
+        .admin-gradient-btn:hover,
+        .admin-gradient-btn:focus {
+            border-color: #202C45;
+            color: #fff;
+            -webkit-text-fill-color: #fff;
+        }
 
-.admin-gradient-btn:hover::after,
-.admin-gradient-btn:focus::after {
-    opacity: 1;
-}
+        .admin-gradient-btn:hover::after,
+        .admin-gradient-btn:focus::after {
+            opacity: 1;
+        }
 
-/* لما الزرار يتلون بالكامل، النص يبقى أبيض */
-.admin-gradient-btn:hover,
-.admin-gradient-btn:focus {
-    background: linear-gradient(90deg, #E81C2E, #202C45);
-    -webkit-background-clip: border-box;
-    -webkit-text-fill-color: #fff;
-    color: #fff;
-    transition: background 0.2s, color 0.2s;
-}
+        /* لما الزرار يتلون بالكامل، النص يبقى أبيض */
+        .admin-gradient-btn:hover,
+        .admin-gradient-btn:focus {
+            background: linear-gradient(90deg, #E81C2E, #202C45);
+            -webkit-background-clip: border-box;
+            -webkit-text-fill-color: #fff;
+            color: #fff;
+            transition: background 0.2s, color 0.2s;
+        }
     </style>
 @endpush
-
-<head>
-  <link href="{{ asset('css/bootstrap.rtl.min.css') }}" rel="stylesheet">
-  <link href="{{ asset('css/dark-mode.css') }}" rel="stylesheet">
-  @stack('styles')    {{-- ← لازم يكون هنا عشان يُحقن الـ <style> اللي دفعتَه --}}
-</head>
