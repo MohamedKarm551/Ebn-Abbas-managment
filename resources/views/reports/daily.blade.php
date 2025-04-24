@@ -3,10 +3,122 @@
 @section('favicon')
     <link rel="icon" type="image/jpeg" href="{{ asset('images/cover.jpg') }}">
 @endsection
+
+{{-- *** الخطوة 1: تضمين Chart.js (يفضل وضعه في layout/app.blade.php قبل نهاية </body>) *** --}}
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+@endpush
+
 @section('content')
     <div class="container">
         <h1>التقرير اليومي - {{ \Carbon\Carbon::now()->format('d/m/Y') }}</h1>
+ {{-- *** الخطوة 2: قسم لوحة المعلومات المصغرة *** --}}
+ <div class=" mb-4 shadow-sm">
+    <div class="card-header">
+        <h3 class="mb-0">نظرة عامة سريعة</h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {{-- الملخصات الحالية --}}
+            <div class="col-md-4 mb-3">
+                <div class=" h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">ملخص اليوم</h5>
+                        <ul class="list-unstyled mb-0">
+                            <li>
+                                <a href="{{ route('bookings.index', ['start_date' => now()->format('d/m/Y')]) }}"
+                                    class="fw-bold text-decoration-none text-primary">
+                                    <i class="fas fa-calendar-day me-1"></i> حجوزات اليوم: {{ $todayBookings->count() }}
+                                </a>
+                            </li>
+                            <li class="fw-bold text-danger"><i class="fas fa-file-invoice-dollar me-1"></i> متبقي من الشركات: {{ number_format($totalRemainingFromCompanies) }} ريال</li>
+                            <li class="fw-bold text-warning"><i class="fas fa-hand-holding-usd me-1"></i> متبقي للفنادق/الجهات: {{ number_format($totalRemainingToHotels) }} ريال</li>
+                            <li class="fw-bold text-success"><i class="fas fa-chart-line me-1"></i> صافي الربح: {{ number_format($netProfit) }} ريال</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
 
+            {{-- *** الخطوة 3: قائمة أعلى 5 شركات عليها مبالغ *** --}}
+            <div class="col-md-4 mb-3">
+                <div class=" h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger"><i class="fas fa-exclamation-triangle me-1"></i> أعلى 5 شركات عليها مبالغ</h5>
+                        @php
+                            // فرز الشركات حسب المتبقي (الأعلى أولاً) في Blade (الأفضل عمله في Controller)
+                            $topCompanies = $companiesReport->sortByDesc('remaining')->take(5);
+                        @endphp
+                        <ul class="list-unstyled mb-0 small">
+                            @forelse ($topCompanies as $company)
+                                @if($company->remaining > 0) {{-- عرض فقط إذا كان المتبقي أكبر من صفر --}}
+                                    <li>{{ $company->name }}: <span class="fw-bold">{{ number_format($company->remaining) }} ريال</span></li>
+                                @endif
+                            @empty
+                                <li>لا توجد شركات عليها مبالغ متبقية حاليًا.</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                </div>
+            </div>
+                                {{-- *** الخطوة 3: قائمة أعلى 5 جهات لها مبالغ *** --}}
+                                <div class="col-md-4 mb-3">
+                                    <div class=" h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title text-warning"><i class="fas fa-money-check-alt me-1"></i> أعلى 5 جهات لها مبالغ</h5>
+                                            @php
+                                                // فرز الجهات حسب المتبقي (الأعلى أولاً) في Blade (الأفضل عمله في Controller)
+                                                $topAgents = $agentsReport->sortByDesc('remaining')->take(5);
+                                            @endphp
+                                            <ul class="list-unstyled mb-0 small">
+                                                @forelse ($topAgents as $agent)
+                                                     @if($agent->remaining > 0) {{-- عرض فقط إذا كان المتبقي أكبر من صفر --}}
+                                                        <li>{{ $agent->name }}: <span class="fw-bold">{{ number_format($agent->remaining) }}</span></li>
+                                                     @endif
+                                                @empty
+                                                    <li>لا توجد جهات لها مبالغ متبقية حاليًا.</li>
+                                                @endforelse
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+            
+                            {{-- *** الخطوة 4: إضافة Canvas للرسوم البيانية *** --}}
+                            <div class="row mt-3">
+                                <div class="col-md-6 mb-3"> {{-- إضافة mb-3 --}}
+                                    <h5 class="text-center text-danger">المتبقي على الشركات (أعلى 5)</h5>
+                                    <div class="chart-container" style="position: relative; height:250px; width:100%">
+                                         <canvas id="topCompaniesChart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3"> {{-- إضافة mb-3 --}}
+                                     <h5 class="text-center text-warning">المتبقي لجهات الحجز (أعلى 5)</h5>
+                                     <div class="chart-container" style="position: relative; height:250px; width:100%">
+                                        <canvas id="topAgentsChart"></canvas>
+                                     </div>
+                                </div>
+
+                                {{-- *** إضافة Canvas للرسوم الجديدة *** --}}
+                                <div class="col-md-6 mb-3">
+                                    <h5 class="text-center text-info">مقارنة إجمالي المتبقي</h5>
+                                     <div class="chart-container" style="position: relative; height:250px; width:100%">
+                                        <canvas id="remainingComparisonChart"></canvas>
+                                     </div>
+                                </div>
+                                 <div class="col-md-6 mb-3">
+                                    <h5 class="text-center text-success">توزيع الحجوزات (أعلى 5 شركات)</h5>
+                                     <div class="chart-container" style="position: relative; height:250px; width:100%">
+                                        <canvas id="companyBookingDistributionChart"></canvas>
+                                     </div>
+                                </div>
+                                {{-- *** نهاية إضافة Canvas *** --}}
+                            </div>
+                        </div>
+                    </div>
+                    {{-- *** نهاية قسم لوحة المعلومات المصغرة *** --}}
+            
+            
+            
         <div class=" mb-4">
             <div class="card-header">
                 <h3>ملخص اليوم</h3>
@@ -367,4 +479,232 @@
             }
         }
     </style>
+        {{-- *** الخطوة 5: JavaScript لإنشاء الرسوم البيانية *** --}}
+        @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // --- بيانات الرسم البياني للشركات ---
+                const topCompaniesLabels = @json($topCompanies->pluck('name'));
+                const topCompaniesDataPoints = @json($topCompanies->pluck('remaining'));
+    
+                const ctxCompanies = document.getElementById('topCompaniesChart');
+                if (ctxCompanies && topCompaniesLabels.length > 0) { // التأكد من وجود العنصر والبيانات
+                    new Chart(ctxCompanies, {
+                        type: 'bar', // نوع الرسم: أعمدة
+                        data: {
+                            labels: topCompaniesLabels,
+                            datasets: [{
+                                label: 'المتبقي (ريال)',
+                                data: topCompaniesDataPoints,
+                                backgroundColor: 'rgba(220, 53, 69, 0.7)', // لون أحمر شفاف
+                                borderColor: 'rgba(220, 53, 69, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false, // مهم للحفاظ على الحجم المحدد في CSS
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { // تنسيق الأرقام على المحور Y (اختياري)
+                                        callback: function(value, index, values) {
+                                            return value.toLocaleString('ar-SA') + ' ريال'; // تنسيق الأرقام بالعربية السعودية
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }, // إخفاء مفتاح الرسم (label)
+                                tooltip: { // تنسيق التلميح عند المرور (اختياري)
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += context.parsed.y.toLocaleString('ar-SA') + ' ريال';
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+    
+                // --- بيانات الرسم البياني لجهات الحجز ---
+                const topAgentsLabels = @json($topAgents->pluck('name'));
+                const topAgentsDataPoints = @json($topAgents->pluck('remaining'));
+    
+                const ctxAgents = document.getElementById('topAgentsChart');
+                 if (ctxAgents && topAgentsLabels.length > 0) { // التأكد من وجود العنصر والبيانات
+                    new Chart(ctxAgents, {
+                        type: 'bar',
+                        data: {
+                            labels: topAgentsLabels,
+                            datasets: [{
+                                label: 'المتبقي (ريال)',
+                                data: topAgentsDataPoints,
+                                backgroundColor: 'rgba(255, 193, 7, 0.7)', // لون أصفر/برتقالي شفاف
+                                borderColor: 'rgba(255, 193, 7, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                         options: { // نفس الخيارات السابقة للاتساق
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value, index, values) {
+                                            return value.toLocaleString('ar-SA') + ' ريال';
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += context.parsed.y.toLocaleString('ar-SA') + ' ريال';
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // --- *** الرسم البياني الجديد: مقارنة إجمالي المتبقي (Doughnut) *** ---
+                const totalRemainingFromCompanies = {{ $totalRemainingFromCompanies ?? 0 }};
+                const totalRemainingToHotels = {{ $totalRemainingToHotels ?? 0 }};
+                const ctxRemainingComparison = document.getElementById('remainingComparisonChart');
+
+                if (ctxRemainingComparison && (totalRemainingFromCompanies > 0 || totalRemainingToHotels > 0)) {
+                    new Chart(ctxRemainingComparison, {
+                        type: 'doughnut', // نوع الرسم: دائري مجوف
+                        data: {
+                            labels: ['متبقي من الشركات', 'متبقي لجهات الحجز'],
+                            datasets: [{
+                                label: 'المبلغ (ريال)',
+                                data: [totalRemainingFromCompanies, totalRemainingToHotels],
+                                backgroundColor: [
+                                    'rgba(220, 53, 69, 0.7)', // أحمر للشركات
+                                    'rgba(255, 193, 7, 0.7)'  // أصفر/برتقالي للجهات
+                                ],
+                                borderColor: [
+                                    'rgba(220, 53, 69, 1)',
+                                    'rgba(255, 193, 7, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top', // مكان ظهور مفتاح الرسم
+                                },
+                                tooltip: { // تنسيق التلميح
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed !== null) {
+                                                label += context.parsed.toLocaleString('ar-SA') + ' ريال';
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // --- *** الرسم البياني الجديد: توزيع حجوزات الشركات (Pie) *** ---
+                const topCompaniesBookingLabels = @json($topCompanies->pluck('name'));
+                const topCompaniesBookingCounts = @json($topCompanies->pluck('bookings_count'));
+                const totalCompanyBookings = {{ $companiesReport->sum('bookings_count') ?? 0 }};
+                const top5CompanyBookingsSum = topCompaniesBookingCounts.reduce((a, b) => a + b, 0);
+                const otherCompanyBookings = totalCompanyBookings - top5CompanyBookingsSum;
+
+                const ctxCompanyBookingDist = document.getElementById('companyBookingDistributionChart');
+
+                // التأكد من وجود بيانات وأن مجموع حجوزات الشركات أكبر من صفر
+                if (ctxCompanyBookingDist && totalCompanyBookings > 0) {
+                    let bookingDistLabels = [...topCompaniesBookingLabels];
+                    let bookingDistData = [...topCompaniesBookingCounts];
+
+                    // إضافة "أخرى" إذا كان هناك شركات أخرى
+                    if (otherCompanyBookings > 0) {
+                        bookingDistLabels.push('شركات أخرى');
+                        bookingDistData.push(otherCompanyBookings);
+                    }
+
+                    new Chart(ctxCompanyBookingDist, {
+                        type: 'pie', // نوع الرسم: دائري
+                        data: {
+                            labels: bookingDistLabels,
+                            datasets: [{
+                                label: 'عدد الحجوزات',
+                                data: bookingDistData,
+                                // يمكنك تحديد ألوان مختلفة لكل شريحة
+                                backgroundColor: [
+                                    'rgba(0, 123, 255, 0.7)',
+                                    'rgba(40, 167, 69, 0.7)',
+                                    'rgba(255, 193, 7, 0.7)',
+                                    'rgba(23, 162, 184, 0.7)',
+                                    'rgba(108, 117, 125, 0.7)',
+                                    'rgba(160, 160, 160, 0.7)' // لون لـ "أخرى"
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            let value = context.parsed || 0;
+                                            let percentage = totalCompanyBookings > 0 ? ((value / totalCompanyBookings) * 100).toFixed(1) : 0;
+                                            label += value + ' (' + percentage + '%)'; // عرض العدد والنسبة المئوية
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+            });
+        </script>
+        @endpush
+    
+    
 @endsection
