@@ -68,7 +68,10 @@ class ReportController extends Controller
         // إجمالي اللي علينا لجهات الحجز أو الفنادقdd(Booking::sum('amount_due_to_hotel')); 
 
         // صافي الربح (الفرق بين اللي لسه الشركات هتدفعه لك واللي لسه عليك تدفعه للفنادق)
-        $netProfit = $totalRemainingFromCompanies - $totalRemainingToHotels;
+        // $netProfit = $totalRemainingFromCompanies - $totalRemainingToHotels; // السطر القديم (ممكن تمسحه أو تخليه تعليق)
+        $totalDueToAgents = $agentsReport->sum('total_due'); // أو total_due حسب اسم العمود عندك لجهات الحجز
+        $netProfit = $totalDueFromCompanies - $totalDueToAgents; // السطر الجديد
+
         // إشعار خفيف على آخر شيء تم عليه تعديل 
         // في نهاية دالة daily
         $recentCompanyEdits = \App\Models\Notification::whereIn('type', [
