@@ -38,16 +38,19 @@
                             <td>
                                 <a href="{{ route('admin.editCompany', $company->id) }}"
                                     class="btn btn-warning btn-sm">تعديل</a>
-                                @auth
+                                    <small class="text-muted ms-2">(الحذف غير مسموح)</small>
+
+                                {{-- @auth
                                     @if (auth()->user()->role === 'Admin')
                                         <form action="{{ route('admin.deleteCompany', $company->id) }}" method="POST"
-                                            style="display:inline;">
+                                            style="display:inline;"
+                                            onsubmit="return confirm('هل أنت متأكد من حذف هذه الشركة؟ سيتم حذف جميع الحجوزات والدفعات المرتبطة بها بشكل نهائي.');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm">حذف</button>
                                         </form>
                                     @endif
-                                @endauth
+                                @endauth --}}
                             </td>
                         </tr>
                     @endforeach

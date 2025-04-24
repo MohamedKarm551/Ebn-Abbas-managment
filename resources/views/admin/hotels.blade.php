@@ -30,11 +30,14 @@
                 <td>{{ $hotel->name }}</td>
                 <td>
                     <a href="{{ route('admin.editHotel', $hotel->id) }}" class="btn btn-warning btn-sm">تعديل</a>
-                    <form action="{{ route('admin.deleteHotel', $hotel->id) }}" method="POST" style="display:inline;">
+                    <small class="text-muted ms-2">(الحذف غير مسموح)</small>
+
+                    {{-- <form action="{{ route('admin.deleteHotel', $hotel->id) }}" method="POST" style="display:inline;"
+                          onsubmit="return confirm('هل أنت متأكد من حذف هذا الفندق؟ سيتم حذف جميع الحجوزات المرتبطة به بشكل نهائي.');">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm">حذف</button>
-                    </form>
+                    </form> --}}
                 </td>
             </tr>
             @endforeach

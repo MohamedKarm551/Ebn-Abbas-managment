@@ -19,13 +19,7 @@
         <a href="{{ route('admin.companies') }}" class="btn btn-secondary">إلغاء</a>
     </form>
 
-    {{-- Form for Deleting with Confirmation --}}
-    <form action="{{ route('admin.destroyCompany', $company->id) }}" method="POST"
-          onsubmit="return confirm('تحذير! هل أنت متأكد من حذف هذه الشركة؟ سيتم حذف جميع الحجوزات والدفعات المرتبطة بها بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.');">
-        @csrf
-        @method('DELETE')
-        <button type="submit" class="btn btn-danger">حذف الشركة</button>
-    </form>
+
 
 </div>
 @endsection

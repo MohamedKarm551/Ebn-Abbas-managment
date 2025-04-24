@@ -30,15 +30,22 @@
                 <td>{{ $agent->name }}</td>
                 <td>
                     <a href="{{ route('admin.editAgent', $agent->id) }}" class="btn btn-warning btn-sm">تعديل</a>
-                    @auth
-    @if(auth()->user()->role === 'Admin')
-                    <form action="{{ route('admin.deleteAgent', $agent->id) }}" method="POST" style="display:inline;">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-danger btn-sm">حذف</button>
-                    </form>
-                    @endif
-                    @endauth
+                    <small class="text-muted ms-2">(الحذف غير مسموح)</small>
+
+                    {{-- زر الحذف ممنوع  --}}
+                    {{-- @auth
+                        @if(auth()->user()->role === 'Admin') --}}
+                            {{-- *** تم تعطيل الحذف مؤقتًا - غير مسموح حتى للمشرف بالحذف حاليًا *** --}}
+                            {{-- 
+                            <form action="{{ route('admin.deleteAgent', $agent->id) }}" method="POST" style="display:inline;"
+                                  onsubmit="return confirm('هل أنت متأكد من حذف جهة الحجز هذه؟ سيتم حذف جميع الحجوزات والدفعات المرتبطة بها بشكل نهائي.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger btn-sm">حذف</button>
+                            </form>
+                            --}}
+                        {{-- @endif
+                    @endauth --}}
                 </td>
             </tr>
             @endforeach

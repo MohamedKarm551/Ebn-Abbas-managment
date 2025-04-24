@@ -470,6 +470,12 @@ class ReportController extends Controller
     // حذف دفعة شركة مع إعادة توزيع المبالغ على الحجوزات
     public function destroyCompanyPayment($id)
     {
+        // *** إضافة تحقق من صلاحية الأدمن ***
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء.');
+        }
+        // *** نهاية التحقق ***
+
         // هات الدفعة المطلوبة
         $payment = Payment::findOrFail($id);
         $remaining = $payment->amount;
@@ -508,6 +514,12 @@ class ReportController extends Controller
     // حذف دفعة وكيل
     public function destroyAgentPayment($id)
     {
+        // *** إضافة تحقق من صلاحية الأدمن ***
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء.');
+        }
+        // *** نهاية التحقق ***
+
         // هات الدفعة المطلوبة
         $payment = AgentPayment::findOrFail($id);
         $agentId = $payment->agent_id;

@@ -98,6 +98,15 @@
                                 </tr>
                             @endforeach
                         </tbody>
+                        <tfoot>
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="2" class="text-center">الإجمالي</td>
+                                <td>{{ number_format($companiesReport->sum('total_due')) }} ريال</td>
+                                <td>{{ number_format($companiesReport->sum('total_paid')) }} ريال</td>
+                                <td>{{ number_format($companiesReport->sum('remaining')) }} ريال</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -164,6 +173,15 @@
                                 </tr>
                             @endforeach
                         </tbody>
+                        <tfoot>
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="2" class="text-center">الإجمالي</td>
+                                <td>{{ number_format($agentsReport->sum('total_due')) }}</td>
+                                <td>{{ number_format($agentsReport->sum('total_paid')) }}</td>
+                                <td>{{ number_format($agentsReport->sum('remaining')) }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -306,6 +324,13 @@
                             </tr>
                         @endforeach
                     </tbody>
+                    <tfoot>
+                        <tr class="table-secondary fw-bold">
+                            <td colspan="2" class="text-center">الإجمالي</td>
+                            <td>{{ number_format($hotelsReport->sum('total_due')) }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
