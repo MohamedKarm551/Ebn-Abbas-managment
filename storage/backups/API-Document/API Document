@@ -1,0 +1,586 @@
+# Ebn Abbas Management API Documentation (v1)
+
+## Introduction
+
+This document provides documentation for the Ebn Abbas Management System API. It allows interaction with bookings, companies, agents, hotels, employees, and reports.
+
+**Base URL:** `https://yourdomain.com/`
+
+*(Note: If API routes are moved to `routes/api.php`, the base URL might change, e.g., `https://yourdomain.com/api/`)*
+
+## Authentication
+
+Currently, most endpoints are protected by Laravel's standard web authentication middleware (`auth`). Requests must be authenticated using session cookies established via the web login interface.
+
+*(Recommendation: For dedicated API usage, consider implementing token-based authentication using Laravel Sanctum.)*
+
+## General Conventions
+
+*   **Request Format:** For `POST` and `PUT` requests expecting data, the `Content-Type` should generally be `application/json` or `application/x-www-form-urlencoded`.
+*   **Response Format:** Successful responses will typically return JSON. Error responses will also return JSON with an error message.
+*   **Date Format:** Dates in requests (query parameters) should generally be in `d/m/Y` format. Dates in responses are typically in `YYYY-MM-DD HH:MM:SS` or `d/m/Y` format as specified.
+
+## Error Responses
+
+*   **401 Unauthorized:** Authentication failed or is required.
+*   **403 Forbidden:** Authenticated user does not have permission for the action (e.g., non-admin accessing admin routes).
+*   **404 Not Found:** The requested resource (e.g., a specific booking) does not exist.
+*   **422 Unprocessable Entity:** The request data failed validation (e.g., missing required fields, invalid formats). The response body will usually contain details about the validation errors.
+*   **500 Internal Server Error:** A server-side error occurred.
+
+---
+
+## Endpoints
+
+### Bookings
+
+#### List Bookings
+
+*   **Endpoint:** `GET /bookings`
+*   **Description:** Retrieves a paginated list of active bookings. Supports filtering and searching.
+*   **Authentication:** Required.
+*   **Query Parameters:**
+    *   `search` (string, optional): Search term for client name, company, agent, hotel, or employee.
+    *   `start_date` (string, optional, format `d/m/Y`): Filter by check-in date >= this date.
+    *   `end_date` (string, optional, format `d/m/Y`): Filter by check-out date <= this date.
+    *   `company_id` (integer, optional): Filter by Company ID.
+    *   `agent_id` (integer, optional): Filter by Agent ID.
+    *   `hotel_id` (integer, optional): Filter by Hotel ID.
+    *   `employee_id` (integer, optional): Filter by Employee ID.
+    *   `page` (integer, optional): Page number for pagination.
+*   **Success Response (200 OK):**
+    ```json
+    {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 1,
+                "client_name": "John Doe",
+                "company_id": 1,
+                "agent_id": 2,
+                "hotel_id": 3,
+                "employee_id": 1,
+                "check_in": "2025-05-01 00:00:00",
+                "check_out": "2025-05-05 00:00:00",
+                "rooms": 2,
+                "days": 4,
+                "cost_price": 400.00,
+                "sale_price": 500.00,
+                "amount_due_to_hotel": 400.00,
+                "amount_due_from_company": 500.00,
+                "amount_paid_to_hotel": 0.00,
+                "amount_paid_by_company": 0.00,
+                "notes": "Special request.",
+                "created_at": "2025-04-24 10:00:00",
+                "updated_at": "2025-04-24 10:00:00",
+                "company": { "id": 1, "name": "Test Company" },
+                "agent": { "id": 2, "name": "Booking Agent" },
+                "hotel": { "id": 3, "name": "Grand Hotel" },
+                "employee": { "id": 1, "name": "Admin User" }
+            },
+            // ... more bookings
+        ],
+        "first_page_url": "/bookings?page=1",
+        "from": 1,
+        "last_page": 5,
+        "last_page_url": "/bookings?page=5",
+        "links": [ /* ... pagination links ... */ ],
+        "next_page_url": "/bookings?page=2",
+        "path": "/bookings",
+        "per_page": 10,
+        "prev_page_url": null,
+        "to": 10,
+        "total": 50
+    }
+    ```
+
+#### Create Booking
+
+*   **Endpoint:** `POST /bookings`
+*   **Description:** Creates a new booking.
+*   **Authentication:** Required.
+*   **Request Body (`application/json` or `x-www-form-urlencoded`):**
+    *   `client_name` (string, required): Name of the client.
+    *   `company_id` (integer, required): ID of the associated company.
+    *   `agent_id` (integer, required): ID of the booking agent.
+    *   `hotel_id` (integer, required): ID of the hotel.
+    *   `employee_id` (integer, required): ID of the responsible employee (usually the logged-in user).
+    *   `check_in` (string, required, format `d/m/Y`): Check-in date.
+    *   `check_out` (string, required, format `d/m/Y`): Check-out date.
+    *   `rooms` (integer, required): Number of rooms.
+    *   `cost_price` (numeric, required): Cost price per night/booking.
+    *   `sale_price` (numeric, required): Sale price per night/booking.
+    *   `notes` (string, optional): Additional notes.
+*   **Success Response (201 Created or 302 Found if redirecting):**
+    ```json
+    // Example if returning JSON
+    {
+        "message": "Booking created successfully!",
+        "booking": {
+             "id": 123,
+             "client_name": "New Client",
+             // ... other booking fields ...
+        }
+    }
+    ```
+*   **Error Response (422 Unprocessable Entity):** If validation fails.
+
+#### Get Booking Details
+
+*   **Endpoint:** `GET /bookings/{id}`
+*   **Description:** Retrieves details for a specific booking.
+*   **Authentication:** Required.
+*   **Path Parameters:**
+    *   `id` (integer, required): The ID of the booking to retrieve.
+*   **Success Response (200 OK):**
+    ```json
+    {
+        "id": 1,
+        "client_name": "John Doe",
+        // ... all other booking fields including relations ...
+        "company": { "id": 1, "name": "Test Company" },
+        "agent": { "id": 2, "name": "Booking Agent" },
+        "hotel": { "id": 3, "name": "Grand Hotel" },
+        "employee": { "id": 1, "name": "Admin User" }
+    }
+    ```
+*   **Error Response (404 Not Found):** If booking with the given ID doesn't exist.
+
+#### Update Booking
+
+*   **Endpoint:** `PUT /bookings/{id}/update` (Note: Standard REST uses `PUT /bookings/{id}`)
+*   **Description:** Updates an existing booking.
+*   **Authentication:** Required.
+*   **Path Parameters:**
+    *   `id` (integer, required): The ID of the booking to update.
+*   **Request Body (`application/json` or `x-www-form-urlencoded`):** (Include fields to be updated, similar to Create Booking)
+    *   `client_name` (string, optional)
+    *   `company_id` (integer, optional)
+    *   `agent_id` (integer, optional)
+    *   `hotel_id` (integer, optional)
+    *   `check_in` (string, optional, format `d/m/Y`)
+    *   `check_out` (string, optional, format `d/m/Y`)
+    *   `rooms` (integer, optional)
+    *   `cost_price` (numeric, optional)
+    *   `sale_price` (numeric, optional)
+    *   `amount_paid_to_hotel` (numeric, optional)
+    *   `amount_paid_by_company` (numeric, optional)
+    *   `notes` (string, optional)
+*   **Success Response (200 OK or 302 Found if redirecting):**
+    ```json
+    // Example if returning JSON
+    {
+        "message": "Booking updated successfully!",
+        "booking": {
+             "id": 1,
+             "client_name": "Updated Name",
+             // ... other updated booking fields ...
+        }
+    }
+    ```
+*   **Error Response (404 Not Found):** If booking doesn't exist.
+*   **Error Response (422 Unprocessable Entity):** If validation fails.
+
+#### Delete Booking (Archive)
+
+*   **Endpoint:** `DELETE /bookings/{id}`
+*   **Description:** Soft deletes (archives) a booking.
+*   **Authentication:** Required.
+*   **Path Parameters:**
+    *   `id` (integer, required): The ID of the booking to delete.
+*   **Success Response (200 OK or 204 No Content or 302 Found if redirecting):**
+    ```json
+    // Example if returning JSON
+    {
+        "message": "Booking archived successfully!"
+    }
+    ```
+*   **Error Response (404 Not Found):** If booking doesn't exist.
+
+#### Get Booking Edit History
+
+*   **Endpoint:** `GET /bookings/{id}/edits`
+*   **Description:** Retrieves the edit log/history for a specific booking.
+*   **Authentication:** Required.
+*   **Path Parameters:**
+    *   `id` (integer, required): The ID of the booking.
+*   **Success Response (200 OK):**
+    ```json
+    [
+        {
+            "id": 1,
+            "booking_id": 1,
+            "user_id": 1,
+            "field_changed": "sale_price",
+            "old_value": "450.00",
+            "new_value": "500.00",
+            "created_at": "2025-04-24 11:00:00",
+            "user": { "id": 1, "name": "Admin User" }
+        },
+        // ... more log entries
+    ]
+    ```
+*   **Error Response (404 Not Found):** If booking doesn't exist.
+
+#### Export Bookings
+
+*   **Endpoint:** `GET /bookings/export`
+*   **Description:** Exports bookings (filtered based on query parameters) to an Excel file. This endpoint directly triggers a file download.
+*   **Authentication:** Required.
+*   **Query Parameters:** Same as List Bookings (`search`, `start_date`, etc.).
+*   **Success Response:** Direct file download (`.xlsx`).
+*   **Content-Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+#### Export All Active Bookings
+
+*   **Endpoint:** `GET /bookings/export-all`
+*   **Description:** Exports *all* active bookings (ignoring filters) to an Excel file.
+*   **Authentication:** Required.
+*   **Success Response:** Direct file download (`.xlsx`).
+*   **Content-Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+---
+
+### Archived Bookings
+
+#### List Archived Bookings
+
+*   **Endpoint:** `GET /admin/archived-bookings`
+*   **Description:** Retrieves a paginated list of archived (soft-deleted) bookings. Supports filtering and searching.
+*   **Authentication:** Required (Admin role likely needed based on route prefix).
+*   **Query Parameters:** Similar to List Bookings (`search`, `start_date`, etc.).
+*   **Success Response (200 OK):** Similar structure to List Bookings, but containing archived bookings.
+
+#### Export Archived Bookings
+
+*   **Endpoint:** `GET /admin/archived-bookings/export`
+*   **Description:** Exports archived bookings (filtered based on query parameters) to an Excel file.
+*   **Authentication:** Required (Admin role likely needed).
+*   **Query Parameters:** Same as List Archived Bookings.
+*   **Success Response:** Direct file download (`.xlsx`).
+*   **Content-Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+---
+
+### Other Resources (Companies, Agents, Hotels, Employees)
+
+*(These follow standard CRUD patterns, documentation would be similar to Bookings)*
+
+#### Example: List Companies
+
+*   **Endpoint:** `GET /admin/companies`
+*   **Description:** Retrieves a list of all companies.
+*   **Authentication:** Required (Admin role likely needed).
+*   **Success Response (200 OK):**
+    ```json
+    [
+        { "id": 1, "name": "Company A", "created_at": "...", "updated_at": "..." },
+        { "id": 2, "name": "Company B", "created_at": "...", "updated_at": "..." }
+        // ...
+    ]
+    ```
+
+#### Example: Create Company
+
+*   **Endpoint:** `POST /admin/companies`
+*   **Description:** Creates a new company.
+*   **Authentication:** Required (Admin role likely needed).
+*   **Request Body:**
+    *   `name` (string, required): Name of the company.
+*   **Success Response (201 Created or 302 Found):**
+    ```json
+    { "id": 3, "name": "New Company", ... }
+    ```
+*   **Error Response (422 Unprocessable Entity):** If name is missing or not unique.
+
+*(Similar endpoints exist for `GET /admin/companies/{id}/edit`, `PUT /admin/companies/{id}`, `DELETE /admin/companies/{id}` and analogous routes for Agents, Hotels, Employees)*
+
+---
+
+### Notifications
+
+#### List Notifications
+
+*   **Endpoint:** `GET /admin/notifications`
+*   **Description:** Retrieves a paginated list of system notifications for the admin.
+*   **Authentication:** Required (Admin role likely needed).
+*   **Success Response (200 OK):** Paginated list of notification objects.
+    ```json
+     {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 1,
+                "user_id": 1, // User who triggered the action
+                "message": "تم تعديل حجز...",
+                "type": "تعديل حجز",
+                "is_read": false,
+                "created_at": "...",
+                "updated_at": "..."
+            },
+            // ...
+        ],
+        // ... pagination fields ...
+     }
+    ```
+
+#### Mark Notification as Read
+
+*   **Endpoint:** `POST /admin/notifications/{id}/read` (Note: `PUT` or `PATCH` might be more semantically correct)
+*   **Description:** Marks a specific notification as read.
+*   **Authentication:** Required (Admin role likely needed).
+*   **Path Parameters:**
+    *   `id` (integer, required): The ID of the notification.
+*   **Success Response (200 OK or 204 No Content):**
+    ```json
+    { "message": "Notification marked as read." }
+    ```
+*   **Error Response (404 Not Found):** If notification doesn't exist.
+
+---
+
+# توثيق واجهة برمجة التطبيقات (API) - نظام ابن عباس للإدارة (v1)
+
+## مقدمة
+
+يوفر هذا المستند توثيقًا لواجهة برمجة التطبيقات (API) الخاصة بنظام ابن عباس للإدارة. تتيح الواجهة التفاعل مع الحجوزات والشركات وجهات الحجز والفنادق والموظفين والتقارير.
+
+**عنوان URL الأساسي:** `https://yourdomain.com/`
+
+*(ملاحظة: إذا تم نقل مسارات API إلى `routes/api.php`، فقد يتغير عنوان URL الأساسي، على سبيل المثال، `https://yourdomain.com/api/`)*
+
+## المصادقة (Authentication)
+
+حاليًا، معظم نقاط النهاية محمية بواسطة وسيط المصادقة القياسي للويب في Laravel (`auth`). يجب مصادقة الطلبات باستخدام ملفات تعريف ارتباط الجلسة (session cookies) التي تم إنشاؤها عبر واجهة تسجيل الدخول على الويب.
+
+*(توصية: للاستخدام المخصص لواجهة برمجة التطبيقات، ضع في اعتبارك تنفيذ المصادقة المستندة إلى التوكن (token) باستخدام Laravel Sanctum.)*
+
+## الاصطلاحات العامة
+
+*   **تنسيق الطلب:** بالنسبة لطلبات `POST` و `PUT` التي تتوقع بيانات، يجب أن يكون `Content-Type` بشكل عام `application/json` أو `application/x-www-form-urlencoded`.
+*   **تنسيق الاستجابة:** ستُرجع الاستجابات الناجحة عادةً JSON. ستُرجع استجابات الخطأ أيضًا JSON مع رسالة خطأ.
+*   **تنسيق التاريخ:** يجب أن تكون التواريخ في الطلبات (معلمات الاستعلام) بشكل عام بتنسيق `d/m/Y`. تكون التواريخ في الاستجابات عادةً بتنسيق `YYYY-MM-DD HH:MM:SS` أو `d/m/Y` كما هو محدد.
+
+## استجابات الخطأ
+
+*   **401 Unauthorized:** فشلت المصادقة أو مطلوبة.
+*   **403 Forbidden:** المستخدم المصادق عليه ليس لديه إذن للإجراء (مثل وصول غير المسؤول إلى مسارات المسؤول).
+*   **404 Not Found:** المورد المطلوب (مثل حجز معين) غير موجود.
+*   **422 Unprocessable Entity:** فشل التحقق من صحة بيانات الطلب (مثل الحقول المطلوبة المفقودة، التنسيقات غير الصالحة). سيحتوي نص الاستجابة عادةً على تفاصيل حول أخطاء التحقق.
+*   **500 Internal Server Error:** حدث خطأ من جانب الخادم.
+
+---
+
+## نقاط النهاية (Endpoints)
+
+### الحجوزات (Bookings)
+
+#### عرض قائمة الحجوزات
+
+*   **نقطة النهاية:** `GET /bookings`
+*   **الوصف:** استرداد قائمة مقسمة إلى صفحات للحجوزات النشطة. يدعم التصفية والبحث.
+*   **المصادقة:** مطلوبة.
+*   **معلمات الاستعلام (Query Parameters):**
+    *   `search` (string, اختياري): مصطلح البحث عن اسم العميل أو الشركة أو جهة الحجز أو الفندق أو الموظف.
+    *   `start_date` (string, اختياري, تنسيق `d/m/Y`): التصفية حسب تاريخ الدخول >= هذا التاريخ.
+    *   `end_date` (string, اختياري, تنسيق `d/m/Y`): التصفية حسب تاريخ الخروج <= هذا التاريخ.
+    *   `company_id` (integer, اختياري): التصفية حسب معرف الشركة.
+    *   `agent_id` (integer, اختياري): التصفية حسب معرف جهة الحجز.
+    *   `hotel_id` (integer, اختياري): التصفية حسب معرف الفندق.
+    *   `employee_id` (integer, اختياري): التصفية حسب معرف الموظف.
+    *   `page` (integer, اختياري): رقم الصفحة للتقسيم.
+*   **استجابة النجاح (200 OK):** (انظر المثال في القسم الإنجليزي أعلاه، هيكل JSON مشابه)
+
+#### إنشاء حجز
+
+*   **نقطة النهاية:** `POST /bookings`
+*   **الوصف:** إنشاء حجز جديد.
+*   **المصادقة:** مطلوبة.
+*   **نص الطلب (`application/json` أو `x-www-form-urlencoded`):**
+    *   `client_name` (string, مطلوب): اسم العميل.
+    *   `company_id` (integer, مطلوب): معرف الشركة المرتبطة.
+    *   `agent_id` (integer, مطلوب): معرف جهة الحجز.
+    *   `hotel_id` (integer, مطلوب): معرف الفندق.
+    *   `employee_id` (integer, مطلوب): معرف الموظف المسؤول (عادة المستخدم المسجل دخوله).
+    *   `check_in` (string, مطلوب, تنسيق `d/m/Y`): تاريخ الدخول.
+    *   `check_out` (string, مطلوب, تنسيق `d/m/Y`): تاريخ الخروج.
+    *   `rooms` (integer, مطلوب): عدد الغرف.
+    *   `cost_price` (numeric, مطلوب): سعر التكلفة لليلة/الحجز.
+    *   `sale_price` (numeric, مطلوب): سعر البيع لليلة/الحجز.
+    *   `notes` (string, اختياري): ملاحظات إضافية.
+*   **استجابة النجاح (201 Created أو 302 Found إذا كان هناك إعادة توجيه):**
+    ```json
+    // مثال إذا تم إرجاع JSON
+    {
+        "message": "تم إنشاء الحجز بنجاح!",
+        "booking": {
+             "id": 123,
+             "client_name": "عميل جديد",
+             // ... حقول الحجز الأخرى ...
+        }
+    }
+    ```
+*   **استجابة الخطأ (422 Unprocessable Entity):** إذا فشل التحقق من الصحة.
+
+#### الحصول على تفاصيل الحجز
+
+*   **نقطة النهاية:** `GET /bookings/{id}`
+*   **الوصف:** استرداد تفاصيل حجز معين.
+*   **المصادقة:** مطلوبة.
+*   **معلمات المسار (Path Parameters):**
+    *   `id` (integer, مطلوب): معرف الحجز المراد استرداده.
+*   **استجابة النجاح (200 OK):** (هيكل JSON مشابه للمثال في القسم الإنجليزي)
+*   **استجابة الخطأ (404 Not Found):** إذا لم يكن الحجز بالمعرف المحدد موجودًا.
+
+#### تحديث حجز
+
+*   **نقطة النهاية:** `PUT /bookings/{id}/update` (ملاحظة: REST القياسي يستخدم `PUT /bookings/{id}`)
+*   **الوصف:** تحديث حجز موجود.
+*   **المصادقة:** مطلوبة.
+*   **معلمات المسار:**
+    *   `id` (integer, مطلوب): معرف الحجز المراد تحديثه.
+*   **نص الطلب (`application/json` أو `x-www-form-urlencoded`):** (تضمين الحقول المراد تحديثها، مشابه لإنشاء حجز)
+    *   `client_name` (string, اختياري)
+    *   `company_id` (integer, اختياري)
+    *   `agent_id` (integer, اختياري)
+    *   `hotel_id` (integer, اختياري)
+    *   `check_in` (string, اختياري, format `d/m/Y`)
+    *   `check_out` (string, اختياري, format `d/m/Y`)
+    *   `rooms` (integer, اختياري)
+    *   `cost_price` (numeric, اختياري)
+    *   `sale_price` (numeric, اختياري)
+    *   `amount_paid_to_hotel` (numeric, اختياري)
+    *   `amount_paid_by_company` (numeric, اختياري)
+    *   `notes` (string, اختياري)
+*   **استجابة النجاح (200 OK أو 302 Found إذا كان هناك إعادة توجيه):**
+    ```json
+    // مثال إذا تم إرجاع JSON
+    {
+        "message": "تم تحديث الحجز بنجاح!",
+        "booking": {
+             "id": 1,
+             "client_name": "اسم محدث",
+             // ... حقول الحجز المحدثة الأخرى ...
+        }
+    }
+    ```
+*   **استجابة الخطأ (404 Not Found):** إذا لم يكن الحجز موجودًا.
+*   **استجابة الخطأ (422 Unprocessable Entity):** إذا فشل التحقق من الصحة.
+
+#### حذف حجز (أرشفة)
+
+*   **نقطة النهاية:** `DELETE /bookings/{id}`
+*   **الوصف:** حذف ناعم (أرشفة) للحجز.
+*   **المصادقة:** مطلوبة.
+*   **معلمات المسار:**
+    *   `id` (integer, مطلوب): معرف الحجز المراد حذفه.
+*   **استجابة النجاح (200 OK أو 204 No Content أو 302 Found إذا كان هناك إعادة توجيه):**
+    ```json
+    // مثال إذا تم إرجاع JSON
+    {
+        "message": "تمت أرشفة الحجز بنجاح!"
+    }
+    ```
+*   **استجابة الخطأ (404 Not Found):** إذا لم يكن الحجز موجودًا.
+
+#### الحصول على سجل تعديلات الحجز
+
+*   **نقطة النهاية:** `GET /bookings/{id}/edits`
+*   **الوصف:** استرداد سجل التعديلات لحجز معين.
+*   **المصادقة:** مطلوبة.
+*   **معلمات المسار:**
+    *   `id` (integer, مطلوب): معرف الحجز.
+*   **استجابة النجاح (200 OK):** (مصفوفة من سجلات التعديل، انظر المثال الإنجليزي)
+*   **استجابة الخطأ (404 Not Found):** إذا لم يكن الحجز موجودًا.
+
+#### تصدير الحجوزات
+
+*   **نقطة النهاية:** `GET /bookings/export`
+*   **الوصف:** تصدير الحجوزات (مفلترة بناءً على معلمات الاستعلام) إلى ملف Excel. تؤدي نقطة النهاية هذه مباشرة إلى تنزيل ملف.
+*   **المصادقة:** مطلوبة.
+*   **معلمات الاستعلام:** نفس معلمات عرض قائمة الحجوزات (`search`, `start_date`, إلخ).
+*   **استجابة النجاح:** تنزيل ملف مباشر (`.xlsx`).
+*   **Content-Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+#### تصدير كل الحجوزات النشطة
+
+*   **نقطة النهاية:** `GET /bookings/export-all`
+*   **الوصف:** تصدير *جميع* الحجوزات النشطة (مع تجاهل الفلاتر) إلى ملف Excel.
+*   **المصادقة:** مطلوبة.
+*   **استجابة النجاح:** تنزيل ملف مباشر (`.xlsx`).
+*   **Content-Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+---
+
+### الحجوزات المؤرشفة (Archived Bookings)
+
+#### عرض قائمة الحجوزات المؤرشفة
+
+*   **نقطة النهاية:** `GET /admin/archived-bookings`
+*   **الوصف:** استرداد قائمة مقسمة إلى صفحات للحجوزات المؤرشفة (المحذوفة حذفًا ناعمًا). يدعم التصفية والبحث.
+*   **المصادقة:** مطلوبة (دور المسؤول مطلوب على الأرجح بناءً على بادئة المسار).
+*   **معلمات الاستعلام:** مشابهة لعرض قائمة الحجوزات (`search`, `start_date`, إلخ).
+*   **استجابة النجاح (200 OK):** هيكل مشابه لعرض قائمة الحجوزات، ولكن يحتوي على الحجوزات المؤرشفة.
+
+#### تصدير الحجوزات المؤرشفة
+
+*   **نقطة النهاية:** `GET /admin/archived-bookings/export`
+*   **الوصف:** تصدير الحجوزات المؤرشفة (مفلترة بناءً على معلمات الاستعلام) إلى ملف Excel.
+*   **المصادقة:** مطلوبة (دور المسؤول مطلوب على الأرجح).
+*   **معلمات الاستعلام:** نفس معلمات عرض قائمة الحجوزات المؤرشفة.
+*   **استجابة النجاح:** تنزيل ملف مباشر (`.xlsx`).
+*   **Content-Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+---
+
+### موارد أخرى (الشركات، جهات الحجز، الفنادق، الموظفين)
+
+*(تتبع هذه الموارد أنماط CRUD القياسية، وسيكون التوثيق مشابهًا للحجوزات)*
+
+#### مثال: عرض قائمة الشركات
+
+*   **نقطة النهاية:** `GET /admin/companies`
+*   **الوصف:** استرداد قائمة بجميع الشركات.
+*   **المصادقة:** مطلوبة (دور المسؤول مطلوب على الأرجح).
+*   **استجابة النجاح (200 OK):** (مصفوفة من كائنات الشركات، انظر المثال الإنجليزي)
+
+#### مثال: إنشاء شركة
+
+*   **نقطة النهاية:** `POST /admin/companies`
+*   **الوصف:** إنشاء شركة جديدة.
+*   **المصادقة:** مطلوبة (دور المسؤول مطلوب على الأرجح).
+*   **نص الطلب:**
+    *   `name` (string, مطلوب): اسم الشركة.
+*   **استجابة النجاح (201 Created أو 302 Found):**
+    ```json
+    { "id": 3, "name": "شركة جديدة", ... }
+    ```
+*   **استجابة الخطأ (422 Unprocessable Entity):** إذا كان الاسم مفقودًا أو غير فريد.
+
+*(توجد نقاط نهاية مماثلة لـ `GET /admin/companies/{id}/edit`, `PUT /admin/companies/{id}`, `DELETE /admin/companies/{id}` ومسارات مماثلة لجهات الحجز والفنادق والموظفين)*
+
+---
+
+### الإشعارات (Notifications)
+
+#### عرض قائمة الإشعارات
+
+*   **نقطة النهاية:** `GET /admin/notifications`
+*   **الوصف:** استرداد قائمة مقسمة إلى صفحات لإشعارات النظام للمسؤول.
+*   **المصادقة:** مطلوبة (دور المسؤول مطلوب على الأرجح).
+*   **استجابة النجاح (200 OK):** قائمة مقسمة إلى صفحات لكائنات الإشعارات (انظر المثال الإنجليزي).
+
+#### وضع علامة مقروء على الإشعار
+
+*   **نقطة النهاية:** `POST /admin/notifications/{id}/read` (ملاحظة: قد يكون `PUT` أو `PATCH` أكثر صحة من الناحية الدلالية)
+*   **الوصف:** وضع علامة مقروء على إشعار معين.
+*   **المصادقة:** مطلوبة (دور المسؤول مطلوب على الأرجح).
+*   **معلمات المسار:**
+    *   `id` (integer, مطلوب): معرف الإشعار.
+*   **استجابة النجاح (200 OK أو 204 No Content):**
+    ```json
+    { "message": "تم وضع علامة مقروء على الإشعار." }
+    ```
+*   **استجابة الخطأ (404 Not Found):** إذا لم يكن الإشعار موجودًا.
+
+---
