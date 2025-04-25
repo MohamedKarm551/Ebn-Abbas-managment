@@ -34,10 +34,12 @@ class ReportController extends Controller
         $todayBookings = Booking::whereDate('check_in', $today)->get();
 
     // تقرير الشركات: كل شركة وعدد حجوزاتها (قائمة الشركات مع عدد الحجوزات لكل شركة)
-        // >>>>> السطر ده بيلغي الترتيب اللي فوق وبيجيب الشركات بدون ترتيب <<<<<
-        $companiesReport = Company::withCount('bookings')->get(); // *** احذف هذا السطر ***
-
-        // إجمالي المتبقي من الشركات ... بيستخدم المتغير اللي بدون ترتيب
+         //  كل الشركات وعدد الحجوزاتها 
+        $companiesReport = Company::withCount('bookings')->get()
+        ->sortByDesc(function ($company) {
+            return $company->remaining; // <-- الترتيب الصحيح هنا
+        })->values();
+        // إجمالي المتبقي من الشركات ...   
         $totalDueFromCompanies = $companiesReport->sum('remaining');
 
         //  تقرير الوكلاء: كل وكيل وعدد حجوزاته وترتيبهم من الأعلى واحد مطلوب منه فلوس للأقل

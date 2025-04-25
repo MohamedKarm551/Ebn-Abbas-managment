@@ -30,15 +30,18 @@ class Company extends Model
 
     public function getRemainingAttribute()
     {
-        // التأكد من أن هناك حجوزات قبل الحساب
-        $totalDue = $this->bookings->sum(function ($booking) {
-            return $booking->sale_price * $booking->rooms * $booking->days;
-        });
+         // التأكد من أن هناك حجوزات قبل الحساب
+    $totalDue = $this->bookings->sum(function ($booking) {
+        // تأكد أن هذه القيم دائمًا أرقام في قاعدة البيانات
+        return ($booking->sale_price ?? 0) * ($booking->rooms ?? 0) * ($booking->days ?? 0);
+    });
 
-        // return max($totalDue - $this->total_paid, 0); // التأكد من أن المتبقي لا يكون أقل من صفر
-        // حساب المتبقي بشكل صحيح (يسمح بالسالب)
-        return $totalDue - $this->total_paid;
-    }
+    $totalPaid = $this->total_paid; // تستخدم الـ accessor الآخر
+
+    // *** التأكد من أن القيمة المرتجعة هي رقم عشري (float) ***
+    return (float) ($totalDue - $totalPaid);
+}
+
 
     public function getTotalDueAttribute()
     {
