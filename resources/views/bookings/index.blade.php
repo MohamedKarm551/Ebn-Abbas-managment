@@ -9,13 +9,55 @@
         <h1>كل الحجوزات</h1>
 
         <!-- الأزرار بتاعة الإدارة - كل زر بيوديك لصفحة إدارة حاجة معينة -->
-        <div class="mb-4">
-            <a href="{{ route('admin.employees') }}" class="btn admin-gradient-btn">إدارة الموظفين</a>
-            <a href="{{ route('admin.companies') }}" class="btn admin-gradient-btn">إدارة الشركات</a>
-            <a href="{{ route('admin.agents') }}" class="btn admin-gradient-btn">إدارة جهات الحجز</a>
-            <a href="{{ route('admin.hotels') }}" class="btn admin-gradient-btn">إدارة الفنادق</a>
-            <a href="{{ route('admin.archived_bookings') }}" class="btn admin-gradient-btn">أرشيف الحجوزات</a>
+        <!-- قائمة الإدارة الدائرية التفاعلية -->
+        <div class="admin-menu-container mb-5" style="direction: rtl;"> {{-- Added direction: rtl --}}
+            <div class="admin-circle">
+                <span>إدارة</span>
+            </div>
+            <div class="admin-menu-items">
+                <a href="{{ route('admin.employees') }}" class="admin-menu-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"
+                        fill="currentColor">
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                    <span>إدارة الموظفين</span>
+                </a>
+                <a href="{{ route('admin.companies') }}" class="admin-menu-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"
+                        fill="currentColor">
+                        <path
+                            d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z" />
+                    </svg>
+                    <span>إدارة الشركات</span>
+                </a>
+                <a href="{{ route('admin.agents') }}" class="admin-menu-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"
+                        fill="currentColor">
+                        <path
+                            d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM13 20.99l-9-9V4h7l9 9-7 7.01z" />
+                        <circle cx="6.5" cy="6.5" r="1.5" />
+                    </svg>
+                    <span>إدارة جهات الحجز</span>
+                </a>
+                <a href="{{ route('admin.hotels') }}" class="admin-menu-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"
+                        fill="currentColor">
+                        <path d="M19 7h-8v6h8V7zm2-2H3v14h18V5zm-4 6h-4v-4h4v4z" />
+                    </svg>
+                    <span>إدارة الفنادق</span>
+                </a>
+                <a href="{{ route('admin.archived_bookings') }}" class="admin-menu-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"
+                        fill="currentColor">
+                        <path
+                            d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z" />
+                    </svg>
+                    <span>أرشيف الحجوزات</span>
+                </a>
+            </div>
         </div>
+
 
         <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
         <div class="filter-box p-4 mb-4">
@@ -85,8 +127,8 @@
                 <div class="mt-3">
                     <button class="btn btn-success" id="captureBtn">أخذ صورة من بيانات الحجوزات</button>
                     <button class="btn btn-info" id="copyBtn" onclick="copyFilteredData()">نسخ بيانات الفلترة</button>
-                    <button class="btn btn-info" type="button" data-bs-toggle="collapse" data-bs-target="#bookingDetails"
-                        id="toggleDetails">
+                    <button class="btn btn-info" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#bookingDetails" id="toggleDetails">
                         عرض تفاصيل الحجوزات
                     </button>
                 </div>
@@ -555,6 +597,27 @@
 
                     // تحديث الرسالة عند أول تحميل (قبل أي Ajax)
                     updateDateAlert();
+                                        // --- 7. كود قائمة الإدارة الدائرية (التثبيت عند الضغط) ---
+                                        const adminMenuContainer = document.querySelector('.admin-menu-container');
+                    const adminCircle = document.querySelector('.admin-circle');
+
+                    if (adminMenuContainer && adminCircle) {
+                        adminCircle.addEventListener('click', function(event) {
+                            event.stopPropagation(); // منع انتشار الحدث للعناصر الأعلى
+                            adminMenuContainer.classList.toggle('is-active');
+                        });
+
+                        // اختياري: إغلاق القائمة عند الضغط في أي مكان آخر في الصفحة
+                        document.addEventListener('click', function(event) {
+                            // نتأكد أن الضغطة لم تكن على القائمة نفسها أو الدائرة
+                            if (!adminMenuContainer.contains(event.target) && adminMenuContainer.classList.contains('is-active')) {
+                                adminMenuContainer.classList.remove('is-active');
+                            }
+                        });
+                    }
+                    // --- نهاية كود قائمة الإدارة ---
+
+
 
                 }); // نهاية الـ DOMContentLoaded
             </script>
@@ -623,53 +686,225 @@
             background: linear-gradient(90deg, #fffaed2d, #f53003, #ff4433, #1b1b18, #f53003);
         }
 
-        /* خلي الزرار فيه تدرج لوني في النص */
-        .admin-gradient-btn {
+        /* --- Admin Circle Menu Styles --- */
+        .admin-menu-container {
             position: relative;
-            background: transparent;
-            border: 1px solid #E81C2E;
-            font-weight: bold;
-            background-image: linear-gradient(90deg, #E81C2E, #202C45);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            transition: color 0.2s, border-color 0.2s;
-            overflow: hidden;
-            z-index: 1;
+            /* Needed for absolute positioning of items */
+            display: inline-flex;
+            /* Align circle and items container */
+            align-items: center;
+            margin-top: 1rem;
+            /* Add some top margin */
         }
 
-        /* الـ after بيعمل طبقة فوق الزرار */
-        .admin-gradient-btn::after {
+        .admin-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(90deg, #E81C2E, #a11422, #202C45);
+            /* Gradient */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            /* transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55); */
+            /* Replaced by hover animation */
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            /* Needed for the pseudo-element border */
+            overflow: hidden;
+            /* Hide overflowing border parts */
+            /* Add pulse animation on hover */
+            transition: transform 0.3s ease;
+            /* Smooth transition for manual scale */
+        }
+
+        .admin-circle::before {
             content: '';
             position: absolute;
-            inset: 0;
-            background-image: linear-gradient(90deg, #E81C2E, #202C45);
-            opacity: 0;
-            transition: opacity 0.3s;
+            top: -50%;
+            left: -50%;
+            /* Position outside initially */
+            width: 200%;
+            height: 200%;
+            /* Make it large */
+            background: conic-gradient(transparent,
+                    transparent,
+                    transparent,
+                    #ffffff
+                    /* White part of the gradient */
+                );
+            animation: circle-border-spin 4s linear infinite;
+            /* Apply rotation animation */
             z-index: -1;
-            border-radius: 0.375rem;
+            /* Place behind the circle content */
+            opacity: 0.6;
+            /* Make it slightly transparent */
         }
 
-        /* لما تعمل هوفر الزرار كله يتلون */
-        .admin-gradient-btn:hover,
-        .admin-gradient-btn:focus {
-            border-color: #202C45;
+        /* Hover effects for circle */
+        .admin-menu-container:hover .admin-circle {
+            /* Combine rotation and pulse */
+            animation: circle-pulse 1.5s infinite ease-in-out;
+            /* Apply pulse animation */
+            transform: scale(1.1);
+            /* Keep the slight enlarge effect */
+        }
+
+        /* Remove the rotation from the main hover effect if pulse is applied */
+        /* .admin-menu-container:hover .admin-circle {
+        transform: rotate(360deg) scale(1.1);
+    } */
+
+
+
+
+        .admin-menu-items {
+            position: absolute;
+            /* Position items to the left for RTL */
+            right: 100%;
+            /* Start from the left edge of the circle */
+            top: 50%;
+            transform: translateY(-50%) scale(0.8);
+            /* Center vertically, slightly smaller */
+            display: flex;
+            flex-direction: column;
+            /* Stack items vertically */
+            gap: 8px;
+            /* Space between items */
+            opacity: 0;
+            pointer-events: none;
+            /* Prevent interaction when hidden */
+            transition: transform 0.4s ease-out, opacity 0.3s ease-out, z-index 0s 0.4s; /* Delay z-index change */
+            transform-origin: right center;
+            /* Scale origin for RTL */
+            margin-right: 15px;
+            /* Space between circle and items */
+            z-index: 5;
+            /* Initially behind */
+            direction: ltr;
+            /* Keep item content LTR */
+        }
+
+        .admin-menu-item {
+            display: flex;
+            align-items: center;
+            background-color: rgba(32, 44, 69, 0.9);
+            /* Dark background */
             color: #fff;
-            -webkit-text-fill-color: #fff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            /* Rounded corners */
+            text-decoration: none;
+            white-space: nowrap;
+            /* Prevent text wrapping */
+            opacity: 0;
+            /* Hidden initially */
+            transform: translateX(20px);
+            /* Start slightly to the right for RTL animation */
+            transition: opacity 0.3s ease-out, transform 0.4s ease-out, background-color 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
-        .admin-gradient-btn:hover::after,
-        .admin-gradient-btn:focus::after {
+        .admin-menu-item svg {
+            margin-left: 8px;
+            /* Space between icon and text */
+            flex-shrink: 0;
+            /* Prevent icon from shrinking */
+        }
+
+        /* Hover effects */
+        .admin-menu-container:hover .admin-circle {
+            transform: rotate(360deg) scale(1.1);
+            /* Rotate and slightly enlarge */
+        }
+
+        .admin-menu-container:hover .admin-menu-items {
             opacity: 1;
+            transform: translateY(-50%) scale(1);
+            /* Scale up to full size */
+            pointer-events: auto;
+            /* Allow interaction */
+            z-index: 15;
+            /* Bring items above circle */
         }
 
-        /* لما الزرار يتلون بالكامل، النص يبقى أبيض */
-        .admin-gradient-btn:hover,
-        .admin-gradient-btn:focus {
-            background: linear-gradient(90deg, #E81C2E, #202C45);
-            -webkit-background-clip: border-box;
-            -webkit-text-fill-color: #fff;
-            color: #fff;
-            transition: background 0.2s, color 0.2s;
+        .admin-menu-container:hover .admin-menu-item {
+            opacity: 1;
+            transform: translateX(0);
+            /* Move item to final position */
         }
+
+        /* Staggered animation delays */
+        .admin-menu-container:hover .admin-menu-item:nth-child(1) {
+            transition-delay: 0.1s;
+        }
+
+        .admin-menu-container:hover .admin-menu-item:nth-child(2) {
+            transition-delay: 0.18s;
+        }
+
+        .admin-menu-container:hover .admin-menu-item:nth-child(3) {
+            transition-delay: 0.26s;
+        }
+
+        .admin-menu-container:hover .admin-menu-item:nth-child(4) {
+            transition-delay: 0.34s;
+        }
+
+        .admin-menu-container:hover .admin-menu-item:nth-child(5) {
+            transition-delay: 0.42s;
+        }
+
+        .admin-menu-item:hover {
+            background-color: rgba(232, 28, 46, 0.9);
+            /* Highlight color on item hover */
+        }
+
+        @keyframes circle-border-spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes circle-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+
+        /* --- Styles when the menu is ACTIVE (clicked) --- */
+        .admin-menu-container.is-active .admin-menu-items {
+            opacity: 1;
+            transform: translateY(-50%) scale(1); /* Scale up to full size */
+            pointer-events: auto; /* Allow interaction */
+            z-index: 15; /* Bring items above circle */
+            transition: transform 0.4s ease-out, opacity 0.3s ease-out, z-index 0s 0s; /* Apply z-index immediately */
+        }
+
+        .admin-menu-container.is-active .admin-menu-item {
+            opacity: 1;
+            transform: translateX(0); /* Move item to final position */
+        }
+
+        /* Staggered animation delays when ACTIVE */
+        .admin-menu-container.is-active .admin-menu-item:nth-child(1) { transition-delay: 0.1s; }
+        .admin-menu-container.is-active .admin-menu-item:nth-child(2) { transition-delay: 0.18s; }
+        .admin-menu-container.is-active .admin-menu-item:nth-child(3) { transition-delay: 0.26s; }
+        .admin-menu-container.is-active .admin-menu-item:nth-child(4) { transition-delay: 0.34s; }
+        .admin-menu-container.is-active .admin-menu-item:nth-child(5) { transition-delay: 0.42s; }
+        /* --- End Active Styles --- */
+
     </style>
 @endpush

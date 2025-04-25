@@ -13,6 +13,8 @@ use App\Models\Hotel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; // لرفع الملفات
+use Illuminate\Support\Facades\DB; //  لإجراء العمليات على قاعدة البيانات
+use Carbon\CarbonPeriod; // لإجراء العمليات على التواريخ
 
 
 /**
@@ -31,11 +33,12 @@ class ReportController extends Controller
         // كل الحجوزات اللي بتبدأ النهاردة
         $todayBookings = Booking::whereDate('check_in', $today)->get();
 
-        //  تقرير الشركات: كل شركة وعدد حجوزاتها وترتيب أعلى مستحق تنازليا
-        $companiesReport = Company::withCount('bookings')->get()
-            ->sortByDesc(function ($company) {
-                return $company->remaining;
-            })->values();
+    // تقرير الشركات: كل شركة وعدد حجوزاتها (قائمة الشركات مع عدد الحجوزات لكل شركة)
+        // >>>>> السطر ده بيلغي الترتيب اللي فوق وبيجيب الشركات بدون ترتيب <<<<<
+        $companiesReport = Company::withCount('bookings')->get(); // *** احذف هذا السطر ***
+
+        // إجمالي المتبقي من الشركات ... بيستخدم المتغير اللي بدون ترتيب
+        $totalDueFromCompanies = $companiesReport->sum('remaining');
 
         //  تقرير الوكلاء: كل وكيل وعدد حجوزاته وترتيبهم من الأعلى واحد مطلوب منه فلوس للأقل
         $agentsReport = Agent::withCount('bookings')->get()
@@ -43,8 +46,6 @@ class ReportController extends Controller
                 return $agent->remaining;
             })->values();
 
-        // إجمالي المستحق من الشركات (كل اللي المفروض الشركات تدفعه بناءً على كل حجوزاتها)
-        $totalDueFromCompanies = $companiesReport->sum('total_due');
 
         // إجمالي اللي اتدفع للفنادق (كل اللي اتدفع فعلاً للفنادق عن كل الحجوزات)
         $totalPaidToHotels = Booking::all()->sum(function ($booking) {
@@ -71,6 +72,37 @@ class ReportController extends Controller
         // $netProfit = $totalRemainingFromCompanies - $totalRemainingToHotels; // السطر القديم (ممكن تمسحه أو تخليه تعليق)
         $totalDueToAgents = $agentsReport->sum('total_due'); // أو total_due حسب اسم العمود عندك لجهات الحجز
         $netProfit = $totalDueFromCompanies - $totalDueToAgents; // السطر الجديد
+                    // --- *** بداية: جلب بيانات الحجوزات اليومية لآخر 30 يومًا *** ---
+        $days = 30; // عدد الأيام
+        $endDate = Carbon::now()->endOfDay();
+        $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
+
+        // اختر الحقل الذي تريد تتبع تاريخه: 'created_at' أو 'check_in'
+        $dateField = 'created_at'; // أو 'check_in'
+
+        // جلب عدد الحجوزات مجمعة حسب اليوم
+        $bookingsData = Booking::select(
+                DB::raw("DATE($dateField) as date"),
+                DB::raw('COUNT(*) as count')
+            )
+            ->whereBetween($dateField, [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date', 'ASC')
+            ->pluck('count', 'date'); // [date => count]
+
+        // إنشاء فترة زمنية كاملة لآخر 30 يومًا
+        $period = CarbonPeriod::create($startDate, $endDate);
+        $chartDates = [];
+        $bookingCounts = [];
+
+        // ملء البيانات مع التأكد من وجود صفر للأيام بدون حجوزات
+        foreach ($period as $date) {
+            $formattedDate = $date->format('Y-m-d');
+            $chartDates[] = $date->format('d/m'); // تنسيق العرض في الرسم البياني (يوم/شهر)
+            $bookingCounts[] = $bookingsData[$formattedDate] ?? 0; // نضع صفر إذا لم يكن اليوم موجودًا
+        }
+        // --- *** نهاية: جلب بيانات الحجوزات اليومية *** ---
+
 
         // إشعار خفيف على آخر شيء تم عليه تعديل 
         // في نهاية دالة daily
@@ -104,7 +136,9 @@ class ReportController extends Controller
             'totalRemainingToHotels',
             'netProfit',
             'recentCompanyEdits', // إشعار خفيف على آخر شركة تم عليها تعديل
-            'resentAgentEdits' // إشعار خفيف على آخر جهة حجز تم عليه تعديل
+            'resentAgentEdits', // إشعار خفيف على آخر جهة حجز تم عليه تعديل
+            'chartDates',       // <-- *** تمرير مصفوفة التواريخ للرسم ***
+            'bookingCounts'     // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
         ));
     }
 
