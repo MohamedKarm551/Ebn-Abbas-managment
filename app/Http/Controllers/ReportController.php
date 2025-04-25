@@ -37,7 +37,7 @@ class ReportController extends Controller
          //  كل الشركات وعدد الحجوزاتها 
         $companiesReport = Company::withCount('bookings')->get()
         ->sortByDesc(function ($company) {
-            return $company->remaining; // <-- الترتيب الصحيح هنا
+            return $company->total_due; // <-- الترتيب الصحيح هنا
         })->values();
         // إجمالي المتبقي من الشركات ...   
         $totalDueFromCompanies = $companiesReport->sum('remaining');
