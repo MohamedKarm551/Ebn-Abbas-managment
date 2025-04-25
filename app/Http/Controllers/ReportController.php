@@ -58,9 +58,7 @@ class ReportController extends Controller
                 return $hotel->total_due;
             })->values();
 
-        // تقرير الشركات: كل شركة وعدد حجوزاتها (قائمة الشركات مع عدد الحجوزات لكل شركة)
-        $companiesReport = Company::withCount('bookings')->get();
-
+       
         // إجمالي المتبقي من الشركات (كل اللي لسه الشركات ما دفعتهوش فعلاً = المستحق - المدفوع لكل شركة)
         $totalRemainingFromCompanies = $companiesReport->sum('remaining');
 
