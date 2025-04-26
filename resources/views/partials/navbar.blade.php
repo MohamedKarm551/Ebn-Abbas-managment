@@ -34,7 +34,20 @@
                         <li class="nav-item dropdown position-relative mx-2 list-unstyled">
                             <a class="nav-link position-relative d-flex align-items-center" href="#"
                                 id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-bell fs-4"></i>
+                                <svg id="notification-bell-svg" xmlns="http://www.w3.org/2000/svg" width="24"
+                                    height="24" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
+                                    {{-- المسار الداخلي (جسم الجرس واللسان) - زي ما هو --}}
+                                    <path
+                                        d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm0-14.082L7.203 2.08a4.002 4.002 0 0 0-3.203 3.92c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.918z" />
+                                    {{-- المسار الخارجي (الحدود اللي النقطة هتمشي عليها) - عدلناه عشان يبقى مسار واحد واديناه ID --}}
+                                    <path id="bell-outline-path" fill="none" stroke="currentColor" stroke-width="0.1"
+                                        {{-- خليناه خط رفيع جداً وغير مرئي تقريباً بس عشان نحدد المسار --}}
+                                        d="M14.22,12 C14.443,12.447 14.701,12.801 15,13 L1,13 C1.299,12.801 1.557,12.447 1.78,12 C2.68,10.2 3,6.88 3,6 C3,3.58 4.72,1.56 7.005,1.099 A1,1 0 0 1 8,1 A1,1 0 0 1 8.995,1.099 A5.002,5.002 0 0 1 13,6 C13,6.88 13.32,10.2 14.22,12 Z" />
+                                    {{-- عنصر النقطة اللي هتتحرك (هنضيفه هنا) --}}
+                                    <circle id="moving-dot" r="0.5" fill="rgba(220, 53, 69, 0.8)"> {{-- نقطة حمراء نص شفافة --}}
+                                        {{-- هنا هنطبق الأنيميشن بالـ CSS --}}
+                                    </circle>
+                                </svg>
                                 @if ($unreadNotificationsCount > 0)
                                     <span
                                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -42,8 +55,8 @@
                                     </span>
                                 @endif
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2 notif-dropdown" aria-labelledby="notifDropdown"
-                                style="min-width: 320px; max-width: 90vw; direction: rtl;">
+                            <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2 notif-dropdown"
+                                aria-labelledby="notifDropdown" style="min-width: 320px; max-width: 90vw; direction: rtl;">
                                 <li class="dropdown-header fw-bold">آخر 5 إشعارات</li>
                                 @forelse($lastNotifications as $notification)
                                     <li>
@@ -93,61 +106,4 @@
         </div>
     </div>
 </nav>
-<style>
-    /* Default styles for large screens */
-    .notif-dropdown {
-        width: 30vw; /* Adjust as needed for large screens */
-        min-width: 280px;
-        max-width: 380px;
-        max-height: 60vh;
-        overflow-y: auto;
-        direction: rtl;
-    }
 
-    /* Medium screens (tablets, etc.) */
-    @media (max-width: 992px) {
-        .notif-dropdown {
-            width: 60vw !important;
-            min-width: unset !important;
-            max-width: unset !important;
-            max-height: 50vh !important;
-            left: 50% !important;
-            right: auto !important;
-            transform: translateX(-50%) !important;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            padding: 0.2rem 0.1rem;
-        }
-        .notif-dropdown .dropdown-header,
-        .notif-dropdown .dropdown-item {
-            font-size: 0.98rem;
-            padding-right: 0.5rem;
-            padding-left: 0.5rem;
-            white-space: normal !important;
-            word-break: break-word;
-        }
-    }
-
-    /* Small screens (mobiles) */
-    @media (max-width: 576px) {
-        .notif-dropdown {
-            width: 60vw !important; /* تم تقليل العرض أكثر */
-            max-width: 70vw !important; /* تم تقليل العرض الأقصى */
-            max-height: 45vh !important;
-            left: 50% !important;
-            right: auto !important;
-            transform: translateX(-40%) !important; /* تم تعديل الإزاحة لليسار */
-            border-radius: 8px;
-            font-size: 0.9rem;
-            padding: 0.15rem 0.05rem;
-        }
-        .notif-dropdown .dropdown-header,
-        .notif-dropdown .dropdown-item {
-            font-size: 0.92rem;
-            padding-right: 0.4rem;
-            padding-left: 0.4rem;
-            white-space: normal !important;
-            word-break: break-word;
-        }
-    }
-</style>

@@ -21,6 +21,8 @@
     crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="{{ asset('css/dark-mode.css') }}" rel="stylesheet">
     {{-- تنسيق خاص لصفحة كل الحجوزات أنا رابطه بالصفحة هنا --}}
+    <link rel="stylesheet" href="{{ asset('css/nav-styles.css') }}">
+
     <link rel="stylesheet" href="{{ asset('css/bookingsStyle.css') }}">
     @stack('styles')    {{-- لازم تحطه هنا عشان يظهر اللي بتدفعه بـ @push --}}
  

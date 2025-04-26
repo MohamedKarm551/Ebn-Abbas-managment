@@ -24,7 +24,7 @@
                             {{ $notification->type }}
                         </span>
                         <span class="mx-1">-</span>
-                        <span class="flex-fill">{{ $notification->message }}</span>
+                        <span  class="text-break w-100 flex-md-grow-1" style="min-width: 0; word-break: break-all;">{{ $notification->message }}</span>
                         <span class="text-muted small ms-2" title="{{ $notification->created_at->format('Y-m-d H:i:s') }}">
                             {{ $notification->created_at->diffForHumans() }}
                         </span>
