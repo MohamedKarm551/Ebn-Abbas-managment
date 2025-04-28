@@ -27,6 +27,9 @@ class Booking extends Model
         'days',
         'amount_due_to_hotel',
         'amount_due_from_company',
+        'availability_room_type_id', // *** إضافة الحقل الجديد ***
+        'amount_paid_by_company', // تأكد من وجود هذا الحقل في المايجريشن
+        'amount_paid_to_hotel', // تأكد من وجود هذا الحقل في المايجريشن
     ];
 
     protected $casts = [
@@ -35,7 +38,11 @@ class Booking extends Model
         'cost_price' => 'float',
         'sale_price' => 'float',
         'days' => 'integer',
-        'rooms' => 'integer'
+        'rooms' => 'integer',
+        'amount_due_to_hotel' => 'float',
+        'amount_due_from_company' => 'float',
+        'amount_paid_by_company' => 'float',
+        'amount_paid_to_hotel' => 'float',
     ];
 
     public function company()
@@ -62,7 +69,21 @@ class Booking extends Model
     {
         return $this->hasMany(EditLog::class);
     }
-
+        // *** علاقة الحجز بصف سعر الإتاحة ***
+        public function availabilityRoomType()
+        {
+            return $this->belongsTo(AvailabilityRoomType::class);
+        }
+    
+        // *** علاقة مساعدة للوصول للإتاحة مباشرة ***
+        public function availability()
+        {
+            // نستخدم optional() للتعامل مع حالة null بأمان
+            return optional($this->availabilityRoomType)->availability();
+            // أو الطريقة الأحدث باستخدام Nullsafe operator (PHP 8+)
+            // return $this->availabilityRoomType?->availability();
+        }
+    
     /** 
      * عدد الليالي المنتهية حتى اليوم (أو حتى تاريخ الخروج إن سبق اليوم)
      */

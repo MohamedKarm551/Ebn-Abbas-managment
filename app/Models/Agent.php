@@ -14,7 +14,12 @@ class Agent extends Model
         return $this->hasMany(Booking::class, 'agent_id');
         // جهة الحجز يمكن أن يكون لها العديد من الحجوزات
     }
-
+        // *** علاقة جهة الحجز بالإتاحات ***
+        public function availabilities()
+        {
+            return $this->hasMany(Availability::class);
+        }
+    
     public function payments()
     {
         return $this->hasMany(AgentPayment::class,'agent_id');

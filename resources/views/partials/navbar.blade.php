@@ -10,15 +10,55 @@
                 <li class="nav-item">
                     <a class="nav-link" href="/bookings">الحجوزات</a>
                 </li>
+                @if(auth()->user()->role === 'Company')
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('company.availabilities.index') }}">الإتاحات المتاحة</a>
+                </li>
+                @endif
+                @if(auth()->user()->role != 'Company')
                 <li class="nav-item">
                     <a class="nav-link" href="/bookings/create">إضافة حجز</a>
                 </li>
+                @endif
+                @auth
+                @if (auth()->user()->role === 'employee')
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.availabilities.index') }}">الإتاحات</a>
+                </li> 
+                @endif
+                @endauth
                 @auth
                     @if (auth()->user()->role === 'Admin')
                         <li class="nav-item">
                             <a class="nav-link" href="/reports/daily">التقارير اليومية</a>
                         </li>
+                        {{-- *** بداية الإضافة *** --}}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                الإدارة
+                            </a>
+                            <ul class="dropdown-menu text-end" aria-labelledby="adminDropdown">
+                                <li><a class="dropdown-item" href="{{ route('admin.employees') }}">الموظفين</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.companies') }}">الشركات</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.agents') }}">جهات الحجز</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.hotels') }}">الفنادق</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.room_types.index') }}">أنواع الغرف</a></li> {{-- *** أضف هذا السطر *** --}}
+                                <li><a class="dropdown-item" href="{{ route('admin.availabilities.index') }}">الإتاحات</a>
+                                </li> 
+                               
+                                
+                                <li><a class="dropdown-item" href="{{ route('admin.archived_bookings') }}">الحجوزات
+                                        المؤرشفة</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.notifications') }}">الإشعارات</a></li>
+                            </ul>
+                        </li>
+                        {{-- *** نهاية الإضافة *** --}}
                     @endif
+                    
+
+
+
                 @endauth
             </ul>
             <div class="d-flex align-items-center gap-2">
@@ -27,10 +67,11 @@
                     <label class="form-check-label" for="darkModeSwitch">دارك مود</label>
                 </div>
                 @auth
-                    @if (auth()->user()->role === 'Admin')
-                        @php
+                    @if (auth()->user()->role === 'Admin' || auth()->user()->role === 'employee')
+                        {{-- أو أي دور تستخدمه للإشعارات --}}
+                        {{-- @php
                             $unreadNotificationsCount = \App\Models\Notification::where('is_read', false)->count();
-                        @endphp
+                        @endphp --}}
                         <li class="nav-item dropdown position-relative mx-2 list-unstyled">
                             <a class="nav-link position-relative d-flex align-items-center" href="#"
                                 id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -48,12 +89,12 @@
                                         {{-- هنا هنطبق الأنيميشن بالـ CSS --}}
                                     </circle>
                                 </svg>
-                                @if ($unreadNotificationsCount > 0)
-                                    <span
-                                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                        {{ $unreadNotificationsCount }}
-                                    </span>
-                                @endif
+                                @if (isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
+                                <span
+                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ $unreadNotificationsCount }}
+                                </span>
+                            @endif
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2 notif-dropdown"
                                 aria-labelledby="notifDropdown" style="min-width: 320px; max-width: 90vw; direction: rtl;">
@@ -84,6 +125,7 @@
                             </ul>
                         </li>
                     @endif
+                  
                 @endauth
                 @auth
                     <div class="dropdown">
@@ -106,4 +148,3 @@
         </div>
     </div>
 </nav>
-

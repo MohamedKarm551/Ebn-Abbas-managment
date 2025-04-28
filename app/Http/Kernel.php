@@ -35,5 +35,11 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'isCompany' => \App\Http\Middleware\IsCompany::class, // <-- عرفنا لارافيل إن isCompany بتشاور على الكلاس ده
+        // 'isAdminOrEmployee' => \App\Http\Middleware\IsAdminOrEmployee::class, // <-- ضيف ده كمان بالمرة لو مش موجود عشان مجموعة الأدمن
+        'isNotCompany' => \App\Http\Middleware\IsNotCompany::class, // <-- السطر الجديد اللي ضفناه
+
+
+
     ];
 }

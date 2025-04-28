@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+// *** استيراد موديل الشركة ***
+use App\Models\Company;
 
 class User extends Authenticatable
 {
@@ -21,6 +23,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'company_id', // *** إضافة company_id هنا ***
+        'role',       // *** تأكد من وجود role هنا لو بتستخدمه في التسجيل أو التعديل ***
     ];
 
     /**
@@ -44,5 +48,15 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the company that the user belongs to.
+     * علاقة المستخدم بالشركة (المستخدم يتبع شركة واحدة)
+     */
+    public function company()
+    {
+        // Eloquent هيفترض إن المفتاح الأجنبي هو company_id بناءً على اسم الدالة
+        return $this->belongsTo(Company::class);
     }
 }

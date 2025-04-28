@@ -16,4 +16,10 @@ class Employee extends Model
     {
         return $this->hasMany(Booking::class, 'employee_id');
     }
+    
+    // *** علاقة الموظف بالإتاحات ***
+    public function availabilities()
+    {
+        return $this->hasMany(Availability::class);
+    }
 }

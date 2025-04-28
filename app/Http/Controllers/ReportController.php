@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; // لرفع الملفات
 use Illuminate\Support\Facades\DB; //  لإجراء العمليات على قاعدة البيانات
 use Carbon\CarbonPeriod; // لإجراء العمليات على التواريخ
+use Illuminate\Support\Str; // لاستخدام دالة Str::limit
 
 
 /**
@@ -404,11 +405,63 @@ class ReportController extends Controller
         // هات الشركة المطلوبة
         $company = Company::findOrFail($id);
 
-        // هات كل الدفعات بتاعتها
-        $payments = Payment::where('company_id', $id)->orderBy('payment_date', 'desc')->get();
+        // --- Fetch Payments ---
+        $payments = Payment::where('company_id', $id)
+            ->orderBy('payment_date', 'asc') // Order ascending for timeline
+            ->get();
 
-        // رجع البيانات للواجهة
-        return view('reports.company_payments', compact('company', 'payments'));
+        // --- Fetch Bookings ---
+        // Get bookings where the company owes money, order by check-in date
+        $bookings = Booking::where('company_id', $id)
+            ->where('amount_due_from_company', '>', 0)
+            ->orderBy('check_in', 'asc') // Use check_in as the date the amount becomes due
+            ->get();
+
+        // --- Combine into Events ---
+        $events = collect();
+
+        foreach ($bookings as $booking) {
+            $events->push([
+                // Use check_in date and add a time to help with sorting if multiple events on same day
+                'date' => Carbon::parse($booking->check_in)->startOfDay()->toDateTimeString(),
+                'type' => 'booking',
+                // Amount due from company is positive (increases balance)
+                'amount' => (float) $booking->amount_due_from_company,
+                'balance_change' => (float) $booking->amount_due_from_company,
+                'details' => "حجز: " . ($booking->client_name ?? 'N/A') . " (فندق: " . ($booking->hotel->name ?? 'N/A') . ")",
+                'id' => 'b_' . $booking->id // Unique ID prefix
+            ]);
+        }
+
+        foreach ($payments as $payment) {
+            $events->push([
+                // Use payment date and add a time
+                'date' => Carbon::parse($payment->payment_date)->endOfDay()->toDateTimeString(), // Payments happen after bookings on the same day
+                'type' => 'payment',
+                // Payment amount is positive, but it decreases the balance
+                'amount' => (float) $payment->amount,
+                'balance_change' => (float) -$payment->amount, // Negative change for balance calculation
+                'details' => "دفعة: " . ($payment->notes ? Str::limit($payment->notes, 30) : 'مبلغ ' . $payment->amount),
+                'id' => 'p_' . $payment->id // Unique ID prefix
+            ]);
+        }
+
+        // --- Sort Events Chronologically ---
+        $sortedEvents = $events->sortBy('date')->values();
+
+        // --- Calculate Running Balance ---
+        $runningBalance = 0;
+        $timelineEvents = $sortedEvents->map(function ($event) use (&$runningBalance) {
+            $runningBalance += $event['balance_change'];
+            $event['running_balance'] = $runningBalance;
+            // Re-parse date for chart.js adapter if needed, ensure consistent format
+            $event['chart_date'] = Carbon::parse($event['date'])->format('Y-m-d');
+            return $event;
+        });
+
+
+        // رجع البيانات للواجهة (pass timelineEvents instead of payments)
+        return view('reports.company_payments', compact('company', 'timelineEvents', 'payments')); // Pass timelineEvents
     }
 
     // سجل الدفعات لوكيل معين

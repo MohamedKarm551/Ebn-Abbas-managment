@@ -4,13 +4,43 @@
 @section('content')
     <div class="container">
         <h3 class="mb-4">الإشعارات - آخر 20 إشعارا</h3>
+                {{-- ==================== أزرار الفلترة ==================== --}}
+                <div class="mb-3 btn-group" role="group" aria-label="Notification Filters">
+                    {{-- زرار عرض الكل --}}
+                    <a href="{{ route('admin.notifications') }}" class="btn btn-outline-secondary {{ !$currentFilter ? 'active' : '' }}">
+                        عرض الكل
+                    </a>
+                    {{-- زرار فلتر الحجوزات --}}
+                    <a href="{{ route('admin.notifications', ['filter' => 'bookings']) }}" class="btn btn-outline-primary {{ $currentFilter == 'bookings' ? 'active' : '' }}">
+                        الحجوزات
+                    </a>
+                    {{-- زرار فلتر الدفعات --}}
+                    <a href="{{ route('admin.notifications', ['filter' => 'payments']) }}" class="btn btn-outline-success {{ $currentFilter == 'payments' ? 'active' : '' }}">
+                        الدفعات
+                    </a>
+                    {{-- زرار فلتر الإتاحات --}}
+                    <a href="{{ route('admin.notifications', ['filter' => 'availabilities']) }}" class="btn btn-outline-info {{ $currentFilter == 'availabilities' ? 'active' : '' }}">
+                        الإتاحات
+                    </a>
+                    {{-- ممكن تضيف أزرار فلاتر تانية هنا بنفس الطريقة --}}
+                    {{-- مثال:
+                    <a href="{{ route('admin.notifications', ['filter' => 'users']) }}" class="btn btn-outline-warning {{ $currentFilter == 'users' ? 'active' : '' }}">
+                        المستخدمين
+                    </a>
+                     --}}
+                </div>
+                {{-- ==================== نهاية أزرار الفلترة ==================== --}}
+        
+        
         <div class="list-group">
-            @if ($notifications->where('is_read', false)->count())
+            {{-- *** بداية التعديل: إخفاء زر تحديد الكل للموظف *** --}}
+            @if (auth()->user()->role === 'Admin' && $notifications->where('is_read', false)->count())
                 <form method="POST" action="{{ route('admin.notifications.markAllRead') }}" class="mb-3">
                     @csrf
                     <button class="btn btn-sm btn-primary">تحديد الكل كمقروء</button>
                 </form>
             @endif
+            {{-- *** نهاية التعديل *** --}}
             @php $i = 1; @endphp
             @forelse($notifications as $notification)
                 <div class="list-group-item {{ $notification->is_read ? 'opacity-50' : '' }}">
@@ -24,7 +54,8 @@
                             {{ $notification->type }}
                         </span>
                         <span class="mx-1">-</span>
-                        <span  class="text-break w-100 flex-md-grow-1" style="min-width: 0; word-break: break-all;">{{ $notification->message }}</span>
+                        <span class="text-break w-100 flex-md-grow-1"
+                            style="min-width: 0; word-break: break-all;">{{ $notification->message }}</span>
                         <span class="text-muted small ms-2" title="{{ $notification->created_at->format('Y-m-d H:i:s') }}">
                             {{ $notification->created_at->diffForHumans() }}
                         </span>

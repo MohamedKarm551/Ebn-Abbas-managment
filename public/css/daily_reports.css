@@ -1,0 +1,29 @@
+ 
+/* تنسيق الجدول على الشاشات الصغيرة */
+@media (max-width: 768px) {
+
+    /* نعدل حجم الخط داخل الجدول عشان يكون أصغر ومناسب */
+    .table-responsive table {
+        font-size: 14px;
+    }
+
+    /* لو محتاجين نحدد عرض أدنى للجدول علشان تظهر الأعمدة كلها */
+    .table-responsive table {
+        min-width: 600px;
+    }
+
+    /* تقليل الحشوة في خلايا الجدول */
+    .table-responsive th,
+    .table-responsive td {
+        padding: 8px 5px;
+        text-align: center;
+        /* أو اضبط حسب المطلوب */
+    }
+
+    /* ممكن تحاول تخلي عناوين الجدول تظهر بخط واضح وتكون محاذاة مركز */
+    .table-responsive thead th {
+        background: #f8f9fa;
+        font-weight: bold;
+    }
+}
+ 

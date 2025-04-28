@@ -3,7 +3,9 @@
 @section('favicon')
     <link rel="icon" type="image/jpeg" href="{{ asset('images/cover.jpg') }}">
 @endsection
-
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/daily_reports.css') }}">
+@endpush
 {{-- *** الخطوة 1: تضمين Chart.js (يفضل وضعه في layout/app.blade.php قبل نهاية </body>) *** --}}
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -557,35 +559,7 @@
     </div>
 
     <!-- إضافة تنسيقات CSS في القسم الخاص بالستيلات -->
-    <style>
-        /* تنسيق الجدول على الشاشات الصغيرة */
-        @media (max-width: 768px) {
-
-            /* نعدل حجم الخط داخل الجدول عشان يكون أصغر ومناسب */
-            .table-responsive table {
-                font-size: 14px;
-            }
-
-            /* لو محتاجين نحدد عرض أدنى للجدول علشان تظهر الأعمدة كلها */
-            .table-responsive table {
-                min-width: 600px;
-            }
-
-            /* تقليل الحشوة في خلايا الجدول */
-            .table-responsive th,
-            .table-responsive td {
-                padding: 8px 5px;
-                text-align: center;
-                /* أو اضبط حسب المطلوب */
-            }
-
-            /* ممكن تحاول تخلي عناوين الجدول تظهر بخط واضح وتكون محاذاة مركز */
-            .table-responsive thead th {
-                background: #f8f9fa;
-                font-weight: bold;
-            }
-        }
-    </style>
+   
     {{-- *** الخطوة 5: JavaScript لإنشاء الرسوم البيانية *** --}}
     @push('scripts')
         <script>

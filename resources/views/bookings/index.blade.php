@@ -6,10 +6,18 @@
 @endsection
 @section('content')
     <div class="container-fluid">
-        <h1>كل الحجوزات</h1>
-
+       @auth 
+       @if (auth()->user()->role != 'Company')
+       <h1>كل الحجوزات</h1>
+       @else
+         <h1>حجوزات شركة : {{ auth()->user()->name }}</h1>
+       @endif
+         @endauth
+          {{-- لو في رسالة نجاح --}}
         <!-- الأزرار بتاعة الإدارة - كل زر بيوديك لصفحة إدارة حاجة معينة -->
         <!-- قائمة الإدارة الدائرية التفاعلية -->
+        @auth
+        @if (auth()->user()->role != 'Company')
         <div class="admin-menu-container mb-5" style="direction: rtl;"> {{-- Added direction: rtl --}}
             <div class="admin-circle">
                 <span>إدارة</span>
@@ -57,7 +65,8 @@
                 </a>
             </div>
         </div>
-
+        @endif
+        @endauth
 
         <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
         <div class="filter-box p-4 mb-4">
@@ -170,20 +179,27 @@
 
         {{-- مكان لعرض رسالة الفلترة بالتواريخ --}}
         <div id="filterAlert"></div>
-
-        <a href="{{ route('bookings.create') }}" class="btn btn-primary mb-3">+ إضافة حجز جديد</a>
+                @auth 
+                @if (auth()->user()->role != 'Company') 
+                    <a href="{{ route('bookings.create') }}" class="btn btn-primary mb-3">+ إضافة حجز جديد</a>
+                @endif
+                @endauth
 
         @if (session('success'))
             <div class="alert alert-success">
                 {{ session('success') }}
             </div>
         @endif
+        @auth
+            @if (auth()->user()->role != 'Company')
         <div class="alert alert-info text-center mb-3">
             تم جلب: <strong>{{ $totalActiveBookingsCount }}</strong> حجز نشط
             ||
             <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
 
         </div>
+            @endif
+        @endauth
         @auth
             @if (auth()->user()->role === 'Admin')
                 <div class="alert alert-warning text-center mb-3">

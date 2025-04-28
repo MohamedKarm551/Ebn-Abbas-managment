@@ -101,10 +101,29 @@
 <body>
     <div class="container my-3">
         <div class="d-flex flex-wrap justify-content-between flex-row-reverse align-items-center">
-            <a href="{{ route('bookings.show', $booking->id) }}"
-                class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
-                رجوع ➡
+            @auth
+            @if(auth()->user()->role === 'Company')
+                {{-- لو شركة، يرجع لصفحة الحجوزات الرئيسية --}}
+                <a href="{{ route('bookings.index') }}"
+                   class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
+                    رجوع ➡
+                </a>
+            @else
+                {{-- لو أدمن أو موظف، يرجع لصفحة تفاصيل الحجز --}}
+                <a href="{{ route('bookings.show', $booking->id) }}"
+                   class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
+                    رجوع ➡
+                </a>
+            @endif
+        @else
+            {{-- حالة غير متوقعة: لو المستخدم مش عامل login أصلاً، ممكن نرجع للرئيسية أو نخفي الزرار --}}
+            <a href="{{ url('/') }}" class="btn btn-secondary d-flex align-items-center gap-2 mb-2 mb-md-0">
+                رجوع للرئيسية ➡
             </a>
+        @endauth
+        {{-- *** نهاية التعديل *** --}}
+
+
             <div class="mx-auto ">
                 <button id="downloadVoucher" class="btn btn-success d-flex align-items-center gap-2">
                     <i class="bi bi-download fs-5"></i>
@@ -243,8 +262,12 @@
                 <th>Meal</th>
             </tr>
             <tr>
-                <td>1</td>
-                <td>Quad</td>
+                {{-- عدد الغرف --}}
+                <td> {{ $booking->rooms }} </td>
+                <td>
+                    {{-- نوع الغرفة --}}
+                    <span class="fw-bold">{{ $booking->room_type }}</span>
+                </td>
                 <td>City View</td>
                 <td>RO</td>
             </tr>

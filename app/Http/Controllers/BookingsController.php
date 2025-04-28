@@ -12,8 +12,12 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Company;
 use App\Models\EditLog;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ArchivedBooking; // <--- 1. نتأكد من إضافة ArchivedBooking
+use App\Models\AvailabilityRoomType; // Import AvailabilityRoomType model
+use Illuminate\Validation\ValidationException; // *** تأكد من وجود هذا السطر ***
+use App\Models\RoomType;
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;  // <--- 2. نضيف DB للـ Transactions
 use Illuminate\Support\Facades\Log; // تأكد من استيراد Log
@@ -38,11 +42,40 @@ class BookingsController extends Controller
         // نبدأ ببناء استعلام Eloquent لجدول الحجوزات.
         // نستخدم `with` لتحميل العلاقات مسبقًا (Eager Loading). هذا يمنع مشكلة N+1
         // ويحسن الأداء عن طريق تقليل عدد الاستعلامات لقاعدة البيانات عند الوصول للعلاقات لاحقًا.
-        $query = Booking::with(['company', 'employee', 'agent', 'hotel']);
-        // تجاهل الحجوزات المؤرشفة (اللي سعرهم بصفر)
-        $query->where('cost_price', '!=', 0)
-            ->where('sale_price', '!=', 0);
+        
+        // 1. بناء الاستعلام الأساسي وتحميل العلاقات (Eager Loading)
         // --------------------------------------------------
+        // سطر 43: بنبدأ نبني الاستعلام لجدول الحجوزات وبنحمل العلاقات عشان الأداء
+        $query = Booking::with(['company', 'employee', 'agent', 'hotel']);
+
+        // سطر 45-46: بنستبعد الحجوزات المؤرشفة (اللي سعرها صفر)
+        $query->where('cost_price', '!=', 0)
+              ->where('sale_price', '!=', 0);
+
+        // ==================================================
+        // *** بداية الجزء المهم: فلترة حسب دور المستخدم ***
+        // ==================================================
+        // سطر 48: بنجيب بيانات المستخدم اللي عامل تسجيل دخول حالياً
+        $user = Auth::user();
+
+        // سطر 49: بنعمل شرط: هل دور المستخدم ده هو 'Company'؟
+        if ($user->role === 'Company') {
+            // لو الشرط ده صح (المستخدم شركة):
+
+            // سطر 52: بنتحقق لو المستخدم ده مربوط بـ company_id في جدول users
+            if ($user->company_id) {
+                // لو مربوط:
+                // سطر 54: بنضيف شرط للاستعلام ($query): هات بس الحجوزات اللي الـ company_id بتاعها بيساوي الـ company_id بتاع المستخدم ده.
+                $query->where('company_id', $user->company_id);
+            } else {
+                // لو المستخدم شركة بس مش مربوط بـ company_id (حالة مش مفروض تحصل):
+                // سطر 58: بنضيف شرط مستحيل يتحقق عشان نرجع نتيجة فاضية (أمان زيادة)
+                $query->whereRaw('1 = 0');
+                // سطر 59: بنسجل تحذير في الـ log عشان نعرف لو المشكلة دي حصلت
+                Log::warning("المستخدم {$user->name} (ID: {$user->id}) دوره شركة لكن ليس لديه company_id.");
+            }
+        }
+
         // 2. تطبيق فلتر البحث النصي (إذا كان موجودًا)
         // --------------------------------------------------
         // نتحقق مما إذا كان حقل البحث 'search' يحتوي على قيمة.
@@ -310,7 +343,7 @@ class BookingsController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
         // ترتيب الشركات تصاعديًا حسب الاسم
         $companies = Company::orderBy('name', 'asc')->get();
@@ -324,159 +357,478 @@ class BookingsController extends Controller
         // ترتيب الموظفين تصاعديًا حسب الاسم
         $employees = Employee::orderBy('name', 'asc')->get();
 
-        return view('bookings.create', compact('companies', 'agents', 'hotels', 'employees'));
-    }
 
-    public function store(Request $request)
-    {
-        $validatedData = $request->validate([
-            'client_name' => 'required|string|max:255',
-            'company_id' => 'required|exists:companies,id',
-            'agent_id' => 'required|exists:agents,id',
-            'hotel_id' => 'required|exists:hotels,id',
-            'room_type' => 'required|string|max:255',
-            'check_in' => 'required|date',
-            'check_out' => 'required|date|after_or_equal:check_in',
-            'rooms' => 'required|integer|min:1',
-            'cost_price' => 'required|numeric|min:0',
-            'sale_price' => 'required|numeric|min:0',
-            'employee_id' => 'required|exists:employees,id',
-            'notes' => 'nullable|string',
-        ]);
-
-        // تحويل التواريخ والحسابات
-        try {
-            $checkIn = \Carbon\Carbon::createFromFormat('Y-m-d', $request->check_in);
-            $checkOut = \Carbon\Carbon::createFromFormat('Y-m-d', $request->check_out);
-
-            $validatedData['check_in'] = $checkIn->format('Y-m-d');
-            $validatedData['check_out'] = $checkOut->format('Y-m-d');
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['date_error' => 'صيغة التاريخ غير صحيحة']);
-        }
-        // حساب عدد الأيام
-
-
-
-        $validatedData['days'] = $checkIn->diffInDays($checkOut);
-
-        // حساب القيم المالية
-        // التحقق من القيم قبل الحساب
-        if ($validatedData['days'] <= 0 || $validatedData['rooms'] <= 0 || $validatedData['cost_price'] <= 0 || $validatedData['sale_price'] <= 0) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['calculation_error' => 'تأكد من إدخال قيم صحيحة للحساب']);
-        }
-        // حساب المبالغ
-        $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'] * $validatedData['days'];
-        $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $validatedData['days'];
-
-        // تتبع القيم المحسوبة
-        Log::info('القيم المحسوبة:', [
-            'amount_due_to_hotel' => $validatedData['amount_due_to_hotel'],
-            'amount_due_from_company' => $validatedData['amount_due_from_company'],
-        ]);
-        // تعقيم الملاحظات من أي أكواد HTML أو سكريبت
-        // تعقيم كل الحقول النصية
-        foreach (['notes', 'client_name'] as $field) {
-            if (isset($validatedData[$field])) {
-                $validatedData[$field] = htmlspecialchars($validatedData[$field], ENT_QUOTES, 'UTF-8');
+        // *** التحقق إذا كان الحجز يتم من صفحة الإتاحات ***
+        $isBookingFromAvailability = false;
+        $bookingData = [];
+                // *** بداية التعديل: جلب البيانات من الداتابيز بناءً على الـ ID ***
+                if ($request->has('availability_room_type_id')) {
+                    $availabilityRoomTypeId = $request->input('availability_room_type_id');
+                    $roomTypeInfo = AvailabilityRoomType::with(['availability.hotel', 'availability.agent', 'roomType', 'availability.employee']) // تحميل العلاقات اللازمة
+                                        ->find($availabilityRoomTypeId);
+        
+                    if ($roomTypeInfo && $roomTypeInfo->availability) {
+                        $isBookingFromAvailability = true;
+                        $availability = $roomTypeInfo->availability;
+        
+                        $bookingData = [
+                            'availability_room_type_id' => $roomTypeInfo->id,
+                            'hotel_id' => $availability->hotel_id,
+                            'agent_id' => $availability->agent_id, // قد يكون null
+                            'room_type' => $roomTypeInfo->roomType->room_type_name ?? 'غير محدد', // اسم نوع الغرفة
+                            'cost_price' => $roomTypeInfo->cost_price, // *** جلب السعر من الداتابيز ***
+                            'sale_price' => $roomTypeInfo->sale_price, // *** جلب السعر من الداتابيز ***
+                            // التواريخ الافتراضية (ممكن المستخدم يغيرها)
+                            'check_in' => $availability->start_date->format('Y-m-d'),
+                            'check_out' => $availability->end_date->format('Y-m-d'),
+                            // تواريخ الإتاحة الأصلية للـ min/max في الفيو
+                            'availability_start_date' => $availability->start_date->format('Y-m-d'),
+                            'availability_end_date' => $availability->end_date->format('Y-m-d'),
+                            'rooms' => 1, // قيمة افتراضية لعدد الغرف
+                            'max_rooms' => $roomTypeInfo->available_rooms, // الحد الأقصى للغرف
+                            'employee_id' => $availability->employee_id, // الموظف المسؤول عن الإتاحة
+                            'company_id' => null, // الشركة المستخدم هيختارها
+                            'client_name' => null, // العميل المستخدم هيدخله
+                            'notes' => null,
+                        ];
+                        Log::info('بيانات الحجز المبدئية من الإتاحة:', $bookingData); // للتأكد
+                    } else {
+                        Log::warning('لم يتم العثور على AvailabilityRoomType أو الإتاحة المرتبطة بالـ ID: ' . $availabilityRoomTypeId);
+                        // ممكن ترجع لصفحة الإتاحات مع رسالة خطأ لو حبيت
+                        // return redirect()->route('company.availabilities.index')->with('error', 'بيانات الإتاحة المطلوبة غير صحيحة.');
+                    }
+                }
+                // *** نهاية التعديل ***
+        
+                return view('bookings.create', compact(
+                    'companies',
+                    'agents',
+                    'hotels',
+                    'employees',
+                    'isBookingFromAvailability',
+                    'bookingData'
+                ));
             }
-        }
-        // dd($validatedData);
-        // إنشاء الحجز
-        $booking = Booking::create($validatedData);
-        // تتبع القيم المحفوظة
-        Log::info('القيم المحفوظة في قاعدة البيانات:', $booking->toArray());
-        // تجهيز البيانات للباك اب
-        $booking->load(['company', 'agent', 'hotel', 'employee']);
+        
 
-        // محتوى ملف النصوص
-        $textContent = sprintf(
-            "
-        === حجز جديد بتاريخ %s ===
-        اسم العميل: %s
-        الشركة: %s
-        جهة الحجز: %s
-        الفندق: %s
-        تاريخ الدخول: %s
-        تاريخ الخروج: %s
-        عدد الغرف: %d
-        عدد الأيام: %d
-        سعر الفندق: %.2f
-        سعر البيع: %.2f
-        المبلغ المستحق للفندق: %.2f
-        المبلغ المستحق من الشركة: %.2f
-        الموظف: %s
-        ملاحظات: %s
-        =====================================\n\n",
-            now()->format('d/m/Y H:i:s'),
-            $booking->client_name,
-            $booking->company->name,
-            $booking->agent->name,
-            $booking->hotel->name,
-            \Carbon\Carbon::parse($booking->check_in)->format('d/m/Y'),
-            \Carbon\Carbon::parse($booking->check_out)->format('d/m/Y'),
-            $booking->rooms,
-            $booking->days,
-            $booking->cost_price,
-            $booking->sale_price,
-            $booking->amount_due_to_hotel,
-            $booking->amount_due_from_company,
-            $booking->employee->name,
-            $booking->notes ?? 'لا يوجد'
-        );
 
-        // محتوى ملف CSV
-        $csvContent = implode(',', [
-            now()->format('d/m/Y H:i:s'),
-            '"' . $booking->client_name . '"',
-            '"' . $booking->company->name . '"',
-            '"' . $booking->agent->name . '"',
-            '"' . $booking->hotel->name . '"',
-            '"' . \Carbon\Carbon::parse($booking->check_in)->format('d/m/Y') . '"',
-            '"' . \Carbon\Carbon::parse($booking->check_out)->format('d/m/Y') . '"',
-            $booking->rooms,
-            $booking->days,
-            $booking->cost_price,
-            $booking->sale_price,
-            $booking->amount_due_to_hotel,
-            $booking->amount_due_from_company,
-            '"' . $booking->employee->name . '"',
-            '"' . ($booking->notes ?? '') . '"'
-        ]) . "\n";
-
-        // التأكد من وجود المجلدات
-        $backupPath = storage_path('backups');
-        if (!File::exists($backupPath)) {
-            File::makeDirectory($backupPath);
-            File::makeDirectory($backupPath . '/txt');
-            File::makeDirectory($backupPath . '/csv');
-        }
-
-        // حفظ الملفات
-        $txtPath = $backupPath . '/txt/bookings.txt';
-        $csvPath = $backupPath . '/csv/bookings.csv';
-
-        // إضافة العناوين للـ CSV لو مش موجود
-        if (!File::exists($csvPath)) {
-            File::put($csvPath, "التاريخ,العميل,الشركة,جهة الحجز,الفندق,تاريخ الدخول,تاريخ الخروج,عدد الغرف,عدد الأيام,سعر الفندق,سعر البيع,المستحق للفندق,المستحق من الشركة,الموظف,ملاحظات\n");
-        }
-
-        // حفظ البيانات
-        File::append($txtPath, $textContent);
-        File::append($csvPath, $csvContent);
-        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
-        Notification::create([
-            'user_id' => Auth::user()->id,
-            'message' => "حجز جديد: {$booking->client_name}، الفندق: {$booking->hotel->name}، الشركة: {$booking->company->name}",
-            'type' => 'إضافة',
-        ]);
-        // return redirect()->route('bookings.index')->with('success', 'تم إنشاء الحجز بنجاح!');
-        return redirect()->route('bookings.voucher', $booking->id)->with('success', 'تم إنشاء الحجز بنجاح! يمكنك طباعة الفاتورة الآن.');
-    }
+            public function store(Request $request)
+            {
+                Log::info('بدء عملية حفظ حجز جديد', $request->except(['_token', 'password', 'password_confirmation'])); // تسجيل بيانات الطلب
+        
+                $originalRoomTypeInfo = null;
+                $availability = null;
+                $isBookingFromAvailability = $request->filled('availability_room_type_id');
+        
+                // ================================================================
+                // 1. التحقق المبدئي والمقارنة لو الحجز من إتاحة (لمنع التلاعب)
+                // ================================================================
+                if ($isBookingFromAvailability) {
+                    $availabilityRoomTypeId = $request->input('availability_room_type_id');
+                    Log::info("الحجز من إتاحة ID: {$availabilityRoomTypeId}");
+        
+                    // جلب بيانات الإتاحة الأصلية مع العلاقات الضرورية
+                    $originalRoomTypeInfo = AvailabilityRoomType::with([
+                        'availability.hotel',
+                        'availability.agent',
+                        'roomType', // للتأكد من اسم نوع الغرفة
+                        'availability.employee' // للتأكد من الموظف المسؤول
+                    ])->find($availabilityRoomTypeId);
+        
+                    // التحقق من وجود الإتاحة ونوع الغرفة المرتبط بها
+                    if (!$originalRoomTypeInfo || !$originalRoomTypeInfo->availability || !$originalRoomTypeInfo->roomType) {
+                        Log::error("محاولة حجز بإتاحة غير صالحة أو محذوفة أو نوع غرفة غير موجود ID: {$availabilityRoomTypeId}");
+                        throw ValidationException::withMessages(['availability_room_type_id' => 'بيانات الإتاحة المطلوبة غير صالحة أو تم حذفها.']);
+                    }
+        
+                    $availability = $originalRoomTypeInfo->availability; // اختصار لبيانات الإتاحة
+                    $errors = []; // لتجميع أخطاء المقارنة
+        
+                    // --- مقارنة البيانات الأساسية ---
+                    if ($request->input('hotel_id') != $availability->hotel_id) $errors['hotel_id'] = 'فندق الإتاحة المحدد غير صحيح.';
+                    if ($request->input('agent_id') != $availability->agent_id) $errors['agent_id'] = 'جهة حجز الإتاحة المحددة غير صحيحة.';
+                    if ($request->input('room_type') != $originalRoomTypeInfo->roomType->room_type_name) $errors['room_type'] = 'نوع غرفة الإتاحة المحدد غير صحيح.';
+                    if (bccomp((string)$request->input('sale_price'), (string)$originalRoomTypeInfo->sale_price, 2) !== 0) $errors['sale_price'] = 'سعر البيع المحدد لا يطابق سعر الإتاحة الأصلي.';
+                    // سعر التكلفة مهم حتى لو الشركة لا تراه في الفورم
+                    if (bccomp((string)$request->input('cost_price'), (string)$originalRoomTypeInfo->cost_price, 2) !== 0) $errors['cost_price'] = 'سعر التكلفة المحدد لا يطابق سعر الإتاحة الأصلي.';
+                    if ($request->input('employee_id') != $availability->employee_id) $errors['employee_id'] = 'الموظف المسؤول عن الإتاحة غير صحيح.';
+        
+                    // --- التحقق من التواريخ ضمن فترة الإتاحة ---
+                    try {
+                        $checkIn = Carbon::parse($request->input('check_in'));
+                        $checkOut = Carbon::parse($request->input('check_out'));
+                        $availabilityStart = $availability->start_date; // تاريخ بداية الإتاحة
+                        $availabilityEnd = $availability->end_date;     // تاريخ نهاية الإتاحة
+        
+                        // التحقق من أن التواريخ المطلوبة تقع ضمن فترة الإتاحة وأن تاريخ الدخول قبل الخروج
+                        if ($checkIn->lt($availabilityStart) || $checkOut->gt($availabilityEnd) || $checkIn->gte($checkOut)) {
+                            $errors['check_in'] = 'التواريخ المحددة خارج فترة الإتاحة الأصلية (' . $availabilityStart->format('d/m/Y') . ' - ' . $availabilityEnd->format('d/m/Y') . ') أو غير صحيحة.';
+                            $errors['check_out'] = 'التواريخ المحددة خارج فترة الإتاحة الأصلية (' . $availabilityStart->format('d/m/Y') . ' - ' . $availabilityEnd->format('d/m/Y') . ') أو غير صحيحة.';
+                        }
+                    } catch (\Exception $e) {
+                         $errors['check_in'] = 'صيغة تاريخ الدخول أو الخروج غير صحيحة.';
+                         $errors['check_out'] = 'صيغة تاريخ الدخول أو الخروج غير صحيحة.';
+                         Log::error("خطأ في صيغة التاريخ أثناء التحقق المبدئي: " . $e->getMessage());
+                    }
+        
+                    // --- التحقق المبدئي من عدد الغرف ---
+                    $requestedRooms = (int)$request->input('rooms');
+                    if ($requestedRooms <= 0) {
+                         $errors['rooms'] = 'عدد الغرف المطلوب يجب أن يكون أكبر من صفر.';
+                    }
+                    // (سيتم التحقق الدقيق من الـ allotment لاحقاً قبل الحفظ النهائي)
+        
+                    // --- إرجاع الأخطاء لو وجدت ---
+                    if (!empty($errors)) {
+                        Log::warning("فشل التحقق المبدئي من بيانات الإتاحة ID: {$availabilityRoomTypeId}", $errors);
+                        throw ValidationException::withMessages($errors);
+                    }
+                    Log::info("نجح التحقق المبدئي لبيانات الإتاحة ID: {$availabilityRoomTypeId}");
+                } // نهاية التحقق لو الحجز من إتاحة
+        
+                // ================================================================
+                // 2. قواعد الـ Validation الأساسية
+                // ================================================================
+                $rules = [
+                    'client_name' => 'required|string|max:255',
+                    'company_id' => 'required|exists:companies,id',
+                    'agent_id' => 'required|exists:agents,id',
+                    'hotel_id' => 'required|exists:hotels,id',
+                    'room_type' => 'required|string|max:255',
+                    'check_in' => 'required|date_format:Y-m-d', // تأكد من أن الفورم يرسل بهذا التنسيق
+                    'check_out' => 'required|date_format:Y-m-d|after:check_in', // after وليس after_or_equal
+                    'rooms' => 'required|integer|min:1',
+                    'availability_room_type_id' => 'nullable|sometimes|exists:availability_room_types,id', // sometimes يعني يتحقق منه لو موجود بس
+                    // سعر التكلفة مطلوب لغير الشركة، ويجب أن يكون رقمياً
+                    'cost_price' => (Auth::user()->role !== 'Company' ? 'required' : 'nullable') . '|numeric|min:0',
+                    'sale_price' => 'required|numeric|min:0',
+                    'employee_id' => 'required|exists:employees,id',
+                    'notes' => 'nullable|string',
+                ];
+        
+                $messages = [
+                    'check_out.after' => 'تاريخ الخروج يجب أن يكون بعد تاريخ الدخول.',
+                    'cost_price.required' => 'حقل سعر التكلفة مطلوب.',
+                    'cost_price.numeric' => 'سعر التكلفة يجب أن يكون رقمًا.',
+                    'cost_price.min' => 'سعر التكلفة يجب أن يكون أكبر من أو يساوي 0.',
+                    'sale_price.required' => 'حقل سعر البيع مطلوب.',
+                    'sale_price.numeric' => 'سعر البيع يجب أن يكون رقمًا.',
+                    'sale_price.min' => 'سعر البيع يجب أن يكون أكبر من أو يساوي 0.',
+                    'rooms.required' => 'حقل عدد الغرف مطلوب.',
+                    'rooms.integer' => 'عدد الغرف يجب أن يكون عدد صحيح.',
+                    'rooms.min' => 'عدد الغرف يجب أن يكون أكبر من 0.',
+                    'client_name.required' => 'اسم العميل مطلوب.',
+                    'client_name.string' => 'اسم العميل يجب أن يكون نصًا.',
+                    'client_name.max' => 'اسم العميل يجب أن لا يتجاوز 255 حرفًا.',
+                    // ... أضف رسائل أخرى حسب الحاجة ...
+                ];
+        
+                // ================================================================
+                // 3. تنفيذ الـ Validation
+                // ================================================================
+                $validatedData = $request->validate($rules, $messages);
+                Log::info('نجح الـ Validation الأساسي');
+        
+                // ================================================================
+                // 4. التحقق الدقيق من الـ Allotment (فقط لو الحجز من إتاحة)
+                // ================================================================
+                if ($isBookingFromAvailability && $originalRoomTypeInfo) {
+                    $requestedRooms = $validatedData['rooms'];
+                    // *** تأكد من أن اسم العمود 'allotment' صحيح في جدول availability_room_types ***
+                    $allotment = $originalRoomTypeInfo->allotment;
+        
+                    // تأكد أن الـ allotment معرف وليس null
+                    if ($allotment === null) {
+                         Log::error("الـ Allotment غير معرف لـ AvailabilityRoomType ID: {$originalRoomTypeInfo->id}");
+                         throw ValidationException::withMessages(['availability_room_type_id' => 'خطأ: لا يمكن تحديد عدد الغرف المتاح لهذه الإتاحة.']);
+                    }
+        
+                    // حساب عدد الغرف المحجوزة حالياً لنفس النوع والتي تتداخل مع الفترة المطلوبة
+                    // (نستبعد الحجز الحالي لو كنا في عملية تعديل - لكن هنا نحن في store لذا لا نستبعد شيئاً)
+                    $requestedCheckIn = Carbon::parse($validatedData['check_in']);
+                    $requestedCheckOut = Carbon::parse($validatedData['check_out']);
+        
+                    $currentlyBookedRooms = Booking::where('availability_room_type_id', $originalRoomTypeInfo->id)
+                        // ->where('status', '!=', 'cancelled') // يمكنك استبعاد الحجوزات الملغاة إذا أردت
+                        ->where(function ($query) use ($requestedCheckIn, $requestedCheckOut) {
+                            // شرط التداخل: الحجز يبدأ قبل نهاية الفترة المطلوبة وينتهي بعد بداية الفترة المطلوبة
+                            $query->where('check_in', '<', $requestedCheckOut)
+                                  ->where('check_out', '>', $requestedCheckIn);
+                        })
+                        ->sum('rooms');
+        
+                    Log::info("التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}", [
+                        'Allotment الأصلي' => $allotment,
+                        'المحجوز حالياً (متداخل)' => $currentlyBookedRooms,
+                        'المطلوب جديد' => $requestedRooms
+                    ]);
+        
+                    // المقارنة النهائية: هل إجمالي المحجوز + المطلوب يتجاوز الـ Allotment؟
+                    if (($currentlyBookedRooms + $requestedRooms) > $allotment) {
+                        $availableNow = max(0, $allotment - $currentlyBookedRooms); // المتاح فعلياً الآن
+                        Log::warning("فشل التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}. المطلوب: {$requestedRooms}, المتاح فعلياً: {$availableNow}");
+                        throw ValidationException::withMessages([
+                            'rooms' => "عدد الغرف المطلوب ({$requestedRooms}) يتجاوز العدد المتاح لهذه الفترة ({$availableNow} غرف متاحة).",
+                        ]);
+                    }
+                    Log::info("نجح التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}.");
+                }
+        
+                // ================================================================
+                // 5. حساب القيم الإضافية (الأيام والمبالغ)
+                // ================================================================
+                try {
+                    $checkInDate = Carbon::parse($validatedData['check_in']);
+                    $checkOutDate = Carbon::parse($validatedData['check_out']);
+                    // حساب عدد الليالي (الفرق بين الأيام)
+                    $days = $checkOutDate->diffInDays($checkInDate);
+                    // إذا كان منطق العمل يعتمد على عدد الأيام وليس الليالي، يمكنك استخدام:
+                    // $days = $checkOutDate->diffInDays($checkInDate) + 1;
+                    // أو إذا كان الحجز بنفس اليوم يعتبر ليلة واحدة:
+                    // $days = $checkOutDate->diffInDays($checkInDate);
+                    // if ($days == 0) $days = 1;
+        
+                    // تأكد من أن عدد الأيام لا يقل عن 1 (أو حسب منطق العمل)
+                     if ($days <= 0) {
+                         Log::warning("عدد الأيام المحسوب صفر أو أقل للحجز", $validatedData);
+                         // يمكنك إما إرجاع خطأ أو تعيين قيمة افتراضية مثل 1
+                         // throw ValidationException::withMessages(['check_out' => 'تاريخ الخروج يجب أن يكون بعد تاريخ الدخول بيوم واحد على الأقل.']);
+                         $days = 1; // أو حسب ما تقرر
+                     }
+                    $validatedData['days'] = $days;
+        
+                    // تحديد سعر التكلفة الصحيح (مهم جداً للشركة)
+                    // إذا كان المستخدم شركة والحجز من إتاحة، نأخذ السعر من الإتاحة الأصلية
+                    $costPrice = ($isBookingFromAvailability && Auth::user()->role === 'Company')
+                                 ? $originalRoomTypeInfo->cost_price
+                                 : ($validatedData['cost_price'] ?? 0); // وإلا نأخذه من الفورم (أو صفر لو مش موجود/الشركة)
+        
+                    // حساب المبالغ
+                    $validatedData['amount_due_to_hotel'] = $costPrice * $validatedData['rooms'] * $days;
+                    $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $days;
+        
+                    Log::info('تم حساب الأيام والمبالغ', [
+                        'days' => $days,
+                        'cost_price_used' => $costPrice,
+                        'amount_due_to_hotel' => $validatedData['amount_due_to_hotel'],
+                        'amount_due_from_company' => $validatedData['amount_due_from_company']
+                    ]);
+        
+                } catch (\Exception $e) {
+                    Log::error('خطأ في حساب الأيام أو المبالغ: ' . $e->getMessage(), $validatedData);
+                    // إرجاع المستخدم للفورم مع رسالة خطأ عامة
+                    return redirect()->back()->withInput()->withErrors(['calculation_error' => 'حدث خطأ أثناء حساب تفاصيل الحجز. يرجى مراجعة التواريخ والأسعار.']);
+                }
+        
+                // ================================================================
+                // 6. تعقيم البيانات النصية (إزالة HTML Tags)
+                // ================================================================
+                foreach (['notes', 'client_name', 'room_type'] as $field) {
+                    if (isset($validatedData[$field])) {
+                        $validatedData[$field] = strip_tags($validatedData[$field]);
+                    }
+                }
+        
+                // ================================================================
+                // 7. إنشاء الحجز وتحديث الـ Allotment (داخل Transaction)
+                // ================================================================
+                $booking = null;
+                try {
+                    DB::transaction(function () use ($validatedData, $isBookingFromAvailability, $originalRoomTypeInfo, &$booking) {
+                        // --- إنشاء الحجز ---
+                        // إضافة بيانات إضافية قبل الإنشاء إذا لزم الأمر
+                        // $validatedData['created_by'] = Auth::id(); // مثال
+                        $booking = Booking::create($validatedData);
+                        Log::info("تم إنشاء الحجز ID: {$booking->id}");
+        
+                        // --- تحديث الـ Allotment لو الحجز من إتاحة ---
+                        if ($isBookingFromAvailability && $originalRoomTypeInfo) {
+                            // جلب وتأمين الصف للتحديث (ضروري لمنع race conditions)
+                            $currentRoomTypeInfo = AvailabilityRoomType::lockForUpdate()->find($originalRoomTypeInfo->id);
+                            if (!$currentRoomTypeInfo) {
+                                 // هذا لا يجب أن يحدث إذا كان التحقق الأول صحيحاً، لكنه أمان إضافي
+                                 Log::critical("لم يتم العثور على AvailabilityRoomType داخل الـ transaction للحجز ID: {$booking->id}");
+                                 throw new \Exception("خطأ داخلي حرج: لم يتم العثور على بيانات الإتاحة لتحديثها.");
+                            }
+        
+                            // *** تأكد من أن اسم العمود 'allotment' صحيح في جدول availability_room_types ***
+                            $currentAllotment = $currentRoomTypeInfo->allotment;
+                            $requestedRooms = $validatedData['rooms'];
+        
+                            // التحقق الأخير داخل الـ transaction (أمان إضافي ضد race conditions)
+                            // هل عدد الغرف المطلوب ما زال أقل من أو يساوي المتاح حالياً؟
+                            if ($requestedRooms > $currentAllotment) {
+                                Log::error("فشل تحديث الـ Allotment (داخل transaction) للحجز ID: {$booking->id}. المطلوب: {$requestedRooms}, المتاح حالياً: {$currentAllotment}");
+                                // إرجاع خطأ validation لإيقاف الـ transaction وإبلاغ المستخدم
+                                throw ValidationException::withMessages(['rooms' => 'عفواً، تم حجز الغرف المطلوبة للتو. المتاح حالياً: ' . $currentAllotment]);
+                            }
+        
+                            // حساب الـ Allotment الجديد وتحديثه
+                            $newAllotment = $currentAllotment - $requestedRooms;
+                            $currentRoomTypeInfo->update(['allotment' => $newAllotment]); // *** تأكد من اسم العمود هنا ***
+                            Log::info("تم تحديث allotment للـ AvailabilityRoomType ID: {$currentRoomTypeInfo->id} إلى {$newAllotment} للحجز ID: {$booking->id}");
+        
+                            // (اختياري) يمكنك تحديث حالة الإتاحة الأم إذا أصبح الـ Allotment صفراً
+                            // if ($newAllotment == 0) {
+                            //     $currentRoomTypeInfo->availability()->lockForUpdate()->update(['status' => 'booked']); // أو أي حالة مناسبة
+                            //     Log::info("تم تحديث حالة الإتاحة الأم ID: {$currentRoomTypeInfo->availability_id} إلى booked.");
+                            // }
+                        }
+        
+                    }); // نهاية الـ transaction
+        
+                } catch (ValidationException $e) {
+                    // إعادة رمي أخطاء الـ validation التي حدثت داخل الـ transaction
+                    Log::warning('ValidationException داخل Transaction الحفظ: ' . $e->getMessage());
+                    throw $e;
+                } catch (\Throwable $e) { // التقاط أي نوع من الأخطاء أو الاستثناءات
+                    // أي خطأ آخر يحدث أثناء الـ transaction (مثل خطأ في قاعدة البيانات)
+                    Log::error('حدث خطأ أثناء Transaction حفظ الحجز وتحديث الـ Allotment: ' . $e->getMessage(), [
+                        'exception' => $e,
+                        'validated_data' => $validatedData // كن حذراً عند تسجيل بيانات حساسة
+                    ]);
+                    // إرجاع المستخدم للفورم مع رسالة خطأ عامة
+                    return redirect()->back()->withInput()->withErrors(['db_error' => 'حدث خطأ غير متوقع أثناء حفظ الحجز. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.']);
+                }
+        
+                // ================================================================
+                // 8. عمليات ما بعد الحفظ (Backup, Notifications) - تتم فقط إذا نجح الـ Transaction
+                // ================================================================
+                if ($booking) { // التأكد من أن الحجز تم إنشاؤه بنجاح
+                    try {
+                        // --- Backup ---
+                        // تحميل العلاقات اللازمة للباك اب (إذا لم تكن محملة بالفعل)
+                        $booking->loadMissing(['company', 'agent', 'hotel', 'employee']);
+        
+                        // محتوى ملف النصوص
+                        $textContent = sprintf(
+                            "\n=== حجز جديد بتاريخ %s ===\nرقم الحجز: %d\nاسم العميل: %s\nالشركة: %s\nجهة الحجز: %s\nالفندق: %s\nتاريخ الدخول: %s\nتاريخ الخروج: %s\nعدد الغرف: %d\nعدد الأيام/الليالي: %d\nسعر الفندق: %.2f\nسعر البيع: %.2f\nالمبلغ المستحق للفندق: %.2f\nالمبلغ المستحق من الشركة: %.2f\nالموظف: %s\nملاحظات: %s\n=====================================\n",
+                            now()->format('d/m/Y H:i:s'),
+                            $booking->id,
+                            $booking->client_name ?? 'N/A',
+                            $booking->company->name ?? 'N/A',
+                            $booking->agent->name ?? 'N/A',
+                            $booking->hotel->name ?? 'N/A',
+                            $booking->check_in ? Carbon::parse($booking->check_in)->format('d/m/Y') : 'N/A',
+                            $booking->check_out ? Carbon::parse($booking->check_out)->format('d/m/Y') : 'N/A',
+                            $booking->rooms ?? 0,
+                            $booking->days ?? 0,
+                            $booking->cost_price ?? 0.00,
+                            $booking->sale_price ?? 0.00,
+                            $booking->amount_due_to_hotel ?? 0.00,
+                            $booking->amount_due_from_company ?? 0.00,
+                            $booking->employee->name ?? 'N/A',
+                            $booking->notes ?? 'لا يوجد'
+                        );
+        
+                        // محتوى ملف CSV (استخدم فاصلة منقوطة لتجنب مشاكل الفواصل في الأسماء)
+                        $csvData = [
+                            now()->format('d/m/Y H:i:s'),
+                            $booking->client_name ?? '',
+                            $booking->company->name ?? '',
+                            $booking->agent->name ?? '',
+                            $booking->hotel->name ?? '',
+                            $booking->check_in ? Carbon::parse($booking->check_in)->format('d/m/Y') : '',
+                            $booking->check_out ? Carbon::parse($booking->check_out)->format('d/m/Y') : '',
+                            $booking->rooms ?? 0,
+                            $booking->days ?? 0,
+                            $booking->cost_price ?? 0.00,
+                            $booking->sale_price ?? 0.00,
+                            $booking->amount_due_to_hotel ?? 0.00,
+                            $booking->amount_due_from_company ?? 0.00,
+                            $booking->employee->name ?? '',
+                            str_replace(["\r", "\n"], ' ', $booking->notes ?? '') // إزالة الأسطر الجديدة من الملاحظات للـ CSV
+                        ];
+                        // تحويل المصفوفة إلى سطر CSV مع تضمين القيم بين علامتي اقتباس مزدوجة
+                        $csvContent = '"' . implode('";"', $csvData) . '"' . "\n";
+        
+        
+                        // التأكد من وجود المجلدات
+                        $backupPath = storage_path('app/backups'); // استخدام storage/app أفضل
+                        if (!File::exists($backupPath)) {
+                            File::makeDirectory($backupPath, 0775, true); // إنشاء المجلد الرئيسي
+                        }
+                        $txtDir = $backupPath . '/txt';
+                        $csvDir = $backupPath . '/csv';
+                        if (!File::exists($txtDir)) File::makeDirectory($txtDir, 0775, true);
+                        if (!File::exists($csvDir)) File::makeDirectory($csvDir, 0775, true);
+        
+        
+                        // حفظ الملفات
+                        $txtPath = $txtDir . '/bookings.txt';
+                        $csvPath = $csvDir . '/bookings.csv';
+        
+                        // إضافة العناوين للـ CSV لو الملف مش موجود أو فارغ
+                        if (!File::exists($csvPath) || File::size($csvPath) === 0) {
+                            $csvHeader = '"التاريخ";"العميل";"الشركة";"جهة الحجز";"الفندق";"تاريخ الدخول";"تاريخ الخروج";"عدد الغرف";"عدد الأيام/الليالي";"سعر الفندق";"سعر البيع";"المستحق للفندق";"المستحق من الشركة";"الموظف";"ملاحظات"' . "\n";
+                            File::put($csvPath, $csvHeader);
+                        }
+        
+                        // حفظ البيانات (إلحاق)
+                        File::append($txtPath, $textContent);
+                        File::append($csvPath, $csvContent);
+                        Log::info("تم إنشاء ملفات الباك اب للحجز ID: {$booking->id}");
+        
+                        // --- Notifications ---
+                        // جلب المستخدم المسؤول (نفترض أن employee_id في الحجز هو user_id)
+                        $responsibleUserId = $booking->employee_id; // أو $booking->employee->user_id حسب العلاقة
+                        $responsibleUser = User::find($responsibleUserId); // أو Employee::find($booking->employee_id)->user;
+                        $responsibleUserName = $responsibleUser ? $responsibleUser->name : ($booking->employee->name ?? 'غير معروف');
+        
+                        // جلب كل المستخدمين الأدمن
+                        $adminUsers = User::where('role', 'Admin')->get();
+        
+                        // إنشاء رسالة الإشعار
+                        $notificationMessage = "حجز جديد من شركة: {$booking->company->name} للعميل: {$booking->client_name}، فندق: {$booking->hotel->name}. (مسؤول: {$responsibleUserName})";
+                        $notificationType = 'حجز جديد';
+        
+                        // 1. إرسال إشعار لكل أدمن
+                        foreach ($adminUsers as $admin) {
+                            Notification::create([
+                                'user_id' => $admin->id,
+                                'message' => $notificationMessage,
+                                'type' => $notificationType,
+                                'related_id' => $booking->id, // ربط الإشعار بالحجز
+                                'related_type' => Booking::class,
+                            ]);
+                            Log::info("تم إرسال إشعار حجز جديد للأدمن: " . $admin->name);
+                        }
+        
+                        // 2. إرسال إشعار للموظف المسؤول (إذا كان موجوداً وليس هو نفسه أدمن)
+                        if ($responsibleUser && $responsibleUser->role !== 'Admin') {
+                            Notification::create([
+                                'user_id' => $responsibleUser->id,
+                                'message' => $notificationMessage,
+                                'type' => $notificationType,
+                                'related_id' => $booking->id,
+                                'related_type' => Booking::class,
+                            ]);
+                            Log::info("تم إرسال إشعار حجز جديد للموظف المسؤول: " . $responsibleUser->name);
+                        } elseif ($responsibleUser && $responsibleUser->role === 'Admin') {
+                            Log::info("الموظف المسؤول ({$responsibleUser->name}) هو أدمن بالفعل، تم إشعاره مرة واحدة.");
+                        } else {
+                            Log::warning("لم يتم العثور على مستخدم للموظف المسؤول ID: " . $responsibleUserId . " أو أنه أدمن.");
+                        }
+                        Log::info("تم إرسال إشعارات الحجز ID: {$booking->id}");
+        
+                    } catch (\Exception $e) {
+                        // تسجيل أي خطأ في عمليات ما بعد الحفظ دون إيقاف المستخدم
+                        Log::error('حدث خطأ في عمليات ما بعد الحجز (Backup/Notifications): ' . $e->getMessage(), ['booking_id' => $booking->id]);
+                        // لا تقم بإرجاع خطأ للمستخدم هنا، فقط سجل المشكلة
+                    }
+        
+                    // ================================================================
+                    // 9. إعادة التوجيه للفاوتشر مع رسالة نجاح
+                    // ================================================================
+                    return redirect()->route('bookings.voucher', $booking->id)->with('success', 'تم إنشاء الحجز بنجاح! يمكنك طباعة الفاتورة الآن.');
+        
+                } else {
+                    // حالة غير متوقعة: لم يتم إنشاء الحجز رغم نجاح الـ Transaction ظاهرياً
+                    Log::critical('فشل إنشاء الحجز لسبب غير معروف بعد الـ Transaction.');
+                    return redirect()->back()->withInput()->withErrors(['unknown_error' => 'حدث خطأ غير معروف ولم يتم إنشاء الحجز. يرجى المحاولة مرة أخرى.']);
+                }
+            }
+        
     public function voucher($id)
     {
         $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);

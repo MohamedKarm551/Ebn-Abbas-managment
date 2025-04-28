@@ -21,28 +21,99 @@ use App\Exports\ArchivedBookingsExport;
 class AdminController extends Controller
 {
 
-    public function notifications()
+    public function notifications(Request $request)
     {
-        $notifications = Notification::latest()->paginate(20); // عرض الإشعارات الأحدث أولاً آخر 20 
-        return view('admin.notifications', compact('notifications'));
+        $user = Auth::user(); // جلب المستخدم الحالي
+        // *** بداية التعديل: فلترة الإشعارات حسب الدور ***
+        $query = Notification::latest(); // نبدأ بالاستعلام الأساسي
+             // شوف لو فيه باراميتر 'filter' جاي في الـ URL
+             $currentFilter = $request->input('filter');
+                // لو فيه فلتر، طبق الشرط بتاعه
+                if ($currentFilter) {
+                    switch ($currentFilter) {
+                        case 'bookings':
+                            // فلتر حسب الكلمات المفتاحية للحجوزات في الرسالة
+                            $query->where(function ($q) {
+                                $q->where('message', 'LIKE', '%حجز%') // كلمة "حجز"
+                                  ->orWhere('message', 'LIKE', '%booking%'); // كلمة "booking"
+                                  // ممكن تضيف كلمات تانية زي "فاتورة", "voucher" لو بتظهر في إشعارات الحجوزات
+                            });
+                            break;
+                        case 'payments':
+                            // فلتر حسب الكلمات المفتاحية للدفعات
+                            $query->where(function ($q) {
+                                $q->where('message', 'LIKE', '%دفعة%') // كلمة "دفعة"
+                                  ->orWhere('message', 'LIKE', '%payment%'); // كلمة "payment"
+                                  // ممكن تضيف "سداد", "تحصيل" ...إلخ
+                            });
+                            break;
+                        case 'availabilities':
+                            // فلتر حسب الكلمات المفتاحية للإتاحات
+                            $query->where(function ($q) {
+                                $q->where('message', 'LIKE', '%إتاحة%') // كلمة "إتاحة"
+                                  ->orWhere('message', 'LIKE', '%availability%') // كلمة "availability"
+                                  ->orWhere('message', 'LIKE', '%allotment%'); // كلمة "allotment"
+                            });
+                            break;
+                        // ممكن تضيف case تانية لأنواع فلاتر تانية لو حبيت
+                        // مثال:
+                        // case 'users':
+                        //     $query->where('message', 'LIKE', '%مستخدم%');
+                        //     break;
+                    }
+                }
+        
+        
+        if ($user->role === 'employee') {
+            // لو المستخدم موظف، جيب إشعاراته هو بس
+            $query->where('user_id', $user->id);
+        }
+        // لو المستخدم أدمن، مش هنضيف أي شرط إضافي (هيجيب كله)
+
+        $notifications = $query->paginate(20); // تطبيق الـ pagination على الاستعلام النهائي
+        // *** نهاية التعديل ***
+
+        return view('admin.notifications', compact('notifications', 'currentFilter'));
     }
+
     public function markNotificationRead($id)
     {
-        $notification = \App\Models\Notification::findOrFail($id);
-        $notification->is_read = true;
-        $notification->save();
+        $user = Auth::user();
+        $notification = Notification::findOrFail($id);
 
-        return redirect()->back()->with('success', 'تم تعليم الإشعار كمقروء');
-    }
+        // *** بداية التعديل: التحقق من الصلاحية ***
+        // نسمح للأدمن أو لصاحب الإشعار فقط بتعليمه كمقروء
+        if ($user->role === 'Admin' || $notification->user_id == $user->id) {
+            $notification->is_read = true;
+            $notification->save();
+            return redirect()->back()->with('success', 'تم تعليم الإشعار كمقروء');
+        } 
+            // لو مش مسموحله، نرجع برسالة خطأ
+            return redirect()->back()->with('error', 'ليس لديك الصلاحية لتعليم هذا الإشعار كمقروء.');
+    } 
+        
     public function markAllNotificationsRead()
     {
-        $notifications = \App\Models\Notification::where('is_read', false)->get();
+        $user = Auth::user();
+
+        // *** بداية التعديل: تحديد الكل حسب الدور ***
+        $query = Notification::where('is_read', false);
+
+        if ($user->role === 'employee') {
+            // لو موظف، حدد إشعاراته هو بس
+            $query->where('user_id', $user->id);
+        }
+        // لو أدمن، هيحدد كل الإشعارات غير المقروءة في النظام
+
+        $notifications = $query->get();
+        // *** نهاية التعديل ***
+
         foreach ($notifications as $notification) {
             $notification->is_read = true;
             $notification->save();
         }
 
-        return redirect()->back()->with('success', 'تم تعليم جميع الإشعارات كمقروءة');
+        return redirect()->back()->with('success', 'تم تعليم جميع الإشعارات المحددة كمقروءة');
     }
     public function employees()
     {

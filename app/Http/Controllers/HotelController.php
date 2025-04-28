@@ -11,6 +11,8 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB; // <--- 2. نضيف DB
 use Illuminate\Support\Facades\Log; // <--- 3. نضيف Log
+use Illuminate\Support\Facades\Storage; // *** تأكد من وجوده ***
+
 
 class HotelController extends Controller
 {
@@ -27,26 +29,37 @@ class HotelController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            // *** تعديل قاعدة التحقق هنا ***
-            // يسمح بالحروف (بما في ذلك العربية)، الأرقام، المسافات، الشرطة، القوسين
+        // 1. التحقق من البيانات (استخدام image_url)
+        $validatedData = $request->validate([
             'name' => [
-                'required',//مطلوب
-                'string', //نص
-                'max:255', //الحد الأقصى 255 حرف
-                'unique:hotels,name', //اسم الفندق فريد
-                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'required',
+                'string',
+                'max:255',
+                'unique:hotels,name',
                 'regex:/^[\pL\pN\s\-()]+$/u'
             ],
+            'location' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'image_path' => 'nullable|url|max:1024', // <-- توحيد الاسم هنا
         ]);
-         // *** تطبيق التنقية هنا قبل الحفظ ***
-         $sanitizedName = strip_tags($request->input('name'));
-        Hotel::create(['name' => $sanitizedName]);
+
+        // 2. تنقية الاسم
+        $validatedData['name'] = strip_tags($validatedData['name']);
+        // يمكنك إضافة تنقية لباقي الحقول النصية لو أردت
+        // $validatedData['location'] = strip_tags($validatedData['location'] ?? '');
+        // $validatedData['description'] = strip_tags($validatedData['description'] ?? '');
+
+        // 3. إنشاء الفندق بكل البيانات
+        $hotel = Hotel::create($validatedData);
+
+        // 4. إنشاء الإشعار
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "إضافة فندق جديد : {$request->name} ,",
+            'message' => "إضافة فندق جديد : {$hotel->name}", // إزالة الفاصلة الزائدة
             'type' => 'جديد',
         ]);
+
+        // 5. إعادة التوجيه
         return redirect()->route('admin.hotels')->with('success', 'تم إضافة الفندق بنجاح!');
     }
 
@@ -59,30 +72,38 @@ class HotelController extends Controller
     public function update(Request $request, $id)
     {
         $hotel = Hotel::findOrFail($id);
-        $oldName = $hotel->name; // حفظ الاسم القديم
-        $request->validate([
-            // *** تعديل قاعدة التحقق هنا ***
+        $oldName = $hotel->name;
+
+        // 1. التحقق من البيانات (استخدام image_url)
+        $validatedData = $request->validate([
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                'unique:hotels,name,' . $hotel->id,
-                 // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
+                'unique:hotels,name,' . $hotel->id, // تجاهل الفندق الحالي عند التحقق من التفرد
                 'regex:/^[\pL\pN\s\-()]+$/u'
             ],
+            'location' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'image_path' => 'nullable|url|max:1024', // <-- توحيد الاسم هنا
         ]);
-        
-        // *** تطبيق التنقية هنا قبل التحديث ***
-        $sanitizedName = strip_tags($request->input('name'));
 
+        // 2. تنقية الاسم
+        $validatedData['name'] = strip_tags($validatedData['name']);
+        // يمكنك إضافة تنقية لباقي الحقول النصية لو أردت
 
-        $hotel->update(['name' => $sanitizedName]);
-        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت
+        // 3. تحديث الفندق بكل البيانات الجديدة
+        $hotel->update($validatedData);
+
+        // 4. إنشاء الإشعار
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => "تعديل اسم فندق   :{$oldName} إلى: {  $hotel->name} ,",
-            'type' => 'تحديث اسم',
+            // استخدام الاسم المحدث من $hotel->name
+            'message' => "تعديل فندق: {$oldName} إلى: {$hotel->name}", // إزالة الفاصلة الزائدة والأقواس
+            'type' => 'تحديث', // تغيير النوع ليكون أوضح
         ]);
+
+        // 5. إعادة التوجيه
         return redirect()->route('admin.hotels')->with('success', 'تم تعديل الفندق بنجاح!');
     }
 

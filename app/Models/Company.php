@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Payment;
+use Illuminate\Notifications\Notifiable; // إذا كنت تستخدم الإشعارات
+use App\Models\User;
 
 class Company extends Model
 {
@@ -47,5 +49,14 @@ class Company extends Model
 
         // *** التأكد من أن القيمة المرتجعة هي رقم عشري (float) ***
         return (float) ($totalDue - $totalPaid);
+    }
+
+    /**
+     * Get the users associated with the company.
+     * علاقة الشركة بالمستخدمين (الشركة لديها عدة مستخدمين)
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class);
     }
 }
