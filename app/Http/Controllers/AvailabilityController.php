@@ -22,6 +22,7 @@ class AvailabilityController extends Controller
      */
     public function index(Request $request)
     {
+        
         $query = Availability::with(['hotel', 'agent', 'employee'])->latest();
 
         if ($request->filled('hotel_id')) {

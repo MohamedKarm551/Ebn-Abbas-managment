@@ -15,7 +15,7 @@
             // --- الرسم البياني: الحجوزات اليومية (Line Chart) ---
             // >>>>> تأكد إن الكود ده كله موجود هنا <<<<<
             const dailyCtx = document.getElementById(
-            'dailyBookingsChart'); // <-- لازم الـ ID ده يكون نفس الـ ID بتاع الـ canvas فوق
+                'dailyBookingsChart'); // <-- لازم الـ ID ده يكون نفس الـ ID بتاع الـ canvas فوق
             const dailyLabels = @json($chartDates ?? []); // <-- بياخد التواريخ من Controller
             const dailyData = @json($bookingCounts ?? []); // <-- بياخد عدد الحجوزات من Controller
 
@@ -89,7 +89,32 @@
 
 @section('content')
     <div class="container">
-        <h1>التقرير اليومي - {{ \Carbon\Carbon::now()->format('d/m/Y') }}</h1>
+        {{-- خلي العنوان جمبه الصورة تظهر بشكل مناسب وريسبونسف --}}
+
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between mb-4">
+            {{-- العنوان --}}
+            <h1 class="mb-3 mb-md-0">التقرير اليومي</h1> {{-- شيلنا التاريخ من هنا --}}
+        
+            {{-- *** بداية التعديل: إضافة التاريخ والوقت فوق الصورة *** --}}
+            {{-- حاوية الصورة والنص (Relative Positioning) --}}
+            <div style="position: relative; max-width: 200px;"> {{-- نفس العرض الأقصى للصورة --}}
+                {{-- الصورة الأصلية --}}
+                <img src="{{ asset('images/watch.jpg') }}" alt="تقرير يومي" style="display: block; width: 100%; height: auto; border-radius: 8px;">
+        
+                {{-- التاريخ (Absolute Positioning) --}}
+                <div style="position: absolute;top: 23%;le;left: -6%;transform: translateX(109%);color: white;font-size: 0.8em;font-weight: bold;text-shadow: 1px 1px 2px rgba(0,0,0,0.7);width: 30%;text-align: center;background: #000;">
+                    {{ \Carbon\Carbon::now()->format('d/m') }} {{-- تنسيق التاريخ يوم/شهر --}}
+                </div>
+        
+                {{-- الوقت (Absolute Positioning) --}}
+                <div style="position: absolute;top: 31%;left: 38%;transform: translateX(-40%);color: white;font-size: 1.1em;font-weight: bold;text-shadow: 1px 1px 3px rgba(0,0,0,0.8);text-align: center;background: #000;width: 60px;">
+                    {{ \Carbon\Carbon::now()->format('H:i') }} {{-- تنسيق الوقت ساعة:دقيقة (24 ساعة) --}}
+                </div>
+            </div>
+            {{-- *** نهاية التعديل *** --}}
+        
+        </div>
+        
         {{-- *** الخطوة 2: قسم لوحة المعلومات المصغرة *** --}}
         <div class=" mb-4 shadow-sm">
             <div class="card-header">
@@ -110,7 +135,8 @@
                                             {{ $todayBookings->count() }}
                                         </a>
                                     </li>
-                                    <li class="fw-bold text-danger"><i class="fas fa-file-invoice-dollar me-1"></i> متبقي من
+                                    <li class="fw-bold text-danger"><i class="fas fa-file-invoice-dollar me-1"></i> متبقي
+                                        من
                                         الشركات: {{ number_format($totalRemainingFromCompanies) }} ريال</li>
                                     <li class="fw-bold text-warning"><i class="fas fa-hand-holding-usd me-1"></i> متبقي
                                         للفنادق/الجهات: {{ number_format($totalRemainingToHotels) }} ريال</li>
@@ -150,7 +176,8 @@
                     <div class="col-md-4 mb-3">
                         <div class=" h-100">
                             <div class="card-body">
-                                <h5 class="card-title text-warning"><i class="fas fa-money-check-alt me-1"></i> أعلى 5 جهات
+                                <h5 class="card-title text-warning"><i class="fas fa-money-check-alt me-1"></i> أعلى 5
+                                    جهات
                                     لها مبالغ</h5>
                                 @php
                                     // فرز الجهات حسب المتبقي (الأعلى أولاً) في Blade (الأفضل عمله في Controller)
@@ -559,7 +586,7 @@
     </div>
 
     <!-- إضافة تنسيقات CSS في القسم الخاص بالستيلات -->
-   
+
     {{-- *** الخطوة 5: JavaScript لإنشاء الرسوم البيانية *** --}}
     @push('scripts')
         <script>

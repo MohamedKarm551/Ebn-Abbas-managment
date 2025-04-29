@@ -19,12 +19,28 @@ class CompanyAvailabilityController extends Controller
      */
     public function index(Request $request)
     {
+        // *** بداية الإضافة: تحديث الإتاحات المنتهية قبل العرض ***
+        try {
+            // ابحث عن الإتاحات اللي مش expired وتاريخ نهايتها قبل النهارده
+            $expiredCount = Availability::where('status', '!=', 'expired')
+                ->whereDate('end_date', '<=', Carbon::today())
+                ->update(['status' => 'expired']); // <-- حدث حالتهم لـ expired
+
+            // (اختياري) سجل في اللوج لو تم تحديث أي حاجة
+            if ($expiredCount > 0) {
+                Log::info("CompanyAvailabilityController: تم تحديث {$expiredCount} إتاحة منتهية إلى 'expired'.");
+            }
+        } catch (\Exception $e) {
+            // لو حصل خطأ أثناء التحديث، سجله بس متوقفش الصفحة
+            Log::error("CompanyAvailabilityController: خطأ أثناء تحديث الإتاحات المنتهية: " . $e->getMessage());
+        }
+        // *** نهاية الإضافة ***
+
         $hotels = Hotel::orderBy('name')->get();
 
         // Start query for active availabilities, eager load necessary relations
-        $query = Availability::with(['hotel', 'availabilityRoomTypes.roomType'])
-            ->where('status', 'active'); // جلب الإتاحات النشطة فقط
-            
+        $query = Availability::with(['hotel', 'availabilityRoomTypes'])
+            ->where('status', "active");
 
         // --- Optional Filtering (Example: By Hotel) ---
         if ($request->filled('hotel_id')) {
