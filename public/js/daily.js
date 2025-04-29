@@ -272,64 +272,49 @@ function swapWatchColors() {
         });
     }
 // --- *** بداية كود الرسم البياني لصافي الرصيد *** ---
-const ctxNetBalance = document.getElementById('netBalanceChart');
-// !!! هام: يجب أن يتم تمرير هذه المتغيرات من الـ Controller
-const netBalanceDates = window.chartData.netBalanceDates; // <-- بياخد التواريخ من Controller
-const netBalanceData =  window.chartData.netBalances; // <-- بياخد بيانات صافي الرصيد من Controller
+// --- الرسم البياني للمستحقات والالتزامات (الخطين) ---
+const ctxMultiLineBalance = document.getElementById('netBalanceChart');
+const balanceDates = window.chartData.dailyLabels;
+const receivableData = window.chartData.receivableBalances;
+const payableData = window.chartData.payableBalances;
+// *** نجيب مصفوفة تفاصيل الأحداث ***
+const dailyEventDetailsData = window.chartData.dailyEventDetails;
 
-if (ctxNetBalance && netBalanceDates.length > 0 && netBalanceData.length > 0) {
-    new Chart(ctxNetBalance, {
-        type: 'line', // نوع الرسم: خطي
+if (ctxMultiLineBalance && balanceDates && balanceDates.length > 0 && receivableData && payableData) {
+    new Chart(ctxMultiLineBalance, {
+        type: 'line',
         data: {
-            labels: netBalanceDates, // التواريخ على المحور الأفقي
-            datasets: [{
-                label: 'صافي الرصيد (ريال)', // اسم الخط
-                data: netBalanceData,      // بيانات الرصيد على المحور العمودي
-                fill: true,               // تلوين المنطقة تحت الخط
-                borderColor: 'rgb(54, 162, 235)', // لون الخط (أزرق)
-                backgroundColor: 'rgba(54, 162, 235, 0.2)', // لون التعبئة شفاف
-                tension: 0.1,             // انحناء بسيط للخط
-                // (اختياري متقدم) تغيير اللون حسب القيمة
-                segment: {
-                    borderColor: ctx => {
-                        // لو القيمة قبل أو بعد النقطة الحالية < 0 خلي اللون أحمر
-                        if (ctx.p0.parsed.y < 0 || ctx.p1.parsed.y < 0) {
-                            return 'rgb(255, 99, 132)'; // أحمر
-                        }
-                        // وإلا خليه أزرق
-                        return 'rgb(54, 162, 235)'; // أزرق
-                    },
-                    backgroundColor: ctx => {
-                         if (ctx.p0.parsed.y < 0 || ctx.p1.parsed.y < 0) {
-                            return 'rgba(255, 99, 132, 0.2)'; // أحمر شفاف
-                        }
-                        return 'rgba(54, 162, 235, 0.2)'; // أزرق شفاف
-                    }
+            labels: balanceDates,
+            datasets: [
+                {
+                    label: 'مستحق من الشركات (ريال)', // الخط الأخضر
+                    data: receivableData,
+                    borderColor: 'rgb(75, 192, 75)',
+                    // ... (باقي خصائص الخط الأخضر) ...
+                },
+                {
+                    label: 'مستحق للجهات (ريال)', // الخط الأحمر
+                    data: payableData,
+                    borderColor: 'rgb(255, 99, 132)',
+                    // ... (باقي خصائص الخط الأحمر) ...
                 }
-            }]
+            ]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    // beginAtZero: false, // مهم عشان يظهر القيم السالبة صح
-                    ticks: {
-                        callback: function(value, index, values) {
-                            return value.toLocaleString('ar-SA') + ' ريال'; // تنسيق الأرقام
-                        }
-                    }
-                }
-            },
+            // ... (باقي الخيارات زي responsive, interaction, scales, legend) ...
             plugins: {
                 legend: {
-                    display: true // ممكن نظهر اسم الخط هنا
+                    display: true,
+                    position: 'top',
                 },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
+                tooltip: { // *** تعديل الـ Tooltip هنا ***
                     callbacks: {
+                        title: function(tooltipItems) {
+                            // السطر الأول: التاريخ
+                            return 'تاريخ: ' + tooltipItems[0].label; // tooltipItems[0].label هو التاريخ 'd/m'
+                        },
                         label: function(context) {
+                            // السطر التاني والتالت: قيمة كل خط (الأرصدة)
                             let label = context.dataset.label || '';
                             if (label) {
                                 label += ': ';
@@ -338,18 +323,38 @@ if (ctxNetBalance && netBalanceDates.length > 0 && netBalanceData.length > 0) {
                                 label += context.parsed.y.toLocaleString('ar-SA') + ' ريال';
                             }
                             return label;
+                        },
+                        // *** بداية الإضافة: عرض تفاصيل الأحداث بعد الأرصدة ***
+                        afterBody: function(tooltipItems) {
+                            // tooltipItems[0].label هو التاريخ 'd/m' اللي المستخدم واقف عليه
+                            const dateLabel = tooltipItems[0].label;
+                            // نجيب قايمة تفاصيل الأحداث بتاعة اليوم ده من البيانات اللي مررناها
+                            const eventDetailsForDay = dailyEventDetailsData[dateLabel] || []; // لو مفيش أحداث، هتبقى مصفوفة فاضية
+
+                            // لو فيه أحداث لليوم ده
+                            if (eventDetailsForDay.length > 0) {
+                                // نعمل مصفوفة سطور جديدة للـ tooltip
+                                let lines = [];
+                                // نضيف سطر فاصل وعنوان
+                                lines.push(''); // سطر فاضي كفاصل
+                                lines.push('--- أحداث اليوم ---');
+                                // نضيف كل تفصيل حدث في سطر جديد
+                                eventDetailsForDay.forEach(detail => {
+                                    lines.push(detail); // كل عنصر في المصفوفة دي هيبقى سطر في الـ tooltip
+                                });
+                                return lines; // نرجع مصفوفة السطور عشان Chart.js يعرضها
+                            }
+                            // لو مفيش أحداث، نرجع مصفوفة فاضية (مش هيعرض حاجة زيادة)
+                            return [];
                         }
+                        // *** نهاية الإضافة ***
                     }
                 }
-            },
-            hover: {
-                mode: 'nearest',
-                intersect: true
             }
         }
     });
-} else if (ctxNetBalance) { // لو مفيش بيانات
-     ctxNetBalance.parentNode.innerHTML = '<p class="text-center text-muted">لا توجد بيانات كافية لعرض اتجاه صافي الرصيد.</p>';
+} else if (ctxMultiLineBalance) {
+     ctxMultiLineBalance.parentNode.innerHTML = '<p class="text-center text-muted">لا توجد بيانات كافية لعرض اتجاه المستحقات والالتزامات.</p>';
 }
 // --- *** نهاية كود الرسم البياني لصافي الرصيد *** ---
 

@@ -102,7 +102,115 @@ class ReportController extends Controller
             $chartDates[] = $date->format('d/m'); // تنسيق العرض في الرسم البياني (يوم/شهر)
             $bookingCounts[] = $bookingsData[$formattedDate] ?? 0; // نضع صفر إذا لم يكن اليوم موجودًا
         }
+                // 2. جلب الحجوزات مع تفاصيلها اللازمة للرسم والتلميح
+                $bookingsForChart = Booking::with(['company', 'agent', 'hotel']) // نجيب العلاقات عشان الأسماء
+                ->select(
+                    'check_in', // تاريخ بدء الاستحقاق
+                    'client_name', // اسم العميل للتفاصيل
+                    'company_id', // لربط الشركة
+                    'agent_id',   // لربط الجهة
+                    'hotel_id',   // لربط الفندق (اختياري في التفاصيل)
+                    DB::raw('sale_price * rooms * days as company_due'), // المستحق من الشركة
+                    DB::raw('cost_price * rooms * days as agent_due') // المستحق للجهة
+                )
+                ->whereBetween('check_in', [$startDate, $endDate]) // نستخدم check_in كتاريخ للحدث
+                ->orderBy('check_in', 'asc')
+                ->get();
+    
+            // 3. جلب دفعات الشركات مع تفاصيلها
+            $companyPaymentsForChart = Payment::with('company') // نجيب الشركة عشان اسمها
+                ->select('payment_date', 'amount', 'company_id', 'notes')
+                ->whereBetween('payment_date', [$startDate, $endDate])
+                ->orderBy('payment_date', 'asc')
+                ->get();
+    
+            // 4. جلب دفعات الوكلاء مع تفاصيلها
+            $agentPaymentsForChart = AgentPayment::with('agent') // نجيب الجهة عشان اسمها
+                ->select('payment_date', 'amount', 'agent_id', 'notes')
+                ->whereBetween('payment_date', [$startDate, $endDate])
+                ->orderBy('payment_date', 'asc')
+                ->get();
+    
+    
         // --- *** نهاية: جلب بيانات الحجوزات اليومية *** ---
+        // 5. تجميع كل الأحداث (حجوزات ودفعات) في مصفوفة واحدة مع تفاصيلها وتأثيرها
+        $allEventsWithDetails = [];
+        foreach ($bookingsForChart as $booking) {
+            $eventDate = Carbon::parse($booking->check_in)->format('Y-m-d');
+            $allEventsWithDetails[$eventDate][] = [
+                'type' => 'booking',
+                'company_change' => $booking->company_due, // التغيير في رصيد الشركات (موجب)
+                'agent_change' => $booking->agent_due,   // التغيير في رصيد الجهات (موجب)
+                // نص التفاصيل اللي هيظهر في الـ tooltip
+                'details' => "حجز: " . Str::limit($booking->client_name ?? 'N/A', 15) // اسم العميل مختصر
+                           . " (+".number_format($booking->company_due)." ش)" // تأثيره على رصيد الشركة
+                           . " (+".number_format($booking->agent_due)." ج)" // تأثيره على رصيد الجهة
+            ];
+        }
+        foreach ($companyPaymentsForChart as $payment) {
+            $eventDate = Carbon::parse($payment->payment_date)->format('Y-m-d');
+            $allEventsWithDetails[$eventDate][] = [
+                'type' => 'company_payment',
+                'company_change' => -$payment->amount, // دفعة الشركة تقلل المستحق منها (سالب)
+                'agent_change' => 0,
+                // نص التفاصيل
+                'details' => "دفعة من: " . Str::limit($payment->company->name ?? 'N/A', 10) // اسم الشركة مختصر
+                           . " (-".number_format($payment->amount)." ش)" // تأثيره على رصيد الشركة
+                           . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
+            ];
+        }
+        foreach ($agentPaymentsForChart as $payment) {
+            $eventDate = Carbon::parse($payment->payment_date)->format('Y-m-d');
+            $allEventsWithDetails[$eventDate][] = [
+                'type' => 'agent_payment',
+                'company_change' => 0,
+                'agent_change' => -$payment->amount, // دفعة للجهة تقلل المستحق لها (سالب)
+                // نص التفاصيل
+                'details' => "دفعة إلى: " . Str::limit($payment->agent->name ?? 'N/A', 10) // اسم الجهة مختصر
+                           . " (-".number_format($payment->amount)." ج)" // تأثيره على رصيد الجهة
+                           . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
+            ];
+        }
+
+        // 6. حساب الأرصدة التراكمية يوم بيوم وتجميع تفاصيل الأحداث لكل يوم
+        $runningReceivables = 0; // الرصيد التراكمي المستحق من الشركات
+        $runningPayables = 0;    // الرصيد التراكمي المستحق للجهات
+        $receivableBalances = []; // مصفوفة لتخزين رصيد الشركات لكل يوم
+        $payableBalances = [];    // مصفوفة لتخزين رصيد الجهات لكل يوم
+        $dailyEventDetails = []; // *** مصفوفة جديدة لتخزين تفاصيل الأحداث لكل يوم ***
+        // نستخدم نفس الفترة الزمنية $period المحسوبة لرسم الحجوزات اليومية (السطر 96)
+        foreach ($period as $date) {
+            $formattedDate = $date->format('Y-m-d'); // تاريخ اليوم YYYY-MM-DD
+            $chartLabelDate = $date->format('d/m'); // التاريخ اللي بيظهر تحت في الرسم d/m
+            $eventsTodayDetails = []; // لتجميع تفاصيل أحداث اليوم الحالي
+
+            // لو فيه أحداث حصلت في اليوم ده
+            if (isset($allEventsWithDetails[$formattedDate])) {
+                // (اختياري) ممكن نرتب الأحداث جوه اليوم لو حابب (مثلاً الحجوزات قبل الدفعات)
+                // usort($allEventsWithDetails[$formattedDate], function($a, $b) { ... });
+
+                // نمشي على أحداث اليوم ده
+                foreach ($allEventsWithDetails[$formattedDate] as $event) {
+                    // نحدث الأرصدة التراكمية
+                    $runningReceivables += $event['company_change'];
+                    $runningPayables += $event['agent_change'];
+                    // نضيف تفاصيل الحدث ده لقائمة أحداث اليوم
+                    $eventsTodayDetails[] = $event['details'];
+                }
+            }
+
+            // نخزن الرصيد في نهاية اليوم (حتى لو مفيش أحداث، الرصيد هو نفسه بتاع اليوم اللي قبله)
+            $receivableBalances[] = round(max(0, $runningReceivables), 2); // نتأكد إن الرصيد مش سالب
+            $payableBalances[] = round(max(0, $runningPayables), 2);    // نتأكد إن الرصيد مش سالب
+            // *** نخزن قايمة تفاصيل أحداث اليوم ده في المصفوفة الجديدة ***
+            // هنستخدم التاريخ اللي بيظهر في الرسم (d/m) كمفتاح عشان نلاقيها بسهولة في الجافاسكريبت
+            $dailyEventDetails[$chartLabelDate] = $eventsTodayDetails;
+        }
+        // --- *** نهاية: تعديل حساب بيانات الرسم البياني وتفاصيل الأحداث *** ---
+
+
+
+
 
 
         // إشعار خفيف على آخر شيء تم عليه تعديل 
@@ -183,8 +291,9 @@ class ReportController extends Controller
             'resentAgentEdits', // إشعار خفيف على آخر جهة حجز تم عليه تعديل
             'chartDates',       // <-- *** تمرير مصفوفة التواريخ للرسم ***
             'bookingCounts' ,    // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
-            'netBalanceDates',  // <-- اسم مصفوفة التواريخ
-            'netBalances'   
+            'receivableBalances', // <-- مصفوفة رصيد الشركات (الخط الأخضر)
+            'payableBalances',    // <-- مصفوفة رصيد الجهات (الخط الأحمر)
+            'dailyEventDetails' 
         ));
     }
 

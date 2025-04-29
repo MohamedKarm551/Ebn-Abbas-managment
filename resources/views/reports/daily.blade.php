@@ -555,9 +555,12 @@
             dailyLabels: @json($chartDates ?? []),
             dailyData: @json($bookingCounts ?? []),
 
-            // بيانات الرسم البياني لصافي الرصيد
-            netBalanceDates: @json($netBalanceDates ?? []),
-            netBalances: @json($netBalances ?? []), // <-- تأكد من الاسم هنا
+             // بيانات الرسم البياني للمستحقات والالتزامات
+             receivableBalances: @json($receivableBalances ?? []), // <-- رصيد الشركات (الأخضر)
+            payableBalances: @json($payableBalances ?? []),       // <-- رصيد الجهات (الأحمر)
+            // *** بداية الإضافة: تمرير تفاصيل الأحداث للجافاسكريبت ***
+            dailyEventDetails: @json($dailyEventDetails ?? []), // <-- مصفوفة تفاصيل الأحداث لكل يوم
+            // *** نهاية الإضافة ***
 
             // بيانات الرسم البياني للشركات (الأعمدة والتوزيع)
             topCompaniesLabels: @json($topCompanies->pluck('name') ?? []),
