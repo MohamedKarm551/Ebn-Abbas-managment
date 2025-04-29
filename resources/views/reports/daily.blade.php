@@ -94,27 +94,30 @@
         <div class="d-flex flex-column flex-md-row align-items-center justify-content-between mb-4">
             {{-- العنوان --}}
             <h1 class="mb-3 mb-md-0">التقرير اليومي</h1> {{-- شيلنا التاريخ من هنا --}}
-        
+
             {{-- *** بداية التعديل: إضافة التاريخ والوقت فوق الصورة *** --}}
             {{-- حاوية الصورة والنص (Relative Positioning) --}}
-            <div style="position: relative; max-width: 200px;"> {{-- نفس العرض الأقصى للصورة --}}
+            <div style="position: relative;max-width: 200px;filter: drop-shadow(2px 2px 10px #000);"> {{-- نفس العرض الأقصى للصورة --}}
                 {{-- الصورة الأصلية --}}
-                <img src="{{ asset('images/watch.jpg') }}" alt="تقرير يومي" style="display: block; width: 100%; height: auto; border-radius: 8px;">
-        
+                <img src="{{ asset('images/watch.jpg') }}" alt="تقرير يومي"
+                    style="display: block; width: 100%; height: auto; border-radius: 8px;">
+
                 {{-- التاريخ (Absolute Positioning) --}}
-                <div style="position: absolute;top: 23%;le;left: -6%;transform: translateX(109%);color: white;font-size: 0.8em;font-weight: bold;text-shadow: 1px 1px 2px rgba(0,0,0,0.7);width: 30%;text-align: center;background: #000;">
+                <div id="watch-date-display"
+                    style="position: absolute;top: 23%;left: -6%;transform: translateX(109%);color: #8b22d8;font-size: 0.8em;font-weight: bold;text-shadow: 1px 1px 2px rgba(0,0,0,0.7);width: 30%;text-align: center;background: #000;">
                     {{ \Carbon\Carbon::now()->format('d/m') }} {{-- تنسيق التاريخ يوم/شهر --}}
                 </div>
-        
+
                 {{-- الوقت (Absolute Positioning) --}}
-                <div style="position: absolute;top: 31%;left: 38%;transform: translateX(-40%);color: white;font-size: 1.1em;font-weight: bold;text-shadow: 1px 1px 3px rgba(0,0,0,0.8);text-align: center;background: #000;width: 60px;">
+                <div id="watch-time-display"
+                    style="position: absolute;top: 31%;left: 38%;transform: translateX(-40%);color: white;font-size: 1.1em;font-weight: bold;text-shadow: 1px 1px 3px rgba(0,0,0,0.8);text-align: center;background: #000;width: 60px;">
                     {{ \Carbon\Carbon::now()->format('H:i') }} {{-- تنسيق الوقت ساعة:دقيقة (24 ساعة) --}}
                 </div>
             </div>
-            {{-- *** نهاية التعديل *** --}}
-        
+
+
         </div>
-        
+
         {{-- *** الخطوة 2: قسم لوحة المعلومات المصغرة *** --}}
         <div class=" mb-4 shadow-sm">
             <div class="card-header">
@@ -591,6 +594,43 @@
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
+                // --- كود تحديث وقت الساعة ---
+                const timeDisplayElement = document.getElementById('watch-time-display');
+                const dateDisplayElement = document.getElementById('watch-date-display'); // <-- جبنا عنصر التاريخ
+                
+            // متغيرات لتخزين الألوان الحالية
+            let currentTimeColor = 'white';
+            let currentDateColor = '#8b22d8'; // اللون البنفسجي المبدئي
+
+                function updateWatchTime() {
+                    if (timeDisplayElement) { // نتأكد إن العنصر موجود
+                        const now = new Date();
+                        const hours = String(now.getHours()).padStart(2, '0'); // نجيب الساعات ونضيف صفر لو أقل من 10
+                        const minutes = String(now.getMinutes()).padStart(2,
+                            '0'); // نجيب الدقايق ونضيف صفر لو أقل من 10
+                        timeDisplayElement.textContent = `${hours}:${minutes}`; // نحدث محتوى العنصر
+                    }
+                }
+            // *** دالة تبديل الألوان ***
+            function swapWatchColors() {
+                if (timeDisplayElement && dateDisplayElement) {
+                    // تبديل الألوان المخزنة
+                    const tempColor = currentTimeColor;
+                    currentTimeColor = currentDateColor;
+                    currentDateColor = tempColor;
+
+                    // تطبيق الألوان الجديدة على العناصر
+                    timeDisplayElement.style.color = currentTimeColor;
+                    dateDisplayElement.style.color = currentDateColor;
+                }
+            }
+
+                updateWatchTime(); // نشغلها مرة أول ما الصفحة تحمل
+                setInterval(updateWatchTime, 60000); // نشغلها كل 60 ثانية (دقيقة)
+                // --- نهاية كود تحديث وقت الساعة ---
+                setInterval(swapWatchColors, 30000); // تبديل الألوان كل 30 ثانية
+
+
                 // --- بيانات الرسم البياني للشركات ---
                 const topCompaniesLabels = @json($topCompanies->pluck('name'));
                 const topCompaniesDataPoints = @json($topCompanies->pluck('remaining'));

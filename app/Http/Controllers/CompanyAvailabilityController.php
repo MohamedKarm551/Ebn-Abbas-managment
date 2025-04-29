@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Availability;
 use App\Models\Hotel;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Log; // لاستخدام اللوج لو حبيت تتابع
 use Carbon\Carbon; // لاستخدام Carbon للتعامل مع التواريخ
 use Illuminate\Support\Facades\DB; // <-- ضيف السطر ده (تقريباً سطر 8)
@@ -29,6 +30,14 @@ class CompanyAvailabilityController extends Controller
             // (اختياري) سجل في اللوج لو تم تحديث أي حاجة
             if ($expiredCount > 0) {
                 Log::info("CompanyAvailabilityController: تم تحديث {$expiredCount} إتاحة منتهية إلى 'expired'.");
+                // Notify Admin  
+                // هنا ممكن تضيف كود لإرسال إشعار للإدارة لو حبيت
+                Notification::create([
+                    'type' => 'availability_expired_auto', // ممكن نغير النوع لتمييزه
+                    'message' => "تم تحديث {$expiredCount} إتاحة منتهية تلقائياً إلى 'منتهية' بواسطة فحص النظام.",
+                    // 'user_id' => null, // ممكن نضيف user_id = null للتأكيد إنه مش مستخدم معين
+                ]);
+
             }
         } catch (\Exception $e) {
             // لو حصل خطأ أثناء التحديث، سجله بس متوقفش الصفحة

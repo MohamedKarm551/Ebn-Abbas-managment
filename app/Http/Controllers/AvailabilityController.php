@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException; // Import ValidationException
+use Mockery\Matcher\Not;
 
 class AvailabilityController extends Controller
 {
@@ -22,7 +23,27 @@ class AvailabilityController extends Controller
      */
     public function index(Request $request)
     {
-        
+        try {
+            // ابحث عن الإتاحات اللي مش expired وتاريخ نهايتها قبل النهارده
+            $expiredCount = Availability::where('status', '!=', 'expired')
+                ->whereDate('end_date', '<=', Carbon::today())
+                ->update(['status' => 'expired']); // <-- حدث حالتهم لـ expired
+
+            // (اختياري) سجل في اللوج لو تم تحديث أي حاجة
+            if ($expiredCount > 0) {
+                Log::info("CompanyAvailabilityController: تم تحديث {$expiredCount} إتاحة منتهية إلى 'expired'.");
+                // Notify Admin  
+                // هنا ممكن تضيف كود لإرسال إشعار للإدارة لو حبيت
+                Notification::create([
+                    'type' => 'availability_expired_auto', // ممكن نغير النوع لتمييزه
+                    'message' => "تم تحديث {$expiredCount} إتاحة منتهية تلقائياً إلى 'منتهية' بواسطة فحص النظام.",
+                    // 'user_id' => null, // ممكن نضيف user_id = null للتأكيد إنه مش مستخدم معين
+                ]);
+            }
+        } catch (\Exception $e) {
+            // لو حصل خطأ أثناء التحديث، سجله بس متوقفش الصفحة
+            Log::error("AvailabilityController (Admin): خطأ أثناء تحديث الإتاحات المنتهية: " . $e->getMessage());
+        }
         $query = Availability::with(['hotel', 'agent', 'employee'])->latest();
 
         if ($request->filled('hotel_id')) {

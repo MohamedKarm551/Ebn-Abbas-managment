@@ -86,8 +86,22 @@
                         theme: 'bootstrap-5',
                         placeholder: $(this).data('placeholder') || "اختر...",
                         allowClear: true,
-                        width: $(this).data('width') ? $(this).data('width') : $(this).hasClass('w-100') ? '100%' : 'style',
+                        width: $(this).data('width') ? $(this).data('width') : $(this).hasClass('w-100') ?
+                            '100%' : 'style',
+                    }).on('select2:open', function(e) {
+                        // نستخدم setTimeout صغير عشان نضمن إن حقل البحث ظهر في الـ DOM
+                        setTimeout(function() {
+                            // نبحث عن حقل البحث داخل الحاوية المفتوحة حالياً
+                            const searchField = document.querySelector(
+                                '.select2-container--open .select2-search__field');
+                            if (searchField) {
+                                searchField.placeholder = 'بحث...'; // <-- النص الجديد هنا
+                            }
+                        }, 1); // تأخير بسيط جداً
                     });
+                    // *** نهاية الإضافة ***
+
+
                 } else {
                     console.warn("Select2 not loaded or initialized correctly.");
                 }
@@ -153,4 +167,5 @@
     @stack('scripts')
 
 </body>
+
 </html>

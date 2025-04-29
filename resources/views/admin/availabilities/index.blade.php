@@ -69,7 +69,7 @@
                             <td>{{ $availability->end_date?->format('d/m/Y') ?? 'N/A' }}</td>
                             <td>
                                 {{-- *** بداية التعديل: التحقق من تاريخ النهاية أولاً *** --}}
-                                @if ($availability->end_date && \Carbon\Carbon::parse($availability->end_date)->isPast())
+                                @if ($availability->status == 'expired' )
                                     {{-- لو تاريخ النهاية عدى، نعرض "منتهية" بغض النظر عن الـ status --}}
                                     <span class="badge bg-danger">منتهية</span>
                                 @elseif ($availability->status == 'active')
