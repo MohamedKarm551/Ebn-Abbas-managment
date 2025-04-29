@@ -34,12 +34,12 @@ class ReportController extends Controller
         // كل الحجوزات اللي بتبدأ النهاردة
         $todayBookings = Booking::whereDate('check_in', $today)->get();
 
-    // تقرير الشركات: كل شركة وعدد حجوزاتها (قائمة الشركات مع عدد الحجوزات لكل شركة)
-         //  كل الشركات وعدد الحجوزاتها 
+        // تقرير الشركات: كل شركة وعدد حجوزاتها (قائمة الشركات مع عدد الحجوزات لكل شركة)
+        //  كل الشركات وعدد الحجوزاتها 
         $companiesReport = Company::withCount('bookings')->get()
-        ->sortByDesc(function ($company) {
-            return $company->total_due; // <-- الترتيب الصحيح هنا
-        })->values();
+            ->sortByDesc(function ($company) {
+                return $company->total_due; // <-- الترتيب الصحيح هنا
+            })->values();
         // إجمالي المتبقي من الشركات ...   
         $totalDueFromCompanies = $companiesReport->sum('remaining');
 
@@ -61,7 +61,7 @@ class ReportController extends Controller
                 return $hotel->total_due;
             })->values();
 
-       
+
         // إجمالي المتبقي من الشركات (كل اللي لسه الشركات ما دفعتهوش فعلاً = المستحق - المدفوع لكل شركة)
         $totalRemainingFromCompanies = $companiesReport->sum('remaining');
 
@@ -73,7 +73,7 @@ class ReportController extends Controller
         // $netProfit = $totalRemainingFromCompanies - $totalRemainingToHotels; // السطر القديم (ممكن تمسحه أو تخليه تعليق)
         $totalDueToAgents = $agentsReport->sum('total_due'); // أو total_due حسب اسم العمود عندك لجهات الحجز
         $netProfit = $totalDueFromCompanies - $totalDueToAgents; // السطر الجديد
-                    // --- *** بداية: جلب بيانات الحجوزات اليومية لآخر 30 يومًا *** ---
+        // --- *** بداية: جلب بيانات الحجوزات اليومية لآخر 30 يومًا *** ---
         $days = 30; // عدد الأيام
         $endDate = Carbon::now()->endOfDay();
         $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
@@ -83,9 +83,9 @@ class ReportController extends Controller
 
         // جلب عدد الحجوزات مجمعة حسب اليوم
         $bookingsData = Booking::select(
-                DB::raw("DATE($dateField) as date"),
-                DB::raw('COUNT(*) as count')
-            )
+            DB::raw("DATE($dateField) as date"),
+            DB::raw('COUNT(*) as count')
+        )
             ->whereBetween($dateField, [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date', 'ASC')
@@ -125,6 +125,49 @@ class ReportController extends Controller
             ->where('created_at', '>=', now()->subDays(2))
             ->get()
             ->groupBy('message');
+        // --- *** بداية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
+
+        // 1. جلب دفعات الشركات (فلوس داخلة = موجب) مرتبة بالتاريخ
+        $companyPayments = Payment::select('payment_date as date', 'amount')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        // 2. جلب دفعات الوكلاء (فلوس خارجة = سالب) مرتبة بالتاريخ
+        $agentPayments = AgentPayment::select('payment_date as date', DB::raw('-amount as amount')) // لاحظ السالب هنا
+            ->orderBy('date', 'asc')
+            ->get();
+
+        // 3. دمج العمليتين في مجموعة واحدة
+        $allTransactions = $companyPayments->concat($agentPayments);
+
+        // 4. ترتيب كل العمليات حسب التاريخ
+        $sortedTransactions = $allTransactions->sortBy('date');
+
+        // 5. حساب الرصيد التراكمي مع الوقت
+        $runningBalance = 0;
+        $netBalanceData = []; // مصفوفة لتخزين [التاريخ => الرصيد]
+
+        foreach ($sortedTransactions as $transaction) {
+            $dateString = Carbon::parse($transaction->date)->format('Y-m-d'); // تاريخ العملية
+            $runningBalance += $transaction->amount; // تحديث الرصيد
+            // بنخزن آخر رصيد لكل يوم (لو فيه أكتر من عملية في نفس اليوم)
+            $netBalanceData[$dateString] = $runningBalance;
+        }
+
+        // 6. تجهيز المصفوفات النهائية للرسم البياني
+        $netBalanceDates = []; // مصفوفة التواريخ للعرض
+        $netBalances = [];   // مصفوفة قيم الرصيد المقابلة
+
+        // لو فيه بيانات، نرتبها حسب التاريخ ونجهزها للـ Chart
+        if (!empty($netBalanceData)) {
+            ksort($netBalanceData); // نرتب المصفوفة حسب مفتاح التاريخ
+            foreach ($netBalanceData as $date => $balance) {
+                $netBalanceDates[] = Carbon::parse($date)->format('d/m'); // تنسيق التاريخ للعرض
+                $netBalances[] = round($balance, 2); // الرصيد المقابل (ممكن تقريبه)
+            }
+        }
+        // --- *** نهاية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
+
         // رجع كل البيانات للواجهة اليومية
         return view('reports.daily', compact(
             'todayBookings',
@@ -139,7 +182,9 @@ class ReportController extends Controller
             'recentCompanyEdits', // إشعار خفيف على آخر شركة تم عليها تعديل
             'resentAgentEdits', // إشعار خفيف على آخر جهة حجز تم عليه تعديل
             'chartDates',       // <-- *** تمرير مصفوفة التواريخ للرسم ***
-            'bookingCounts'     // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
+            'bookingCounts' ,    // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
+            'netBalanceDates',  // <-- اسم مصفوفة التواريخ
+            'netBalances'   
         ));
     }
 
