@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AvailabilityController;
-use App\Http\Controllers\RoomTypeController; 
+use App\Http\Controllers\RoomTypeController;
 use App\Http\Controllers\CompanyAvailabilityController;
+use Jenssegers\Agent\Agent;
+use App\Models\Notification;
 
 Route::middleware(['auth'])->group(function () {
     // تصدير جدول الحجز
@@ -59,7 +61,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/hotels/{id}', [HotelController::class, 'update'])->name('updateHotel'); // مسار التحديث
         // مسار صفحة الأرشيف:
         Route::get('/archived-bookings', [AdminController::class, 'archivedBookings'])->name('archived_bookings');
-        Route::get('/archived-bookings/autocomplete', [AdminController::class, 'archivedAutocomplete'])->name('archived_bookings.autocomplete');     
+        Route::get('/archived-bookings/autocomplete', [AdminController::class, 'archivedAutocomplete'])->name('archived_bookings.autocomplete');
 
 
         Route::get('/archived-bookings/export', [AdminController::class, 'exportArchivedBookings'])->name('archived_bookings.export'); // الاسم النهائي: admin.archived_bookings.export
@@ -142,25 +144,25 @@ Route::middleware(['auth'])->group(function () {
     // ==================================================
 
 
-// end of the auth middleware group
-// لو انت مش شركة اسمح بدول : 
-Route::middleware([\App\Http\Middleware\IsNotCompany::class])->group(function () {
+    // end of the auth middleware group
+    // لو انت مش شركة اسمح بدول : 
+    Route::middleware([\App\Http\Middleware\IsNotCompany::class])->group(function () {
 
-Route::get('/admin/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
-Route::post('/admin/notifications/{id}/read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.markRead');
-Route::post('/admin/notifications/mark-all-read', [AdminController::class, 'markAllNotificationsRead'])->name('admin.notifications.markAllRead');
-Route::get('/api/notifications/unread-count', function () {
-    return response()->json([
-        'count' => \App\Models\Notification::where('is_read', false)->count()
-    ]);
-})->name('api.notifications.unread_count'); // اسم مقترح للروت
+        Route::get('/admin/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
+        Route::post('/admin/notifications/{id}/read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.markRead');
+        Route::post('/admin/notifications/mark-all-read', [AdminController::class, 'markAllNotificationsRead'])->name('admin.notifications.markAllRead');
+        Route::get('/api/notifications/unread-count', function () {
+            return response()->json([
+                'count' => \App\Models\Notification::where('is_read', false)->count()
+            ]);
+        })->name('api.notifications.unread_count'); // اسم مقترح للروت
 
-// ==================================================
-// *** نهاية مجموعة روتات الإشعارات (لغير الشركات) ***
-// ==================================================
+        // ==================================================
+        // *** نهاية مجموعة روتات الإشعارات (لغير الشركات) ***
+        // ==================================================
 
 
-}); // <--- نهاية المجموعة الرئيسية للمستخدمين المسجلين
+    }); // <--- نهاية المجموعة الرئيسية للمستخدمين المسجلين
 }); // <--- نهاية مجموعة روتات الإشعارات (لغير الشركات)
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 Route::get('/', function () {
@@ -168,7 +170,7 @@ Route::get('/', function () {
 });
 
 // مش راضي يشتغل على الهوستنجر عشان هما لسه لم يحدثوا الكومبوسر
- Auth::routes(); 
+Auth::routes();
 //  Route::get('/login', function () {
 //     return view('welcome');
 // })->name('login');
@@ -186,12 +188,44 @@ Route::get('/login', function () {
 Route::post('/manual-login', function (Request $request) {
     $credentials = $request->only('email', 'password');
     if (Auth::attempt($credentials, $request->filled('remember'))) {
+        $user = Auth::user();
+        $agent = new Agent();
+        $device = $agent->device();
+        $platform = $agent->platform();
+        $browser = $agent->browser();
+        // $isMobile = $agent->isMobile();
+        // $isTablet = $agent->isTablet();
+        // $isDesktop = $agent->isDesktop();
+        $ip = $request->ip();
+        if ($user) {
+            Notification::create([
+                'user_id' => $user->id,
+                'title' => 'تسجيل دخول',
+                'message' => "تم تسجيل دخول المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
+                'type' => 'login',
+            ]);
+        }
         return redirect()->intended('/bookings');
     }
     return back()->withErrors(['email' => 'بيانات الدخول غير صحيحة'])->withInput();
 })->name('manual.login');
 
-Route::post('/logout', function () {
+Route::post('/logout', function (Request $request) {
+    $user = Auth::user();
+    $agent = new Agent();
+    $device = $agent->device();
+    $platform = $agent->platform();
+    $browser = $agent->browser();
+    $ip = $request->ip();
+
+    if ($user) {
+        Notification::create([
+            'user_id' => $user->id,
+            'title' => 'تسجيل خروج',
+            'message' => "تم تسجيل خروج المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
+            'type' => 'logout',
+        ]);
+    }
     Auth::logout();
     return redirect('/');
 })->name('logout');

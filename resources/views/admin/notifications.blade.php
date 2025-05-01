@@ -22,6 +22,10 @@
                     <a href="{{ route('admin.notifications', ['filter' => 'availabilities']) }}" class="btn btn-outline-info {{ $currentFilter == 'availabilities' ? 'active' : '' }}">
                         الإتاحات
                     </a>
+                        {{-- زرار تسجيلات الدخول والخروج  --}}
+                        <a href="{{ route('admin.notifications', ['filter' => 'logins']) }}" class="btn btn-outline-warning {{ $currentFilter == 'logins' ? 'active' : '' }}">
+                            تسجيلات دخول وخروج 
+                        </a>
                     {{-- ممكن تضيف أزرار فلاتر تانية هنا بنفس الطريقة --}}
                     {{-- مثال:
                     <a href="{{ route('admin.notifications', ['filter' => 'users']) }}" class="btn btn-outline-warning {{ $currentFilter == 'users' ? 'active' : '' }}">

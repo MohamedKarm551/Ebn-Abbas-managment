@@ -26,44 +26,53 @@ class AdminController extends Controller
         $user = Auth::user(); // جلب المستخدم الحالي
         // *** بداية التعديل: فلترة الإشعارات حسب الدور ***
         $query = Notification::latest(); // نبدأ بالاستعلام الأساسي
-             // شوف لو فيه باراميتر 'filter' جاي في الـ URL
-             $currentFilter = $request->input('filter');
-                // لو فيه فلتر، طبق الشرط بتاعه
-                if ($currentFilter) {
-                    switch ($currentFilter) {
-                        case 'bookings':
-                            // فلتر حسب الكلمات المفتاحية للحجوزات في الرسالة
-                            $query->where(function ($q) {
-                                $q->where('message', 'LIKE', '%حجز%') // كلمة "حجز"
-                                  ->orWhere('message', 'LIKE', '%booking%'); // كلمة "booking"
-                                  // ممكن تضيف كلمات تانية زي "فاتورة", "voucher" لو بتظهر في إشعارات الحجوزات
-                            });
-                            break;
-                        case 'payments':
-                            // فلتر حسب الكلمات المفتاحية للدفعات
-                            $query->where(function ($q) {
-                                $q->where('message', 'LIKE', '%دفعة%') // كلمة "دفعة"
-                                  ->orWhere('message', 'LIKE', '%payment%'); // كلمة "payment"
-                                  // ممكن تضيف "سداد", "تحصيل" ...إلخ
-                            });
-                            break;
-                        case 'availabilities':
-                            // فلتر حسب الكلمات المفتاحية للإتاحات
-                            $query->where(function ($q) {
-                                $q->where('message', 'LIKE', '%إتاحة%') // كلمة "إتاحة"
-                                  ->orWhere('message', 'LIKE', '%availability%') // كلمة "availability"
-                                  ->orWhere('message', 'LIKE', '%allotment%'); // كلمة "allotment"
-                            });
-                            break;
-                        // ممكن تضيف case تانية لأنواع فلاتر تانية لو حبيت
-                        // مثال:
-                        // case 'users':
-                        //     $query->where('message', 'LIKE', '%مستخدم%');
-                        //     break;
-                    }
-                }
-        
-        
+           // استدعاء الفانكشن الأولى (مثلاً حذف إشعارات قديمة)
+    $this->deleteOldLoginNotifications();
+
+        // شوف لو فيه باراميتر 'filter' جاي في الـ URL
+        $currentFilter = $request->input('filter');
+        // لو فيه فلتر، طبق الشرط بتاعه
+        if ($currentFilter) {
+            switch ($currentFilter) {
+                case 'bookings':
+                    // فلتر حسب الكلمات المفتاحية للحجوزات في الرسالة
+                    $query->where(function ($q) {
+                        $q->where('message', 'LIKE', '%حجز%') // كلمة "حجز"
+                            ->orWhere('message', 'LIKE', '%booking%'); // كلمة "booking"
+                        // ممكن تضيف كلمات تانية زي "فاتورة", "voucher" لو بتظهر في إشعارات الحجوزات
+                    });
+                    break;
+                case 'payments':
+                    // فلتر حسب الكلمات المفتاحية للدفعات
+                    $query->where(function ($q) {
+                        $q->where('message', 'LIKE', '%دفعة%') // كلمة "دفعة"
+                            ->orWhere('message', 'LIKE', '%payment%'); // كلمة "payment"
+                        // ممكن تضيف "سداد", "تحصيل" ...إلخ
+                    });
+                    break;
+                case 'availabilities':
+                    // فلتر حسب الكلمات المفتاحية للإتاحات
+                    $query->where(function ($q) {
+                        $q->where('message', 'LIKE', '%إتاحة%') // كلمة "إتاحة"
+                            ->orWhere('message', 'LIKE', '%availability%') // كلمة "availability"
+                            ->orWhere('message', 'LIKE', '%allotment%'); // كلمة "allotment"
+                    });
+                    break;
+                    case 'logins':
+                        $query->where(function ($q) {
+                            $q->where('type', 'LIKE', '%login%')
+                              ->orWhere('type', 'LIKE', '%logout%');
+                        });
+                        break;
+                    // ممكن تضيف case تانية لأنواع فلاتر تانية لو حبيت
+                    // مثال:
+                    // case 'users':
+                    //     $query->where('message', 'LIKE', '%مستخدم%');
+                    //     break;
+            }
+        }
+
+
         if ($user->role === 'employee') {
             // لو المستخدم موظف، جيب إشعاراته هو بس
             $query->where('user_id', $user->id);
@@ -75,7 +84,15 @@ class AdminController extends Controller
 
         return view('admin.notifications', compact('notifications', 'currentFilter'));
     }
-
+    public function deleteOldLoginNotifications()
+    {
+        $deleted = Notification::whereIn('type', ['login', 'logout'])
+            ->where('created_at', '<', now()->subDays(3))
+            ->delete();
+    
+        return redirect()->back()->with('success', "تم حذف $deleted إشعار تسجيل دخول/خروج أقدم من 3أيام.");
+    }
+    
     public function markNotificationRead($id)
     {
         $user = Auth::user();
@@ -87,11 +104,11 @@ class AdminController extends Controller
             $notification->is_read = true;
             $notification->save();
             return redirect()->back()->with('success', 'تم تعليم الإشعار كمقروء');
-        } 
-            // لو مش مسموحله، نرجع برسالة خطأ
-            return redirect()->back()->with('error', 'ليس لديك الصلاحية لتعليم هذا الإشعار كمقروء.');
-    } 
-        
+        }
+        // لو مش مسموحله، نرجع برسالة خطأ
+        return redirect()->back()->with('error', 'ليس لديك الصلاحية لتعليم هذا الإشعار كمقروء.');
+    }
+
     public function markAllNotificationsRead()
     {
         $user = Auth::user();
@@ -494,7 +511,7 @@ class AdminController extends Controller
             $term = '%' . $term . '%'; // بنحط علامات % عشان البحث الجزئي
 
             // بنعرف الشروط بتاعة الحجوزات المؤرشفة (زي ما هي في دالة archivedBookings)
-           
+
             $archiveConditions = function ($query) {
                 $query->where('cost_price', 0)->where('sale_price', 0);
             };
@@ -512,8 +529,8 @@ class AdminController extends Controller
                 // بنطبق شروط الأرشفة على الحجوزات اللي بنبحث فيها
                 $archiveConditions($query);
             })
-            ->where('name', 'LIKE', $term) // بنبحث عن اسم الشركة نفسها
-            ->limit(5)->pluck('name');
+                ->where('name', 'LIKE', $term) // بنبحث عن اسم الشركة نفسها
+                ->limit(5)->pluck('name');
             $suggestions = $suggestions->merge($companySuggestions);
 
             // 3. البحث في أسماء جهات الحجز المرتبطة بالحجوزات المؤرشفة
@@ -521,8 +538,8 @@ class AdminController extends Controller
             $agentSuggestions = Agent::whereHas('bookings', function ($query) use ($archiveConditions) {
                 $archiveConditions($query); // تطبيق الشروط هنا
             })
-            ->where('name', 'LIKE', $term)
-            ->limit(5)->pluck('name');
+                ->where('name', 'LIKE', $term)
+                ->limit(5)->pluck('name');
             $suggestions = $suggestions->merge($agentSuggestions);
 
             // 4. البحث في أسماء الفنادق المرتبطة بالحجوزات المؤرشفة
@@ -530,8 +547,8 @@ class AdminController extends Controller
             $hotelSuggestions = Hotel::whereHas('bookings', function ($query) use ($archiveConditions) {
                 $archiveConditions($query); // تطبيق الشروط هنا
             })
-            ->where('name', 'LIKE', $term)
-            ->limit(5)->pluck('name');
+                ->where('name', 'LIKE', $term)
+                ->limit(5)->pluck('name');
             $suggestions = $suggestions->merge($hotelSuggestions);
 
             // 5. البحث في أسماء الموظفين المرتبطين بالحجوزات المؤرشفة
@@ -539,8 +556,8 @@ class AdminController extends Controller
             $employeeSuggestions = Employee::whereHas('bookings', function ($query) use ($archiveConditions) {
                 $archiveConditions($query); // تطبيق الشروط هنا
             })
-            ->where('name', 'LIKE', $term)
-            ->limit(5)->pluck('name');
+                ->where('name', 'LIKE', $term)
+                ->limit(5)->pluck('name');
             $suggestions = $suggestions->merge($employeeSuggestions);
 
             // *** نهاية التعديل ***
