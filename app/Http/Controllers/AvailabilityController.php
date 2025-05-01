@@ -78,20 +78,20 @@ class AvailabilityController extends Controller
      */
     public function store(Request $request)
     {
-
+        // dd($request->all());
         $validatedData = $request->validate([
             'hotel_id' => 'required|exists:hotels,id',
             'agent_id' => 'required|exists:agents,id', // Assuming agent is required
             'employee_id' => 'required|exists:employees,id', // Validate employee
-            'start_date' => 'required|date_format:d/m/Y', // Use uppercase Y
-            'end_date' => 'required|date_format:d/m/Y|after_or_equal:start_date', // Use uppercase Y
+            'start_date' => 'required|date', // Use uppercase Y
+            'end_date' => 'required|date|after_or_equal:start_date', // Use uppercase Y
             'status' => 'required|in:active,inactive',
             'notes' => 'nullable|string|max:5000', // Added max length
             'room_types' => 'required|array|min:1',
             'room_types.*.room_type_id' => 'required|exists:room_types,id|distinct', // Ensure distinct room types
             'room_types.*.cost_price' => 'required|numeric|min:0',
             'room_types.*.sale_price' => 'required|numeric|min:0|gte:room_types.*.cost_price', // Sale price >= cost price
-            'room_types.*.allotment' => 'nullable|integer|min:0',
+            'room_types.*.allotment' => 'nullable|integer|min:1',
         ], [
             'hotel_id.required' => 'يجب اختيار الفندق.',
             'agent_id.required' => 'يجب اختيار جهة الحجز.',
@@ -119,8 +119,9 @@ class AvailabilityController extends Controller
 
         // **Crucial: Convert date format before saving**
         try {
-            $dbStartDate = Carbon::createFromFormat('d/m/Y', $validatedData['start_date'])->format('Y-m-d'); // Use uppercase Y
-            $dbEndDate = Carbon::createFromFormat('d/m/Y', $validatedData['end_date'])->format('Y-m-d');     // Use uppercase Y
+            // دعم الصيغتين: d/m/Y و Y-m-d
+            $dbStartDate = self::parseDateFlexible($validatedData['start_date']);
+            $dbEndDate = self::parseDateFlexible($validatedData['end_date']);
         } catch (\Exception $e) {
             // This should ideally not happen due to validation, but handle just in case
             throw ValidationException::withMessages([
@@ -168,7 +169,19 @@ class AvailabilityController extends Controller
 
         return redirect()->route('admin.availabilities.index')->with('success', 'تم إضافة الإتاحة وأنواع الغرف بنجاح!');
     }
-
+    private static function parseDateFlexible($date)
+    {
+        // إذا كان التاريخ بالفعل بصيغة Y-m-d (مثلاً 2025-05-01)
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return $date;
+        }
+        // إذا كان التاريخ بصيغة d/m/Y (مثلاً 01/05/2025)
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+            return Carbon::createFromFormat('d/m/Y', $date)->format('Y-m-d');
+        }
+        // حاول تحويله تلقائياً (قد يرمي استثناء)
+        return Carbon::parse($date)->format('Y-m-d');
+    }
 
     /**
      * Display the specified resource.
@@ -205,12 +218,14 @@ class AvailabilityController extends Controller
      */
     public function update(Request $request, Availability $availability)
     {
+        // احفظ القيم الأصلية قبل التحديث
+$originalData = $availability->getOriginal();
         $validatedData = $request->validate([
             'hotel_id' => 'required|exists:hotels,id',
             'agent_id' => 'required|exists:agents,id',
             'employee_id' => 'required|exists:employees,id',
-            'start_date' => 'required|date_format:d/m/Y',
-            'end_date' => 'required|date_format:d/m/Y|after_or_equal:start_date',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
             // Allow 'expired' only if it's already the status
             'status' => 'required|in:active,inactive' . ($availability->status === 'expired' ? ',expired' : ''),
             'notes' => 'nullable|string|max:5000',
@@ -220,7 +235,7 @@ class AvailabilityController extends Controller
             'room_types.*.room_type_id' => 'required|exists:room_types,id|distinct', // Ensure distinct
             'room_types.*.cost_price' => 'required|numeric|min:0',
             'room_types.*.sale_price' => 'required|numeric|min:0|gte:room_types.*.cost_price',
-            'room_types.*.allotment' => 'nullable|integer|min:0',
+            'room_types.*.allotment' => 'nullable|integer|min:1',
         ], [
             // Add specific messages similar to store method
             'hotel_id.required' => 'يجب اختيار الفندق.',
@@ -249,8 +264,8 @@ class AvailabilityController extends Controller
 
         // **Crucial: Convert date format before saving**
         try {
-            $dbStartDate = Carbon::createFromFormat('d/m/Y', $validatedData['start_date'])->format('Y-m-d'); // Use uppercase Y
-            $dbEndDate = Carbon::createFromFormat('d/m/Y', $validatedData['end_date'])->format('Y-m-d');     // Use uppercase Y
+            $dbStartDate = self::parseDateFlexible($validatedData['start_date']);
+            $dbEndDate = self::parseDateFlexible($validatedData['end_date']);
         } catch (\Exception $e) {
             throw ValidationException::withMessages([
                 'start_date' => 'حدث خطأ غير متوقع في تحويل صيغة التاريخ.',
@@ -264,11 +279,27 @@ class AvailabilityController extends Controller
         $availabilityData['end_date'] = $dbEndDate;
 
         // Prevent changing status from 'expired'
-        if ($availability->status === 'expired' && $availabilityData['status'] !== 'expired') {
-            throw ValidationException::withMessages([
-                'status' => 'لا يمكن تغيير حالة الإتاحة المنتهية.',
-            ]);
+        // تحويل التواريخ أولاً حتى نقدر نقارنها
+        $startDate = self::parseDateFlexible($request->input('start_date'));
+        $endDate = self::parseDateFlexible($request->input('end_date'));
+
+        // تحقق من الحالة السابقة وهل يمكن تغييرها
+        $statusRule = 'required|in:active,inactive';
+        $messages = [
+            'status.required' => 'حالة الإتاحة مطلوبة.',
+        ];
+
+        // إذا كانت الحالة الحالية "expired" لكن تاريخ الانتهاء الجديد في المستقبل، اسمح بالتغيير
+        if ($availability->status === 'expired' && Carbon::parse($endDate)->gt(Carbon::today())) {
+            // لا تضف "expired" للـ in: rule، فقط active/inactive
+            // لا رسالة منع
+        } elseif ($availability->status === 'expired') {
+            // إذا ظلت منتهية (تاريخ الانتهاء في الماضي)، امنع التغيير
+            $statusRule .= ',expired';
+            $messages['status.in'] = 'لا يمكن تغيير حالة الإتاحة المنتهية إلا إذا تم تعديل تاريخ الانتهاء ليكون في المستقبل.';
         }
+
+
 
         // Update availability main data
         $availability->update($availabilityData);
@@ -320,11 +351,47 @@ class AvailabilityController extends Controller
         // --- End Sync ---
 
         // Create Notification
+        // بعد تحديث بيانات الإتاحة
+        // قاموس الحقول بالعربي
+        $fieldNames = [
+            'start_date' => 'تاريخ البداية',
+            'end_date' => 'تاريخ النهاية',
+            'status' => 'الحالة',
+            'notes' => 'الملاحظات',
+            'hotel_id' => 'الفندق',
+            'agent_id' => 'جهة الحجز',
+            'employee_id' => 'الموظف المسؤول',
+        ];
+
+        // دالة لتنسيق التاريخ والوقت بالعربي
+        function formatDateTimeArabic($dateTime)
+        {
+            return \Carbon\Carbon::parse($dateTime)->translatedFormat('d/m/Y');
+        }
+
+        // بعد تحديث بيانات الإتاحة
+        $changedFields = [];
+foreach ($availabilityData as $key => $newValue) {
+    if (($originalData[$key] ?? null) != $newValue) {
+        $fieldLabel = $fieldNames[$key] ?? $key;
+        if (in_array($key, ['start_date', 'end_date'])) {
+            $old = formatDateTimeArabic($originalData[$key] ?? '');
+            $new = formatDateTimeArabic($newValue);
+        } else {
+            $old = $originalData[$key] ?? '';
+            $new = $newValue;
+        }
+        $changedFields[] = "- {$fieldLabel}: من \"{$old} \" إلى \"{$new} \"";
+    } }
+            $userName = Auth::user()->name ?? 'مستخدم غير معروف';
+        $details = !empty($changedFields) ? implode("\n", $changedFields) : 'لم يتم تغيير أي بيانات رئيسية.';
+
         Notification::create([
             'user_id' => Auth::id(),
-            'message' => "تعديل إتاحة للفندق: {$availability->hotel->name} (ID: {$availability->id})",
+            'message' => "تم تعديل الإتاحة رقم ({$availability->id}) الخاصة بفندق \"{$availability->hotel->name}\" بواسطة  \"{$userName}\".\n{$details}",
             'type' => 'تعديل إتاحة',
         ]);
+
 
         return redirect()->route('admin.availabilities.index')->with('success', 'تم تحديث الإتاحة وأنواع الغرف بنجاح!');
     }

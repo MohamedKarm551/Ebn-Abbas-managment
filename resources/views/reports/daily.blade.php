@@ -290,7 +290,7 @@
                                                 تسجيل دفعة
                                             </button>
                                             <a href="{{ route('reports.company.payments', $company->id) }}"
-                                                class="btn btn-primary btn-sm">عرض السجل</a>
+                                                class="btn btn-primary btn-sm">كشف حساب </a>
                                         </div>
                                     </td>
                                 </tr>
@@ -313,7 +313,7 @@
         <!-- جدول جهات الحجز -->
         <div class="  mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>حسابات اللي علينا إلى جهات الحجز</h3>
+                <h3>حساب المستحق إلى جهات الحجز</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
             </div>
             <div class="card-body">
@@ -365,7 +365,7 @@
                                                 تسجيل دفعة
                                             </button>
                                             <a href="{{ route('reports.agent.payments', $agent->id) }}"
-                                                class="btn btn-primary btn-sm">عرض السجل</a>
+                                                class="btn btn-primary btn-sm">كشف حساب</a>
                                         </div>
                                     </td>
                                 </tr>

@@ -164,6 +164,9 @@
             }
             // حساب الـ colspan الأساسي (بدون الأعمدة المخفية)
             $baseColspan = 8; // م + العميل +جهة الحجز +  الشركة + الفندق + الدخول + الخروج + غرف
+            if(auth()->user()->role === 'Company') {
+                $baseColspan = 7; // جهة الحجز + المستحق للفندق + الملاحظات + الإجراءات
+            }
             $finalColspan = $baseColspan;
             $totalColsAfterAmount = 1; // الموظف المسؤول
         @endphp

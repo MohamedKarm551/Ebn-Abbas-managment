@@ -66,8 +66,9 @@
         <div class="col-md-4">
             <label for="start_date" class="form-label">تاريخ البداية <span class="text-danger">*</span></label>
             <input type="text" name="start_date" id="start_date"
-                class="form-control datepicker @error('start_date') is-invalid @enderror"
-                value="{{ old('start_date', $availability?->start_date?->format('d/m/Y')) }}" required
+            class="form-control datepicker @error('start_date') is-invalid @enderror"
+            value="{{ old('start_date', $availability?->start_date?->format('Y-m-d')) }}" required data-date-format="dd/mm/yyyy"
+
                 placeholder="dd/mm/yyyy" autocomplete="off"> {{-- Use text type for datepicker --}}
             @error('start_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
@@ -75,8 +76,8 @@
         <div class="col-md-4">
             <label for="end_date" class="form-label">تاريخ النهاية <span class="text-danger">*</span></label>
             <input type="text" name="end_date" id="end_date"
-                class="form-control datepicker @error('end_date') is-invalid @enderror"
-                value="{{ old('end_date', $availability?->end_date?->format('d/m/Y')) }}" required
+            class="form-control datepicker @error('end_date') is-invalid @enderror"
+            value="{{ old('end_date', $availability?->end_date?->format('Y-m-d')) }}" required data-date-format="dd/mm/yyyy"
                 placeholder="dd/mm/yyyy" autocomplete="off"> {{-- Use text type for datepicker --}}
             @error('end_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>

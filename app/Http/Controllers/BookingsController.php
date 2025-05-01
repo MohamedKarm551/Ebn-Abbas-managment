@@ -414,6 +414,7 @@ class BookingsController extends Controller
 
             public function store(Request $request)
             {
+                // dd($request->all());
                 Log::info('بدء عملية حفظ حجز جديد', $request->except(['_token', 'password', 'password_confirmation'])); // تسجيل بيانات الطلب
         
                 $originalRoomTypeInfo = null;
