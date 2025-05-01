@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AvailabilityController;
-use App\Http\Controllers\RoomTypeController; // تأكد من وجود هذا الكلاس
+use App\Http\Controllers\RoomTypeController; 
 use App\Http\Controllers\CompanyAvailabilityController;
 
 Route::middleware(['auth'])->group(function () {
@@ -59,6 +59,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/hotels/{id}', [HotelController::class, 'update'])->name('updateHotel'); // مسار التحديث
         // مسار صفحة الأرشيف:
         Route::get('/archived-bookings', [AdminController::class, 'archivedBookings'])->name('archived_bookings');
+        Route::get('/archived-bookings/autocomplete', [AdminController::class, 'archivedAutocomplete'])->name('archived_bookings.autocomplete');     
+
 
         Route::get('/archived-bookings/export', [AdminController::class, 'exportArchivedBookings'])->name('archived_bookings.export'); // الاسم النهائي: admin.archived_bookings.export
         // إدارة أنواع الغرف
@@ -166,12 +168,18 @@ Route::get('/', function () {
 });
 
 // مش راضي يشتغل على الهوستنجر عشان هما لسه لم يحدثوا الكومبوسر
-// Auth::routes(); 
+ Auth::routes(); 
 //  Route::get('/login', function () {
 //     return view('welcome');
 // })->name('login');
 // حل يدوي
 // كان في هنا مشكلة لو راح على راوتر اسه لوجين مش هيلاقيه عملته يدوي عشان يويدني صح
+// Route::get('/register', function(){
+//     // return view('auth.register');
+//     return view('welcome');
+// })->name('register');
+
+
 Route::get('/login', function () {
     return redirect('/'); // أو أي صفحة أنت عايزها
 })->name('login');

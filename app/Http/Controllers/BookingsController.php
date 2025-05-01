@@ -1011,11 +1011,11 @@ class BookingsController extends Controller
         $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $validatedData['days'];
         // تسجيل التعديلات
         foreach ($validatedData as $field => $newValue) {
-            $oldValue = $booking->$field;
+            $oldValue = $booking->getOriginal($field); // <-- استخدم getOriginal
 
-            // تجاهل الحقول المحسوبة ديناميكيًا
+             // تجاهل الحقول المحسوبة ديناميكيًا مهم 
 
-            if (in_array($field, ['amount_due_to_hotel', 'amount_due_from_company'])) {
+            if (in_array($field, ['amount_due_to_hotel', 'amount_due_from_company','days'])) {
                 continue;
             }
             //لو الحقل اللي تعدل هو التاريخ ابقا قارنه بعد التنسيق لانه كان بيعتبر كل مرة تغيير في التاريخ حتى لو انا معملتش تعديل
@@ -1036,8 +1036,8 @@ class BookingsController extends Controller
                     \App\Models\EditLog::create([
                         'booking_id' => $booking->id,
                         'field' => $field,
-                        'old_value' => $oldValue,
-                        'new_value' => $newValue,
+                        'old_value' => $oldValue ?? '', // <-- لو null يبقى نص فاضي
+                        'new_value' => $newValue ?? '', // <-- لو null يبقى نص فاضي
                     ]);
                 }
             }

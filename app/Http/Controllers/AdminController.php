@@ -485,6 +485,76 @@ class AdminController extends Controller
 
         ]);
     }
+    public function archivedAutocomplete(Request $request)
+    {
+        $term = $request->input('term'); // بناخد الكلمة اللي المستخدم كتبها
+        $suggestions = collect(); // بنجهز مصفوفة فاضية للاقتراحات
+
+        if ($term) { // لو المستخدم كتب حاجة
+            $term = '%' . $term . '%'; // بنحط علامات % عشان البحث الجزئي
+
+            // بنعرف الشروط بتاعة الحجوزات المؤرشفة (زي ما هي في دالة archivedBookings)
+           
+            $archiveConditions = function ($query) {
+                $query->where('cost_price', 0)->where('sale_price', 0);
+            };
+
+            // 1. البحث في اسم العميل في الحجوزات المؤرشفة (ده سليم)
+            $clientSuggestions = Booking::where($archiveConditions) // تطبيق شروط الأرشفة هنا
+                ->where('client_name', 'LIKE', $term)
+                ->distinct()->limit(5)->pluck('client_name');
+            $suggestions = $suggestions->merge($clientSuggestions);
+
+            // *** بداية التعديل: تطبيق الشروط جوه whereHas ***
+
+            // 2. البحث في أسماء الشركات المرتبطة بالحجوزات المؤرشفة
+            $companySuggestions = Company::whereHas('bookings', function ($query) use ($archiveConditions) {
+                // بنطبق شروط الأرشفة على الحجوزات اللي بنبحث فيها
+                $archiveConditions($query);
+            })
+            ->where('name', 'LIKE', $term) // بنبحث عن اسم الشركة نفسها
+            ->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($companySuggestions);
+
+            // 3. البحث في أسماء جهات الحجز المرتبطة بالحجوزات المؤرشفة
+            // السطر 511 (تقريباً)
+            $agentSuggestions = Agent::whereHas('bookings', function ($query) use ($archiveConditions) {
+                $archiveConditions($query); // تطبيق الشروط هنا
+            })
+            ->where('name', 'LIKE', $term)
+            ->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($agentSuggestions);
+
+            // 4. البحث في أسماء الفنادق المرتبطة بالحجوزات المؤرشفة
+            // السطر 516 (تقريباً)
+            $hotelSuggestions = Hotel::whereHas('bookings', function ($query) use ($archiveConditions) {
+                $archiveConditions($query); // تطبيق الشروط هنا
+            })
+            ->where('name', 'LIKE', $term)
+            ->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($hotelSuggestions);
+
+            // 5. البحث في أسماء الموظفين المرتبطين بالحجوزات المؤرشفة
+            // السطر 521 (تقريباً)
+            $employeeSuggestions = Employee::whereHas('bookings', function ($query) use ($archiveConditions) {
+                $archiveConditions($query); // تطبيق الشروط هنا
+            })
+            ->where('name', 'LIKE', $term)
+            ->limit(5)->pluck('name');
+            $suggestions = $suggestions->merge($employeeSuggestions);
+
+            // *** نهاية التعديل ***
+
+            // بنشيل التكرار وناخد أول 10 اقتراحات بس
+            $suggestions = $suggestions->unique()->take(10)->values();
+        }
+
+        // بنرجع الاقتراحات كـ JSON عشان الجافاسكريبت يفهمها
+        return response()->json($suggestions);
+    }
+
+
+
     // ... (use Maatwebsite\Excel\Facades\Excel; use App\Exports\ArchivedBookingsExport; use Illuminate\Http\Request;)
 
     public function exportArchivedBookings(Request $request)

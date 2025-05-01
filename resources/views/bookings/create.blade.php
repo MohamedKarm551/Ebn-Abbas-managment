@@ -193,13 +193,16 @@
                 {{-- *** التأكد من type="text" وإضافة الشرط لـ onkeydown *** --}}
                 <input type="text" class="form-control datepicker @error('check_in') is-invalid @enderror"
                     id="check_in" name="check_in" value="{{ old('check_in', $bookingData['check_in'] ?? '') }}"
-                    {{-- min/max attributes --}}
-                    @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_start_date'])) min="{{ $bookingData['availability_start_date'] }}"
-        @elseif (!auth()->user() || strtolower(auth()->user()->role) !== 'admin')
-            min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}" @endif
+                    {{-- min/max attributes --}} {{-- *** تحديد أقل تاريخ مسموح به *** --}}
+                    @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_start_date'])) min="{{ $bookingData['availability_start_date'] }}" {{-- لو من إتاحة، استخدم تاريخ بدايتها --}}
+           @elseif (!Auth::user() || strtolower(Auth::user()->role) !== 'admin')
+               min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}" {{-- لو مش أدمن ومش من إتاحة، استخدم تاريخ اليوم --}} @endif
+                    {{-- *** تحديد أقصى تاريخ مسموح به (لو من إتاحة) *** --}}
                     @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_end_date'])) max="{{ $bookingData['availability_end_date'] }}" @endif
-                    {{-- *** إضافة الشرط هنا: منع الكتابة لغير الأدمن *** --}} @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin') onkeydown="return false" @endif required
-                    placeholder="YYYY-MM-DD">
+                    {{-- *** منع الكتابة اليدوية لغير الأدمن *** --}}
+                    @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin') onkeydown="return false;" {{-- يمنع أي ضغطة زر --}}
+               style="background-color: #e9ecef; cursor: pointer;" {{-- تغيير شكل الحقل ليوضح إنه للقراءة فقط --}} @endif
+                    required placeholder="YYYY-MM-DD">
                 @error('check_in')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
@@ -211,16 +214,28 @@
                 {{-- *** التأكد من type="text" وإضافة الشرط لـ onkeydown *** --}}
                 <input type="text" class="form-control datepicker @error('check_out') is-invalid @enderror"
                     id="check_out" name="check_out" value="{{ old('check_out', $bookingData['check_out'] ?? '') }}"
-                    {{-- min/max attributes --}}
-                    @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_start_date'])) min="{{ $bookingData['availability_start_date'] }}" @endif
-                    @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_end_date'])) max="{{ $bookingData['availability_end_date'] }}" @endif
-                    {{-- *** إضافة الشرط هنا: منع الكتابة لغير الأدمن *** --}} @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin') onkeydown="return false" @endif required
-                    placeholder="YYYY-MM-DD">
-                @error('check_out')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-
+           {{-- *** تحديد أقل تاريخ مسموح به *** --}}
+           {{-- تاريخ الخروج لازم يكون بعد تاريخ الدخول، لكن ممكن نحدد أقل تاريخ مسموح بيه بشكل عام --}}
+           @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_start_date']))
+               min="{{ $bookingData['availability_start_date'] }}" {{-- لو من إتاحة، استخدم تاريخ بدايتها --}}
+           @elseif (!auth()->user() || strtolower(auth()->user()->role) !== 'admin')
+               min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}" {{-- لو مش أدمن ومش من إتاحة، استخدم تاريخ اليوم --}}
+           @endif
+           {{-- *** تحديد أقصى تاريخ مسموح به (لو من إتاحة) *** --}}
+           @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_end_date']))
+               max="{{ $bookingData['availability_end_date'] }}"
+           @endif
+           {{-- *** منع الكتابة اليدوية لغير الأدمن *** --}}
+           @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin')
+               onkeydown="return false;"
+               style="background-color: #e9ecef; cursor: pointer;"
+           @endif
+           required
+           placeholder="YYYY-MM-DD">
+    @error('check_out')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
             {{-- الموظف المسؤول --}}
             <div class="col-md-4">
                 <label for="employee_id" class="form-label">الموظف المسؤول <span class="text-danger">*</span></label>
@@ -284,9 +299,9 @@
                 dateFormat: 'yy-mm-dd', // مهم عشان يطابق صيغة Y-m-d اللي بنستخدمها
                 changeMonth: true, // السماح بتغيير الشهر
                 changeYear: true, // السماح بتغيير السنة
-                // ممكن تضيف minDate و maxDate هنا لو حبيت بدل الـ attributes في الـ HTML
-                // minDate: $('#check_in').attr('min'),
-                // maxDate: $('#check_in').attr('max')
+                // مهم عشان نحدد تاريخ البداية والنهاية
+                minDate: $('#check_in').attr('min'),
+                maxDate: $('#check_in').attr('max')
                 // ... أي خيارات تانية محتاجها
             });
             // *** نهاية التعديل ***

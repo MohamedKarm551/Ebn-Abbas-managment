@@ -31,7 +31,7 @@
 
 </head>
 
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100" data-role="{{ auth()->user()->role ?? 'guest' }}">
 
     @include('partials.navbar')
 
@@ -66,13 +66,61 @@
             // Initialize DatePicker
             try {
                 if (typeof $.fn.datepicker === 'function') {
-                    $(".datepicker").datepicker({
-                        dateFormat: "dd/mm/yy", // Match validation format d/m/y
-                        changeMonth: true,
-                        changeYear: true,
-                        showButtonPanel: true
+                    const userRole = $('body').data('role');
+                    const isAdmin = userRole && userRole.toLowerCase() === 'admin';
+                    const today = new Date(); // تاريخ اليوم
+                    today.setHours(0, 0, 0, 0); // ضبط الوقت لـ 00:00:00 للمقارنة الصحيحة
+
+                    $(".datepicker").each(function() {
+                        const inputField = $(this);
+                        const minAttr = inputField.attr('min');
+                        const maxAttr = inputField.attr('max');
+                        let minDateOption = null;
+
+                        if (minAttr) {
+                            minDateOption = minAttr;
+                        } else if (!isAdmin) {
+                            minDateOption = 0; // اليوم
+                        }
+
+                        inputField.datepicker({
+                            dateFormat: "yy-mm-dd",
+                            changeMonth: true,
+                            changeYear: true,
+                            showButtonPanel: true,
+                            minDate: minDateOption,
+                            maxDate: maxAttr || null,
+                            // *** بداية الإضافة: دالة onSelect ***
+                            onSelect: function(dateText, inst) {
+                                // التحقق فقط لو المستخدم مش أدمن
+                                if (!isAdmin) {
+                                    try {
+                                        // تحويل النص المختار إلى تاريخ للمقارنة
+                                        const selectedDate = $.datepicker.parseDate("yy-mm-dd", dateText);
+                                        selectedDate.setHours(0, 0, 0, 0); // ضبط الوقت للمقارنة
+
+                                        // المقارنة مع تاريخ اليوم
+                                        if (selectedDate < today) {
+                                            // لو التاريخ المختار قبل النهارده
+                                            console.warn("تاريخ قديم تم اختياره من مستخدم غير أدمن:", dateText);
+                                            $(this).val(''); // *** مسح قيمة الحقل فوراً ***
+                                            // (اختياري) ممكن تظهر رسالة للمستخدم
+                                            // alert('لا يمكنك اختيار تاريخ قبل اليوم.');
+                                        }
+                                    } catch (e) {
+                                        console.error("خطأ في تحليل التاريخ المختار:", dateText, e);
+                                        // لو حصل خطأ في تحليل التاريخ (غير متوقع)، امسح الحقل احتياطي
+                                        $(this).val('');
+                                    }
+                                }
+                                // لو المستخدم أدمن، مش هنعمل حاجة وهنسيب التاريخ زي ما هو
+                            }
+                            // *** نهاية الإضافة: دالة onSelect ***
+                        });
                     });
+                    // *** نهاية التعديل ***
                 } else {
+
                     console.warn("jQuery UI Datepicker not loaded or initialized correctly.");
                 }
             } catch (e) {
