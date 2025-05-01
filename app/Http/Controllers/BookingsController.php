@@ -118,7 +118,7 @@ class BookingsController extends Controller
         // بنحاول نقرا التواريخ لو موجودة
         if ($startDateFilled) {
             try {
-                $startDate = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+                $startDate = Carbon::createFromFormat('Y-m-d', $request->input('start_date'))->startOfDay();
                 Log::info('[فلتر التواريخ] تاريخ البداية المطلوب: ' . $startDate->toDateString());
             } catch (\Exception $e) {
                 Log::error('[فلتر التواريخ] تنسيق تاريخ البداية غير صحيح: ' . $request->input('start_date') . ' - ' . $e->getMessage());
@@ -127,7 +127,7 @@ class BookingsController extends Controller
         }
         if ($endDateFilled) {
             try {
-                $endDate = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay(); // بنستخدم endOfDay هنا عشان يشمل اليوم كله
+                $endDate = Carbon::createFromFormat('Y-m-d', $request->input('end_date'))->endOfDay(); // بنستخدم endOfDay هنا عشان يشمل اليوم كله
                 Log::info('[فلتر التواريخ] تاريخ النهاية المطلوب: ' . $endDate->toDateString());
             } catch (\Exception $e) {
                 Log::error('[فلتر التواريخ] تنسيق تاريخ النهاية غير صحيح: ' . $request->input('end_date') . ' - ' . $e->getMessage());

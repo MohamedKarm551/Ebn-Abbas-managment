@@ -403,14 +403,14 @@ class AdminController extends Controller
 
         if ($startDateFilled) {
             try {
-                $startDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+                $startDate = \Carbon\Carbon::createFromFormat('Y-m-d', $request->input('start_date'))->startOfDay();
             } catch (\Exception $e) {
                 $startDateFilled = false;
             }
         }
         if ($endDateFilled) {
             try {
-                $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
+                $endDate = \Carbon\Carbon::createFromFormat('Y-m-d', $request->input('end_date'))->endOfDay();
             } catch (\Exception $e) {
                 $endDateFilled = false;
             }
