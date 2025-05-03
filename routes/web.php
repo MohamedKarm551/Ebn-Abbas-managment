@@ -63,7 +63,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/archived-bookings', [AdminController::class, 'archivedBookings'])->name('archived_bookings');
         Route::get('/archived-bookings/autocomplete', [AdminController::class, 'archivedAutocomplete'])->name('archived_bookings.autocomplete');
 
-
+        // Download archived bookings
         Route::get('/archived-bookings/export', [AdminController::class, 'exportArchivedBookings'])->name('archived_bookings.export'); // الاسم النهائي: admin.archived_bookings.export
         // إدارة أنواع الغرف
         Route::resource('room_types', RoomTypeController::class); // <-- أضف هذا

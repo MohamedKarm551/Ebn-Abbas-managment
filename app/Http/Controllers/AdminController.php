@@ -15,7 +15,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use App\Exports\ArchivedBookingsExport;
+use Carbon\Carbon;
+
 
 
 class AdminController extends Controller
@@ -574,12 +579,81 @@ class AdminController extends Controller
 
     // ... (use Maatwebsite\Excel\Facades\Excel; use App\Exports\ArchivedBookingsExport; use Illuminate\Http\Request;)
 
-    public function exportArchivedBookings(Request $request)
+    public function exportArchivedBookings( )
     {
-        // اسم الملف الذي سيتم تحميله
-        $fileName = 'archived_bookings_' . now()->format('Ymd_His') . '.xlsx';
+        $fileName = 'all_archived_bookings_' . now()->format('Ymd_His') . '.xlsx';
 
-        // استخدم الـ Export class مع تمرير الـ request الحالي للحفاظ على الفلاتر
-        return Excel::download(new ArchivedBookingsExport($request), $fileName);
+        // 1. جلب كل الحجوزات المؤرشفة
+        $archivedBookings = \App\Models\Booking::with(['company', 'agent', 'hotel', 'employee'])
+            ->where('cost_price', 0)
+            ->where('sale_price', 0)
+            ->orderBy('created_at', 'desc')
+            ->get();
+    
+        // 2. رؤوس الأعمدة
+        $headings = [
+            'م',
+            'العميل',
+            'الشركة',
+            'جهة حجز',
+            'الفندق',
+            'الدخول',
+            'الخروج',
+            'غرف',
+            'المستحق للفندق',
+            'مطلوب من الشركة',
+            'الموظف المسؤول',
+            'الملاحظات',
+            'تاريخ الإنشاء',
+        ];
+    
+        // 3. Anonymous Export Class زي اللي في BookingsController
+        return Excel::download(new class($archivedBookings, $headings) implements FromCollection, WithHeadings, WithMapping
+        {
+            protected $bookings;
+            protected $headings;
+            protected static $index = 0;
+    
+            public function __construct($bookings, $headings)
+            {
+                $this->bookings = $bookings;
+                $this->headings = $headings;
+                self::$index = 0; // Reset the index for each export
+            }
+    
+            public function collection()
+            {
+                // هنا بنرجع مجموعة الحجوزات المؤرشفة
+                return $this->bookings;
+            }
+    
+            public function headings(): array
+            {
+
+                return $this->headings;
+            }
+    
+            public function map($booking): array
+            {
+                // هنا بنرجع البيانات لكل حجز
+                self::$index++;
+                return [
+                    self::$index,
+                    $booking->client_name,
+                    $booking->company->name ?? '-',
+                    $booking->agent->name ?? '-',
+                    $booking->hotel->name ?? '-',
+                    $booking->check_in ? Carbon::parse($booking->check_in)->format('d/m/Y') : '-',
+                    $booking->check_out ? Carbon::parse($booking->check_out)->format('d/m/Y') : '-',
+                    $booking->rooms ?? '-',
+                    $booking->amount_due_to_hotel ?? '0',
+                    $booking->amount_due_from_company ?? '0',
+                    $booking->employee->name ?? '-',
+                    $booking->notes ?? '-',
+                    $booking->created_at ? $booking->created_at->format('Y-m-d H:i') : '-',
+                ];
+            }
+        }, $fileName);
+    
     }
 }
