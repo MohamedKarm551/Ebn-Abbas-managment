@@ -349,6 +349,9 @@
     </style>
 
     <script>
+          // تضمين ملف preventClick.js
+          $.getScript("{{ asset('js/preventClick.js') }}");
+
         document.addEventListener('DOMContentLoaded', function() {
             const copyButton = document.getElementById('copyBookingDetails');
             if (copyButton) {

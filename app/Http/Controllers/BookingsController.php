@@ -364,10 +364,21 @@ class BookingsController extends Controller
                 // *** بداية التعديل: جلب البيانات من الداتابيز بناءً على الـ ID ***
                 if ($request->has('availability_room_type_id')) {
                     $availabilityRoomTypeId = $request->input('availability_room_type_id');
-                    $roomTypeInfo = AvailabilityRoomType::with(['availability.hotel', 'availability.agent', 'roomType', 'availability.employee']) // تحميل العلاقات اللازمة
-                                        ->find($availabilityRoomTypeId);
-        
+                    $roomTypeInfo = AvailabilityRoomType::with(['availability.hotel', 'availability.agent', 'roomType', 'availability.employee'])
+                        ->find($availabilityRoomTypeId);
+                
+                        // --- هنا نتحقق من صلاحية الإتاحة ---
+
                     if ($roomTypeInfo && $roomTypeInfo->availability) {
+                        if (Auth::user()->role === 'Company') {
+                            // لو الإتاحة دي نشطة اظهرا 
+                            if ($roomTypeInfo->availability->status !== 'active') {
+                                // لو مش من حقه يشوفها، رجعه لصفحة الإتاحات مع رسالة خطأ
+                                return redirect()->route('company.availabilities.index')
+                                    ->with('error', 'غير مسموح لك بالوصول لهذه الإتاحة.');
+                            }
+                        }
+                
                         $isBookingFromAvailability = true;
                         $availability = $roomTypeInfo->availability;
         
@@ -393,12 +404,12 @@ class BookingsController extends Controller
                         ];
                         Log::info('بيانات الحجز المبدئية من الإتاحة:', $bookingData); // للتأكد
                     } else {
-                        Log::warning('لم يتم العثور على AvailabilityRoomType أو الإتاحة المرتبطة بالـ ID: ' . $availabilityRoomTypeId);
-                        // ممكن ترجع لصفحة الإتاحات مع رسالة خطأ لو حبيت
-                        // return redirect()->route('company.availabilities.index')->with('error', 'بيانات الإتاحة المطلوبة غير صحيحة.');
+                        // لو الإتاحة مش موجودة أصلاً
+                        return redirect()->route('company.availabilities.index')
+                            ->with('error', 'بيانات الإتاحة المطلوبة غير صحيحة.');
                     }
                 }
-                // *** نهاية التعديل ***
+                
         
                 return view('bookings.create', compact(
                     'companies',
@@ -549,32 +560,23 @@ class BookingsController extends Controller
                     $requestedCheckIn = Carbon::parse($validatedData['check_in']);
                     $requestedCheckOut = Carbon::parse($validatedData['check_out']);
         
-                    $currentlyBookedRooms = Booking::where('availability_room_type_id', $originalRoomTypeInfo->id)
-                        // ->where('status', '!=', 'cancelled') // يمكنك استبعاد الحجوزات الملغاة إذا أردت
-                        ->where(function ($query) use ($requestedCheckIn, $requestedCheckOut) {
-                            // شرط التداخل: الحجز يبدأ قبل نهاية الفترة المطلوبة وينتهي بعد بداية الفترة المطلوبة
-                            $query->where('check_in', '<', $requestedCheckOut)
-                                  ->where('check_out', '>', $requestedCheckIn);
-                        })
-                        ->sum('rooms');
-        
+                 
+                    // التحقق الصحيح لو الـ allotment بيعبر عن المتاح الحالي فقط
                     Log::info("التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}", [
-                        'Allotment الأصلي' => $allotment,
-                        'المحجوز حالياً (متداخل)' => $currentlyBookedRooms,
+                        'Allotment المتاح حالياً' => $allotment,
                         'المطلوب جديد' => $requestedRooms
                     ]);
-        
-                    // المقارنة النهائية: هل إجمالي المحجوز + المطلوب يتجاوز الـ Allotment؟
-                    if (($currentlyBookedRooms + $requestedRooms) > $allotment) {
-                        $availableNow = max(0, $allotment - $currentlyBookedRooms); // المتاح فعلياً الآن
-                        Log::warning("فشل التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}. المطلوب: {$requestedRooms}, المتاح فعلياً: {$availableNow}");
+                    
+                    if ($requestedRooms > $allotment) {
+                        Log::warning("فشل التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}. المطلوب: {$requestedRooms}, المتاح حالياً: {$allotment}");
                         throw ValidationException::withMessages([
-                            'rooms' => "عدد الغرف المطلوب ({$requestedRooms}) يتجاوز العدد المتاح لهذه الفترة ({$availableNow} غرف متاحة).",
+                            'rooms' => "عدد الغرف المطلوب ({$requestedRooms}) يتجاوز العدد المتاح حالياً ({$allotment} غرف متاحة).",
                         ]);
                     }
-                    Log::info("نجح التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}.");
+                    Log::info("نجح التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}.");        
+                } else {
+                    Log::info("الحجز ليس من إتاحة، لا حاجة للتحقق من الـ Allotment.");
                 }
-        
                 // ================================================================
                 // 5. حساب القيم الإضافية (الأيام والمبالغ)
                 // ================================================================
@@ -670,10 +672,10 @@ class BookingsController extends Controller
                             Log::info("تم تحديث allotment للـ AvailabilityRoomType ID: {$currentRoomTypeInfo->id} إلى {$newAllotment} للحجز ID: {$booking->id}");
         
                             // (اختياري) يمكنك تحديث حالة الإتاحة الأم إذا أصبح الـ Allotment صفراً
-                            // if ($newAllotment == 0) {
-                            //     $currentRoomTypeInfo->availability()->lockForUpdate()->update(['status' => 'booked']); // أو أي حالة مناسبة
-                            //     Log::info("تم تحديث حالة الإتاحة الأم ID: {$currentRoomTypeInfo->availability_id} إلى booked.");
-                            // }
+                             if ($newAllotment == 0) {
+                                $currentRoomTypeInfo->availability()->lockForUpdate()->update(['status' => 'inactive']); // أو أي حالة مناسبة
+                                Log::info("تم تحديث حالة الإتاحة الأم ID: {$currentRoomTypeInfo->availability_id} إلى inactive.");
+                             }
                         }
         
                     }); // نهاية الـ transaction

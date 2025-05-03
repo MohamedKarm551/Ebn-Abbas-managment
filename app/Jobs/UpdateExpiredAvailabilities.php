@@ -35,7 +35,6 @@ class UpdateExpiredAvailabilities implements ShouldQueue
         $expiredAvailabilities = Availability::whereDate('end_date', '<=', Carbon::today()) // <-- تغيير هنا من < إلى <=
                                             ->where('status', '!=', 'expired') // تجنب التحديث المتكرر
                                             ->get();
-        // *** نهاية التعديل ***
 
         if ($expiredAvailabilities->count() > 0) {
             Log::info('Found ' . $expiredAvailabilities->count() . ' availabilities to mark as expired.'); // اختياري

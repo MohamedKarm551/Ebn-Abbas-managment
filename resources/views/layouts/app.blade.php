@@ -118,7 +118,6 @@
                             // *** نهاية الإضافة: دالة onSelect ***
                         });
                     });
-                    // *** نهاية التعديل ***
                 } else {
 
                     console.warn("jQuery UI Datepicker not loaded or initialized correctly.");

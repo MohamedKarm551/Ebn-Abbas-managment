@@ -29,7 +29,6 @@ return new class extends Migration
             // *** بداية التعديل: استخدام اسم القيد الصريح ***
             // اسم القيد ده جبناه من رسالة الخطأ
             $table->dropForeign('bookings_availability_room_type_id_foreign');
-            // *** نهاية التعديل ***
 
             // بعد ما حذفنا القيد، نقدر نحذف العمود
             $table->dropColumn('availability_room_type_id');

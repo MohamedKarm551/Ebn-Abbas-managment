@@ -182,15 +182,25 @@ class AvailabilityController extends Controller
         // حاول تحويله تلقائياً (قد يرمي استثناء)
         return Carbon::parse($date)->format('Y-m-d');
     }
-
     /**
      * Display the specified resource.
      */
+    // عرض تفاصيل الإتاحة
+    
     public function show(Availability $availability)
-    {
-        $availability->loadMissing(['hotel', 'agent', 'employee', 'availabilityRoomTypes.roomType']); // Load roomType name
-        return view('admin.availabilities.show', compact('availability'));
-    }
+{
+    $availability->loadMissing(['hotel', 'agent', 'employee', 'availabilityRoomTypes.roomType']);
+
+    // هات كل الحجوزات المرتبطة بأي RoomType من الإتاحة دي
+    $bookings = \App\Models\Booking::with(['company', 'employee'])
+        ->whereHas('availabilityRoomType', function($q) use ($availability) {
+            $q->where('availability_id', $availability->id);
+        })
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return view('admin.availabilities.show', compact('availability', 'bookings'));
+}
 
     /**
      * Show the form for editing the specified resource.

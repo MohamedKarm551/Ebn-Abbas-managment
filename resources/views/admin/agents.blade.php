@@ -73,31 +73,9 @@
 </div>
 @push('scripts') {{-- أو يمكنك وضعه مباشرة قبل @endsection --}}
 <script>
-    // منع النقر بزر الماوس الأيمن
-    document.addEventListener('contextmenu', function(event) {
-        event.preventDefault();
-    
-    });
+      // تضمين ملف preventClick.js
+      $.getScript("{{ asset('js/preventClick.js') }}");
 
-    // منع فتح أدوات المطور باستخدام F12 وبعض الاختصارات الأخرى
-    document.addEventListener('keydown', function(event) {
-        // F12
-        if (event.keyCode === 123) {
-            event.preventDefault();
-        }
-        // Ctrl+Shift+I (Chrome, Edge, Firefox)
-        if (event.ctrlKey && event.shiftKey && event.keyCode === 73) {
-            event.preventDefault();
-        }
-        // Ctrl+Shift+J (Chrome, Edge)
-        if (event.ctrlKey && event.shiftKey && event.keyCode === 74) {
-            event.preventDefault();
-        }
-        // Ctrl+U (View Source)
-        if (event.ctrlKey && event.keyCode === 85) {
-            event.preventDefault();
-        }
-    });
 </script>
 @endpush {{-- أو نهاية <script> --}}
 

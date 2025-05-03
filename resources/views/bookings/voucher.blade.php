@@ -296,20 +296,8 @@
     </script>
     <script>
         // تعطيل كليك يمين
-        document.addEventListener('contextmenu', event => event.preventDefault());
-
-        // تعطيل F12 وCtrl+Shift+I وCtrl+U
-        document.onkeydown = function(e) {
-            if (
-                e.keyCode == 123 // F12
-                ||
-                (e.ctrlKey && e.shiftKey && e.keyCode == 73) // Ctrl+Shift+I
-                ||
-                (e.ctrlKey && e.keyCode == 85) // Ctrl+U
-            ) {
-                return false;
-            }
-        };
+  // تضمين ملف preventClick.js
+  $.getScript("{{ asset('js/preventClick.js') }}");
     </script>
 </body>
 

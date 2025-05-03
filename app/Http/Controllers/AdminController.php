@@ -85,7 +85,6 @@ class AdminController extends Controller
         // لو المستخدم أدمن، مش هنضيف أي شرط إضافي (هيجيب كله)
 
         $notifications = $query->paginate(20); // تطبيق الـ pagination على الاستعلام النهائي
-        // *** نهاية التعديل ***
 
         return view('admin.notifications', compact('notifications', 'currentFilter'));
     }
@@ -128,7 +127,6 @@ class AdminController extends Controller
         // لو أدمن، هيحدد كل الإشعارات غير المقروءة في النظام
 
         $notifications = $query->get();
-        // *** نهاية التعديل ***
 
         foreach ($notifications as $notification) {
             $notification->is_read = true;
@@ -565,7 +563,6 @@ class AdminController extends Controller
                 ->limit(5)->pluck('name');
             $suggestions = $suggestions->merge($employeeSuggestions);
 
-            // *** نهاية التعديل ***
 
             // بنشيل التكرار وناخد أول 10 اقتراحات بس
             $suggestions = $suggestions->unique()->take(10)->values();

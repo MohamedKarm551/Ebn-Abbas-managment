@@ -117,6 +117,9 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script>
+            // تضمين ملف preventClick.js
+        $.getScript("{{ asset('js/preventClick.js') }}");
+
         document.addEventListener('DOMContentLoaded', function() {
             const userRole = "{{ auth()->user()->role ?? 'guest' }}"; // جلب الدور من PHP
             const isAdmin = userRole.toLowerCase() === 'admin';

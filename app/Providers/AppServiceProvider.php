@@ -56,6 +56,5 @@ class AppServiceProvider extends ServiceProvider
             $view->with('unreadNotificationsCount', 0);
         }
     });
-    // *** نهاية التعديل ***
 }
 }

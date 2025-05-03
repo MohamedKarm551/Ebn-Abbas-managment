@@ -65,7 +65,7 @@
                             <th scope="col">نوع الغرفة</th>
                             <th scope="col">سعر التكلفة</th>
                             <th scope="col">سعر البيع</th>
-                            <th scope="col">عدد الغرف (Allotment)</th>
+                            <th scope="col">عدد الغرف المتاح الآن (Allotment)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,6 +88,39 @@
             </div>
         </div>
     </div>
-
+    @if($bookings->count())
+    <h5 class="mt-4">الشركات التي حجزت من هذه الإتاحة:</h5>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>الشركة</th>
+                <th>عدد الغرف</th>
+                <th>تاريخ الدخول</th>
+                <th>تاريخ الخروج</th>
+                <th>اسم العميل</th>
+                <th>الموظف</th>
+                <th>تاريخ الحجز</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($bookings as $i => $booking)
+                <tr>
+                    <td>{{ $i + 1 }}</td>
+                    <td>{{ $booking->company->name ?? '-' }}</td>
+                    <td>{{ $booking->rooms }}</td>
+                    {{-- في $booking->check_in عرض صيغة معينة للتاريخ --}}
+                    <td>{{ $booking->check_in ? $booking->check_in->format('Y-m-d ') : '-' }}</td>
+                    <td>{{ $booking->check_out ? $booking->check_out->format('Y-m-d ') : '-' }}</td>
+                    <td>{{ $booking->client_name }}</td>
+                    <td>{{ $booking->employee->name ?? '-' }}</td>
+                    <td>{{ $booking->created_at ? $booking->created_at->format('Y-m-d H:i') : '-' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+@else
+    <div class="alert alert-info">لا يوجد حجوزات على هذه الإتاحة بعد.</div>
+@endif
 </div>
 @endsection

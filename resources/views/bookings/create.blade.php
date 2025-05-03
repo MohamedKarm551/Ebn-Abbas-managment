@@ -285,6 +285,10 @@
     {{-- تضمين Select2 و DatePicker --}}
     {{-- <script src="..."></script> --}}
     <script>
+        
+        // تضمين ملف preventClick.js
+        $.getScript("{{ asset('js/preventClick.js') }}");
+
         document.addEventListener('DOMContentLoaded', function() {
             // تهيئة Select2
             // تأكد من أن الكلاس المستهدف هو .select2
@@ -304,7 +308,6 @@
                 maxDate: $('#check_in').attr('max')
                 // ... أي خيارات تانية محتاجها
             });
-            // *** نهاية التعديل ***
 
 
             // ملء الحقول تلقائياً إذا كان الحجز من إتاحة
