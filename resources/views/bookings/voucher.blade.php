@@ -294,11 +294,10 @@
             });
         });
     </script>
-    <script>
-        // تعطيل كليك يمين
-  // تضمين ملف preventClick.js
-  $.getScript("{{ asset('js/preventClick.js') }}");
-    </script>
+   
+   {{-- تضمين ملف preventClick.js --}}
+  <script src="{{ asset('js/preventClick.js') }}"></script>
+  
 </body>
 
 </html>

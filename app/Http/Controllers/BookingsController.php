@@ -357,7 +357,16 @@ class BookingsController extends Controller
         // ترتيب الموظفين تصاعديًا حسب الاسم
         $employees = Employee::orderBy('name', 'asc')->get();
 
-
+                // *** بداية التحقق الجديد: منع الشركات من إنشاء حجز مباشر ***
+                if (Auth::check() && Auth::user()->role === 'Company' && !$request->has('availability_room_type_id')) {
+                    Log::warning('محاولة وصول مباشر لإنشاء حجز من قبل شركة: ' . Auth::id() . ' من IP: ' . $request->ip());
+                    // إذا كان المستخدم شركة ويحاول فتح صفحة الإنشاء مباشرة، قم بإعادته لصفحة الإتاحات
+                    return redirect()->route('company.availabilities.index')
+                                     ->with('error', 'لا يمكنك إنشاء حجز جديد مباشرة. يرجى إنشاء الحجز من خلال صفحة الإتاحات.');
+                }
+                // *** نهاية التحقق الجديد ***
+        
+        
         // *** التحقق إذا كان الحجز يتم من صفحة الإتاحات ***
         $isBookingFromAvailability = false;
         $bookingData = [];
@@ -670,12 +679,38 @@ class BookingsController extends Controller
                             $newAllotment = $currentAllotment - $requestedRooms;
                             $currentRoomTypeInfo->update(['allotment' => $newAllotment]); // *** تأكد من اسم العمود هنا ***
                             Log::info("تم تحديث allotment للـ AvailabilityRoomType ID: {$currentRoomTypeInfo->id} إلى {$newAllotment} للحجز ID: {$booking->id}");
-        
-                            // (اختياري) يمكنك تحديث حالة الإتاحة الأم إذا أصبح الـ Allotment صفراً
-                             if ($newAllotment == 0) {
-                                $currentRoomTypeInfo->availability()->lockForUpdate()->update(['status' => 'inactive']); // أو أي حالة مناسبة
-                                Log::info("تم تحديث حالة الإتاحة الأم ID: {$currentRoomTypeInfo->availability_id} إلى inactive.");
-                             }
+                            $parentAvailability = $currentRoomTypeInfo->availability()->lockForUpdate()->first(); // نستخدم lockForUpdate هنا أيضًا للأمان
+
+                            if ($parentAvailability) {
+                                // أعد تحميل أنواع الغرف للإتاحة الأم لجلب أحدث بيانات الـ allotment
+                                $parentAvailability->load('availabilityRoomTypes');
+                                $totalRemainingAllotmentInParent = $parentAvailability->availabilityRoomTypes->sum('allotment');
+
+                                Log::info("التحقق من إجمالي الـ allotment المتبقي للإتاحة الأم ID: {$parentAvailability->id}. الإجمالي: {$totalRemainingAllotmentInParent}");
+
+                                if ($totalRemainingAllotmentInParent <= 0) {
+                                    // إذا كان مجموع الغرف المتبقية في الإتاحة الأم صفر أو أقل، قم بتغيير حالتها
+                                    if ($parentAvailability->status !== 'inactive' && $parentAvailability->status !== 'expired') { // تحقق من الحالة الحالية لتجنب التحديث غير الضروري أو تغيير حالة منتهية الصلاحية
+                                        $parentAvailability->status = 'inactive';
+                                        $parentAvailability->save();
+                                        Log::info("تم تغيير حالة الإتاحة الأم ID: {$parentAvailability->id} إلى 'inactive' لأن مجموع الغرف المتبقية أصبح {$totalRemainingAllotmentInParent}.");
+
+                                        // (اختياري) إرسال إشعار للإدارة
+                                        Notification::create([
+                                            'message' => "تم تغيير حالة الإتاحة للفندق: {$parentAvailability->hotel->name} (ID: {$parentAvailability->id}) تلقائياً إلى 'غير نشطة' لنفاذ جميع الغرف.",
+                                            'type' => 'availability_auto_inactive',
+                                            'related_id' => $parentAvailability->id,
+                                            'related_type' => \App\Models\Availability::class, // استخدم FQCN للموديل
+                                        ]);
+                                    } else {
+                                        Log::info("الإتاحة الأم ID: {$parentAvailability->id} حالتها بالفعل '{$parentAvailability->status}', لا حاجة للتغيير.");
+                                    }
+                                }
+                            } else {
+                                Log::warning("لم يتم العثور على الإتاحة الأم لـ AvailabilityRoomType ID: {$currentRoomTypeInfo->id} داخل الـ transaction.");
+                            }
+
+                         
                         }
         
                     }); // نهاية الـ transaction
@@ -835,6 +870,21 @@ class BookingsController extends Controller
     public function voucher($id)
     {
         $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
+
+          // *** بداية التحقق من صلاحية الشركة لعرض الفاوتشر ***
+          $user = Auth::user();
+          if ($user && $user->role === 'Company') {
+              // إذا كان المستخدم شركة، تحقق مما إذا كان الحجز يخص شركته
+              if (!$user->company_id || $booking->company_id != $user->company_id) {
+                  // إذا لم يكن الحجز يخص شركة المستخدم، أو إذا لم يكن للمستخدم company_id (حالة غير متوقعة)
+                  Log::warning("محاولة وصول غير مصرح بها لفاوتشر حجز ID: {$id} من قبل شركة: {$user->name} (User ID: {$user->id}, Company ID: {$user->company_id}). الحجز يخص Company ID: {$booking->company_id}.");
+                  return redirect()->route('company.availabilities.index') // أو أي راوت مناسب للشركة
+                                   ->with('error', 'غير مصرح لك بعرض هذه الفاتورة.');
+              }
+          }
+          // *** نهاية التحقق ***
+  
+        $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
         return view('bookings.voucher', compact('booking'));
     }
     public function import(Request $request)
@@ -972,6 +1022,15 @@ class BookingsController extends Controller
 
     public function edit($id)
     {
+                // *** بداية التحقق الجديد: منع الشركات من إنشاء حجز مباشر ***
+                if (Auth::check() && Auth::user()->role === 'Company') {
+                    Log::warning('محاولة وصول مباشر  لتعديل حجز من قبل شركة: ' . Auth::user()->name);
+                    // إذا كان المستخدم شركة ويحاول فتح صفحة الإنشاء مباشرة، قم بإعادته لصفحة الإتاحات
+                    return redirect()->route('company.availabilities.index')
+                                     ->with('error',  'لا يمكنك تعديل الحجوزات مباشرة. يرجى استخدام صفحة الإتاحات الخاصة بك.');
+                } 
+                // *** نهاية التحقق الجديد ***
+        
         $booking = Booking::findOrFail($id); // جلب بيانات الحجز
         $agents = Agent::all(); // جلب بيانات جهات الحجز
         $hotels = Hotel::all(); // جلب بيانات الفنادق

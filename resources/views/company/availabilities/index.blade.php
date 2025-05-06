@@ -163,10 +163,13 @@
                     <h6><i class="fas fa-door-open me-1"></i> أنواع الغرف والأسعار:</h6>
                     <ul class="list-unstyled mb-0">
                         @foreach ($availability->availabilityRoomTypes as $roomType)
+                        {{-- *** إضافة الشرط هنا: اعرض فقط لو المتاح > 0 *** --}}
+                        @if($roomType->allotment > 0)
                             <li class="room-type-item">
                                 <div class="room-details">
                                     <span class="fw-bold">{{ $roomType->room_type_name }}</span>
                                     <span>| السعر : <strong class="text-success">{{ number_format($roomType->sale_price, 2) }}</strong> ر.س</span>
+                                    {{-- *** عرض العدد المتاح *** --}}
                                     <span>| المتاح: <strong class="text-info">{{ $roomType->allotment }}</strong> غرف</span>
                                 </div>
                                 <div class="book-button-container">
@@ -176,7 +179,8 @@
                                     </a>
                                 </div>
                             </li>
-                        @endforeach
+                        @endif {{-- *** نهاية الشرط *** --}}
+                    @endforeach
                     </ul>
                 @else
                     <p class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i> لا توجد تفاصيل غرف أو أسعار محددة لهذه الإتاحة.</p>

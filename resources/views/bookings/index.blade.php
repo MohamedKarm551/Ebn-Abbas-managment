@@ -230,10 +230,10 @@
             <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
             {{-- 3. الكود الأساسي بتاعنا --}}
-            <script>
-                  // تضمين ملف preventClick.js
-        $.getScript("{{ asset('js/preventClick.js') }}");
-
+         
+                 
+                  <script src="{{ asset('js/preventClick.js') }}"></script>
+                  <script>
                 // ==========================================================
                 // دالة تهيئة مكونات Bootstrap (زي الـ Popovers)
                 // ==========================================================

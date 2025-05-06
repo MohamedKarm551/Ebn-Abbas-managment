@@ -56,11 +56,10 @@
         </table>
     </div>
     @push('scripts')
-    <script>
-          // تضمين ملف preventClick.js
-          $.getScript("{{ asset('js/preventClick.js') }}");
+    
+          <script src="{{ asset('js/preventClick.js') }}"></script>
 
-    </script>
+   
     @endpush
 
 @endsection

@@ -120,12 +120,15 @@
 
                 <div class="col-md-3">
                     <label :for="'room_type_id_' + index" class="form-label">نوع الغرفة <span class="text-danger">*</span></label>
-                    {{-- Select populated by Alpine using allRoomTypes --}}
-                    <select class="form-select" :name="'room_types[' + index + '][room_type_id]'"
-                            x-model.number="room.room_type_id" required @change="checkDuplicate(index)">
+                    <select class="form-select" 
+                            :name="'room_types[' + index + '][room_type_id]'"
+                            x-model="room.room_type_id"
+                            required @change="checkDuplicate(index)">
                         <option value="" disabled>اختر نوع الغرفة</option>
                         <template x-for="(name, id) in allRoomTypes" :key="id">
-                            <option :value="id" x-text="name"></option>
+                            <option :value="id" 
+                                    x-text="name"
+                                    :selected="room.room_type_id == id"></option>
                         </template>
                     </select>
                     <small class="text-danger" x-show="room.duplicate" x-cloak>تم اختيار هذا النوع مسبقاً!</small>

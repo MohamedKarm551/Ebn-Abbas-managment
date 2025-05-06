@@ -284,11 +284,11 @@
 @push('scripts')
     {{-- تضمين Select2 و DatePicker --}}
     {{-- <script src="..."></script> --}}
-    <script>
+   
         
-        // تضمين ملف preventClick.js
-        $.getScript("{{ asset('js/preventClick.js') }}");
-
+        {{-- تضمين ملف preventClick.js --}}
+        <script src="{{ asset('js/preventClick.js') }}"></script>
+        <script>
         document.addEventListener('DOMContentLoaded', function() {
             // تهيئة Select2
             // تأكد من أن الكلاس المستهدف هو .select2

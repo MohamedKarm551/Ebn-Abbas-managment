@@ -129,9 +129,10 @@
     </table>
 </div>
 @push('scripts') {{-- أو يمكنك وضعه مباشرة قبل @endsection --}}
-<script>
-  // تضمين ملف preventClick.js
-  $.getScript("{{ asset('js/preventClick.js') }}");
+
+//    تضمين ملف preventClick.js
+  <script src="{{ asset('js/preventClick.js') }}"></script>
+  <script>
     var imageModal = document.getElementById('imageModal');
     imageModal.addEventListener('show.bs.modal', function (event) {
       // الزر أو الرابط الذي ضغط عليه لفتح الـ modal

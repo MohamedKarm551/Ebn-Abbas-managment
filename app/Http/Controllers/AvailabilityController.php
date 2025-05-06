@@ -7,6 +7,7 @@ use App\Models\Availability;
 use App\Models\Hotel;
 use App\Models\Agent;
 use App\Models\Employee;
+use App\Models\User; // Assuming you have a User model for admin notifications
 use App\Models\RoomType;
 use App\Models\AvailabilityRoomType;
 use App\Models\Notification;
@@ -186,21 +187,21 @@ class AvailabilityController extends Controller
      * Display the specified resource.
      */
     // عرض تفاصيل الإتاحة
-    
+
     public function show(Availability $availability)
-{
-    $availability->loadMissing(['hotel', 'agent', 'employee', 'availabilityRoomTypes.roomType']);
+    {
+        $availability->loadMissing(['hotel', 'agent', 'employee', 'availabilityRoomTypes.roomType']);
 
-    // هات كل الحجوزات المرتبطة بأي RoomType من الإتاحة دي
-    $bookings = \App\Models\Booking::with(['company', 'employee'])
-        ->whereHas('availabilityRoomType', function($q) use ($availability) {
-            $q->where('availability_id', $availability->id);
-        })
-        ->orderBy('created_at', 'desc')
-        ->get();
+        // هات كل الحجوزات المرتبطة بأي RoomType من الإتاحة دي
+        $bookings = \App\Models\Booking::with(['company', 'employee'])
+            ->whereHas('availabilityRoomType', function ($q) use ($availability) {
+                $q->where('availability_id', $availability->id);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    return view('admin.availabilities.show', compact('availability', 'bookings'));
-}
+        return view('admin.availabilities.show', compact('availability', 'bookings'));
+    }
 
     /**
      * Show the form for editing the specified resource.
@@ -229,7 +230,7 @@ class AvailabilityController extends Controller
     public function update(Request $request, Availability $availability)
     {
         // احفظ القيم الأصلية قبل التحديث
-$originalData = $availability->getOriginal();
+        $originalData = $availability->getOriginal();
         $validatedData = $request->validate([
             'hotel_id' => 'required|exists:hotels,id',
             'agent_id' => 'required|exists:agents,id',
@@ -363,49 +364,140 @@ $originalData = $availability->getOriginal();
         // Create Notification
         // بعد تحديث بيانات الإتاحة
         // قاموس الحقول بالعربي
-        $fieldNames = [
-            'start_date' => 'تاريخ البداية',
-            'end_date' => 'تاريخ النهاية',
-            'status' => 'الحالة',
-            'notes' => 'الملاحظات',
-            'hotel_id' => 'الفندق',
-            'agent_id' => 'جهة الحجز',
-            'employee_id' => 'الموظف المسؤول',
-        ];
 
-        // دالة لتنسيق التاريخ والوقت بالعربي
-        function formatDateTimeArabic($dateTime)
-        {
-            return \Carbon\Carbon::parse($dateTime)->translatedFormat('d/m/Y');
+        // *** الخطوة 9: إنشاء الإشعار ***
+        try {
+            // إعادة تحميل العلاقات المحدثة (خاصة hotel, agent, employee إذا تغيروا)
+            $availability->refresh(); // يقوم بتحديث بيانات الموديل والعلاقات المحملة
+
+            // 1. حساب التغييرات للبيانات الأساسية
+            $fieldNames = [
+                'start_date' => 'تاريخ البداية', 'end_date' => 'تاريخ النهاية', 'status' => 'الحالة',
+                'notes' => 'الملاحظات', 'hotel_id' => 'الفندق', 'agent_id' => 'جهة الحجز', 'employee_id' => 'الموظف المسؤول',
+            ];
+            $statusMap = ['active' => 'نشط', 'inactive' => 'غير نشط', 'expired' => 'منتهي'];
+            $mainChangedFields = [];
+
+            foreach ($availabilityData as $key => $newValue) {
+                if (array_key_exists($key, $originalData) && array_key_exists($key, $fieldNames) && $originalData[$key] != $newValue) {
+                    $fieldLabel = $fieldNames[$key];
+                    $oldValueFormatted = $originalData[$key];
+                    $newValueFormatted = $newValue;
+
+                    // تنسيق القيم للعرض
+                    if ($key === 'hotel_id') {
+                        $oldValueFormatted = $originalHotelName ?? $originalData[$key];
+                        $newValueFormatted = $availability->hotel?->name ?? $newValue; // الاسم الحالي بعد التحديث
+                    } elseif ($key === 'agent_id') {
+                        $oldValueFormatted = $originalAgentName ?? $originalData[$key];
+                        $newValueFormatted = $availability->agent?->name ?? $newValue; // الاسم الحالي بعد التحديث
+                    } elseif ($key === 'employee_id') {
+                        $oldValueFormatted = $originalEmployeeName ?? $originalData[$key];
+                        $newValueFormatted = $availability->employee?->name ?? $newValue; // الاسم الحالي بعد التحديث
+                    } elseif (in_array($key, ['start_date', 'end_date'])) {
+                        $oldValueFormatted = $originalData[$key] ? self::formatDateTimeForDisplay($originalData[$key]) : 'فارغ';
+                        $newValueFormatted = self::formatDateTimeForDisplay($newValue);
+                    } elseif ($key === 'status') {
+                        $oldValueFormatted = $statusMap[$originalData[$key] ?? ''] ?? $originalData[$key] ?? 'فارغ';
+                        $newValueFormatted = $statusMap[$newValue] ?? $newValue;
+                    }
+
+                    $mainChangedFields[] = "- {$fieldLabel}: من \"{$oldValueFormatted}\" إلى \"{$newValueFormatted}\"";
+                }
+            }
+
+            // 2. حساب التغييرات لأنواع الغرف
+            $roomTypeChanges = [];
+            $originalRoomTypesById = collect($originalData['availability_room_types'] ?? [])->keyBy('id');
+            // جلب الحالة الحالية للغرف بعد المزامنة
+            $currentRoomTypes = $availability->availabilityRoomTypes()->with('roomType')->get()->keyBy('id');
+
+            // مقارنة التحديثات والإضافات
+            foreach ($currentRoomTypes as $currentId => $currentType) {
+                $originalType = $originalRoomTypesById->get($currentId);
+                $roomName = $currentType->roomType->room_type_name ?? "ID: {$currentType->room_type_id}";
+                $currentChanges = [];
+                if ($originalType) { // تحديث
+                    if ($originalType['cost_price'] != $currentType->cost_price) $currentChanges[] = "التكلفة: \"{$originalType['cost_price']}\" -> \"{$currentType->cost_price}\"";
+                    if ($originalType['sale_price'] != $currentType->sale_price) $currentChanges[] = "البيع: \"{$originalType['sale_price']}\" -> \"{$currentType->sale_price}\"";
+                    if ($originalType['allotment'] != $currentType->allotment) $currentChanges[] = "الكمية: \"{$originalType['allotment']}\" -> \"{$currentType->allotment}\"";
+                    if (!empty($currentChanges)) $roomTypeChanges[] = "- {$roomName}: " . implode(', ', $currentChanges);
+                } else { // إضافة
+                    $roomTypeChanges[] = "- إضافة: {$roomName} (تكلفة: {$currentType->cost_price}, بيع: {$currentType->sale_price}, كمية: {$currentType->allotment})";
+                }
+            }
+            // مقارنة الحذف
+            $deletedIds = $originalRoomTypesById->keys()->diff($currentRoomTypes->keys());
+            foreach($deletedIds as $deletedId) {
+                $deletedType = $originalRoomTypesById->get($deletedId);
+                if ($deletedType) {
+                    $deletedRoomTypeName = RoomType::find($deletedType['room_type_id'])->room_type_name ?? "ID: {$deletedType['room_type_id']}";
+                    $roomTypeChanges[] = "- حذف: {$deletedRoomTypeName}";
+                }
+            }
+
+            // 3. بناء الرسالة النهائية
+            $updater = Auth::user();
+            $updaterName = $updater->name ?? 'مستخدم';
+            $allChanges = array_merge($mainChangedFields, $roomTypeChanges);
+
+            if (empty($allChanges)) {
+                $details = 'لم يتم تغيير أي بيانات.';
+            } else {
+                $details = implode("\n", $mainChangedFields);
+                if (!empty($roomTypeChanges)) {
+                    $details .= (empty($mainChangedFields) ? '' : "\n") . "--- تغييرات أنواع الغرف ---\n" . implode("\n", $roomTypeChanges);
+                }
+            }
+
+            $hotelName = $availability->hotel->name ?? 'فندق غير محدد'; // الاسم الحالي
+            $notificationMessage = "تعديل إتاحة ({$availability->id}) فندق \"{$hotelName}\" بواسطة \"{$updaterName}\".\n{$details}";
+            $notificationType = 'تعديل إتاحة';
+
+            // 4. تحديد المستلمين
+            $recipients = collect([$updater]); // ابدأ بالمستخدم الحالي
+            if ($availability->employee && $availability->employee->user) {
+                $recipients->push($availability->employee->user);
+            }
+            $adminUsers = User::where('role', 'Admin')->get();
+            $uniqueRecipients = $recipients->merge($adminUsers)->unique('id')->filter(); // إزالة القيم الفارغة المحتملة
+
+            // 5. إرسال الإشعارات
+            if ($uniqueRecipients->isNotEmpty()) {
+                foreach ($uniqueRecipients as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'message' => $notificationMessage,
+                        'type' => $notificationType,
+                        'related_id' => $availability->id,
+                        'related_type' => Availability::class,
+                    ]);
+                }
+                Log::info("تم إرسال إشعارات تحديث الإتاحة ID: {$availability->id} إلى " . $uniqueRecipients->count() . " مستلمين.");
+            } else {
+                Log::warning("AvailabilityController@update: لم يتم العثور على مستلمين صالحين للإشعار ID: {$availability->id}.");
+            }
+
+        } catch (\Exception $e) {
+            Log::error('خطأ في إرسال إشعار تحديث الإتاحة: ' . $e->getMessage(), ['availability_id' => $availability->id, 'exception' => $e]);
         }
+        // --- نهاية كود الإشعارات ---
 
-        // بعد تحديث بيانات الإتاحة
-        $changedFields = [];
-foreach ($availabilityData as $key => $newValue) {
-    if (($originalData[$key] ?? null) != $newValue) {
-        $fieldLabel = $fieldNames[$key] ?? $key;
-        if (in_array($key, ['start_date', 'end_date'])) {
-            $old = formatDateTimeArabic($originalData[$key] ?? '');
-            $new = formatDateTimeArabic($newValue);
-        } else {
-            $old = $originalData[$key] ?? '';
-            $new = $newValue;
-        }
-        $changedFields[] = "- {$fieldLabel}: من \"{$old} \" إلى \"{$new} \"";
-    } }
-            $userName = Auth::user()->name ?? 'مستخدم غير معروف';
-        $details = !empty($changedFields) ? implode("\n", $changedFields) : 'لم يتم تغيير أي بيانات رئيسية.';
-
-        Notification::create([
-            'user_id' => Auth::id(),
-            'message' => "تم تعديل الإتاحة رقم ({$availability->id}) الخاصة بفندق \"{$availability->hotel->name}\" بواسطة  \"{$userName}\".\n{$details}",
-            'type' => 'تعديل إتاحة',
-        ]);
-
+    
 
         return redirect()->route('admin.availabilities.index')->with('success', 'تم تحديث الإتاحة وأنواع الغرف بنجاح!');
     }
 
+    private static function formatDateTimeForDisplay($dateTime)
+    {
+        if (!$dateTime) return 'فارغ';
+        try {
+            return Carbon::parse($dateTime)->translatedFormat('d/m/Y');
+        } catch (\Exception $e) {
+            Log::error("Error formatting date for display: " . $e->getMessage(), ['date' => $dateTime]);
+            return (string) $dateTime;
+        }
+    }
 
     /**
      * Remove the specified resource from storage.
