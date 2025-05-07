@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,14 +13,14 @@ class Hotel extends Model
     protected $fillable = [
         'name',
         'location',
-        'image_path', // *** إضافة image_path ***
-        'description', // *** إضافة description ***
-        'color', // *** إضافة color ***
+        // 'image_path', 
+        'description',
+        'color',
     ];
 
     public function bookings()
     {
-        return $this->hasMany(Booking::class,'hotel_id');
+        return $this->hasMany(Booking::class, 'hotel_id');
     }
 
     // *** علاقة الفندق بالإتاحات ***
@@ -35,19 +36,34 @@ class Hotel extends Model
             return $booking->cost_price * $booking->rooms * $booking->days;
         });
     }
-
-    // *** Accessor لجلب رابط الصورة كامل ***
-    public function getImageUrlAttribute()
+    // *** علاقة الفندق بالصور المتعددة ***
+    public function images()
     {
-        if ($this->image_path) {
-            // يفترض أن الصور مخزنة في storage/app/public/hotels
-            // return Storage::url('hotels/' . $this->image_path);
-            // ممكن أجيب من جوجل درايف  https://drive.google.com/file/d/1yQZDjO-qB6fmo-yAvkUhA70mPp1FjSyl/view?usp=sharing
-            
-            // return 'https://drive.google.com/uc?export=view&id=' . $this->image_path;
-            return "";
+        return $this->hasMany(HotelImage::class);
+    }
+    // Accessor لجلب رابط الصورة الأولى (أو صورة افتراضية)
+    public function getFirstImageUrlAttribute()
+    {
+        $firstImage = $this->images()->first();
+        if ($firstImage) {
+            return $firstImage->image_path; // يفترض أن image_path في hotel_images هو URL كامل
         }
         // يمكنك إرجاع رابط صورة افتراضية هنا إذا أردت
         return null; // أو رابط صورة افتراضية
     }
+
+    // *** Accessor لجلب رابط الصورة كامل ***
+    // public function getImageUrlAttribute()
+    // {
+    //     if ($this->image_path) {
+    //         // يفترض أن الصور مخزنة في storage/app/public/hotels
+    //         // return Storage::url('hotels/' . $this->image_path);
+    //         // ممكن أجيب من جوجل درايف  https://drive.google.com/file/d/1yQZDjO-qB6fmo-yAvkUhA70mPp1FjSyl/view?usp=sharing
+
+    //         // return 'https://drive.google.com/uc?export=view&id=' . $this->image_path;
+    //         return "";
+    //     }
+    //     // يمكنك إرجاع رابط صورة افتراضية هنا إذا أردت
+    //     return null; // أو رابط صورة افتراضية
+    // }
 }

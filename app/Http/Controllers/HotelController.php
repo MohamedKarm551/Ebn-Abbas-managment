@@ -1,25 +1,25 @@
-<?php 
+<?php
 
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
 use App\Models\Booking;
-use App\Models\ArchivedBooking; // <--- 1. نضيف ArchivedBooking
+use App\Models\ArchivedBooking;
 use Illuminate\Http\Request;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // <--- 2. نضيف DB
-use Illuminate\Support\Facades\Log; // <--- 3. نضيف Log
-use Illuminate\Support\Facades\Storage; // *** تأكد من وجوده ***
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use App\Models\HotelImage;
 
 class HotelController extends Controller
 {
     public function index()
     {
         $hotels = Hotel::all();
-        return view('admin.hotels', compact('hotels'));
+        return view('admin.hotels.hotels', compact('hotels'));
     }
 
     public function create()
@@ -29,6 +29,8 @@ class HotelController extends Controller
 
     public function store(Request $request)
     {
+
+
         // 1. التحقق من البيانات (استخدام image_url)
         $validatedData = $request->validate([
             'name' => [
@@ -40,7 +42,9 @@ class HotelController extends Controller
             ],
             'location' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'image_path' => 'nullable|url|max:1024', // <-- توحيد الاسم هنا
+            // التحقق من أن image_urls مصفوفة وأن كل عنصر فيها هو URL صالح (اختياري)
+            'image_urls' => 'nullable|array',
+            'image_urls.*' => 'nullable|url|max:1024',
         ]);
 
         // 2. تنقية الاسم
@@ -50,8 +54,23 @@ class HotelController extends Controller
         // $validatedData['description'] = strip_tags($validatedData['description'] ?? '');
 
         // 3. إنشاء الفندق بكل البيانات
-        $hotel = Hotel::create($validatedData);
+        // إنشاء الفندق بالبيانات الأساسية
+        $hotel = Hotel::create([
+            'name' => $validatedData['name'],
+            'location' => $validatedData['location'] ?? null,
+            'description' => $validatedData['description'] ?? null,
+            // 'color' => $validatedData['color'] ?? '#000000', // إذا كان لديك حقل لون
+        ]);
+        // حفظ الصور المتعددة إذا تم توفيرها
+        // قم بتصفية القيم الفارغة من مصفوفة image_urls قبل الحفظ
+        $imageUrlsToSave = isset($validatedData['image_urls']) ? array_filter($validatedData['image_urls']) : [];
 
+        if (!empty($imageUrlsToSave)) {
+            foreach ($imageUrlsToSave as $imageUrl) {
+                // التحقق من أن الرابط ليس فارغًا تم ضمنيًا بواسطة array_filter
+                $hotel->images()->create(['image_path' => $imageUrl]);
+            }
+        }
         // 4. إنشاء الإشعار
         Notification::create([
             'user_id' => Auth::user()->id,
@@ -66,7 +85,7 @@ class HotelController extends Controller
     public function edit($id)
     {
         $hotel = Hotel::findOrFail($id);
-        return view('admin.edit-hotel', compact('hotel'));
+        return view('admin.hotels.edit-hotel', compact('hotel'));
     }
 
     public function update(Request $request, $id)
@@ -85,7 +104,8 @@ class HotelController extends Controller
             ],
             'location' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'image_path' => 'nullable|url|max:1024', // <-- توحيد الاسم هنا
+            'image_urls' => 'nullable|array',
+            'image_urls.*' => 'nullable|url|max:1024', // التحقق من أن كل عنصر في المصفوفة هو URL صالح
         ]);
 
         // 2. تنقية الاسم
@@ -93,7 +113,28 @@ class HotelController extends Controller
         // يمكنك إضافة تنقية لباقي الحقول النصية لو أردت
 
         // 3. تحديث الفندق بكل البيانات الجديدة
-        $hotel->update($validatedData);
+        $hotel->update([
+            'name' => $validatedData['name'],
+            'location' => $validatedData['location'] ?? null,
+            'description' => $validatedData['description'] ?? null,
+        ]);
+
+    // معالجة الصور
+    // إذا تم إرسال مفتاح image_urls (حتى لو كان مصفوفة فارغة بسبب إفراغ جميع الحقول)، قم بتحديث الصور
+    if ($request->has('image_urls')) {
+        $hotel->images()->delete(); // احذف الصور القديمة
+
+        // قم بتصفية القيم الفارغة من مصفوفة image_urls قبل الحفظ
+        $imageUrlsToSave = isset($validatedData['image_urls']) ? array_filter($validatedData['image_urls']) : [];
+
+        if (!empty($imageUrlsToSave)) {
+            foreach ($imageUrlsToSave as $imageUrl) {
+                $hotel->images()->create(['image_path' => $imageUrl]);
+            }
+        }
+    }
+    // إذا لم يتم إرسال 'image_urls' في الطلب، لا تقم بأي تعديل على الصور الحالية.
+
 
         // 4. إنشاء الإشعار
         Notification::create([
