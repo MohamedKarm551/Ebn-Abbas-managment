@@ -88,6 +88,8 @@ class AvailabilityController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date', // Use uppercase Y
             'status' => 'required|in:active,inactive',
             'notes' => 'nullable|string|max:5000', // Added max length
+            'min_nights' => 'nullable|integer|min:1',  
+
             'room_types' => 'required|array|min:1',
             'room_types.*.room_type_id' => 'required|exists:room_types,id|distinct', // Ensure distinct room types
             'room_types.*.cost_price' => 'required|numeric|min:0',
@@ -138,8 +140,16 @@ class AvailabilityController extends Controller
         // employee_id is already validated and included
 
         // Create Availability
-        $availability = Availability::create($availabilityData);
-
+        $availability = Availability::create([
+            'hotel_id' => $validatedData['hotel_id'],
+            'agent_id' => $validatedData['agent_id'],
+            'employee_id' => $validatedData['employee_id'],
+            'start_date' => $validatedData['start_date'],
+            'end_date' => $validatedData['end_date'],
+            'status' => $validatedData['status'],
+            'notes' => $validatedData['notes'],
+            'min_nights' => $validatedData['min_nights'] ?? null, // *** تمت الإضافة هنا ***
+        ]);
         // Save associated room types
         if (isset($validatedData['room_types'])) {
             $roomTypesData = [];
@@ -240,6 +250,8 @@ class AvailabilityController extends Controller
             // Allow 'expired' only if it's already the status
             'status' => 'required|in:active,inactive' . ($availability->status === 'expired' ? ',expired' : ''),
             'notes' => 'nullable|string|max:5000',
+            'min_nights' => 'nullable|integer|min:1', 
+
             'room_types' => 'required|array|min:1',
             // Validate existing IDs belong to this availability
             'room_types.*.id' => 'sometimes|nullable|integer|exists:availability_room_types,id,availability_id,' . $availability->id,
@@ -313,8 +325,16 @@ class AvailabilityController extends Controller
 
 
         // Update availability main data
-        $availability->update($availabilityData);
-
+         // لا نحدث employee_id عند التعديل عادةً، إلا إذا كان هذا مطلوبًا
+    $availability->update([
+        'hotel_id' => $validatedData['hotel_id'],
+        'agent_id' => $validatedData['agent_id'],
+        'start_date' => $validatedData['start_date'],
+        'end_date' => $validatedData['end_date'],
+        'status' => $validatedData['status'],
+        'notes' => $validatedData['notes'],
+        'min_nights' => $validatedData['min_nights'] ?? null, // *** تمت الإضافة هنا ***
+    ]);
         // --- Sync Availability Room Types ---
         $submittedRoomTypes = collect($validatedData['room_types'] ?? []);
         $existingRoomTypeIds = $availability->availabilityRoomTypes()->pluck('id')->all();

@@ -65,30 +65,36 @@
                 </div>
 
                 {{-- جهة الحجز --}}
-                <div class="col-md-6">
-                    <label for="agent_id" class="form-label">جهة الحجز <span class="text-danger">*</span></label>
-                    {{-- *** إضافة كلاس select2 و خاصية disabled *** --}}
-                    <select class="form-select select2 @error('agent_id') is-invalid @enderror" id="agent_id"
-                        name="agent_id" required
-                        {{ isset($isBookingFromAvailability) && $isBookingFromAvailability ? 'disabled' : '' }}>
-                        <option value="" disabled selected>اختر جهة الحجز</option>
-                        @foreach ($agents as $agent)
-                            {{-- *** تعديل بسيط لـ old() و إزالة الشرط الإضافي لـ selected *** --}}
-                            <option value="{{ $agent->id }}"
-                                {{ old('agent_id', $bookingData['agent_id'] ?? '') == $agent->id ? 'selected' : '' }}>
-                                {{ $agent->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('agent_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                    {{-- *** حقل مخفي لإرسال القيمة لو الحقل disabled *** --}}
+                @if (auth()->user()->role != 'Company')
+                    <div class="col-md-6">
+                        <label for="agent_id" class="form-label">جهة الحجز <span class="text-danger">*</span></label>
+                        {{-- *** إضافة كلاس select2 و خاصية disabled *** --}}
+                        <select class="form-select select2 @error('agent_id') is-invalid @enderror" id="agent_id"
+                            name="agent_id" required
+                            {{ isset($isBookingFromAvailability) && $isBookingFromAvailability ? 'disabled' : '' }}>
+                            <option value="" disabled selected>اختر جهة الحجز</option>
+                            @foreach ($agents as $agent)
+                                {{-- *** تعديل بسيط لـ old() و إزالة الشرط الإضافي لـ selected *** --}}
+                                <option value="{{ $agent->id }}"
+                                    {{ old('agent_id', $bookingData['agent_id'] ?? '') == $agent->id ? 'selected' : '' }}>
+                                    {{ $agent->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('agent_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        {{-- *** حقل مخفي لإرسال القيمة لو الحقل select معطل (لغير الشركة، عند الحجز من إتاحة) *** --}}
+                        @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['agent_id']))
+                            <input type="hidden" name="agent_id" value="{{ $bookingData['agent_id'] }}">
+                        @endif
+                    </div>
+                @else
+                    {{-- إذا كان المستخدم شركة والحجز من إتاحة وبها جهة حجز، أرسل القيمة بشكل مخفي --}}
                     @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['agent_id']))
                         <input type="hidden" name="agent_id" value="{{ $bookingData['agent_id'] }}">
                     @endif
-                </div>
-
+                @endif
                 {{-- الفندق --}}
                 <div class="col-md-6">
                     <label for="hotel_id" class="form-label">اسم الفندق <span class="text-danger">*</span></label>
@@ -146,7 +152,7 @@
 
                 {{-- سعر البيع (للشركة) --}}
                 <div class="col-md-3">
-                    <label for="sale_price" class="form-label">سعر البيع (للشركة) <span class="text-danger">*</span></label>
+                    <label for="sale_price" class="form-label">سعر الليلة(للشركة) <span class="text-danger">*</span></label>
                     {{-- *** إضافة readonly *** --}}
                     <input type="number" step="0.01" class="form-control @error('sale_price') is-invalid @enderror"
                         id="sale_price" name="sale_price" value="{{ old('sale_price', $bookingData['sale_price'] ?? '') }}"
@@ -214,28 +220,20 @@
                 {{-- *** التأكد من type="text" وإضافة الشرط لـ onkeydown *** --}}
                 <input type="text" class="form-control datepicker @error('check_out') is-invalid @enderror"
                     id="check_out" name="check_out" value="{{ old('check_out', $bookingData['check_out'] ?? '') }}"
-           {{-- *** تحديد أقل تاريخ مسموح به *** --}}
-           {{-- تاريخ الخروج لازم يكون بعد تاريخ الدخول، لكن ممكن نحدد أقل تاريخ مسموح بيه بشكل عام --}}
-           @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_start_date']))
-               min="{{ $bookingData['availability_start_date'] }}" {{-- لو من إتاحة، استخدم تاريخ بدايتها --}}
+                    {{-- *** تحديد أقل تاريخ مسموح به *** --}} {{-- تاريخ الخروج لازم يكون بعد تاريخ الدخول، لكن ممكن نحدد أقل تاريخ مسموح بيه بشكل عام --}}
+                    @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_start_date'])) min="{{ $bookingData['availability_start_date'] }}" {{-- لو من إتاحة، استخدم تاريخ بدايتها --}}
            @elseif (!auth()->user() || strtolower(auth()->user()->role) !== 'admin')
-               min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}" {{-- لو مش أدمن ومش من إتاحة، استخدم تاريخ اليوم --}}
-           @endif
-           {{-- *** تحديد أقصى تاريخ مسموح به (لو من إتاحة) *** --}}
-           @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_end_date']))
-               max="{{ $bookingData['availability_end_date'] }}"
-           @endif
-           {{-- *** منع الكتابة اليدوية لغير الأدمن *** --}}
-           @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin')
-               onkeydown="return false;"
-               style="background-color: #e9ecef; cursor: pointer;"
-           @endif
-           required
-           placeholder="YYYY-MM-DD">
-    @error('check_out')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
+               min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}" {{-- لو مش أدمن ومش من إتاحة، استخدم تاريخ اليوم --}} @endif
+                    {{-- *** تحديد أقصى تاريخ مسموح به (لو من إتاحة) *** --}}
+                    @if (isset($isBookingFromAvailability) && $isBookingFromAvailability && isset($bookingData['availability_end_date'])) max="{{ $bookingData['availability_end_date'] }}" @endif
+                    {{-- *** منع الكتابة اليدوية لغير الأدمن *** --}}
+                    @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin') onkeydown="return false;"
+               style="background-color: #e9ecef; cursor: pointer;" @endif
+                    required placeholder="YYYY-MM-DD">
+                @error('check_out')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
             {{-- الموظف المسؤول --}}
             <div class="col-md-4">
                 <label for="employee_id" class="form-label">الموظف المسؤول <span class="text-danger">*</span></label>
@@ -284,11 +282,11 @@
 @push('scripts')
     {{-- تضمين Select2 و DatePicker --}}
     {{-- <script src="..."></script> --}}
-   
-        
-        {{-- تضمين ملف preventClick.js --}}
-        <script src="{{ asset('js/preventClick.js') }}"></script>
-        <script>
+
+
+    {{-- تضمين ملف preventClick.js --}}
+    <script src="{{ asset('js/preventClick.js') }}"></script>
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             // تهيئة Select2
             // تأكد من أن الكلاس المستهدف هو .select2

@@ -18,12 +18,14 @@ class Availability extends Model
         'end_date',
         'status', // مثلاً: 'active', 'inactive', 'expired'
         'notes',
+        'min_nights',  
     ];
 
     // *** تحويل التواريخ تلقائياً ***
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'min_nights' => 'integer',
     ];
 
     // *** العلاقات ***
