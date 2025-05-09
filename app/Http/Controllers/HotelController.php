@@ -12,13 +12,23 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 use App\Models\HotelImage;
 
 class HotelController extends Controller
 {
+    // مدة صلاحية الكاش بالثواني (هنا:    3 أيام)
+    protected $cacheDuration = 259200;
+    protected $allHotelsCacheKey = 'hotels_all_with_images';
+
+
     public function index()
     {
-        $hotels = Hotel::all();
+        // $hotels = Hotel::all(); // Old way
+        $hotels = Cache::remember($this->allHotelsCacheKey, $this->cacheDuration, function () {
+            Log::info('Caching all hotels with images.');
+            return Hotel::with('images')->orderBy('name')->get(); // جلب الفنادق مع صورها
+        });
         return view('admin.hotels.hotels', compact('hotels'));
     }
 
@@ -77,6 +87,9 @@ class HotelController extends Controller
             'message' => "إضافة فندق جديد : {$hotel->name}", // إزالة الفاصلة الزائدة
             'type' => 'جديد',
         ]);
+        // مسح كاش قائمة جميع الفنادق لأنها تغيرت
+        Cache::forget($this->allHotelsCacheKey);
+        Log::info('All hotels cache cleared after new hotel creation.');
 
         // 5. إعادة التوجيه
         return redirect()->route('admin.hotels')->with('success', 'تم إضافة الفندق بنجاح!');
@@ -84,7 +97,13 @@ class HotelController extends Controller
 
     public function edit($id)
     {
-        $hotel = Hotel::findOrFail($id);
+        // $hotel = Hotel::findOrFail($id); // Old way
+        $hotelCacheKey = "hotel_{$id}_with_images";
+        $hotel = Cache::remember($hotelCacheKey, $this->cacheDuration, function () use ($id) {
+            Log::info("Caching hotel {$id} with images.");
+            return Hotel::with('images')->findOrFail($id); // جلب الفندق مع صوره
+        });
+
         return view('admin.hotels.edit-hotel', compact('hotel'));
     }
 
@@ -92,6 +111,7 @@ class HotelController extends Controller
     {
         $hotel = Hotel::findOrFail($id);
         $oldName = $hotel->name;
+        $hotelCacheKey = "hotel_{$id}_with_images";
 
         // 1. التحقق من البيانات (استخدام image_url)
         $validatedData = $request->validate([
@@ -119,21 +139,21 @@ class HotelController extends Controller
             'description' => $validatedData['description'] ?? null,
         ]);
 
-    // معالجة الصور
-    // إذا تم إرسال مفتاح image_urls (حتى لو كان مصفوفة فارغة بسبب إفراغ جميع الحقول)، قم بتحديث الصور
-    if ($request->has('image_urls')) {
-        $hotel->images()->delete(); // احذف الصور القديمة
+        // معالجة الصور
+        // إذا تم إرسال مفتاح image_urls (حتى لو كان مصفوفة فارغة بسبب إفراغ جميع الحقول)، قم بتحديث الصور
+        if ($request->has('image_urls')) {
+            $hotel->images()->delete(); // احذف الصور القديمة
 
-        // قم بتصفية القيم الفارغة من مصفوفة image_urls قبل الحفظ
-        $imageUrlsToSave = isset($validatedData['image_urls']) ? array_filter($validatedData['image_urls']) : [];
+            // قم بتصفية القيم الفارغة من مصفوفة image_urls قبل الحفظ
+            $imageUrlsToSave = isset($validatedData['image_urls']) ? array_filter($validatedData['image_urls']) : [];
 
-        if (!empty($imageUrlsToSave)) {
-            foreach ($imageUrlsToSave as $imageUrl) {
-                $hotel->images()->create(['image_path' => $imageUrl]);
+            if (!empty($imageUrlsToSave)) {
+                foreach ($imageUrlsToSave as $imageUrl) {
+                    $hotel->images()->create(['image_path' => $imageUrl]);
+                }
             }
         }
-    }
-    // إذا لم يتم إرسال 'image_urls' في الطلب، لا تقم بأي تعديل على الصور الحالية.
+        // إذا لم يتم إرسال 'image_urls' في الطلب، لا تقم بأي تعديل على الصور الحالية.
 
 
         // 4. إنشاء الإشعار
@@ -143,6 +163,11 @@ class HotelController extends Controller
             'message' => "تعديل فندق: {$oldName} إلى: {$hotel->name}", // إزالة الفاصلة الزائدة والأقواس
             'type' => 'تحديث', // تغيير النوع ليكون أوضح
         ]);
+        // مسح كاش هذا الفندق وكاش قائمة جميع الفنادق
+        Cache::forget($hotelCacheKey);
+        Cache::forget($this->allHotelsCacheKey);
+        Log::info("Cache cleared for hotel {$id} and all hotels list after update.");
+
 
         // 5. إعادة التوجيه
         return redirect()->route('admin.hotels')->with('success', 'تم تعديل الفندق بنجاح!');
@@ -151,12 +176,20 @@ class HotelController extends Controller
     public function destroy($id)
     {
         $hotel = Hotel::findOrFail($id);
+        $hotelCacheKey = "hotel_{$id}_with_images";
+
         $hotel->delete();
         Notification::create([
             'user_id' => Auth::user()->id,
             'message' => "حذف فندق   : {$hotel->name} ,",
             'type' => 'عملية حذف',
         ]);
+        // مسح كاش هذا الفندق وكاش قائمة جميع الفنادق
+        Cache::forget($hotelCacheKey);
+        Cache::forget($this->allHotelsCacheKey);
+        Log::info("Cache cleared for hotel {$id} and all hotels list after deletion.");
+
+
         return redirect()->route('admin.hotels')->with('success', 'تم حذف الفندق بنجاح!');
     }
 }
