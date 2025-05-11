@@ -17,7 +17,10 @@
         <div class="d-flex flex-column flex-md-row align-items-center justify-content-between mb-4">
             {{-- العنوان --}}
             <h1 class="mb-3 mb-md-0">التقرير اليومي</h1> {{-- شيلنا التاريخ من هنا --}}
-
+            {{-- زر التقارير المتقدمة --}}
+            <a href="{{ route('reports.advanced') }}" class="btn btn-primary btn-lg mb-3 mb-md-0 ms-md-3">
+                <i class="fas fa-chart-line me-2"></i> عرض التقارير المتقدمة
+            </a>
             {{-- *** بداية التعديل: إضافة التاريخ والوقت فوق الصورة *** --}}
             {{-- حاوية الصورة والنص (Relative Positioning) --}}
             <div style="position: relative;max-width: 200px;filter: drop-shadow(2px 2px 10px #000);"> {{-- نفس العرض الأقصى للصورة --}}
@@ -544,66 +547,66 @@
     {{-- *** الخطوة 5: JavaScript لإنشاء الرسوم البيانية *** --}}
     {{-- C:\xampp\htdocs\Ebn-Abbas-managment\public\js\daily.js --}}
     @push('scripts')
-    {{-- 1. تضمين Chart.js (إذا لم يكن مضمنًا في app.blade.php) --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        {{-- 1. تضمين Chart.js (إذا لم يكن مضمنًا في app.blade.php) --}}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    {{-- 2. تمرير البيانات من PHP إلى JavaScript --}}
-    <script>
-        // نضع البيانات في كائن window لسهولة الوصول إليها من الملف الخارجي
-        window.chartData = {
-            // بيانات الرسم البياني للحجوزات اليومية
-            dailyLabels: @json($chartDates ?? []),
-            dailyData: @json($bookingCounts ?? []),
+        {{-- 2. تمرير البيانات من PHP إلى JavaScript --}}
+        <script>
+            // نضع البيانات في كائن window لسهولة الوصول إليها من الملف الخارجي
+            window.chartData = {
+                // بيانات الرسم البياني للحجوزات اليومية
+                dailyLabels: @json($chartDates ?? []),
+                dailyData: @json($bookingCounts ?? []),
 
-             // بيانات الرسم البياني للمستحقات والالتزامات
-             receivableBalances: @json($receivableBalances ?? []), // <-- رصيد الشركات (الأخضر)
-            payableBalances: @json($payableBalances ?? []),       // <-- رصيد الجهات (الأحمر)
-            // *** بداية الإضافة: تمرير تفاصيل الأحداث للجافاسكريبت ***
-            dailyEventDetails: @json($dailyEventDetails ?? []), // <-- مصفوفة تفاصيل الأحداث لكل يوم
-            // *** نهاية الإضافة ***
+                // بيانات الرسم البياني للمستحقات والالتزامات
+                receivableBalances: @json($receivableBalances ?? []), // <-- رصيد الشركات (الأخضر)
+                payableBalances: @json($payableBalances ?? []), // <-- رصيد الجهات (الأحمر)
+                // *** بداية الإضافة: تمرير تفاصيل الأحداث للجافاسكريبت ***
+                dailyEventDetails: @json($dailyEventDetails ?? []), // <-- مصفوفة تفاصيل الأحداث لكل يوم
+                // *** نهاية الإضافة ***
 
-            // بيانات الرسم البياني للشركات (الأعمدة والتوزيع)
-            topCompaniesLabels: @json($topCompanies->pluck('name') ?? []),
-            topCompaniesRemaining: @json($topCompanies->pluck('remaining') ?? []), // <-- للمتبقي
-            topCompaniesBookingCounts: @json($topCompanies->pluck('bookings_count') ?? []), // <-- للحجوزات
+                // بيانات الرسم البياني للشركات (الأعمدة والتوزيع)
+                topCompaniesLabels: @json($topCompanies->pluck('name') ?? []),
+                topCompaniesRemaining: @json($topCompanies->pluck('remaining') ?? []), // <-- للمتبقي
+                topCompaniesBookingCounts: @json($topCompanies->pluck('bookings_count') ?? []), // <-- للحجوزات
 
-            // بيانات الرسم البياني لجهات الحجز
-            topAgentsLabels: @json($topAgents->pluck('name') ?? []),
-            topAgentsRemaining: @json($topAgents->pluck('remaining') ?? []), // <-- للمتبقي
+                // بيانات الرسم البياني لجهات الحجز
+                topAgentsLabels: @json($topAgents->pluck('name') ?? []),
+                topAgentsRemaining: @json($topAgents->pluck('remaining') ?? []), // <-- للمتبقي
 
-            // بيانات الرسم البياني لمقارنة المتبقي
-            totalRemainingFromCompanies: {{ $totalRemainingFromCompanies ?? 0 }},
-            totalRemainingToHotels: {{ $totalRemainingToHotels ?? 0 }}
-            // *** بداية الإضافة: إضافة إجمالي حجوزات الشركات ***
-            , // <-- فاصلة هنا
-            totalCompanyBookings: {{ $companiesReport->sum('bookings_count') ?? 0 }}
-            // *** نهاية الإضافة ***
-        };
-    </script>
+                // بيانات الرسم البياني لمقارنة المتبقي
+                totalRemainingFromCompanies: {{ $totalRemainingFromCompanies ?? 0 }},
+                totalRemainingToHotels: {{ $totalRemainingToHotels ?? 0 }}
+                    // *** بداية الإضافة: إضافة إجمالي حجوزات الشركات ***
+                    , // <-- فاصلة هنا
+                totalCompanyBookings: {{ $companiesReport->sum('bookings_count') ?? 0 }}
+                // *** نهاية الإضافة ***
+            };
+        </script>
 
-    {{-- 3. استدعاء ملف JavaScript الخارجي --}}
-    <script src="{{ asset('js/daily.js') }}"></script>
+        {{-- 3. استدعاء ملف JavaScript الخارجي --}}
+        <script src="{{ asset('js/daily.js') }}"></script>
 
-    {{-- 4. تعريف دالة النسخ --}}
-    <script>
-        function copyTable(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return; // تأكد من وجود الجدول
-            const range = document.createRange();
-            range.selectNode(table);
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
-            try {
-                document.execCommand('copy');
-                alert('تم نسخ الجدول');
-            } catch (err) {
-                alert('فشل نسخ الجدول. حاول مرة أخرى.');
+        {{-- 4. تعريف دالة النسخ --}}
+        <script>
+            function copyTable(tableId) {
+                const table = document.getElementById(tableId);
+                if (!table) return; // تأكد من وجود الجدول
+                const range = document.createRange();
+                range.selectNode(table);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                try {
+                    document.execCommand('copy');
+                    alert('تم نسخ الجدول');
+                } catch (err) {
+                    alert('فشل نسخ الجدول. حاول مرة أخرى.');
+                }
+                window.getSelection().removeAllRanges();
             }
-            window.getSelection().removeAllRanges();
-        }
-    </script>
-@endpush
-{{-- *** نهاية التعديل *** --}}
+        </script>
+    @endpush
+    {{-- *** نهاية التعديل *** --}}
 
 
 @endsection

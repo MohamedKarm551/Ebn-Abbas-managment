@@ -1,0 +1,112 @@
+/* تنسيقات عامة للتقارير المتقدمة */
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #3498db, #2980b9);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(45deg, #2ecc71, #27ae60);
+}
+
+.bg-gradient-danger {
+    background: linear-gradient(45deg, #e74c3c, #c0392b);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(45deg, #f39c12, #e67e22);
+}
+
+/* تنسيق جداول البيانات */
+.table-advanced {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.table-advanced thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    padding: 0.75rem 1rem;
+    border-top: none;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table-advanced tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+/* تنسيق البطاقات والأقسام */
+.section-title {
+    position: relative;
+    margin-bottom: 1.5rem;
+    padding-right: 1rem;
+    font-weight: 600;
+}
+
+.section-title::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: #007bff;
+    border-radius: 4px;
+}
+
+/* تنسيقات خاصة بالأجهزة المحمولة */
+@media (max-width: 767.98px) {
+    .chart-container {
+        height: 250px !important;
+    }
+
+    .stat-card h2 {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .chart-container {
+        height: 280px !important;
+    }
+}
+
+/* تنسيقات الطباعة */
+@media print {
+    @page {
+        size: landscape;
+    }
+    
+    body {
+        font-size: 12px;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+    
+    .chart-container {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    .row {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}
+
+/* تنسيق الإشعارات والتنبيهات */
+.alert-icon {
+    display: flex;
+    align-items: center;
+}
+
+.alert-icon i {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}

@@ -102,36 +102,36 @@ class ReportController extends Controller
             $chartDates[] = $date->format('d/m'); // تنسيق العرض في الرسم البياني (يوم/شهر)
             $bookingCounts[] = $bookingsData[$formattedDate] ?? 0; // نضع صفر إذا لم يكن اليوم موجودًا
         }
-                // 2. جلب الحجوزات مع تفاصيلها اللازمة للرسم والتلميح
-                $bookingsForChart = Booking::with(['company', 'agent', 'hotel']) // نجيب العلاقات عشان الأسماء
-                ->select(
-                    'check_in', // تاريخ بدء الاستحقاق
-                    'client_name', // اسم العميل للتفاصيل
-                    'company_id', // لربط الشركة
-                    'agent_id',   // لربط الجهة
-                    'hotel_id',   // لربط الفندق (اختياري في التفاصيل)
-                    DB::raw('sale_price * rooms * days as company_due'), // المستحق من الشركة
-                    DB::raw('cost_price * rooms * days as agent_due') // المستحق للجهة
-                )
-                ->whereBetween('check_in', [$startDate, $endDate]) // نستخدم check_in كتاريخ للحدث
-                ->orderBy('check_in', 'asc')
-                ->get();
-    
-            // 3. جلب دفعات الشركات مع تفاصيلها
-            $companyPaymentsForChart = Payment::with('company') // نجيب الشركة عشان اسمها
-                ->select('payment_date', 'amount', 'company_id', 'notes')
-                ->whereBetween('payment_date', [$startDate, $endDate])
-                ->orderBy('payment_date', 'asc')
-                ->get();
-    
-            // 4. جلب دفعات الوكلاء مع تفاصيلها
-            $agentPaymentsForChart = AgentPayment::with('agent') // نجيب الجهة عشان اسمها
-                ->select('payment_date', 'amount', 'agent_id', 'notes')
-                ->whereBetween('payment_date', [$startDate, $endDate])
-                ->orderBy('payment_date', 'asc')
-                ->get();
-    
-    
+        // 2. جلب الحجوزات مع تفاصيلها اللازمة للرسم والتلميح
+        $bookingsForChart = Booking::with(['company', 'agent', 'hotel']) // نجيب العلاقات عشان الأسماء
+            ->select(
+                'check_in', // تاريخ بدء الاستحقاق
+                'client_name', // اسم العميل للتفاصيل
+                'company_id', // لربط الشركة
+                'agent_id',   // لربط الجهة
+                'hotel_id',   // لربط الفندق (اختياري في التفاصيل)
+                DB::raw('sale_price * rooms * days as company_due'), // المستحق من الشركة
+                DB::raw('cost_price * rooms * days as agent_due') // المستحق للجهة
+            )
+            ->whereBetween('check_in', [$startDate, $endDate]) // نستخدم check_in كتاريخ للحدث
+            ->orderBy('check_in', 'asc')
+            ->get();
+
+        // 3. جلب دفعات الشركات مع تفاصيلها
+        $companyPaymentsForChart = Payment::with('company') // نجيب الشركة عشان اسمها
+            ->select('payment_date', 'amount', 'company_id', 'notes')
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->orderBy('payment_date', 'asc')
+            ->get();
+
+        // 4. جلب دفعات الوكلاء مع تفاصيلها
+        $agentPaymentsForChart = AgentPayment::with('agent') // نجيب الجهة عشان اسمها
+            ->select('payment_date', 'amount', 'agent_id', 'notes')
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->orderBy('payment_date', 'asc')
+            ->get();
+
+
         // --- *** نهاية: جلب بيانات الحجوزات اليومية *** ---
         // 5. تجميع كل الأحداث (حجوزات ودفعات) في مصفوفة واحدة مع تفاصيلها وتأثيرها
         $allEventsWithDetails = [];
@@ -143,8 +143,8 @@ class ReportController extends Controller
                 'agent_change' => $booking->agent_due,   // التغيير في رصيد الجهات (موجب)
                 // نص التفاصيل اللي هيظهر في الـ tooltip
                 'details' => "حجز: " . Str::limit($booking->client_name ?? 'N/A', 15) // اسم العميل مختصر
-                           . " (+".number_format($booking->company_due)." ش)" // تأثيره على رصيد الشركة
-                           . " (+".number_format($booking->agent_due)." ج)" // تأثيره على رصيد الجهة
+                    . " (+" . number_format($booking->company_due) . " ش)" // تأثيره على رصيد الشركة
+                    . " (+" . number_format($booking->agent_due) . " ج)" // تأثيره على رصيد الجهة
             ];
         }
         foreach ($companyPaymentsForChart as $payment) {
@@ -155,8 +155,8 @@ class ReportController extends Controller
                 'agent_change' => 0,
                 // نص التفاصيل
                 'details' => "دفعة من: " . Str::limit($payment->company->name ?? 'N/A', 10) // اسم الشركة مختصر
-                           . " (-".number_format($payment->amount)." ش)" // تأثيره على رصيد الشركة
-                           . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
+                    . " (-" . number_format($payment->amount) . " ش)" // تأثيره على رصيد الشركة
+                    . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
             ];
         }
         foreach ($agentPaymentsForChart as $payment) {
@@ -167,8 +167,8 @@ class ReportController extends Controller
                 'agent_change' => -$payment->amount, // دفعة للجهة تقلل المستحق لها (سالب)
                 // نص التفاصيل
                 'details' => "دفعة إلى: " . Str::limit($payment->agent->name ?? 'N/A', 10) // اسم الجهة مختصر
-                           . " (-".number_format($payment->amount)." ج)" // تأثيره على رصيد الجهة
-                           . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
+                    . " (-" . number_format($payment->amount) . " ج)" // تأثيره على رصيد الجهة
+                    . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
             ];
         }
 
@@ -290,13 +290,256 @@ class ReportController extends Controller
             'recentCompanyEdits', // إشعار خفيف على آخر شركة تم عليها تعديل
             'resentAgentEdits', // إشعار خفيف على آخر جهة حجز تم عليه تعديل
             'chartDates',       // <-- *** تمرير مصفوفة التواريخ للرسم ***
-            'bookingCounts' ,    // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
+            'bookingCounts',    // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
             'receivableBalances', // <-- مصفوفة رصيد الشركات (الخط الأخضر)
             'payableBalances',    // <-- مصفوفة رصيد الجهات (الخط الأحمر)
-            'dailyEventDetails' 
+            'dailyEventDetails'
+        ));
+    }
+    /**
+     * عرض صفحة التقارير المتقدمة
+     */
+    public function advanced(Request $request)
+    {
+        // إذا تم تحديد تاريخ، نستخدمه، وإلا نستخدم تاريخ اليوم
+        // إذا تم تحديد تاريخ، نستخدمه، وإلا نستخدم تاريخ اليوم
+        if ($request->has('date')) {
+            try {
+                $today = Carbon::createFromFormat('Y-m-d', $request->input('date'));
+            } catch (\Exception $e) {
+                // إذا كان التاريخ غير صالح، نستخدم اليوم
+                $today = Carbon::today();
+            }
+        } else {
+            $today = Carbon::today();
+        }
+
+        $tomorrow = (clone $today)->addDay();
+
+        // بنجيب كل الحجوزات النشطة اللي موجودة في التاريخ المحدد
+        $activeBookings = Booking::whereDate('check_in', '<=', $today)
+            ->whereDate('check_out', '>', $today)
+            ->with(['hotel', 'company', 'agent'])
+            ->get();
+
+        // بنجيب الحجوزات اللي هتدخل في التاريخ المحدد
+        $checkingInToday = Booking::whereDate('check_in', $today)
+            ->with(['hotel', 'company', 'agent'])
+            ->get();
+
+        // بنجيب الحجوزات اللي هتخرج في اليوم التالي للتاريخ المحدد
+        $checkingOutTomorrow = Booking::whereDate('check_out', $tomorrow)
+            ->with(['hotel', 'company', 'agent'])
+            ->get();
+        // ملخص إحصائي عن الفنادق
+        $hotelStats = Hotel::withCount(['bookings as active_bookings' => function ($query) use ($today) {
+            $query->whereDate('check_in', '<=', $today)
+                ->whereDate('check_out', '>', $today);
+        }])
+            ->withCount(['bookings as checking_in_today' => function ($query) use ($today) {
+                $query->whereDate('check_in', $today);
+            }])
+            ->withCount(['bookings as checking_out_tomorrow' => function ($query) use ($tomorrow) {
+                $query->whereDate('check_out', $tomorrow);
+            }])
+            ->withCount('bookings as total_bookings')
+            ->get()
+            ->map(function ($hotel) use ($activeBookings) {
+                // نستخدم قيمة افتراضية لعدد الغرف (30 غرفة لكل فندق)
+                $defaultRooms = 30;
+
+                // بنحسب معدل الإشغال للفندق النهاردة
+                $occupiedRooms = $activeBookings->where('hotel_id', $hotel->id)->sum('rooms');
+                $hotel->occupancy_rate = $defaultRooms > 0 ? round(($occupiedRooms / $defaultRooms) * 100) : 0;
+
+                // إضافة حقل total_rooms بقيمة افتراضية لكل فندق
+                $hotel->total_rooms = $defaultRooms;
+
+                return $hotel;
+            });
+
+        // بنجيب بيانات للرسم البياني للإشغال اليومي لمدة أسبوع
+        $occupancyData = $this->calculateOccupancyForWeek();
+
+        // بنجيب بيانات تحليل الإيرادات
+        $revenueData = $this->calculateRevenueAnalysis();
+
+        // بنجمع كل المعلومات في متغير واحد ونبعتها للفيو
+        return view('reports.advanced', compact(
+            'today',
+            'tomorrow',
+            'activeBookings',
+            'checkingInToday',
+            'checkingOutTomorrow',
+            'hotelStats',
+            'occupancyData',
+            'revenueData'
         ));
     }
 
+    /**
+     * دالة لحساب معدل الإشغال اليومي للفنادق لمدة أسبوع
+     */
+    private function calculateOccupancyForWeek($startDate = null)
+    {
+        $result = [];
+        $startDate = $startDate ?? Carbon::today();
+        $endDate = $startDate->addDays(6); // أسبوع كامل
+
+        // جلب قائمة الفنادق (بدون total_rooms لأنه غير موجود)
+        $hotels = Hotel::select('id', 'name')->get();
+
+        // نقوم بتعيين عدد غرف افتراضي لكل فندق (يمكنك تغيير هذه القيمة)
+        $defaultRoomsPerHotel = 30; // قيمة افتراضية لكل فندق
+
+        // إنشاء مصفوفة تحتوي على عدد الغرف لكل فندق
+        $totalRoomsByHotelId = $hotels->mapWithKeys(function ($hotel) use ($defaultRoomsPerHotel) {
+            // هنا نستخدم عدد غرف افتراضي بما أن العمود غير موجود
+            return [$hotel->id => $defaultRoomsPerHotel];
+        });
+
+        $totalRooms = $totalRoomsByHotelId->sum();
+
+        // حساب الإشغال لكل يوم
+        for ($date = clone $startDate; $date <= $endDate; $date->addDay()) {
+            $dateString = $date->format('Y-m-d');
+            $dateLabel = $date->format('d/m');
+
+            // جلب الحجوزات في هذا اليوم مع عدد الغرف
+            $bookings = Booking::whereDate('check_in', '<=', $dateString)
+                ->whereDate('check_out', '>', $dateString)
+                ->select('hotel_id', DB::raw('SUM(rooms) as booked_rooms'))
+                ->groupBy('hotel_id')
+                ->get()
+                ->pluck('booked_rooms', 'hotel_id')
+                ->toArray();
+
+            // حساب الغرف المحجوزة والمتاحة لكل فندق
+            $occupancyByHotel = [];
+            $totalBooked = 0;
+
+            foreach ($hotels as $hotel) {
+                // استخدم القيمة الافتراضية التي قمنا بتعيينها
+                $hotelTotalRooms = $totalRoomsByHotelId[$hotel->id];
+                $booked = $bookings[$hotel->id] ?? 0;
+                $available = max(0, $hotelTotalRooms - $booked);
+                $occupancyRate = $hotelTotalRooms > 0 ? round(($booked / $hotelTotalRooms) * 100, 1) : 0;
+
+                $occupancyByHotel[$hotel->id] = [
+                    'name' => $hotel->name,
+                    'booked' => $booked,
+                    'available' => $available,
+                    'total' => $hotelTotalRooms, // استخدام القيمة الافتراضية
+                    'rate' => $occupancyRate
+                ];
+
+                $totalBooked += $booked;
+            }
+
+            // إضافة البيانات لهذا اليوم
+            $overallRate = $totalRooms > 0 ? round(($totalBooked / $totalRooms) * 100, 1) : 0;
+            $result[] = [
+                'date' => $dateString,
+                'label' => $dateLabel,
+                'day_name' => $date->locale('ar')->dayName,
+                'total_booked' => $totalBooked,
+                'total_available' => $totalRooms - $totalBooked,
+                'overall_rate' => $overallRate,
+                'hotels' => $occupancyByHotel
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * دالة لحساب وتحليل الإيرادات (المثال فقط)
+     */
+    private function calculateRevenueAnalysis($referenceDate = null)
+    {
+        // إذا لم يتم تمرير تاريخ مرجعي، نستخدم اليوم
+    $referenceDate = $referenceDate ?? Carbon::now();
+    
+        // بنجيب الأشهر الثلاثة الماضية
+        $months = [];
+        $revenueData = [];
+
+        for ($i = 2; $i >= 0; $i--) {
+            $month = Carbon::now()->startOfMonth()->subMonths($i);
+            $months[] = $month->format('M'); // اسم الشهر مختصر
+
+            // جلب الإيرادات الفعلية (مبالغ البيع للحجوزات في هذا الشهر)
+            $actualRevenue = Booking::whereYear('check_in', $month->year)
+                ->whereMonth('check_in', $month->month)
+                ->sum(DB::raw('sale_price * rooms * days'));
+
+            // جلب المدفوعات الفعلية من الشركات خلال هذا الشهر
+            $actualPayments = Payment::whereYear('payment_date', $month->year)
+                ->whereMonth('payment_date', $month->month)
+                ->sum('amount');
+
+            // طبعا الإيرادات المتوقعة في المستقبل ممكن تكون تقديرات أو توقعات
+            // هنا بنضع قيم افتراضية للتوضيح
+            $projectedRevenue = $actualRevenue * 1.1; // مثال: 10% زيادة متوقعة
+
+            $revenueData[] = [
+                'month' => $month->format('M Y'),
+                'actual' => round($actualRevenue),
+                'payments' => round($actualPayments),
+                'projected' => round($projectedRevenue),
+                'collection_rate' => $actualRevenue > 0 ? round(($actualPayments / $actualRevenue) * 100) : 0
+            ];
+        }
+
+        // إضافة الشهر الحالي والشهر القادم (توقعات)
+        $currentMonth = Carbon::now()->startOfMonth();
+        $nextMonth = Carbon::now()->addMonth()->startOfMonth();
+
+        $months[] = $currentMonth->format('M');
+        $months[] = $nextMonth->format('M');
+
+        // الإيرادات الفعلية حتى الآن في الشهر الحالي
+        $currentMonthRevenue = Booking::whereYear('check_in', $currentMonth->year)
+            ->whereMonth('check_in', $currentMonth->month)
+            ->sum(DB::raw('sale_price * rooms * days'));
+
+        $currentMonthPayments = Payment::whereYear('payment_date', $currentMonth->year)
+            ->whereMonth('payment_date', $currentMonth->month)
+            ->sum('amount');
+
+        // توقعات الشهر الحالي (مبني على أنماط سابقة)
+        // هنا بنضع قيم افتراضية للتوضيح
+        $projectedCurrentMonth = $currentMonthRevenue * 1.5; // افتراض أننا في منتصف الشهر
+
+        $revenueData[] = [
+            'month' => $currentMonth->format('M Y'),
+            'actual' => round($currentMonthRevenue),
+            'payments' => round($currentMonthPayments),
+            'projected' => round($projectedCurrentMonth),
+            'collection_rate' => $currentMonthRevenue > 0 ? round(($currentMonthPayments / $currentMonthRevenue) * 100) : 0
+        ];
+
+        // توقعات الشهر القادم (يمكنك حسابها بناء على الحجوزات المؤكدة مسبقًا للشهر القادم)
+        $nextMonthConfirmedBookings = Booking::whereYear('check_in', $nextMonth->year)
+            ->whereMonth('check_in', $nextMonth->month)
+            ->sum(DB::raw('sale_price * rooms * days'));
+
+        // نفترض أن هناك 30% زيادة متوقعة على الحجوزات المؤكدة حاليًا
+        $projectedNextMonth = $nextMonthConfirmedBookings * 1.3;
+
+        $revenueData[] = [
+            'month' => $nextMonth->format('M Y'),
+            'actual' => 0, // لسه معندناش إيرادات فعلية
+            'payments' => 0, // لسه معندناش مدفوعات فعلية
+            'projected' => round($projectedNextMonth),
+            'collection_rate' => 0
+        ];
+
+        return [
+            'months' => $months,
+            'data' => $revenueData
+        ];
+    }
     // تقرير حجوزات شركة معينة
     public function companyBookings($id)
     {

@@ -90,6 +90,7 @@ Route::middleware(['auth'])->group(function () {
         //     عرض الرواتس التالية  أدمن فقط ميدل وير
 
         Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
+        Route::get('/reports/advanced/{date?}', [ReportController::class, 'advanced'])->name('reports.advanced');
         Route::get('/reports/company/{id}/bookings', [ReportController::class, 'companyBookings'])->name('reports.company.bookings');
         Route::get('/reports/agent/{id}/bookings', [ReportController::class, 'agentBookings'])->name('reports.agent.bookings');
         Route::get('/reports/hotel/{id}/bookings', [ReportController::class, 'hotelBookings'])->name('reports.hotel.bookings');
