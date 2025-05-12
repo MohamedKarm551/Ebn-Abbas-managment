@@ -287,6 +287,19 @@ document.addEventListener("DOMContentLoaded", function () {
                     cells[checkInIdx].style.display = 'none';
                     cells[checkOutIdx].style.display = 'none';
                 }
+                // <td colspan="8" class="text-end">المجموع في الصفحة:</td> خليه يبقا خمسة بس في الشاشات دي فقط : 
+                // colspan="5" كود سكريبت  : 
+                 document.querySelectorAll('.table tbody tr').forEach(row => {
+        // ابحث عن خلية المجموع (عادة تحتوي على النص "المجموع في الصفحة")
+        row.querySelectorAll('td').forEach(cell => {
+            if (cell.textContent.includes('المجموع في الصفحة')) {
+                cell.colSpan = 5;
+            }
+        });
+    });
+
+
+
             });
         });
     }

@@ -95,7 +95,6 @@
     // دالة تهيئة مكونات Bootstrap (زي الـ Popovers)
     // ==========================================================
     function initBootstrapComponents() {
-        console.log('بنهيئ مكونات Bootstrap...');
         var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
         var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
             // بنتأكد إن الـ popover مش متفعل قبل كده

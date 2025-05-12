@@ -230,3 +230,14 @@ Route::post('/logout', function (Request $request) {
     Auth::logout();
     return redirect('/');
 })->name('logout');
+Route::post('/devtools-logout', function () {
+    if (Auth::check()) {
+        \App\Models\Notification::create([
+            'user_id' => Auth::id(),
+            'message' => "محاولة فحص الصفحة أو التعديل عبر أدوات المطور.",
+            'type' => 'تنبيه أمني',
+        ]);
+        Auth::logout();
+    }
+    return response()->json(['status' => 'ok']);
+})->name('devtools.logout');

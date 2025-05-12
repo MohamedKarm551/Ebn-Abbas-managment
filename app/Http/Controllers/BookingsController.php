@@ -967,7 +967,14 @@ class BookingsController extends Controller
                 $adminUsers = User::where('role', 'Admin')->get();
 
                 // إنشاء رسالة الإشعار
-                $notificationMessage = "حجز جديد من شركة: {$booking->company->name} للعميل: {$booking->client_name}، فندق: {$booking->hotel->name}. (مسؤول: {$responsibleUserName})";
+                // تحديد اسم المسؤول حسب مصدر الحجز
+                if ($isBookingFromAvailability && isset($responsibleUserName)) {
+                    // لو من إتاحة، المسؤول هو الموظف المرتبط بالإتاحة
+                    $notificationMessage = "حجز جديد من شركة: {$booking->company->name} للعميل: {$booking->client_name}، فندق: {$booking->hotel->name}. (مسؤول: {$responsibleUserName})";
+                } else {
+                    // لو حجز عادي، المسؤول هو المستخدم الحالي
+                    $notificationMessage = "حجز جديد من شركة: {$booking->company->name} للعميل: {$booking->client_name}، فندق: {$booking->hotel->name}. (مسؤول: " . (Auth::user()->name ?? 'غير معروف') . ")";
+                }
                 $notificationType = 'حجز جديد';
 
                 // 1. إرسال إشعار لكل أدمن

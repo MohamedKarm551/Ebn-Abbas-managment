@@ -31,8 +31,8 @@ class AdminController extends Controller
         $user = Auth::user(); // جلب المستخدم الحالي
         // *** بداية التعديل: فلترة الإشعارات حسب الدور ***
         $query = Notification::latest(); // نبدأ بالاستعلام الأساسي
-           // استدعاء الفانكشن الأولى (مثلاً حذف إشعارات قديمة)
-    $this->deleteOldLoginNotifications();
+        // استدعاء الفانكشن الأولى (مثلاً حذف إشعارات قديمة)
+        $this->deleteOldLoginNotifications();
 
         // شوف لو فيه باراميتر 'filter' جاي في الـ URL
         $currentFilter = $request->input('filter');
@@ -40,12 +40,18 @@ class AdminController extends Controller
         if ($currentFilter) {
             switch ($currentFilter) {
                 case 'bookings':
-                    // فلتر حسب الكلمات المفتاحية للحجوزات في الرسالة
-                    $query->where(function ($q) {
-                        $q->where('message', 'LIKE', '%حجز%') // كلمة "حجز"
-                            ->orWhere('message', 'LIKE', '%booking%'); // كلمة "booking"
-                        // ممكن تضيف كلمات تانية زي "فاتورة", "voucher" لو بتظهر في إشعارات الحجوزات
-                    });
+                    // فلترة الحجوزات حسب نوع الإشعار
+                    $bookingTypes = [
+                        'إضافة حجز',
+                        'حجز جديد',
+                        'تعديل حجز',
+                        'حذف حجز',
+                        'عملية حذف',
+                        'تأكيد حجز',
+                        'إلغاء حجز',
+                        // أضف كل الأنواع التي تخص الحجوزات فقط
+                    ];
+                    $query->whereIn('type', $bookingTypes);
                     break;
                 case 'payments':
                     // فلتر حسب الكلمات المفتاحية للدفعات
@@ -63,12 +69,12 @@ class AdminController extends Controller
                             ->orWhere('message', 'LIKE', '%allotment%'); // كلمة "allotment"
                     });
                     break;
-                    case 'logins':
-                        $query->where(function ($q) {
-                            $q->where('type', 'LIKE', '%login%')
-                              ->orWhere('type', 'LIKE', '%logout%');
-                        });
-                        break;
+                case 'logins':
+                    $query->where(function ($q) {
+                        $q->where('type', 'LIKE', '%login%')
+                            ->orWhere('type', 'LIKE', '%logout%');
+                    });
+                    break;
                     // ممكن تضيف case تانية لأنواع فلاتر تانية لو حبيت
                     // مثال:
                     // case 'users':
@@ -93,10 +99,10 @@ class AdminController extends Controller
         $deleted = Notification::whereIn('type', ['login', 'logout'])
             ->where('created_at', '<', now()->subDays(3))
             ->delete();
-    
+
         return redirect()->back()->with('success', "تم حذف $deleted إشعار تسجيل دخول/خروج أقدم من 3أيام.");
     }
-    
+
     public function markNotificationRead($id)
     {
         $user = Auth::user();
@@ -576,7 +582,7 @@ class AdminController extends Controller
 
     // ... (use Maatwebsite\Excel\Facades\Excel; use App\Exports\ArchivedBookingsExport; use Illuminate\Http\Request;)
 
-    public function exportArchivedBookings( )
+    public function exportArchivedBookings()
     {
         $fileName = 'all_archived_bookings_' . now()->format('Ymd_His') . '.xlsx';
 
@@ -586,7 +592,7 @@ class AdminController extends Controller
             ->where('sale_price', 0)
             ->orderBy('created_at', 'desc')
             ->get();
-    
+
         // 2. رؤوس الأعمدة
         $headings = [
             'م',
@@ -603,33 +609,33 @@ class AdminController extends Controller
             'الملاحظات',
             'تاريخ الإنشاء',
         ];
-    
+
         // 3. Anonymous Export Class زي اللي في BookingsController
         return Excel::download(new class($archivedBookings, $headings) implements FromCollection, WithHeadings, WithMapping
         {
             protected $bookings;
             protected $headings;
             protected static $index = 0;
-    
+
             public function __construct($bookings, $headings)
             {
                 $this->bookings = $bookings;
                 $this->headings = $headings;
                 self::$index = 0; // Reset the index for each export
             }
-    
+
             public function collection()
             {
                 // هنا بنرجع مجموعة الحجوزات المؤرشفة
                 return $this->bookings;
             }
-    
+
             public function headings(): array
             {
 
                 return $this->headings;
             }
-    
+
             public function map($booking): array
             {
                 // هنا بنرجع البيانات لكل حجز
@@ -651,6 +657,5 @@ class AdminController extends Controller
                 ];
             }
         }, $fileName);
-    
     }
 }
