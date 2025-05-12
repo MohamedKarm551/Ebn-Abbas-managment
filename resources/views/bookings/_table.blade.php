@@ -33,7 +33,7 @@
             @endif
             {{-- *** نهاية التعديل *** --}}
             <th style="min-width: 100px;"> مطلوب من الشركة</th>
-            <th class="text-center">العملة</th> {{-- إضافة عمود العملة --}}
+            {{-- <th class="text-center">العملة</th> إضافة عمود العملة --}}
 
             {{-- <th>السداد من الشركة</th> --}}
             <th>الموظف المسؤول</th>
@@ -113,9 +113,9 @@
                     {{ $booking->amount_due_from_company }}
                     {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
                 </td>
-                <td class="text-center align-middle">
+                {{-- <td class="text-center align-middle">
                     {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
-                </td>
+                </td> --}}
                 <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط فلترة الموظف *** --}}
                     @if (auth()->user()->role !== 'Company')
@@ -228,3 +228,71 @@
         </tr>
     </tbody>
 </table>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function mergeTableCellsForMobile() {
+        if (window.innerWidth >= 768) {
+            // عند العودة للديسكتوب أظهر كل الأعمدة
+            document.querySelectorAll('.table').forEach(table => {
+                table.querySelectorAll('thead th, tbody td').forEach(cell => {
+                    cell.style.display = '';
+                });
+            });
+            return;
+        }
+
+        document.querySelectorAll('.table').forEach(table => {
+            // استخراج رؤوس الأعمدة الفعلية
+            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+
+            // حدد الأعمدة المطلوب إخفاؤها حسب النص
+            const hideCols = ['غرف', 'الدخول', 'الخروج'];
+            // إخفاء رؤوس الأعمدة المطلوبة
+            headers.forEach((h, idx) => {
+                if (hideCols.some(col => h.includes(col))) {
+                    const th = table.querySelector(`thead th:nth-child(${idx + 1})`);
+                    if (th) th.style.display = 'none';
+                }
+            });
+
+            // لكل صف بيانات
+            table.querySelectorAll('tbody tr').forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td'));
+                if (cells.length < 4) return;
+
+                // ابحث عن الأعمدة حسب النص (وليس الترتيب)
+                let clientIdx = -1, roomsIdx = -1, hotelIdx = -1, checkInIdx = -1, checkOutIdx = -1;
+                headers.forEach((h, i) => {
+                    if (h.includes('العميل')) clientIdx = i;
+                    if (h.includes('غرف')) roomsIdx = i;
+                    if (h.includes('فندق')) hotelIdx = i;
+                    if (h.includes('الدخول')) checkInIdx = i;
+                    if (h.includes('الخروج')) checkOutIdx = i;
+                });
+
+                // دمج اسم العميل + عدد الغرف
+                if (clientIdx !== -1 && roomsIdx !== -1 && cells[clientIdx] && cells[roomsIdx]) {
+                    if (!cells[clientIdx].innerHTML.includes('غرفة')) {
+                        cells[clientIdx].innerHTML += `<span class="d-block text-muted small">(${cells[roomsIdx].textContent.trim()} غرفة)</span>`;
+                    }
+                    cells[roomsIdx].style.display = 'none';
+                }
+
+                // دمج التواريخ + الفندق
+                if (hotelIdx !== -1 && checkInIdx !== -1 && checkOutIdx !== -1 &&
+                    cells[hotelIdx] && cells[checkInIdx] && cells[checkOutIdx]) {
+                    if (!cells[hotelIdx].innerHTML.includes('دخول:')) {
+                        cells[hotelIdx].innerHTML += `<div class="text-muted small">دخول: ${cells[checkInIdx].textContent.trim()}<br>خروج: ${cells[checkOutIdx].textContent.trim()}</div>`;
+                    }
+                    cells[checkInIdx].style.display = 'none';
+                    cells[checkOutIdx].style.display = 'none';
+                }
+            });
+        });
+    }
+
+    mergeTableCellsForMobile();
+    window.addEventListener('resize', mergeTableCellsForMobile);
+    document.addEventListener('ajaxTableUpdated', mergeTableCellsForMobile);
+});
+</script>

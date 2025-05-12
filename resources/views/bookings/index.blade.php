@@ -262,6 +262,74 @@
 
 
             <script src="{{ asset('js/preventClick.js') }}"></script>
+            {{-- <script src="{{ asset('js/hide-cols-mobile.js') }}"></script> --}}
+            {{-- سكريبت لجعل الجدوال مناسبا لحجم شاشات الهاتف --}}
+            <script>
+                function adjustBookingsTableForMobile() {
+                    // ابحث عن كل الجداول التي تحتوي على العملاء
+                    document.querySelectorAll('.table').forEach(table => {
+                        const headerCells = table.querySelectorAll('thead tr th');
+                        let roomColIndex = -1,
+                            currencyColIndex = -1,
+                            clientColIndex = -1;
+
+                        headerCells.forEach((th, idx) => {
+                            if (th.textContent.trim().includes('غرف')) roomColIndex = idx;
+                            if (th.textContent.trim().includes('العملة')) currencyColIndex = idx;
+                            if (th.textContent.trim().includes('العميل')) clientColIndex = idx;
+                        });
+
+                        if (window.innerWidth < 768) {
+                            if (roomColIndex !== -1) headerCells[roomColIndex].style.display = 'none';
+                            if (currencyColIndex !== -1) headerCells[currencyColIndex].style.display = 'none';
+
+                            table.querySelectorAll('tbody tr').forEach(row => {
+                                const cells = row.querySelectorAll('td');
+                                // دمج عدد الغرف مع اسم العميل (مرة واحدة فقط)
+                                if (clientColIndex !== -1 && roomColIndex !== -1 && cells[clientColIndex] && cells[
+                                        roomColIndex]) {
+                                    const rooms = cells[roomColIndex].textContent.trim();
+                                    if (rooms && !cells[clientColIndex].innerHTML.includes('غرفة')) {
+                                        cells[clientColIndex].innerHTML +=
+                                            `<span class="d-block text-muted small">(${rooms} غرفة)</span>`;
+                                    }
+                                }
+                                if (roomColIndex !== -1 && cells[roomColIndex]) cells[roomColIndex].style.display =
+                                    'none';
+                                if (currencyColIndex !== -1 && cells[currencyColIndex]) cells[currencyColIndex]
+                                    .style.display = 'none';
+                            });
+                        } else {
+                            if (roomColIndex !== -1) headerCells[roomColIndex].style.display = '';
+                            if (currencyColIndex !== -1) headerCells[currencyColIndex].style.display = '';
+                            table.querySelectorAll('tbody tr').forEach(row => {
+                                const cells = row.querySelectorAll('td');
+                                if (roomColIndex !== -1 && cells[roomColIndex]) cells[roomColIndex].style.display =
+                                    '';
+                                if (currencyColIndex !== -1 && cells[currencyColIndex]) cells[currencyColIndex]
+                                    .style.display = '';
+                                // إزالة النص المضاف بجانب اسم العميل فقط إذا كان موجود
+                                if (clientColIndex !== -1 && cells[clientColIndex]) {
+                                    cells[clientColIndex].innerHTML = cells[clientColIndex].innerHTML.replace(
+                                        /\(<span.*غرفة<\/span>\)/, '');
+                                    cells[clientColIndex].innerHTML = cells[clientColIndex].innerHTML.replace(
+                                        /<span class="d-block text-muted small">\(\d+\sغرفة\)<\/span>/, '');
+                                }
+                            });
+                        }
+                    });
+                }
+
+                // شغل الدالة عند التحميل وعند تغيير حجم الشاشة
+                document.addEventListener("DOMContentLoaded", adjustBookingsTableForMobile);
+                window.addEventListener('resize', adjustBookingsTableForMobile);
+
+                // لو الجدول بيتحدث بالـ AJAX أو أي طريقة ديناميكية، شغل الدالة بعد كل تحديث:
+                document.addEventListener('ajaxTableUpdated', adjustBookingsTableForMobile);
+                // بعد تحديث الجدول بالـ AJAX
+                document.dispatchEvent(new Event('ajaxTableUpdated'));
+            </script>
+
             <script>
                 // ==========================================================
                 // دالة تهيئة مكونات Bootstrap (زي الـ Popovers)
@@ -440,7 +508,8 @@
                             } else {
                                 console.warn('مش لاقي حاوية الجدول أو بيانات الجدول مرجعتش.');
                             }
-
+                            
+                            
                             // ب. تحديث أزرار التنقل بين الصفحات
                             if (paginationContainer && response.data.pagination !== undefined) {
                                 const tempDiv = document.createElement('div');
@@ -506,6 +575,7 @@
                 // الكود الأساسي اللي بيشتغل لما الصفحة تحمل (DOMContentLoaded)
                 // ==========================================================
                 document.addEventListener('DOMContentLoaded', function() {
+
                     // --- كود الإكمال التلقائي (Autocomplete) ---
                     const searchInput = document.getElementById('search');
                     let suggestionsContainer = null;
@@ -698,6 +768,9 @@
 
                 }); // نهاية الـ DOMContentLoaded
             </script>
+
+            {{-- كود تفعيل الـ Accordion لجدول الحجوزات --}}
+           
         @endpush
 
     </div>
@@ -899,8 +972,8 @@
 
         /* Remove the rotation from the main hover effect if pulse is applied */
         /* .admin-menu-container:hover .admin-circle {
-                    transform: rotate(360deg) scale(1.1);
-                } */
+                                                                transform: rotate(360deg) scale(1.1);
+                                                            } */
 
 
 
