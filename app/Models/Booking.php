@@ -27,6 +27,7 @@ class Booking extends Model
         'days',
         'amount_due_to_hotel',
         'amount_due_from_company',
+        'currency',
         'availability_room_type_id', // *** إضافة الحقل الجديد ***
         'amount_paid_by_company', // تأكد من وجود هذا الحقل في المايجريشن
         'amount_paid_to_hotel', // تأكد من وجود هذا الحقل في المايجريشن

@@ -28,7 +28,8 @@
                                 data-rooms="{{ $booking->rooms }}"
                                 data-days="{{ $booking->days ?? \Carbon\Carbon::parse($booking->check_in)->diffInDays(\Carbon\Carbon::parse($booking->check_out)) }}"
                                 data-cost-price="{{ $booking->{$costPriceField} ?? 0 }}"
-                                onclick="event.stopPropagation();">
+                                data-currency="{{ $booking->currency }}"
+                                 onclick="event.stopPropagation();">
                         </label>
                     </td>
                     {{-- Render the rest of the row columns passed from parent --}}

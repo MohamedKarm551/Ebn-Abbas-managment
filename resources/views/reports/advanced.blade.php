@@ -315,7 +315,7 @@
         <div class="col-lg-7 mb-4">
             <div class="  h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">معدل الإشغال اليومي (أسبوع)</h5>
+                    <h5 class="mb-2">معدل الإشغال اليومي (أسبوع)</h5>
                     <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" href="#occupancyChartControls"
                         aria-expanded="false">
                         <i class="fas fa-filter"></i>
@@ -343,7 +343,7 @@
         <div class="col-lg-5 mb-4">
             <div class="  h-100">
                 <div class="card-header">
-                    <h5 class="mb-0">حالة الغرف اليوم</h5>
+                    <h5 class="mb-2">حالة الغرف اليوم</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 260px;">
@@ -388,7 +388,7 @@
         <div class="col-lg-12 mb-4">
             <div class=" ">
                 <div class="card-header">
-                    <h5 class="mb-0">تحليل الإيرادات والتحصيلات</h5>
+                    <h5 class="mb-2">تحليل الإيرادات والتحصيلات</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -405,7 +405,7 @@
         <div class="col-lg-6">
             <div class="  mb-4">
                 <div class="card-header bg-primary text-white d-flex justify-content-between">
-                    <h5 class="mb-0">النزلاء الحاليين ({{ $activeBookings->count() }})</h5>
+                    <h5 class="mb-2">النزلاء الحاليين ({{ $activeBookings->count() }})</h5>
                     <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse"
                         data-bs-target="#currentGuestsCollapse">
                         <i class="fas fa-chevron-down"></i>
@@ -414,7 +414,7 @@
                 <div class="collapse show" id="currentGuestsCollapse">
                     <div class="card-body p-0">
                         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-striped table-hover mb-0">
+                            <table class="table table-striped table-hover mb-2">
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -456,7 +456,7 @@
         <div class="col-lg-6">
             <div class="  mb-4">
                 <div class="card-header bg-danger text-white d-flex justify-content-between">
-                    <h5 class="mb-0">المغادرون غداً ({{ $checkingOutTomorrow->count() }})</h5>
+                    <h5 class="mb-2">المغادرون غداً ({{ $checkingOutTomorrow->count() }})</h5>
                     <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse"
                         data-bs-target="#checkoutTomorrowCollapse">
                         <i class="fas fa-chevron-down"></i>
@@ -465,7 +465,7 @@
                 <div class="collapse show" id="checkoutTomorrowCollapse">
                     <div class="card-body p-0">
                         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-striped table-hover mb-0">
+                            <table class="table table-striped table-hover mb-2">
                                 <thead>
                                     <tr>
                                         <th>#</th>

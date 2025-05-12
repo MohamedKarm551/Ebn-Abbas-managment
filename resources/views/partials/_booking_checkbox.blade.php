@@ -17,5 +17,6 @@
         data-rooms="{{ $booking->rooms }}"
         data-days="{{ $booking->days ?? \Carbon\Carbon::parse($booking->check_in)->diffInDays(\Carbon\Carbon::parse($booking->check_out)) }}"
         data-cost-price="{{ $booking->{$costPriceField} ?? 0 }}"
+        data-currency="{{ $booking->currency }}"
         onclick="event.stopPropagation();">
 </label>

@@ -1,7 +1,7 @@
 <div class="mb-3 text-start">
     {{-- تم تغيير الرابط هنا --}}
     <a href="{{ route('bookings.export', request()->query()) }}" class="btn btn-success">
-        <i class="fas fa-file-excel me-1"></i>   الجدول المعروض فقط إلى Excel
+        <i class="fas fa-file-excel me-1"></i> الجدول المعروض فقط إلى Excel
     </a>
     {{-- الزر الجديد (يصدر كل الحجوزات النشطة) --}}
     <a href="{{ route('bookings.export.all') }}" class="btn btn-info"> {{-- لون مختلف للتمييز --}}
@@ -15,7 +15,7 @@
             <th>العميل</th>
             <th>الشركة</th>
             {{-- *** بداية التعديل: إخفاء جهة الحجز للشركة *** --}}
-            @if(auth()->user()->role !== 'Company')
+            @if (auth()->user()->role !== 'Company')
                 <th>جهة حجز</th>
             @endif
             {{-- *** نهاية التعديل *** --}}
@@ -25,18 +25,20 @@
             {{-- <th>عدد الأيام</th> --}}
             <th class="text-center">غرف</th> {{-- اختصار "عدد الغرف" --}}
             {{-- *** بداية التعديل: إخفاء المستحق للفندق للشركة *** --}}
-            @if(auth()->user()->role !== 'Company')
+            @if (auth()->user()->role !== 'Company')
                 {{-- الشرط القديم بتاع company_id مش محتاجينه هنا لأن الشركة مش هتشوف العمود ده أصلاً --}}
                 {{-- @if (!request('company_id')) --}}
-                    <th style="min-width: 100px;"> المستحق للفندق</th>
+                <th style="min-width: 100px;"> المستحق للفندق</th>
                 {{-- @endif --}}
             @endif
             {{-- *** نهاية التعديل *** --}}
             <th style="min-width: 100px;"> مطلوب من الشركة</th>
+            <th class="text-center">العملة</th> {{-- إضافة عمود العملة --}}
+
             {{-- <th>السداد من الشركة</th> --}}
             <th>الموظف المسؤول</th>
             {{-- *** بداية التعديل: إخفاء الملاحظات والإجراءات للشركة *** --}}
-            @if(auth()->user()->role !== 'Company')
+            @if (auth()->user()->role !== 'Company')
                 <th class="text-center">الملاحظات</th>
                 <th class="text-center" style="min-width: 130px;">الإجراءات</th>
             @endif
@@ -49,8 +51,9 @@
                 <td class="text-center align-middle">{{ $loop->iteration }}</td> <!-- رقم الصف -->
                 <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط التفاصيل *** --}}
-                    @if(auth()->user()->role !== 'Company')
-                        <a href="{{ route('bookings.show', $booking->id) }}" class="text-primary text-decoration-none fw-bold">
+                    @if (auth()->user()->role !== 'Company')
+                        <a href="{{ route('bookings.show', $booking->id) }}"
+                            class="text-primary text-decoration-none fw-bold">
                             {{ $booking->client_name }}
                         </a>
                     @else
@@ -59,7 +62,7 @@
                 </td>
                 <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط فلترة الشركة *** --}}
-                    @if(auth()->user()->role !== 'Company')
+                    @if (auth()->user()->role !== 'Company')
                         <a href="{{ route('bookings.index', ['company_id' => $booking->company->id]) }}"
                             class="text-primary text-decoration-none">
                             {{ $booking->company->name }}
@@ -69,9 +72,10 @@
                     @endif
                 </td>
                 {{-- *** بداية التعديل: إخفاء جهة الحجز للشركة *** --}}
-                @if(auth()->user()->role !== 'Company')
+                @if (auth()->user()->role !== 'Company')
                     <td class="text-center align-middle">
-                        <a href="{{ route('bookings.index', ['agent_id' => $booking->agent->id]) }}" class="text-primary text-decoration-none">
+                        <a href="{{ route('bookings.index', ['agent_id' => $booking->agent->id]) }}"
+                            class="text-primary text-decoration-none">
                             {{ $booking->agent->name }}
                         </a>
                     </td>
@@ -79,8 +83,9 @@
                 {{-- *** نهاية التعديل *** --}}
                 <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط فلترة الفندق *** --}}
-                    @if(auth()->user()->role !== 'Company')
-                        <a href="{{ route('bookings.index', ['hotel_id' => $booking->hotel->id]) }}" class="text-primary text-decoration-none">
+                    @if (auth()->user()->role !== 'Company')
+                        <a href="{{ route('bookings.index', ['hotel_id' => $booking->hotel->id]) }}"
+                            class="text-primary text-decoration-none">
                             {{ $booking->hotel->name }}
                         </a>
                     @else
@@ -92,23 +97,28 @@
                 {{-- <td class="text-center align-middle">{{ $booking->days }}</td> --}}
                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
                 {{-- *** بداية التعديل: إخفاء المستحق للفندق للشركة *** --}}
-                @if(auth()->user()->role !== 'Company')
+                @if (auth()->user()->role !== 'Company')
                     {{-- الشرط القديم بتاع company_id مش محتاجينه هنا --}}
                     {{-- @if (!request('company_id')) --}}
-                        <td class="text-center align-middle"
-                            title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق)">
-                            {{ $booking->amount_due_to_hotel }}
-                        </td>
+                    <td class="text-center align-middle"
+                        title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق)">
+                        {{ $booking->amount_due_to_hotel }}
+                        {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
+                    </td>
                     {{-- @endif --}}
                 @endif
                 {{-- *** نهاية التعديل *** --}}
-                <td class="text-center align-middle "
+                <td class="text-center align-middle"
                     title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة)">
                     {{ $booking->amount_due_from_company }}
+                    {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
+                </td>
+                <td class="text-center align-middle">
+                    {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
                 </td>
                 <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط فلترة الموظف *** --}}
-                    @if(auth()->user()->role !== 'Company')
+                    @if (auth()->user()->role !== 'Company')
                         <a href="{{ route('bookings.index', ['employee_id' => $booking->employee->id]) }}"
                             class="text-primary text-decoration-none">
                             {{ $booking->employee->name }}
@@ -118,7 +128,7 @@
                     @endif
                 </td>
                 {{-- *** بداية التعديل: إخفاء الملاحظات والإجراءات للشركة *** --}}
-                @if(auth()->user()->role !== 'Company')
+                @if (auth()->user()->role !== 'Company')
                     <td class="text-center align-middle">
                         {{-- Notes Popover Implementation --}}
                         @if (!empty($booking->notes))
@@ -139,9 +149,10 @@
                         <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-sm btn-warning me-1"
                             title="تعديل"><i class="fas fa-edit"></i></a>
                         @auth
-                            @if(auth()->user()->role === 'Admin') {{-- زر الحذف للأدمن فقط --}}
-                                <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" style="display:inline;"
-                                    onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
+                            @if (auth()->user()->role === 'Admin')
+                                {{-- زر الحذف للأدمن فقط --}}
+                                <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST"
+                                    style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i
@@ -155,16 +166,39 @@
             </tr>
         @endforeach
         @php
-            $pageDueToHotels = $bookings->sum('amount_due_to_hotel');
-            $pageDueFromCompany = $bookings->sum('amount_due_from_company');
+            // $pageDueToHotels = $bookings->sum('amount_due_to_hotel');
+            // $pageDueFromCompany = $bookings->sum('amount_due_from_company');
+            // تجميع المبالغ حسب العملة مباشرة من الـ Collection
+            $pageDueToHotelsByCurrency = $bookings
+                ->groupBy('currency')
+                ->map(function ($group) {
+                    return [
+                        'currency' => $group->first()->currency,
+                        'amount' => $group->sum('amount_due_to_hotel'),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            $pageDueFromCompanyByCurrency = $bookings
+                ->groupBy('currency')
+                ->map(function ($group) {
+                    return [
+                        'currency' => $group->first()->currency,
+                        'amount' => $group->sum('amount_due_from_company'),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
             // حساب عدد الأعمدة المخفية
             $hiddenCols = 0;
-            if(auth()->user()->role === 'Company') {
+            if (auth()->user()->role === 'Company') {
                 $hiddenCols += 4; // جهة الحجز + المستحق للفندق + الملاحظات + الإجراءات
             }
             // حساب الـ colspan الأساسي (بدون الأعمدة المخفية)
             $baseColspan = 8; // م + العميل +جهة الحجز +  الشركة + الفندق + الدخول + الخروج + غرف
-            if(auth()->user()->role === 'Company') {
+            if (auth()->user()->role === 'Company') {
                 $baseColspan = 7; // جهة الحجز + المستحق للفندق + الملاحظات + الإجراءات
             }
             $finalColspan = $baseColspan;
@@ -174,11 +208,21 @@
             {{-- الـ colspan الأول يشمل الأعمدة حتى قبل عمود "مطلوب من الشركة" --}}
             <td colspan="{{ $finalColspan }}" class="text-end">المجموع في الصفحة:</td>
             {{-- عمود مجموع المستحق للفندق (يظهر فقط لغير الشركة) --}}
-            @if(auth()->user()->role !== 'Company')
-                <td class="text-center">{{ $pageDueToHotels }}</td>
+            @if (auth()->user()->role !== 'Company')
+                <td class="text-center">
+                    @foreach ($pageDueToHotelsByCurrency as $currencyGroup)
+                        {{ number_format($currencyGroup['amount'], 2) }}
+                        {{ $currencyGroup['currency'] == 'SAR' ? 'ريال' : 'دينار' }}<br>
+                    @endforeach
+                </td>
             @endif
             {{-- عمود مجموع مطلوب من الشركة (يظهر للكل) --}}
-            <td class="text-center">{{ $pageDueFromCompany }}</td>
+            <td class="text-center">
+                @foreach ($pageDueFromCompanyByCurrency as $currencyGroup)
+                    {{ number_format($currencyGroup['amount'], 2) }}
+                    {{ $currencyGroup['currency'] == 'SAR' ? 'ريال' : 'دينار' }}<br>
+                @endforeach
+            </td>
             {{-- الـ colspan الأخير يشمل الأعمدة بعد "مطلوب من الشركة" (مع الأخذ في الاعتبار الأعمدة المخفية) --}}
             <td colspan="{{ $totalColsAfterAmount }}"></td>
         </tr>

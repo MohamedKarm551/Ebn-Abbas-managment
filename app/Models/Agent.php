@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Agent extends Model
 {
@@ -47,4 +48,44 @@ class Agent extends Model
           return $this->total_due - $this->total_paid;
 
     }
+/**
+ * حساب إجمالي المستحق للوكيل مصنف حسب العملة
+ */
+public function getTotalDueByCurrencyAttribute()
+{
+    return $this->bookings()
+        ->select('currency', DB::raw('SUM(amount_due_to_hotel) as total'))
+        ->groupBy('currency')
+        ->pluck('total', 'currency')
+        ->toArray();
+}
+
+/**
+ * حساب المدفوع للوكيل مصنف حسب العملة
+ */
+public function getTotalPaidByCurrencyAttribute()
+{
+    return $this->payments()
+        ->select('currency', DB::raw('SUM(amount) as total'))
+        ->groupBy('currency')
+        ->pluck('total', 'currency')
+        ->toArray();
+}
+
+/**
+ * حساب المتبقي للوكيل مصنف حسب العملة
+ */
+public function getRemainingByCurrencyAttribute()
+{
+    $dueByCurrency = $this->total_due_by_currency;
+    $paidByCurrency = $this->total_paid_by_currency;
+    $remainingByCurrency = [];
+    
+    foreach ($dueByCurrency as $currency => $due) {
+        $paid = $paidByCurrency[$currency] ?? 0;
+        $remainingByCurrency[$currency] = $due - $paid;
+    }
+    
+    return $remainingByCurrency;
+}
 }

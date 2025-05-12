@@ -203,11 +203,40 @@
         @auth
             @if (auth()->user()->role === 'Admin')
                 <div class="alert alert-warning text-center mb-3">
-                    <span>
-                        مجموع المستحق للفنادق (لكل النتائج): <strong>{{ $totalDueToHotelsAll }}</strong> ريال
-                        <br>
-                        مجموع المطلوب من الشركات (لكل النتائج): <strong>{{ $totalDueFromCompanyAll }}</strong> ريال
-                    </span>
+                    <strong>ملخص المجاميع حسب العملة:</strong><br>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-striped mt-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>العملة</th>
+                                    <th>مجموع المستحق للفنادق</th>
+                                    <th>مجموع المطلوب من الشركات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{-- عرض الريال السعودي --}}
+                                <tr>
+                                    <th>ريال سعودي</th>
+                                    <td>
+                                        {{ number_format(collect($totalDueToHotelsByCurrency)->where('currency', 'SAR')->first()['amount'] ?? 0, 2) }}
+                                    </td>
+                                    <td>
+                                        {{ number_format(collect($totalDueFromCompanyByCurrency)->where('currency', 'SAR')->first()['amount'] ?? 0, 2) }}
+                                    </td>
+                                </tr>
+                                {{-- عرض الدينار الكويتي --}}
+                                <tr>
+                                    <th>دينار كويتي</th>
+                                    <td>
+                                        {{ number_format(collect($totalDueToHotelsByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0, 2) }}
+                                    </td>
+                                    <td>
+                                        {{ number_format(collect($totalDueFromCompanyByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0, 2) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             @endif
         @endauth
@@ -324,30 +353,58 @@
 
                     // *** بنقرا القيم من الحقول المخفية ***
                     const totalCount = document.getElementById('hidden-total-count')?.value ?? 0;
-                    const totalDueFromCompany = document.getElementById('hidden-total-due-from-company')?.value ?? 0;
-                    const totalPaidByCompany = document.getElementById('hidden-total-paid-by-company')?.value ?? 0;
-                    const remainingFromCompany = document.getElementById('hidden-total-remaining-from-company')?.value ?? 0;
+                    copyText += `عدد الحجوزات: ${totalCount} حجز\n\n`;
 
-                    copyText += `عدد الحجوزات: ${totalCount} حجز\n`;
-                    copyText += `إجمالي المستحق من الشركة: ${totalDueFromCompany} ريال\n`;
-                    copyText += `إجمالي المدفوع من الشركة: ${totalPaidByCompany} ريال\n`;
-                    copyText += `إجمالي المتبقي على الشركة: ${remainingFromCompany} ريال\n`;
+                    // إضافة المستحق والمدفوع من الشركات حسب العملة
+                    copyText += "بالريال السعودي:\n";
+                    const totalDueFromCompanySAR =
+                        {{ collect($totalDueFromCompanyByCurrency)->where('currency', 'SAR')->first()['amount'] ?? 0 }};
+                    const totalPaidByCompanySAR =
+                        {{ collect($totalPaidByCompanyByCurrency)->where('currency', 'SAR')->first()['amount'] ?? 0 }};
+                    const remainingFromCompanySAR = totalDueFromCompanySAR - totalPaidByCompanySAR;
 
-                    // بنجيب عناصر الفنادق المخفية
-                    const dueHotelsEl = document.getElementById('hidden-total-due-to-hotels');
-                    const paidHotelsEl = document.getElementById('hidden-total-paid-to-hotels');
-                    const remainingHotelsEl = document.getElementById('hidden-total-remaining-to-hotels');
+                    copyText += `إجمالي المستحق من الشركة: ${totalDueFromCompanySAR.toFixed(2)} ريال\n`;
+                    copyText += `إجمالي المدفوع من الشركة: ${totalPaidByCompanySAR.toFixed(2)} ريال\n`;
+                    copyText += `إجمالي المتبقي على الشركة: ${remainingFromCompanySAR.toFixed(2)} ريال\n\n`;
+
+                    copyText += "بالدينار الكويتي:\n";
+                    const totalDueFromCompanyKWD =
+                        {{ collect($totalDueFromCompanyByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0 }};
+                    const totalPaidByCompanyKWD =
+                        {{ collect($totalPaidByCompanyByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0 }};
+                    const remainingFromCompanyKWD = totalDueFromCompanyKWD - totalPaidByCompanyKWD;
+
+                    copyText += `إجمالي المستحق من الشركة: ${totalDueFromCompanyKWD.toFixed(2)} دينار\n`;
+                    copyText += `إجمالي المدفوع من الشركة: ${totalPaidByCompanyKWD.toFixed(2)} دينار\n`;
+                    copyText += `إجمالي المتبقي على الشركة: ${remainingFromCompanyKWD.toFixed(2)} دينار\n\n`;
 
                     // بنضيف إجماليات الفنادق بس لو الحقول بتاعتها موجودة (يعني مش بنفلتر بشركة)
-                    if (dueHotelsEl && paidHotelsEl && remainingHotelsEl) {
-                        const totalDueToHotels = dueHotelsEl.value ?? 0;
-                        const totalPaidToHotels = paidHotelsEl.value ?? 0;
-                        const remainingToHotels = remainingHotelsEl.value ?? 0;
-                        copyText += `إجمالي المستحق للفنادق: ${totalDueToHotels} ريال\n`;
-                        copyText += `إجمالي المدفوع للفنادق: ${totalPaidToHotels} ريال\n`;
-                        copyText += `إجمالي المتبقي للفنادق: ${remainingToHotels} ريال\n`;
+                    const dueHotelsEl = document.getElementById('hidden-total-due-to-hotels');
+                    if (dueHotelsEl) {
+                        copyText += "إجماليات الفنادق:\n";
+
+                        copyText += "بالريال السعودي:\n";
+                        const totalDueToHotelsSAR =
+                            {{ collect($totalDueToHotelsByCurrency)->where('currency', 'SAR')->first()['amount'] ?? 0 }};
+                        const totalPaidToHotelsSAR =
+                            {{ collect($totalPaidToHotelsByCurrency)->where('currency', 'SAR')->first()['amount'] ?? 0 }};
+                        const remainingToHotelsSAR = totalDueToHotelsSAR - totalPaidToHotelsSAR;
+
+                        copyText += `إجمالي المستحق للفنادق: ${totalDueToHotelsSAR.toFixed(2)} ريال\n`;
+                        copyText += `إجمالي المدفوع للفنادق: ${totalPaidToHotelsSAR.toFixed(2)} ريال\n`;
+                        copyText += `إجمالي المتبقي للفنادق: ${remainingToHotelsSAR.toFixed(2)} ريال\n\n`;
+
+                        copyText += "بالدينار الكويتي:\n";
+                        const totalDueToHotelsKWD =
+                            {{ collect($totalDueToHotelsByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0 }};
+                        const totalPaidToHotelsKWD =
+                            {{ collect($totalPaidToHotelsByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0 }};
+                        const remainingToHotelsKWD = totalDueToHotelsKWD - totalPaidToHotelsKWD;
+
+                        copyText += `إجمالي المستحق للفنادق: ${totalDueToHotelsKWD.toFixed(2)} دينار\n`;
+                        copyText += `إجمالي المدفوع للفنادق: ${totalPaidToHotelsKWD.toFixed(2)} دينار\n`;
+                        copyText += `إجمالي المتبقي للفنادق: ${remainingToHotelsKWD.toFixed(2)} دينار\n\n`;
                     }
-                    copyText += "\n";
 
                     copyText += "تفاصيل الحجوزات (غير مدعومة حالياً في النسخ بعد الفلترة)\n";
 
@@ -842,8 +899,8 @@
 
         /* Remove the rotation from the main hover effect if pulse is applied */
         /* .admin-menu-container:hover .admin-circle {
-            transform: rotate(360deg) scale(1.1);
-        } */
+                    transform: rotate(360deg) scale(1.1);
+                } */
 
 
 

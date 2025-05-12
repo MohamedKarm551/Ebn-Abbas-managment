@@ -9,6 +9,7 @@ class Payment extends Model
     protected $fillable = [
         'company_id',
         'amount',
+        'currency',  // إضافة حقل العملة
         'payment_date',
         'notes',
         'bookings_covered' // سيحتوي على IDs الحجوزات المغطاة بالدفعة
@@ -27,5 +28,5 @@ class Payment extends Model
     // {
     //     $totalPaid = Payment::where('company_id', $this->company->id)->sum('amount');
     // }
-    
+
 }

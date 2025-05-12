@@ -124,17 +124,20 @@
                 <tr>
                     <td>15</td>
                     <td>المبلغ المستحق من الشركة <i class="fas fa-hand-holding-usd text-success"></i> </td>
-                    <td>{{ $booking->amount_due_from_company }} ريال</td>
+                    {{ number_format($booking->amount_due_from_company, 2) }}
+    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  </td>
                 </tr>
                 <tr>
                     <td>16</td>
                     <td> المبلغ المدفوع من الشركة<i class="fas fa-wallet text-info"></i> </td>
-                    <td>{{ $booking->amount_paid_by_company }} ريال</td>
+                    <td>{{ number_format($booking->amount_paid_by_company, 2) }}
+                    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  </td>
                 </tr>
                 <tr>
                     <td>17</td>
                     <td>الباقي من الشركة <i class="fas fa-balance-scale text-danger"></i> </td>
-                    <td>{{ $booking->amount_due_from_company - $booking->amount_paid_by_company }} ريال</td>
+                    <td>{{ number_format($booking->amount_due_from_company - $booking->amount_paid_by_company, 2) }}
+                    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  </td>
                 </tr>
                 <tr>
                     <td>18</td>

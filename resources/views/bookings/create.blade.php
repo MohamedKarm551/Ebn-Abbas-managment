@@ -190,8 +190,15 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
-
-
+            {{-- اختيار العملة --}}
+            {{-- لو انت شركة ممنوع التعديل --}}
+            <div class="mb-3">
+                <label for="currency" class="form-label">العملة</label>
+                <select class="form-select" name="currency" id="currency" {{ isset($isBookingFromAvailability) && $isBookingFromAvailability ? 'readonly' : '' }}>
+                    <option value="SAR" {{ isset($booking) && $booking->currency == 'SAR' ? 'selected' : '' }}>ريال سعودي</option>
+                    <option value="KWD" {{ isset($booking) && $booking->currency == 'KWD' ? 'selected' : '' }}>دينار كويتي</option>
+                </select>
+            </div>
             {{-- تاريخ الدخول --}}
             <div class="col-md-4">
                 {{-- ... label ... --}}

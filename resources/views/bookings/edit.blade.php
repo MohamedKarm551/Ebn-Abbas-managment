@@ -92,24 +92,36 @@
                 <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price"
                     value="{{ $booking->sale_price }}" required>
             </div>
-            <div class="mb-3">
-                <label for="employee_id" class="form-label">الموظف المسؤول</label>
-                <select class="form-control" id="employee_id" name="employee_id" required>
-                    <option value="" disabled selected>اختر الموظف</option>
-                    @foreach ($employees as $employee)
-                        <option value="{{ $employee->id }}"
-                            {{ isset($booking) && $employee->id == $booking->employee_id ? 'selected' : '' }}>
-                            {{ $employee->name }}
-                        </option>
-                    @endforeach
-                </select>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="currency" class="form-label">العملة</label>
+                    <select class="form-select" id="currency" name="currency" onchange="updateCurrencyLabels()">
+                        <option value="SAR" {{ isset($booking) && $booking->currency == 'SAR' ? 'selected' : '' }}>ريال
+                            سعودي</option>
+                        <option value="KWD" {{ isset($booking) && $booking->currency == 'KWD' ? 'selected' : '' }}>
+                            دينار كويتي</option>
+                    </select>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="notes" class="form-label">الملاحظات</label>
-                <textarea class="form-control" id="notes" name="notes">{{ $booking->notes }}</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
-        </form>
+    </div>
+    <div class="mb-3">
+        <label for="employee_id" class="form-label">الموظف المسؤول</label>
+        <select class="form-control" id="employee_id" name="employee_id" required>
+            <option value="" disabled selected>اختر الموظف</option>
+            @foreach ($employees as $employee)
+                <option value="{{ $employee->id }}"
+                    {{ isset($booking) && $employee->id == $booking->employee_id ? 'selected' : '' }}>
+                    {{ $employee->name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="notes" class="form-label">الملاحظات</label>
+        <textarea class="form-control" id="notes" name="notes">{{ $booking->notes }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+    </form>
     </div>
 
     <!-- Include Flatpickr CSS and JS -->
@@ -162,4 +174,16 @@
             });
         });
     </script>
+    <script>
+    function updateCurrencyLabels() {
+        const currency = document.getElementById('currency').value;
+        const currencyLabels = document.querySelectorAll('.currency-label');
+        currencyLabels.forEach(label => {
+            label.textContent = currency === 'KWD' ? 'دينار' : 'ريال';
+        });
+    }
+    
+    // تنفيذ عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', updateCurrencyLabels);
+</script>
 @endsection

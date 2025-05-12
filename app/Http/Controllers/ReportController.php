@@ -233,48 +233,174 @@ class ReportController extends Controller
             ->where('created_at', '>=', now()->subDays(2))
             ->get()
             ->groupBy('message');
+
         // --- *** بداية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
-
-        // 1. جلب دفعات الشركات (فلوس داخلة = موجب) مرتبة بالتاريخ
-        $companyPayments = Payment::select('payment_date as date', 'amount')
+        // 1. جلب دفعات الشركات بالعملات المختلفة
+        $companyPaymentsSAR = Payment::select('payment_date as date', 'amount')
+            ->where('currency', 'SAR')
             ->orderBy('date', 'asc')
             ->get();
 
-        // 2. جلب دفعات الوكلاء (فلوس خارجة = سالب) مرتبة بالتاريخ
-        $agentPayments = AgentPayment::select('payment_date as date', DB::raw('-amount as amount')) // لاحظ السالب هنا
+        $companyPaymentsKWD = Payment::select('payment_date as date', 'amount')
+            ->where('currency', 'KWD')
             ->orderBy('date', 'asc')
             ->get();
 
-        // 3. دمج العمليتين في مجموعة واحدة
-        $allTransactions = $companyPayments->concat($agentPayments);
+        // 2. جلب دفعات الوكلاء بالعملات المختلفة
+        $agentPaymentsSAR = AgentPayment::select('payment_date as date', DB::raw('-amount as amount'))
+            ->where('currency', 'SAR')
+            ->orderBy('date', 'asc')
+            ->get();
 
-        // 4. ترتيب كل العمليات حسب التاريخ
+        $agentPaymentsKWD = AgentPayment::select('payment_date as date', DB::raw('-amount as amount'))
+            ->where('currency', 'KWD')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        // 3. حساب المتغيرات لكل عملة
+        // --- الريال السعودي (نحافظ على الكود الأصلي للتوافق) ---
+        $allTransactions = $companyPaymentsSAR->concat($agentPaymentsSAR);
         $sortedTransactions = $allTransactions->sortBy('date');
 
-        // 5. حساب الرصيد التراكمي مع الوقت
         $runningBalance = 0;
-        $netBalanceData = []; // مصفوفة لتخزين [التاريخ => الرصيد]
+        $netBalanceData = []; // مصفوفة للريال السعودي
 
         foreach ($sortedTransactions as $transaction) {
-            $dateString = Carbon::parse($transaction->date)->format('Y-m-d'); // تاريخ العملية
-            $runningBalance += $transaction->amount; // تحديث الرصيد
-            // بنخزن آخر رصيد لكل يوم (لو فيه أكتر من عملية في نفس اليوم)
+            $dateString = Carbon::parse($transaction->date)->format('Y-m-d');
+            $runningBalance += $transaction->amount;
             $netBalanceData[$dateString] = $runningBalance;
         }
 
-        // 6. تجهيز المصفوفات النهائية للرسم البياني
-        $netBalanceDates = []; // مصفوفة التواريخ للعرض
-        $netBalances = [];   // مصفوفة قيم الرصيد المقابلة
+        // --- الدينار الكويتي (إضافة كود جديد) ---
+        $allTransactionsKWD = $companyPaymentsKWD->concat($agentPaymentsKWD);
+        $sortedTransactionsKWD = $allTransactionsKWD->sortBy('date');
 
-        // لو فيه بيانات، نرتبها حسب التاريخ ونجهزها للـ Chart
-        if (!empty($netBalanceData)) {
-            ksort($netBalanceData); // نرتب المصفوفة حسب مفتاح التاريخ
-            foreach ($netBalanceData as $date => $balance) {
-                $netBalanceDates[] = Carbon::parse($date)->format('d/m'); // تنسيق التاريخ للعرض
-                $netBalances[] = round($balance, 2); // الرصيد المقابل (ممكن تقريبه)
+        $runningBalanceKWD = 0;
+        $netBalanceDataKWD = []; // مصفوفة جديدة للدينار الكويتي
+
+        foreach ($sortedTransactionsKWD as $transaction) {
+            $dateString = Carbon::parse($transaction->date)->format('Y-m-d');
+            $runningBalanceKWD += $transaction->amount;
+            $netBalanceDataKWD[$dateString] = $runningBalanceKWD;
+        }
+
+        // 4. تجهيز المصفوفات النهائية
+        $netBalanceDates = []; // مصفوفة التواريخ المشتركة
+        $netBalances = [];     // للريال (متوافق مع الكود القديم)
+        $netBalancesKWD = [];  // للدينار (جديدة)
+
+        // دمج وترتيب كل التواريخ الفريدة من كلتا العملتين
+        $allDates = array_unique(array_merge(array_keys($netBalanceData), array_keys($netBalanceDataKWD)));
+        sort($allDates);
+
+        // ملء البيانات بشكل متزامن
+        $lastBalanceSAR = 0;
+        $lastBalanceKWD = 0;
+
+        foreach ($allDates as $date) {
+            $netBalanceDates[] = Carbon::parse($date)->format('d/m');
+
+            // للريال السعودي
+            if (isset($netBalanceData[$date])) {
+                $lastBalanceSAR = $netBalanceData[$date];
+            }
+            $netBalances[] = round($lastBalanceSAR, 2);
+
+            // للدينار الكويتي
+            if (isset($netBalanceDataKWD[$date])) {
+                $lastBalanceKWD = $netBalanceDataKWD[$date];
+            }
+            $netBalancesKWD[] = round($lastBalanceKWD, 2);
+        }
+
+        // --- *** نهاية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
+
+        // حساب المدفوعات حسب العملة للشركات
+        $companyPaymentsByCurrency = Payment::select('currency', DB::raw('SUM(amount) as total'))
+            ->groupBy('currency')
+            ->get()
+            ->pluck('total', 'currency')
+            ->toArray();
+
+        // حساب المدفوعات حسب العملة للوكلاء
+        $agentPaymentsByCurrency = AgentPayment::select('currency', DB::raw('SUM(amount) as total'))
+            ->groupBy('currency')
+            ->get()
+            ->pluck('total', 'currency')
+            ->toArray();
+        // تصنيف الحجوزات حسب العملة للشركات
+        $bookingsByCompanyCurrency = Booking::select(
+            'company_id',
+            'currency',
+            DB::raw('SUM(amount_due_from_company) as total_due'),
+            DB::raw('COUNT(*) as count')
+        )
+            ->groupBy('company_id', 'currency')
+            ->get();
+
+        // تصنيف الحجوزات حسب العملة للجهات
+        $bookingsByAgentCurrency = Booking::select(
+            'agent_id',
+            'currency',
+            DB::raw('SUM(amount_due_to_hotel) as total_due'),
+            DB::raw('COUNT(*) as count')
+        )
+            ->groupBy('agent_id', 'currency')
+            ->get();
+
+        // تخزين إجمالي المستحقات حسب العملة
+        $totalDueFromCompaniesByCurrency = [
+            'SAR' => 0,
+            'KWD' => 0
+        ];
+
+        $totalDueToAgentsByCurrency = [
+            'SAR' => 0,
+            'KWD' => 0
+        ];
+
+        // تجميع إجماليات الحجوزات حسب العملة
+        foreach ($bookingsByCompanyCurrency as $booking) {
+            $totalDueFromCompaniesByCurrency[$booking->currency] += $booking->total_due;
+        }
+
+        foreach ($bookingsByAgentCurrency as $booking) {
+            $totalDueToAgentsByCurrency[$booking->currency] += $booking->total_due;
+        }
+
+        // حساب المتبقي من الشركات حسب العملة
+        $totalRemainingByCurrency = [
+            'SAR' => 0,
+            'KWD' => 0,
+        ];
+        foreach ($companiesReport as $company) {
+            $remainingByCurrency = $company->remaining_by_currency ?? [
+                'SAR' => $company->remaining,
+            ];
+            foreach ($remainingByCurrency as $currency => $amount) {
+                $totalRemainingByCurrency[$currency] += $amount;
             }
         }
-        // --- *** نهاية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
+
+        // حساب المتبقي للجهات حسب العملة
+        $agentRemainingByCurrency = [
+            'SAR' => 0,
+            'KWD' => 0,
+        ];
+        foreach ($agentsReport as $agent) {
+            $remainingByCurrency = $agent->remaining_by_currency ?? [
+                'SAR' => $agent->remaining,
+            ];
+            foreach ($remainingByCurrency as $currency => $amount) {
+                $agentRemainingByCurrency[$currency] += $amount;
+            }
+        }
+
+        // حساب صافي الربح حسب العملة
+        $netProfitByCurrency = [
+            'SAR' => $totalRemainingByCurrency['SAR'] - $agentRemainingByCurrency['SAR'],
+            'KWD' => $totalRemainingByCurrency['KWD'] - $agentRemainingByCurrency['KWD'],
+        ];
 
         // رجع كل البيانات للواجهة اليومية
         return view('reports.daily', compact(
@@ -293,7 +419,19 @@ class ReportController extends Controller
             'bookingCounts',    // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
             'receivableBalances', // <-- مصفوفة رصيد الشركات (الخط الأخضر)
             'payableBalances',    // <-- مصفوفة رصيد الجهات (الخط الأحمر)
-            'dailyEventDetails'
+            'dailyEventDetails',
+            'companyPaymentsByCurrency',  // المدفوعات حسب العملة للشركات
+            'agentPaymentsByCurrency',    // المدفوعات حسب العملة للوكلاء
+            'totalDueFromCompaniesByCurrency', // إجمالي المستحقات حسب العملة للشركات
+            'totalDueToAgentsByCurrency', // إجمالي المستحقات حسب العملة للجهات
+            'totalRemainingByCurrency',
+            'agentRemainingByCurrency',
+            'netProfitByCurrency',
+            'netBalanceDates',
+            'netBalances',      // للريال (الحفاظ عليه للتوافق)
+            'netBalancesKWD',   // للدينار (جديد)
+            'dailyEventDetails',
+            // 'netBalanceDates',
         ));
     }
     /**
@@ -458,8 +596,8 @@ class ReportController extends Controller
     private function calculateRevenueAnalysis($referenceDate = null)
     {
         // إذا لم يتم تمرير تاريخ مرجعي، نستخدم اليوم
-    $referenceDate = $referenceDate ?? Carbon::now();
-    
+        $referenceDate = $referenceDate ?? Carbon::now();
+
         // بنجيب الأشهر الثلاثة الماضية
         $months = [];
         $revenueData = [];
@@ -581,6 +719,11 @@ class ReportController extends Controller
 
 
 
+        // إضافة الإجماليات حسب العملة
+        $totalDueByCurrency = $company->total_due_by_currency;
+        $totalPaidByCurrency = $company->total_paid_by_currency;
+        $totalRemainingByCurrency = $company->remaining_by_currency;
+
 
         // رجع البيانات للواجهة
         return view('reports.company_bookings', compact(
@@ -590,6 +733,9 @@ class ReportController extends Controller
             'totalDue',
             'totalPaid',
             'totalRemaining',
+            'totalDueByCurrency',
+            'totalPaidByCurrency',
+            'totalRemainingByCurrency'
 
         ));
     }
@@ -639,6 +785,12 @@ class ReportController extends Controller
         // المتبقي للوكيل بعد الدفعات
         $totalRemaining = $totalDue - $totalPaid;
 
+        // إضافة الإجماليات حسب العملة
+        $totalDueByCurrency = $agent->total_due_by_currency;
+        $totalPaidByCurrency = $agent->total_paid_by_currency;
+        $totalRemainingByCurrency = $agent->remaining_by_currency;
+
+
         // رجع البيانات للواجهة
         return view('reports.agent_bookings', compact(
             'agent',
@@ -646,7 +798,10 @@ class ReportController extends Controller
             'dueCount',
             'totalDue',
             'totalPaid',
-            'totalRemaining'
+            'totalRemaining',
+            'totalDueByCurrency',
+            'totalPaidByCurrency',
+            'totalRemainingByCurrency'
         ));
     }
 
@@ -660,11 +815,16 @@ class ReportController extends Controller
         $bookings = Booking::where('hotel_id', $id)
             ->with(['company', 'agent'])
             ->get();
-
+        // حساب المستحق والمتبقي حسب العملة
+        $totalDueByCurrency = $bookings->groupBy('currency')
+            ->map(function ($currencyBookings) {
+                return $currencyBookings->sum('amount_due_to_hotel');
+            });
         // رجع البيانات للواجهة
         return view('reports.hotel_bookings', [
             'hotel'   => $hotel,
-            'bookings' => $bookings
+            'bookings' => $bookings,
+            'totalDueByCurrency' => $totalDueByCurrency
         ]);
     }
 
@@ -675,6 +835,7 @@ class ReportController extends Controller
         $validated = $request->validate([
             'company_id'       => 'required|exists:companies,id',
             'amount'           => 'required|numeric|min:0',
+            'currency' => 'required|in:SAR,KWD',  // التحقق من العملة
             'payment_date'     => 'nullable|date',
             'notes'            => 'nullable|string',
             'bookings_covered' => 'nullable|array',
@@ -707,6 +868,7 @@ class ReportController extends Controller
         $payment = Payment::create([
             'company_id'       => $validated['company_id'],
             'amount'           => $validated['amount'],
+            'currency' => $validated['currency'],  // حفظ العملة
             'payment_date'     => $validated['payment_date'] ?? now(),
             'notes'            => $validated['notes'] ?? null,
             'bookings_covered' => json_encode($validated['bookings_covered'] ?? []),
@@ -715,24 +877,29 @@ class ReportController extends Controller
         ]);
 
         // وزع المبلغ على الحجوزات المفتوحة
-        $remaining = $payment->amount;
-        Booking::whereIn('id', $validated['bookings_covered'] ?? [])
-            ->orderBy('check_in')
-            ->get()
-            ->each(function (Booking $b) use (&$remaining) {
-                $due = $b->amount_due_from_company - $b->amount_paid_by_company;
-                if ($due <= 0 || $remaining <= 0) {
-                    return;
-                }
-                $pay = min($due, $remaining);
-                $b->increment('amount_paid_by_company', $pay);
-                $remaining -= $pay;
-            });
+        // فقط إذا كانت العملة ريال سعودي، نخصص المبلغ على الحجوزات
+        // لأن الحجوزات مسجلة بالريال السعودي
+        if ($payment->currency === 'SAR') {
+            $remaining = $payment->amount;
+            Booking::whereIn('id', $validated['bookings_covered'] ?? [])
+                ->orderBy('check_in')
+                ->get()
+                ->each(function (Booking $b) use (&$remaining) {
+                    $due = $b->amount_due_from_company - $b->amount_paid_by_company;
+                    if ($due <= 0 || $remaining <= 0) {
+                        return;
+                    }
+                    $pay = min($due, $remaining);
+                    $b->increment('amount_paid_by_company', $pay);
+                    $remaining -= $pay;
+                });
+        }
+
 
         // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => " تم إضافة دفعة جديدة لشركة {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'message' => " تم إضافة دفعة جديدة ({$payment->currency}) لشركة {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
             'type' => 'دفعة جديدة',
         ]);
         // رجع للصفحة مع رسالة نجاح
@@ -748,6 +915,7 @@ class ReportController extends Controller
         $validated = $request->validate([
             'agent_id' => 'required|exists:agents,id',
             'amount'   => 'required|numeric|min:0',
+            'currency' => 'required|in:SAR,KWD',  // التحقق من العملة
             'notes'    => 'nullable|string',
             // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // *** إضافة التحقق هنا ***
 
@@ -778,6 +946,7 @@ class ReportController extends Controller
         $payment = AgentPayment::create([
             'agent_id' => $validated['agent_id'],
             'amount' => $validated['amount'],
+            'currency' => $validated['currency'],
             'payment_date' => now(),
             'notes' => $validated['notes'],
             // 'receipt_path' => $receiptPath, // *** تأكد من إضافة هذا السطر هنا ***
@@ -786,7 +955,7 @@ class ReportController extends Controller
         // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => " تم إضافة دفعة جديدة لجهة حجز  {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'message' => " تم إضافة دفعة جديدة ({$payment->currency}) لجهة حجز {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
             'type' => 'دفعة جديدة',
             // 'receipt_path' => $receiptPath, // *** إضافة مسار الإيصال هنا ***
             'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة

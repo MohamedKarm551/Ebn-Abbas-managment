@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Payment;
 use Illuminate\Notifications\Notifiable; // إذا كنت تستخدم الإشعارات
 use App\Models\User;
+use Illuminate\Support\Facades\DB; // تأكد من إضافة هذا السطر
 
 class Company extends Model
 {
@@ -58,5 +59,46 @@ class Company extends Model
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * حساب إجمالي المستحق من الشركة مصنف حسب العملة
+     */
+    public function getTotalDueByCurrencyAttribute()
+    {
+        return $this->bookings()
+            ->select('currency', DB::raw('SUM(amount_due_from_company) as total'))
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+    }
+
+    /**
+     * حساب المدفوع من الشركة مصنف حسب العملة
+     */
+    public function getTotalPaidByCurrencyAttribute()
+    {
+        return $this->payments()
+            ->select('currency', DB::raw('SUM(amount) as total'))
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+    }
+
+    /**
+     * حساب المتبقي على الشركة مصنف حسب العملة
+     */
+    public function getRemainingByCurrencyAttribute()
+    {
+        $dueByCurrency = $this->total_due_by_currency;
+        $paidByCurrency = $this->total_paid_by_currency;
+        $remainingByCurrency = [];
+        
+        foreach ($dueByCurrency as $currency => $due) {
+            $paid = $paidByCurrency[$currency] ?? 0;
+            $remainingByCurrency[$currency] = $due - $paid;
+        }
+        
+        return $remainingByCurrency;
     }
 }

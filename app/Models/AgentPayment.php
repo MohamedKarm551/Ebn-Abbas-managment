@@ -9,6 +9,7 @@ class AgentPayment extends Model
     protected $fillable = [
         'agent_id',
         'amount',
+        'currency',  // إضافة حقل العملة
         'payment_date',
         'notes'
     ];
@@ -17,12 +18,10 @@ class AgentPayment extends Model
         'payment_date' => 'datetime',
         'amount' => 'float'
     ];
-    
+
     public function agent()
     {
-        return $this->belongsTo(Agent::class ,'agent_id');
+        return $this->belongsTo(Agent::class, 'agent_id');
         // كل دفعة مرتبطة بجهة حجز واحدة
     }
-
-    
 }

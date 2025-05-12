@@ -33,10 +33,8 @@
                                 {{-- *** 4. إضافة زرار التوسيع (+/-) *** --}}
                                 <td class="d-table-cell d-md-none text-center align-middle">
                                     <button class="btn btn-sm btn-outline-secondary toggle-details-btn"
-                                            data-bs-toggle="collapse"
-                                            data-bs-target="#details-{{ $booking->id }}"
-                                            aria-expanded="false"
-                                            aria-controls="details-{{ $booking->id }}">
+                                        data-bs-toggle="collapse" data-bs-target="#details-{{ $booking->id }}"
+                                        aria-expanded="false" aria-controls="details-{{ $booking->id }}">
                                         <i class="fas fa-plus"></i>
                                     </button>
                                 </td>
@@ -53,24 +51,29 @@
                                     {{ $booking->client_name }}
                                     @if (!empty($booking->notes))
                                         {{-- أيقونة الملاحظات (Popover) --}}
-                                        <i class="fas fa-info-circle text-primary ms-2 fs-5 p-1"
-                                           data-bs-toggle="popover"
-                                           data-bs-trigger="hover focus"
-                                           data-bs-placement="auto"
-                                           title="ملاحظات"
-                                           data-bs-content="{{ e($booking->notes) }}">
+                                        <i class="fas fa-info-circle text-primary ms-2 fs-5 p-1" data-bs-toggle="popover"
+                                            data-bs-trigger="hover focus" data-bs-placement="auto" title="ملاحظات"
+                                            data-bs-content="{{ e($booking->notes) }}">
                                         </i>
                                     @endif
                                 </td>
                                 <td class="align-middle">{{ $booking->company->name }}</td>
                                 <td class="align-middle">{{ $booking->agent->name }}</td>
                                 {{-- الأعمدة المخفية في الصف الرئيسي على الشاشات الصغيرة --}}
-                                <td class="d-none d-md-table-cell text-center align-middle">{{ $booking->check_in->format('d/m/Y') }}</td>
-                                <td class="d-none d-md-table-cell text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
+                                <td class="d-none d-md-table-cell text-center align-middle">
+                                    {{ $booking->check_in->format('d/m/Y') }}</td>
+                                <td class="d-none d-md-table-cell text-center align-middle">
+                                    {{ $booking->check_out->format('d/m/Y') }}</td>
                                 <td class="d-none d-md-table-cell text-center align-middle">{{ $booking->days }}</td>
                                 <td class="d-none d-md-table-cell text-center align-middle">{{ $booking->rooms }}</td>
-                                <td class="d-none d-md-table-cell text-center align-middle">{{ number_format($booking->cost_price) }}</td> {{-- سعر التكلفة --}}
-                                <td class="text-center align-middle">{{ number_format($booking->amount_due_to_hotel) }}</td> {{-- الإجمالي المستحق للفندق --}}
+                                <td class="d-none d-md-table-cell text-center align-middle">
+                                    {{ number_format($booking->cost_price) }}
+                                    {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
+                                </td>
+                                <td class="text-center align-middle">
+                                    {{ number_format($booking->amount_due_to_hotel) }}
+                                    {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
+                                </td>
                             </tr>
                             {{-- *** 5. الصف المخفي للتفاصيل (يظهر فقط على الشاشات الصغيرة) *** --}}
                             <tr class="collapse booking-details-row d-md-none" id="details-{{ $booking->id }}">
@@ -83,7 +86,10 @@
                                             <li><strong>الخروج:</strong> {{ $booking->check_out->format('d/m/Y') }}</li>
                                             <li><strong>الأيام:</strong> {{ $booking->days }}</li>
                                             <li><strong>الغرف:</strong> {{ $booking->rooms }}</li>
-                                            <li><strong>السعر علينا:</strong> {{ number_format($booking->cost_price) }}</li>
+                                            <li><strong>السعر علينا:</strong>
+                                                {{ number_format($booking->cost_price) }}
+                                                {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
+                                            </li>
                                         </ul>
                                     </div>
                                 </td>
@@ -109,7 +115,9 @@
             var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
             var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
                 if (!bootstrap.Popover.getInstance(popoverTriggerEl)) {
-                    return new bootstrap.Popover(popoverTriggerEl, { html: true });
+                    return new bootstrap.Popover(popoverTriggerEl, {
+                        html: true
+                    });
                 }
                 return null;
             }).filter(Boolean);
@@ -118,14 +126,16 @@
             const detailCollapseElements = document.querySelectorAll('.booking-details-row');
             detailCollapseElements.forEach(el => {
                 el.addEventListener('show.bs.collapse', event => {
-                    const triggerButton = document.querySelector(`button[data-bs-target="#${event.target.id}"] i`);
+                    const triggerButton = document.querySelector(
+                        `button[data-bs-target="#${event.target.id}"] i`);
                     if (triggerButton) {
                         triggerButton.classList.remove('fa-plus');
                         triggerButton.classList.add('fa-minus');
                     }
                 });
                 el.addEventListener('hide.bs.collapse', event => {
-                    const triggerButton = document.querySelector(`button[data-bs-target="#${event.target.id}"] i`);
+                    const triggerButton = document.querySelector(
+                        `button[data-bs-target="#${event.target.id}"] i`);
                     if (triggerButton) {
                         triggerButton.classList.remove('fa-minus');
                         triggerButton.classList.add('fa-plus');

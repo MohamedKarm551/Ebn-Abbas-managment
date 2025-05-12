@@ -58,7 +58,12 @@
                     @endphp
                     <tr>
                         <td>{{ $loop->iteration }}</td> {{-- *** إضافة خلية الترقيم *** --}}
-                        <td>{{ number_format($payment->amount, 2) }} ريال</td>
+                        <td>{{ number_format($payment->amount, 2) }} @if ($payment->currency == 'KWD')
+                                دينار كويتي
+                            @else
+                                ريال سعودي
+                            @endif
+                        </td>
                         <td>{{ $payment->payment_date->format('d/m/Y') }}</td> {{-- *** تغيير تنسيق التاريخ *** --}}
                         {{-- *** عرض الملاحظات بعد استبدال الرابط (إن وجد) *** --}}
                         <td>{!! nl2br(e($displayNotes)) !!}</td> {{-- استخدم nl2br للحفاظ على الأسطر الجديدة و e للحماية --}}
@@ -95,158 +100,167 @@
         </table>
     </div>
     @push('scripts')
-    {{-- محول التاريخ لـ Chart.js --}}
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    {{-- مكتبة الزووم --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+        {{-- محول التاريخ لـ Chart.js --}}
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js">
+        </script>
+        {{-- مكتبة الزووم --}}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 
-    <script>
-        // دالة حساب حجم النقطة
-        function calculateRadius(amount, minAmount, maxAmount, minRadius, maxRadius) {
-            if (maxAmount === minAmount || amount === null || amount === undefined) {
-                return minRadius;
+        <script>
+            // دالة حساب حجم النقطة
+            function calculateRadius(amount, minAmount, maxAmount, minRadius, maxRadius) {
+                if (maxAmount === minAmount || amount === null || amount === undefined) {
+                    return minRadius;
+                }
+                const radius = minRadius + ((amount - minAmount) / (maxAmount - minAmount)) * (maxRadius - minRadius);
+                return Math.max(minRadius, Math.min(maxRadius, radius));
             }
-            const radius = minRadius + ((amount - minAmount) / (maxAmount - minAmount)) * (maxRadius - minRadius);
-            return Math.max(minRadius, Math.min(maxRadius, radius));
-        }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // إعداد العناصر
-            const showChartBtn = document.getElementById('showChartBtn');
-            const chartContainer = document.getElementById('chartContainer');
-            const ctx = document.getElementById('paymentsChart');
-            let paymentsChartInstance = null;
+            document.addEventListener('DOMContentLoaded', function() {
+                // إعداد العناصر
+                const showChartBtn = document.getElementById('showChartBtn');
+                const chartContainer = document.getElementById('chartContainer');
+                const ctx = document.getElementById('paymentsChart');
+                let paymentsChartInstance = null;
 
-            // *** بداية: تحضير البيانات ***
-            // هنا نستخدم متغير PHP مجهز مسبقًا (بدون تداخل معقد مع JavaScript)
-            const paymentPoints = @json($payments->map(function($payment) {
-                return [
-                    'x' => $payment->payment_date->format('Y-m-d'),
-                    'y' => $payment->amount
-                ];
-            }));
+                // *** بداية: تحضير البيانات ***
+                // هنا نستخدم متغير PHP مجهز مسبقًا (بدون تداخل معقد مع JavaScript)
+                const paymentPoints = @json(
+                    $payments->map(function ($payment) {
+                        return [
+                            'x' => $payment->payment_date->format('Y-m-d'),
+                            'y' => $payment->amount,
+                        ];
+                    }));
 
-            // حساب القيم الدنيا والقصوى للمبالغ
-            const amounts = paymentPoints.map(p => p.y).filter(Boolean);
-            const minAmount = amounts.length ? Math.min(...amounts) : 0;
-            const maxAmount = amounts.length ? Math.max(...amounts) : 0;
-            
-            // ثوابت حجم النقطة
-            const minRadius = 4;
-            const maxRadius = 15;
-            
-            // حساب أحجام النقاط
-            const pointRadii = paymentPoints.map(p => calculateRadius(p.y, minAmount, maxAmount, minRadius, maxRadius));
-            const pointHoverRadii = paymentPoints.map(p => calculateRadius(p.y, minAmount, maxAmount, minRadius, maxRadius) + 2);
-            // *** نهاية: تحضير البيانات ***
+                // حساب القيم الدنيا والقصوى للمبالغ
+                const amounts = paymentPoints.map(p => p.y).filter(Boolean);
+                const minAmount = amounts.length ? Math.min(...amounts) : 0;
+                const maxAmount = amounts.length ? Math.max(...amounts) : 0;
 
-            if (showChartBtn && chartContainer && ctx && paymentPoints.length > 0) {
-                showChartBtn.addEventListener('click', function() {
-                    chartContainer.style.display = 'block';
-                    
-                    if (!paymentsChartInstance) {
-                        paymentsChartInstance = new Chart(ctx, {
-                            type: 'scatter',
-                            data: {
-                                datasets: [{
-                                    label: 'دفعة',
-                                    data: paymentPoints,
-                                    backgroundColor: 'rgba(0, 123, 255, 0.7)',
-                                    borderColor: 'rgb(0, 123, 255)',
-                                    radius: pointRadii,
-                                    hoverRadius: pointHoverRadii
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        ticks: {
-                                            callback: function(value) {
-                                                return value.toLocaleString('ar-SA') + ' ريال';
-                                            }
-                                        },
-                                        grid: {
-                                            display: true,
-                                            color: 'rgba(0, 0, 0, 0.05)'
-                                        }
-                                    },
-                                    x: {
-                                        type: 'time',
-                                        time: {
-                                            unit: 'day',
-                                            tooltipFormat: 'dd/MM/yyyy',
-                                            displayFormats: {
-                                                day: 'dd/MM',
-                                                week: 'dd/MM',
-                                                month: 'MMM yyyy',
-                                                year: 'yyyy'
-                                            }
-                                        },
-                                        ticks: {
-                                            source: 'auto',
-                                            autoSkip: true,
-                                            maxRotation: 45,
-                                            minRotation: 0
-                                        },
-                                        title: {
-                                            display: true,
-                                            text: 'تاريخ الدفعة'
-                                        },
-                                        grid: {
-                                            display: true,
-                                            color: 'rgba(0, 0, 0, 0.05)'
-                                        }
-                                    }
+                // ثوابت حجم النقطة
+                const minRadius = 4;
+                const maxRadius = 15;
+
+                // حساب أحجام النقاط
+                const pointRadii = paymentPoints.map(p => calculateRadius(p.y, minAmount, maxAmount, minRadius,
+                    maxRadius));
+                const pointHoverRadii = paymentPoints.map(p => calculateRadius(p.y, minAmount, maxAmount, minRadius,
+                    maxRadius) + 2);
+                // *** نهاية: تحضير البيانات ***
+
+                if (showChartBtn && chartContainer && ctx && paymentPoints.length > 0) {
+                    showChartBtn.addEventListener('click', function() {
+                        chartContainer.style.display = 'block';
+
+                        if (!paymentsChartInstance) {
+                            paymentsChartInstance = new Chart(ctx, {
+                                type: 'scatter',
+                                data: {
+                                    datasets: [{
+                                        label: 'دفعة',
+                                        data: paymentPoints,
+                                        backgroundColor: 'rgba(0, 123, 255, 0.7)',
+                                        borderColor: 'rgb(0, 123, 255)',
+                                        radius: pointRadii,
+                                        hoverRadius: pointHoverRadii
+                                    }]
                                 },
-                                plugins: {
-                                    legend: {
-                                        display: false
-                                    },
-                                    tooltip: {
-                                        callbacks: {
-                                            title: function(tooltipItems) {
-                                                const date = new Date(tooltipItems[0].raw.x);
-                                                return date.toLocaleDateString('ar-EG', { 
-                                                    day: 'numeric', 
-                                                    month: 'long', 
-                                                    year: 'numeric' 
-                                                });
-                                            },
-                                            label: function(context) {
-                                                if (context.parsed.y !== null) {
-                                                    return 'المبلغ: ' + context.parsed.y.toLocaleString('ar-SA') + ' ريال';
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: {
+                                                callback: function(value) {
+                                                    return value.toLocaleString('ar-SA') + ' ريال';
                                                 }
-                                                return '';
+                                            },
+                                            grid: {
+                                                display: true,
+                                                color: 'rgba(0, 0, 0, 0.05)'
+                                            }
+                                        },
+                                        x: {
+                                            type: 'time',
+                                            time: {
+                                                unit: 'day',
+                                                tooltipFormat: 'dd/MM/yyyy',
+                                                displayFormats: {
+                                                    day: 'dd/MM',
+                                                    week: 'dd/MM',
+                                                    month: 'MMM yyyy',
+                                                    year: 'yyyy'
+                                                }
+                                            },
+                                            ticks: {
+                                                source: 'auto',
+                                                autoSkip: true,
+                                                maxRotation: 45,
+                                                minRotation: 0
+                                            },
+                                            title: {
+                                                display: true,
+                                                text: 'تاريخ الدفعة'
+                                            },
+                                            grid: {
+                                                display: true,
+                                                color: 'rgba(0, 0, 0, 0.05)'
                                             }
                                         }
                                     },
-                                    zoom: {
-                                        pan: {
-                                            enabled: true,
-                                            mode: 'x',
-                                            threshold: 5
+                                    plugins: {
+                                        legend: {
+                                            display: false
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                title: function(tooltipItems) {
+                                                    const date = new Date(tooltipItems[0].raw.x);
+                                                    return date.toLocaleDateString('ar-EG', {
+                                                        day: 'numeric',
+                                                        month: 'long',
+                                                        year: 'numeric'
+                                                    });
+                                                },
+                                                label: function(context) {
+                                                    if (context.parsed.y !== null) {
+                                                        return 'المبلغ: ' + context.parsed.y
+                                                            .toLocaleString('ar-SA') + ' ريال';
+                                                    }
+                                                    return '';
+                                                }
+                                            }
                                         },
                                         zoom: {
-                                            wheel: { enabled: true },
-                                            pinch: { enabled: true },
-                                            mode: 'x'
+                                            pan: {
+                                                enabled: true,
+                                                mode: 'x',
+                                                threshold: 5
+                                            },
+                                            zoom: {
+                                                wheel: {
+                                                    enabled: true
+                                                },
+                                                pinch: {
+                                                    enabled: true
+                                                },
+                                                mode: 'x'
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        });
-                    }
-                });
-            } else if (showChartBtn) {
-                showChartBtn.textContent = 'لا توجد بيانات دفعات لعرض الرسم البياني';
-                showChartBtn.disabled = true;
-            }
-        });
-    </script>
-@endpush
+                            });
+                        }
+                    });
+                } else if (showChartBtn) {
+                    showChartBtn.textContent = 'لا توجد بيانات دفعات لعرض الرسم البياني';
+                    showChartBtn.disabled = true;
+                }
+            });
+        </script>
+    @endpush
     {{-- ... الكود اللي تحت زي ما هو @endsection ... --}}
 @endsection

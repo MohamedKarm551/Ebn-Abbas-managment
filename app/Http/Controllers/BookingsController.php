@@ -208,21 +208,108 @@ class BookingsController extends Controller
 
         // 2. بنحسب الإجماليات على النسخة دي
         $totalCount = $queryForTotals->count();
-        // **مهم:** تأكد إن أسماء الأعمدة دي صح في جدول bookings
-        $totalDueFromCompanyAccurate = $queryForTotals->sum('amount_due_from_company') ?? 0;
-        $totalPaidByCompanyAccurate = $queryForTotals->sum('amount_paid_by_company') ?? 0;
+        // 3. حساب الإجماليات مفصلة حسب العملة
+        $allBookings = $queryForTotals->get();
+
+        // تجميع المستحق من الشركات حسب العملة
+        $totalDueFromCompanyByCurrency = $allBookings->groupBy('currency')
+            ->map(function ($currencyGroup) {
+                return [
+                    'currency' => $currencyGroup->first()->currency,
+                    'amount' => $currencyGroup->sum('amount_due_from_company')
+                ];
+            })->values()->toArray();
+
+        // تجميع المدفوع من الشركات حسب العملة
+        $totalPaidByCompanyByCurrency = $allBookings->groupBy('currency')
+            ->map(function ($currencyGroup) {
+                return [
+                    'currency' => $currencyGroup->first()->currency,
+                    'amount' => $currencyGroup->sum('amount_paid_by_company')
+                ];
+            })->values()->toArray();
+
+        // حساب المتبقي من الشركات حسب العملة
+        $remainingFromCompanyByCurrency = [];
+        foreach ($totalDueFromCompanyByCurrency as $dueItem) {
+            $paid = collect($totalPaidByCompanyByCurrency)
+                ->where('currency', $dueItem['currency'])
+                ->first()['amount'] ?? 0;
+
+            $remainingFromCompanyByCurrency[] = [
+                'currency' => $dueItem['currency'],
+                'amount' => $dueItem['amount'] - $paid
+            ];
+        }
+
+        // للتوافق مع الكود القديم - المستحق من الشركات الإجمالي
+        $totalDueFromCompanyAccurate = array_sum(array_column($totalDueFromCompanyByCurrency, 'amount'));
+        $totalPaidByCompanyAccurate = array_sum(array_column($totalPaidByCompanyByCurrency, 'amount'));
         $remainingFromCompanyAccurate = $totalDueFromCompanyAccurate - $totalPaidByCompanyAccurate;
 
-        // 3. بنحسب إجماليات الفنادق بس لو مش بنفلتر بشركة
-        $totalDueToHotelsAccurate = 0;
-        $totalPaidToHotelsAccurate = 0;
-        $remainingToHotelsAccurate = 0;
+        // المستحق للفنادق بالعملات المختلفة
+        $totalDueToHotelsByCurrency = [];
+        $totalPaidToHotelsByCurrency = [];
+        $remainingToHotelsByCurrency = [];
+
+
         if (!$request->filled('company_id')) {
-            // **مهم:** تأكد إن أسماء الأعمدة دي صح في جدول bookings
-            $totalDueToHotelsAccurate = $queryForTotals->sum('amount_due_to_hotel') ?? 0;
-            $totalPaidToHotelsAccurate = $queryForTotals->sum('amount_paid_to_hotel') ?? 0;
+            // تجميع المستحق للفنادق حسب العملة
+            $totalDueToHotelsByCurrency = $allBookings->groupBy('currency')
+                ->map(function ($currencyGroup) {
+                    return [
+                        'currency' => $currencyGroup->first()->currency,
+                        'amount' => $currencyGroup->sum('amount_due_to_hotel')
+                    ];
+                })->values()->toArray();
+            // تجميع المدفوع للفنادق حسب العملة
+            $totalPaidToHotelsByCurrency = $allBookings->groupBy('currency')
+                ->map(function ($currencyGroup) {
+                    return [
+                        'currency' => $currencyGroup->first()->currency,
+                        'amount' => $currencyGroup->sum('amount_paid_to_hotel')
+                    ];
+                })->values()->toArray();
+
+            // حساب المتبقي للفنادق حسب العملة
+            foreach ($totalDueToHotelsByCurrency as $dueItem) {
+                $paid = collect($totalPaidToHotelsByCurrency)
+                    ->where('currency', $dueItem['currency'])
+                    ->first()['amount'] ?? 0;
+
+                $remainingToHotelsByCurrency[] = [
+                    'currency' => $dueItem['currency'],
+                    'amount' => $dueItem['amount'] - $paid
+                ];
+            }
+
+            // للتوافق مع الكود القديم - المستحق للفنادق الإجمالي
+            $totalDueToHotelsAccurate = array_sum(array_column($totalDueToHotelsByCurrency, 'amount'));
+            $totalPaidToHotelsAccurate = array_sum(array_column($totalPaidToHotelsByCurrency, 'amount'));
             $remainingToHotelsAccurate = $totalDueToHotelsAccurate - $totalPaidToHotelsAccurate;
+        } else {
+            $totalDueToHotelsAccurate = 0;
+            $totalPaidToHotelsAccurate = 0;
+            $remainingToHotelsAccurate = 0;
         }
+
+        // تجميع المستحق من الشركات في الصفحة الحالية حسب العملة
+        $pageDueFromCompanyByCurrency = $allBookings->groupBy('currency')
+            ->map(function ($currencyGroup) {
+                return [
+                    'currency' => $currencyGroup->first()->currency,
+                    'amount' => $currencyGroup->sum('amount_due_from_company')
+                ];
+            })->values()->toArray();
+
+        // تجميع المستحق للفنادق في الصفحة الحالية حسب العملة
+        $pageDueToHotelsByCurrency = $allBookings->groupBy('currency')
+            ->map(function ($currencyGroup) {
+                return [
+                    'currency' => $currencyGroup->first()->currency,
+                    'amount' => $currencyGroup->sum('amount_due_to_hotel')
+                ];
+            })->values()->toArray();
 
         // 4. (اختياري) بنسجل الإجماليات في الـ log عشان نتأكد
         Log::info('[الإجماليات المحسوبة قبل Paginate] العدد: ' . $totalCount . ', مستحق من الشركة: ' . $totalDueFromCompanyAccurate);
@@ -234,29 +321,44 @@ class BookingsController extends Controller
         $totalDueToHotelsAll = $queryForTotals->sum('amount_due_to_hotel') ?? 0;
         $totalDueFromCompanyAll = $queryForTotals->sum('amount_due_from_company') ?? 0;
         $bookings = $query->paginate(10)->withQueryString();
+        $totalDueToHotelsAll = $totalDueToHotelsAccurate;
+        $totalDueFromCompanyAll = $totalDueFromCompanyAccurate;
+
         // فحص إذا كان الطلب AJAX
         if ($request->wantsJson() || $request->ajax()) {
-            // الحفاظ على معلمات البحث في روابط الصفحات وتحديد قالب bootstrap-4 بشكل صريح
             $paginationLinks = $bookings->appends($request->all())
                 ->onEachSide(1)
                 ->links('vendor.pagination.bootstrap-4')
                 ->toHtml();
 
             return response()->json([
-                'table' => view('bookings._table', ['bookings' => $bookings])->render(),
+                'table' => view('bookings._table', [
+                    'bookings' => $bookings,
+                    'pageDueToHotelsByCurrency' => $pageDueToHotelsByCurrency,
+                    'pageDueFromCompanyByCurrency' => $pageDueFromCompanyByCurrency,
+                    'totalDueToHotelsByCurrency' => $totalDueToHotelsByCurrency,
+                    'totalDueFromCompanyByCurrency' => $totalDueFromCompanyByCurrency
+                ])->render(),
                 'pagination' => $paginationLinks,
-                'totals' => [ // بنضيف مفتاح جديد اسمه totals
+                'totals' => [
                     'count' => $totalCount,
+                    'due_from_company_by_currency' => $totalDueFromCompanyByCurrency,
+                    'paid_by_company_by_currency' => $totalPaidByCompanyByCurrency,
+                    'remaining_from_company_by_currency' => $remainingFromCompanyByCurrency,
+                    'due_to_hotels_by_currency' => $totalDueToHotelsByCurrency,
+                    'paid_to_hotels_by_currency' => $totalPaidToHotelsByCurrency,
+                    'remaining_to_hotels_by_currency' => $remainingToHotelsByCurrency,
+                    // للتوافق مع الكود القديم
                     'due_from_company' => $totalDueFromCompanyAccurate,
                     'paid_by_company' => $totalPaidByCompanyAccurate,
                     'remaining_from_company' => $remainingFromCompanyAccurate,
-                    // بنرجع إجماليات الفنادق بس لو اتحسبت (يعني مش بنفلتر بشركة)
                     'due_to_hotels' => $request->filled('company_id') ? null : $totalDueToHotelsAccurate,
                     'paid_to_hotels' => $request->filled('company_id') ? null : $totalPaidToHotelsAccurate,
                     'remaining_to_hotels' => $request->filled('company_id') ? null : $remainingToHotelsAccurate,
                 ]
             ]);
         }
+
 
         // --------------------------------------------------
         // 7. حساب الإجماليات (ملاحظة: قد يكون غير دقيق مع Pagination)
@@ -340,6 +442,15 @@ class BookingsController extends Controller
             'totalDueToHotelsAll' => $totalDueToHotelsAll,
             'totalDueFromCompanyAll' => $totalDueFromCompanyAll,
             // ممكن تشيل 'bookingDetails' لو مش بتستخدمها في الفيو بعد ما شيلنا الـ map
+            // إضافة المتغيرات الجديدة
+            'pageDueToHotelsByCurrency' => $pageDueToHotelsByCurrency,
+            'pageDueFromCompanyByCurrency' => $pageDueFromCompanyByCurrency,
+            'totalDueToHotelsByCurrency' => $totalDueToHotelsByCurrency,
+            'totalDueFromCompanyByCurrency' => $totalDueFromCompanyByCurrency,
+            'totalPaidByCompanyByCurrency' => $totalPaidByCompanyByCurrency,
+            'totalPaidToHotelsByCurrency' => $totalPaidToHotelsByCurrency,
+            'remainingFromCompanyByCurrency' => $remainingFromCompanyByCurrency,
+            'remainingToHotelsByCurrency' => $remainingToHotelsByCurrency
         ]);
     }
 
@@ -523,6 +634,7 @@ class BookingsController extends Controller
             // سعر التكلفة مطلوب لغير الشركة، ويجب أن يكون رقمياً
             'cost_price' => (Auth::user()->role !== 'Company' ? 'required' : 'nullable') . '|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
+            'currency' => 'required|in:SAR,KWD', // إضافة التحقق من العملة
             'employee_id' => 'required|exists:employees,id',
             'notes' => 'nullable|string',
         ];
@@ -535,6 +647,8 @@ class BookingsController extends Controller
             'sale_price.required' => 'حقل سعر البيع مطلوب.',
             'sale_price.numeric' => 'سعر البيع يجب أن يكون رقمًا.',
             'sale_price.min' => 'سعر البيع يجب أن يكون أكبر من أو يساوي 0.',
+            'currency.required' => 'حقل العملة مطلوب.',
+            'currency.in' => 'العملة يجب أن تكون واحدة من: SAR, KWD.',
             'rooms.required' => 'حقل عدد الغرف مطلوب.',
             'rooms.integer' => 'عدد الغرف يجب أن يكون عدد صحيح.',
             'rooms.min' => 'عدد الغرف يجب أن يكون أكبر من 0.',
@@ -574,14 +688,14 @@ class BookingsController extends Controller
             }
 
             // الآن نحسب عدد الليالي، ويجب أن تكون القيمة موجبة
-            
+
             $bookedNights = abs($checkOutDateForMinNights->diffInDays($checkInDateForMinNights, false)); // لاحظ false لجعلها قد ترجع سالب ثم abs
 
 
             if ($availability->min_nights && $bookedNights < $availability->min_nights) {
                 Log::warning("فشل التحقق من أقل عدد ليالي للإتاحة ID: {$availability->id}. الليالي المحجوزة: {$bookedNights}, الحد الأدنى المطلوب: {$availability->min_nights} ليالٍ.");
                 throw ValidationException::withMessages([
-                    'check_out' => 'أقل عدد ليالي مسموح به للحجز في هذه الفترة هو ' . $availability->min_nights . ' ليالٍ. عدد الليالي التي اخترتها هو ' . $bookedNights  
+                    'check_out' => 'أقل عدد ليالي مسموح به للحجز في هذه الفترة هو ' . $availability->min_nights . ' ليالٍ. عدد الليالي التي اخترتها هو ' . $bookedNights
                 ]);
             }
             Log::info("نجح التحقق من أقل عدد ليالي للإتاحة ID: {$availability->id}. عدد الليالي المحجوزة: {$bookedNights}");
@@ -655,6 +769,9 @@ class BookingsController extends Controller
             // حساب المبالغ
             $validatedData['amount_due_to_hotel'] = $costPrice * $validatedData['rooms'] * $days;
             $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $days;
+            // تأكيد حفظ العملة
+            $validatedData['currency'] = $request->input('currency');
+
 
             Log::info('تم حساب الأيام والمبالغ', [
                 'days' => $days,
@@ -1086,6 +1203,7 @@ class BookingsController extends Controller
             'rooms' => 'required|integer|min:1',
             'cost_price' => 'required|numeric', // لو الحجز اتكنسل ادخل عدل السعر صفر هيقبل
             'sale_price' => 'required|numeric', //لو الحجز اتكنسل دلوقت تعمل تعديل السعر بصفر
+            'currency' => 'required|in:SAR,KWD', // إضافة التحقق من العملة
             'employee_id' => 'required|exists:employees,id',
             'notes' => 'nullable|string',
         ]);
@@ -1102,6 +1220,10 @@ class BookingsController extends Controller
         // حساب المبالغ
         $validatedData['amount_due_to_hotel'] = $validatedData['cost_price'] * $validatedData['rooms'] * $validatedData['days'];
         $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $validatedData['days'];
+        // تأكيد أن العملة تم أخذها من النموذج
+        $currency = $request->input('currency');
+        $validatedData['currency'] = $currency;
+
         // تسجيل التعديلات
         foreach ($validatedData as $field => $newValue) {
             $oldValue = $booking->getOriginal($field); // <-- استخدم getOriginal

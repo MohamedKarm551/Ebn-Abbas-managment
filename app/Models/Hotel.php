@@ -66,4 +66,14 @@ class Hotel extends Model
     //     // يمكنك إرجاع رابط صورة افتراضية هنا إذا أردت
     //     return null; // أو رابط صورة افتراضية
     // }
+    public function getTotalDueByCurrencyAttribute()
+{
+    // تجميع الحجوزات حسب العملة وحساب المبالغ المستحقة
+    return $this->bookings()
+        ->select('currency', \Illuminate\Support\Facades\DB::raw('SUM(amount_due_to_hotel) as total'))
+        ->groupBy('currency')
+        ->pluck('total', 'currency')
+        ->toArray();
+}
+
 }
