@@ -360,7 +360,7 @@
                     const originalBtnText = captureBtn.innerText;
                     captureBtn.innerText = 'جاري التجهيز...';
                     captureBtn.disabled = true;
-                    console.log('جاري تجهيز الصورة...');
+                    // console.log('جاري تجهيز الصورة...');
 
                     html2canvas(element, {
                         scale: 2,
@@ -372,9 +372,9 @@
                         link.click();
                         captureBtn.innerText = originalBtnText;
                         captureBtn.disabled = false;
-                        console.log('تم تحميل الصورة بنجاح.');
+                        // console.log('تم تحميل الصورة بنجاح.');
                     }).catch(err => {
-                        console.error('خطأ أثناء تصوير الجدول:', err);
+                        // console.error('خطأ أثناء تصوير الجدول:', err);
                         alert('حصل خطأ أثناء تجهيز الصورة.');
                         captureBtn.innerText = originalBtnText;
                         captureBtn.disabled = false;
@@ -408,7 +408,7 @@
                     if (remainingHotelsEl && totals.remaining_to_hotels !== null && totals.remaining_to_hotels !== undefined)
                         remainingHotelsEl.value = totals.remaining_to_hotels;
 
-                    console.log('تم تحديث الإجماليات المخفية.');
+                    // console.log('تم تحديث الإجماليات المخفية.');
                 }
 
                 // ==========================================================
@@ -479,7 +479,7 @@
                     navigator.clipboard.writeText(copyText).then(() => {
                         alert('تم نسخ إجماليات الفلترة بنجاح!');
                     }).catch(err => {
-                        console.error('خطأ أثناء نسخ البيانات:', err);
+                        // console.error('خطأ أثناء نسخ البيانات:', err);
                         alert('فشل نسخ البيانات.');
                     });
                 }
@@ -488,7 +488,7 @@
                 // دالة جلب البيانات بالـ AJAX (بتحدث الجدول والصفحات والإجماليات)
                 // ==========================================================
                 function fetchData(url) {
-                    console.log('بنجيب بيانات من:', url);
+                    // console.log('بنجيب بيانات من:', url);
                     // بنعرف المتغيرات دي جوه الدالة عشان نضمن إنها بتجيب العناصر الحالية بعد التحديث
                     const bookingsTableContainer = document.getElementById('bookingsTable');
                     const paginationContainer = document.querySelector('.d-flex.justify-content-center.mt-4');
@@ -499,13 +499,13 @@
                             }
                         })
                         .then(function(response) {
-                            console.log('البيانات وصلت:', response.data);
+                            // console.log('البيانات وصلت:', response.data);
 
                             // أ. تحديث محتوى الجدول
                             if (bookingsTableContainer && response.data.table !== undefined) {
                                 bookingsTableContainer.innerHTML = response.data.table;
                             } else {
-                                console.warn('مش لاقي حاوية الجدول أو بيانات الجدول مرجعتش.');
+                                // console.warn('مش لاقي حاوية الجدول أو بيانات الجدول مرجعتش.');
                             }
                             
                             
@@ -522,13 +522,13 @@
                                         paginationContainer.innerHTML = '';
                                         paginationContainer.appendChild(newPagination);
                                     }
-                                    console.log('تم تحديث أزرار الصفحات.');
+                                    // console.log('تم تحديث أزرار الصفحات.');
                                 } else {
                                     paginationContainer.innerHTML = ''; // مفيش صفحات جديدة، بنفضي الحاوية
-                                    console.log('مفيش أزرار صفحات، الحاوية فضيت.');
+                                    // console.log('مفيش أزرار صفحات، الحاوية فضيت.');
                                 }
                             } else {
-                                console.warn('مش لاقي حاوية أزرار الصفحات أو بيانات الصفحات مرجعتش.');
+                                // console.warn('مش لاقي حاوية أزرار الصفحات أو بيانات الصفحات مرجعتش.');
                                 if (paginationContainer) paginationContainer.innerHTML = ''; // بنفضيها احتياطي
                             }
 
@@ -536,7 +536,7 @@
                             if (response.data.totals) { // بنتأكد إن الـ Controller بعت الإجماليات
                                 updateHiddenTotals(response.data.totals);
                             } else {
-                                console.warn('الإجماليات لم يتم إرجاعها في استجابة الـ AJAX.');
+                                // console.warn('الإجماليات لم يتم إرجاعها في استجابة الـ AJAX.');
                             }
 
                             // د. إعادة تهيئة مكونات Bootstrap (زي الـ Popovers) بعد التحديث
@@ -546,7 +546,7 @@
                             updateDateAlert();
                         })
                         .catch(function(error) {
-                            console.error('خطأ في جلب البيانات:', error.response || error.message || error);
+                            // console.error('خطأ في جلب البيانات:', error.response || error.message || error);
                             alert('حصل مشكلة واحنا بنجيب البيانات. حاول تاني أو شوف الكونسول.');
                         });
                 }
@@ -735,7 +735,7 @@
                     window.addEventListener('popstate', function(event) {
                         // بنجيب الـ URL من الـ state أو الـ location الحالي
                         const url = event.state ? event.state.path : location.href;
-                        console.log('زرار الـ Back/Forward اتداس، بنجيب بيانات:', url);
+                        // console.log('زرار الـ Back/Forward اتداس، بنجيب بيانات:', url);
                         // بنجيب البيانات بالـ AJAX
                         fetchData(url);
                     });

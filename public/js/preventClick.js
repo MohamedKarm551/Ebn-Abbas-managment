@@ -46,10 +46,10 @@ function showOverlayAndLogout() {
 }
 
 // مراقبة الكونسول (في الـ global scope)
-["log", "warn", "error", "info", "debug", "table", "clear"].forEach(function (method) {
-    const original = console[method];
-    console[method] = function () {
-        showOverlayAndLogout();
-        return original.apply(console, arguments);
-    };
-});
+// ["log", "warn", "error", "info", "debug", "table", "clear"].forEach(function (method) {
+//     const original = console[method];
+//     console[method] = function () {
+//         showOverlayAndLogout();
+//         return original.apply(console, arguments);
+//     };
+// });

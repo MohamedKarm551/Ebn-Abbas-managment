@@ -22,7 +22,11 @@ class Hotel extends Model
     {
         return $this->hasMany(Booking::class, 'hotel_id');
     }
-
+        // العلاقة مع الرحلات البرية
+    public function landTrips()
+    {
+        return $this->hasMany(LandTrip::class);
+    }
     // *** علاقة الفندق بالإتاحات ***
     public function availabilities()
     {

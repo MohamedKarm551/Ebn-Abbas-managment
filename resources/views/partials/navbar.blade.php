@@ -8,58 +8,97 @@
         <div class="collapse navbar-collapse justify-content-between" id="navbarNav">
             <ul class="navbar-nav mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link" href="/bookings">الحجوزات</a>
+                    <a class="nav-link" href="/bookings"><i class="fas fa-calendar-alt me-1"></i>الحجوزات</a>
                 </li>
-                @if(auth()->user()->role === 'Company')
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('company.availabilities.index') }}">الإتاحات المتاحة</a>
-                </li>
-                @endif
-                @if(auth()->user()->role != 'Company')
-                <li class="nav-item">
-                    <a class="nav-link" href="/bookings/create">إضافة حجز</a>
-                </li>
+                @auth
+                    @if (auth()->user()->role === 'Company')
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('company.availabilities.index') }}"><i
+                                    class="fas fa-calendar-check me-1"></i>الإتاحات المتاحة</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('company.land-trips.index') }}"><i
+                                    class="fas fa-bus me-1"></i>الرحلات البرية</a>
+
+                        </li>
+                    @endauth
                 @endif
                 @auth
-                @if (auth()->user()->role === 'employee')
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.availabilities.index') }}">الإتاحات</a>
-                </li> 
-                @endif
+                    @if (auth()->user()->role != 'Company')
+                        <li class="nav-item">
+                            <a class="nav-link" href="/bookings/create">
+                                <i class="fas fa-plus-circle me-1"></i>إضافة حجز
+                            </a>
+                        </li>
+                    @endif
+                @endauth
+                @auth
+                    @if (auth()->user()->role === 'employee')
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('admin.availabilities.index') }}">الإتاحات <i
+                                    class="fas fa-calendar-check me-1"></i></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('admin.land-trips.index') }}">الرحلات البرية <i
+                                    class="fas fa-bus me-1"></i></a>
+                        </li>
+                    @endif
                 @endauth
                 @auth
                     @if (auth()->user()->role === 'Admin')
                         <li class="nav-item">
-                            <a class="nav-link" href="/reports/daily">التقارير اليومية</a>
+                            <a class="nav-link" href="/reports/daily">
+                                <i class="fas fa-chart-bar me-1"></i>
+                                التقارير اليومية
+
+                            </a>
                         </li>
-                        {{-- *** بداية الإضافة *** --}}
+
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button"
                                 data-bs-toggle="dropdown" aria-expanded="false">
-                                الإدارة
+                                الإدارة <i class="fas fa-cogs me-1"></i>
                             </a>
                             <ul class="dropdown-menu text-end" aria-labelledby="adminDropdown">
-                                <li><a class="dropdown-item" href="{{ route('admin.employees') }}">الموظفين</a></li>
-                                <li><a class="dropdown-item" href="{{ route('admin.companies') }}">الشركات</a></li>
-                                <li><a class="dropdown-item" href="{{ route('admin.agents') }}">جهات الحجز</a></li>
-                                <li><a class="dropdown-item" href="{{ route('admin.hotels') }}">الفنادق</a></li>
-                                <li><a class="dropdown-item" href="{{ route('admin.room_types.index') }}">أنواع الغرف</a></li> {{-- *** أضف هذا السطر *** --}}
-                                <li><a class="dropdown-item" href="{{ route('admin.availabilities.index') }}">الإتاحات</a>
-                                </li> 
-                               
-                                
-                                <li><a class="dropdown-item" href="{{ route('admin.archived_bookings') }}">الحجوزات
-                                        المؤرشفة</a></li>
-                                <li><a class="dropdown-item" href="{{ route('admin.notifications') }}">الإشعارات</a></li>
-                            </ul>
+                                <li><a class="dropdown-item" href="{{ route('admin.employees') }}">الموظفين <i
+                                            class="fas fa-user me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.companies') }}">الشركات <i
+                                            class="fas fa-building me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.agents') }}">جهات الحجز <i
+                                            class="fas fa-concierge-bell me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.hotels') }}">الفنادق <i
+                                            class="fas fa-hotel me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.room_types.index') }}">أنواع الغرف <i
+                                            class="fas fa-bed me-1"></i></a>
+                                </li> {{-- *** أضف هذا السطر *** --}}
+                                <li><a class="dropdown-item" href="{{ route('admin.availabilities.index') }}">الإتاحات
+                                        <i class="fas fa-clock me-1"></i></a>
+                                </li>
+
+
+                                <li><a class="dropdown-item" href="{{ route('admin.archived_bookings') }}">
+                                        الحجوزات المؤرشفة <i class="fas fa-archive me-1"></i> </a></li>
+                                @auth
+                                    @if (auth()->user()->role === 'Admin' || auth()->user()->role === 'employee')
+                                        <li><a class="dropdown-item" href="{{ route('admin.land-trips.index') }}">
+                                            الرحلات البرية <i class="fas fa-bus me-1"></i>
+                                            </a>
+                                        </li>
+                                    @endif
+                                @endauth <li><a class="dropdown-item" href="{{ route('admin.notifications') }}">
+                                        الإشعارات<i class="fas fa-bell me-1"></i>
+                                    </a></li>
+                                </a>
                         </li>
-                        {{-- *** نهاية الإضافة *** --}}
-                    @endif
-                    
+                </ul>
+                </li>
+                {{-- *** نهاية الإضافة *** --}}
+                @endif
 
 
 
-                @endauth
+
+            @endauth
             </ul>
             <div class="d-flex align-items-center gap-2">
                 <div class="form-check form-switch">
@@ -90,14 +129,15 @@
                                     </circle>
                                 </svg>
                                 @if (isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
-                                <span
-                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    {{ $unreadNotificationsCount }}
-                                </span>
-                            @endif
+                                    <span
+                                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ $unreadNotificationsCount }}
+                                    </span>
+                                @endif
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2 notif-dropdown"
-                                aria-labelledby="notifDropdown" style="min-width: 320px; max-width: 90vw; direction: rtl;">
+                                aria-labelledby="notifDropdown"
+                                style="min-width: 320px; max-width: 90vw; direction: rtl;">
                                 <li class="dropdown-header fw-bold">آخر 5 إشعارات</li>
                                 @forelse($lastNotifications as $notification)
                                     <li>
@@ -125,7 +165,7 @@
                             </ul>
                         </li>
                     @endif
-                  
+
                 @endauth
                 @auth
                     <div class="dropdown">

@@ -14,11 +14,13 @@ class AvailabilityRoomType extends Model
         'room_type_id',
         'cost_price',
         'sale_price',
+        'currency', // إضافة حقل العملة
+
         'allotment', // عدد الغرف المتاحة
     ];
 
     // *** تحويل الأسعار تلقائياً ***
-     protected $casts = [
+    protected $casts = [
         'cost_price' => 'float',
         'sale_price' => 'float',
         'allotment' => 'integer',

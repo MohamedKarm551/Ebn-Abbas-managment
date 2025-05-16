@@ -192,12 +192,27 @@
             </div>
             {{-- اختيار العملة --}}
             {{-- لو انت شركة ممنوع التعديل --}}
-            <div class="mb-3">
-                <label for="currency" class="form-label">العملة</label>
-                <select class="form-select" name="currency" id="currency" {{ isset($isBookingFromAvailability) && $isBookingFromAvailability ? 'readonly' : '' }}>
-                    <option value="SAR" {{ isset($booking) && $booking->currency == 'SAR' ? 'selected' : '' }}>ريال سعودي</option>
-                    <option value="KWD" {{ isset($booking) && $booking->currency == 'KWD' ? 'selected' : '' }}>دينار كويتي</option>
+            <div class="col-md-3">
+                <label for="currency" class="form-label">العملة <span class="text-danger">*</span></label>
+                <select class="form-select @error('currency') is-invalid @enderror" id="currency" name="currency"
+                    required
+                    {{ auth()->user()->role == 'Company' || (isset($isBookingFromAvailability) && $isBookingFromAvailability) ? 'disabled' : '' }}>
+                    <option value="SAR"
+                        {{ old('currency', $bookingData['currency'] ?? 'SAR') == 'SAR' ? 'selected' : '' }}>ريال سعودي
+                    </option>
+                    <option value="KWD"
+                        {{ old('currency', $bookingData['currency'] ?? '') == 'KWD' ? 'selected' : '' }}>دينار كويتي
+                    </option>
                 </select>
+                @error('currency')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+
+                {{-- حقل مخفي لإرسال القيمة لو الحقل disabled --}}
+                @if (auth()->user()->role == 'Company' || (isset($isBookingFromAvailability) && $isBookingFromAvailability))
+                    <input type="hidden" name="currency"
+                        value="{{ old('currency', $bookingData['currency'] ?? 'SAR') }}">
+                @endif
             </div>
             {{-- تاريخ الدخول --}}
             <div class="col-md-4">
@@ -331,6 +346,16 @@
                 if (bookingData.sale_price) document.getElementById('sale_price').value = bookingData.sale_price;
                 // سعر التكلفة قد لا يكون متاحاً
                 if (bookingData.cost_price) document.getElementById('cost_price').value = bookingData.cost_price;
+                if (bookingData.currency) {
+                    // تحديث القيمة في القائمة المنسدلة
+                    document.getElementById('currency').value = bookingData.currency;
+
+                    // تحديث القيمة في الحقل المخفي إذا كان موجوداً
+                    const hiddenCurrencyInput = document.querySelector('input[type="hidden"][name="currency"]');
+                    if (hiddenCurrencyInput) {
+                        hiddenCurrencyInput.value = bookingData.currency;
+                    }
+                }
                 if (bookingData.check_in) document.getElementById('check_in').value = bookingData.check_in;
                 if (bookingData.check_out) document.getElementById('check_out').value = bookingData.check_out;
                 // يمكنك إضافة حقل rooms إذا أردت ملئه أيضاً

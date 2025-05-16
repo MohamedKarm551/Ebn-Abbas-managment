@@ -12,7 +12,9 @@
 
 {{-- Alpine.js component for dynamic room types --}}
 <div x-data="availabilityForm({
-    initialRoomTypes: {{ $availability ? json_encode($availability->availabilityRoomTypes->map(fn($art) => ['id' => $art->id, 'room_type_id' => $art->room_type_id, 'cost_price' => $art->cost_price, 'sale_price' => $art->sale_price, 'allotment' => $art->allotment])) : '[]' }},
+    initialRoomTypes: {{ $availability ? json_encode($availability->availabilityRoomTypes->map(fn($art) => ['id' => $art->id, 'room_type_id' => $art->room_type_id, 'cost_price' => $art->cost_price, 'sale_price' => $art->sale_price,
+            'currency' => $art->currency ?? 'SAR',  {{-- إضافة حقل العملة هنا --}}
+ 'allotment' => $art->allotment])) : '[]' }},
     allRoomTypes: {{ json_encode($roomTypes->pluck('room_type_name', 'id')) }} // Pass all possible room types {id: name}
 })" x-init="init()" {{-- Initialize Alpine component --}} class="p-3 border rounded">
 
@@ -177,7 +179,15 @@
                         :name="'room_types[' + index + '][sale_price]'" x-model.number="room.sale_price"
                         placeholder="0.00" required min="0">
                 </div>
-
+                <div class="col-md-2">
+                    <label :for="'currency_' + index" class="form-label">العملة <span
+                            class="text-danger">*</span></label>
+                    <select class="form-select" :name="'room_types[' + index + '][currency]'" x-model="room.currency"
+                        required>
+                        <option value="SAR">ريال سعودي</option>
+                        <option value="KWD">دينار كويتي</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label :for="'allotment_' + index" class="form-label">عدد الغرف</label>
                     <input type="number" step="1" min="0"
@@ -217,6 +227,13 @@
 
             // Initialize the component
             init() {
+                // إذا كانت هناك أنواع غرف موجودة مسبقًا، تأكد من أن لديها عملة
+                this.roomTypes.forEach(room => {
+                    if (!room.currency) {
+                        room.currency = 'SAR'; // تعيين العملة الافتراضية
+                    }
+                });
+
                 // Add an empty row if creating a new availability
                 if (this.roomTypes.length === 0) {
                     this.addRoomType();
@@ -236,6 +253,7 @@
                     room_type_id: '', // Start with empty selection
                     cost_price: '',
                     sale_price: '',
+                    currency: 'SAR', // تعيين العملة الافتراضية للسجلات الجديدة
                     allotment: null,
                     duplicate: false // Flag for duplicate validation
                 });

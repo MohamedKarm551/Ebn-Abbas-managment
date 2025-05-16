@@ -12,6 +12,10 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\RoomTypeController;
 use App\Http\Controllers\CompanyAvailabilityController;
+use App\Http\Controllers\LandTripController;
+use App\Http\Controllers\CompanyLandTripController;
+use App\Http\Controllers\TripTypeController;
+
 use Jenssegers\Agent\Agent;
 use App\Models\Notification;
 
@@ -140,6 +144,8 @@ Route::middleware(['auth'])->group(function () {
         //     ->name('reports.agent.payment.show');
 
     });
+    Route::post('/save-screenshot', [\App\Http\Controllers\ReportController::class, 'saveScreenshot']);
+    Route::post('/save-pdf', [\App\Http\Controllers\ReportController::class, 'savePDF']);
     // ==================================================
     // *** نهاية مجموعة روتات التقارير والدفعات (أدمن فقط) ***
     // ==================================================
@@ -165,6 +171,28 @@ Route::middleware(['auth'])->group(function () {
 
     }); // <--- نهاية المجموعة الرئيسية للمستخدمين المسجلين
 }); // <--- نهاية مجموعة روتات الإشعارات (لغير الشركات)
+// ==================================================
+// روتات إدارة الرحلات (للأدمن والموظفين)
+Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('land-trips', LandTripController::class);
+        Route::resource('trip-types', TripTypeController::class)->except('show');
+
+    Route::get('land-trips/{land_trip}/bookings', [LandTripController::class, 'showBookings'])->name('land-trips.bookings');
+        // إضافة مسارات إنشاء الحجوزات
+    Route::get('land-trips/{land_trip}/create-booking', [LandTripController::class, 'createBooking'])->name('land-trips.create-booking');
+    Route::post('land-trips/{land_trip}/store-booking', [LandTripController::class, 'storeBooking'])->name('land-trips.store-booking');
+});
+
+// روتات الشركات للحجز
+Route::middleware(['auth', \App\Http\Middleware\IsCompany::class])->prefix('company')->name('company.')->group(function () {
+       // الرحلات البرية
+    Route::get('land-trips', [CompanyLandTripController::class, 'index'])->name('land-trips.index');
+    Route::get('land-trips/{landTrip}', [CompanyLandTripController::class, 'show'])->name('land-trips.show');
+    Route::post('land-trips/{landTrip}/book', [CompanyLandTripController::class, 'book'])->name('land-trips.book');
+    Route::get('land-trips/booking/{booking}/voucher', [CompanyLandTripController::class, 'voucher'])->name('land-trips.voucher');
+    Route::get('land-trips/booking/{booking}/download-voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.downloadVoucher');
+    
+});
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 Route::get('/', function () {
     return view('welcome');

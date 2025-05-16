@@ -24,6 +24,9 @@
         href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
     <!-- Dark Mode CSS -->
     <link href="{{ asset('css/dark-mode.css') }}" rel="stylesheet">
+    {{-- SweetAlert2 CSS --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="{{ asset('css/nav-styles.css') }}">
     <link rel="stylesheet" href="{{ asset('css/bookingsStyle.css') }}">
@@ -212,6 +215,7 @@
     </script>
 
     {{-- Stack for page specific scripts (Keep only ONE at the very end) --}}
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
 
 </body>

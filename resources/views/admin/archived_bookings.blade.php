@@ -120,7 +120,7 @@
         const originalBtnText = captureBtn.innerText;
         captureBtn.innerText = 'جاري التجهيز...';
         captureBtn.disabled = true;
-        console.log('جاري تجهيز الصورة...');
+        // console.log('جاري تجهيز الصورة...');
 
         html2canvas(element, {
             scale: 2,
@@ -132,7 +132,7 @@
             link.click();
             captureBtn.innerText = originalBtnText;
             captureBtn.disabled = false;
-            console.log('تم تحميل الصورة بنجاح.');
+            // console.log('تم تحميل الصورة بنجاح.');
         }).catch(err => {
             console.error('خطأ أثناء تصوير الجدول:', err);
             alert('حصل خطأ أثناء تجهيز الصورة.');
@@ -168,7 +168,7 @@
         if (remainingHotelsEl && totals.remaining_to_hotels !== null && totals.remaining_to_hotels !== undefined)
             remainingHotelsEl.value = totals.remaining_to_hotels;
 
-        console.log('تم تحديث الإجماليات المخفية.');
+        // console.log('تم تحديث الإجماليات المخفية.');
     }
 
     // ==========================================================
@@ -220,7 +220,7 @@
     // دالة جلب البيانات بالـ AJAX (بتحدث الجدول والصفحات والإجماليات)
     // ==========================================================
     function fetchData(url) {
-        console.log('بنجيب بيانات من:', url);
+        // console.log('بنجيب بيانات من:', url);
         // بنعرف المتغيرات دي جوه الدالة عشان نضمن إنها بتجيب العناصر الحالية بعد التحديث
         const bookingsTableContainer = document.getElementById('bookingsTable');
         const paginationContainer = document.querySelector('.d-flex.justify-content-center.mt-4');
@@ -231,7 +231,7 @@
                 }
             })
             .then(function(response) {
-                console.log('البيانات وصلت:', response.data);
+                // console.log('البيانات وصلت:', response.data);
 
                 // أ. تحديث محتوى الجدول
                 if (bookingsTableContainer && response.data.table !== undefined) {
@@ -253,10 +253,10 @@
                             paginationContainer.innerHTML = '';
                             paginationContainer.appendChild(newPagination);
                         }
-                        console.log('تم تحديث أزرار الصفحات.');
+                        // console.log('تم تحديث أزرار الصفحات.');
                     } else {
                         paginationContainer.innerHTML = ''; // مفيش صفحات جديدة، بنفضي الحاوية
-                        console.log('مفيش أزرار صفحات، الحاوية فضيت.');
+                        // console.log('مفيش أزرار صفحات، الحاوية فضيت.');
                     }
                 } else {
                     console.warn('مش لاقي حاوية أزرار الصفحات أو بيانات الصفحات مرجعتش.');
@@ -465,7 +465,7 @@
         window.addEventListener('popstate', function(event) {
             // بنجيب الـ URL من الـ state أو الـ location الحالي
             const url = event.state ? event.state.path : location.href;
-            console.log('زرار الـ Back/Forward اتداس، بنجيب بيانات:', url);
+            // console.log('زرار الـ Back/Forward اتداس، بنجيب بيانات:', url);
             // بنجيب البيانات بالـ AJAX
             fetchData(url);
         });

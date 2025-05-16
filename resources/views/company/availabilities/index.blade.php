@@ -1,4 +1,3 @@
-{{-- filepath: c:\xampp\htdocs\Ebn-Abbas-managment\resources\views\company\availabilities\index.blade.php --}}
 @extends('layouts.app')
 
 @section('title', 'الإتاحات المتاحة للحجز')
@@ -395,12 +394,16 @@
                 <div class="card-body availability-body p-3">
                     <div class="availability-image-container mb-3 text-center">
                         @if ($availability->hotel && $availability->hotel->images->count() > 0)
-                            <div id="carouselHotelImages-{{ $availability->id }}" class="carousel slide" data-bs-ride="carousel">
+                            <div id="carouselHotelImages-{{ $availability->id }}" class="carousel slide"
+                                data-bs-ride="carousel">
                                 <div class="carousel-indicators">
                                     @foreach ($availability->hotel->images as $index => $image)
-                                        <button type="button" data-bs-target="#carouselHotelImages-{{ $availability->id }}"
-                                            data-bs-slide-to="{{ $index }}" class="{{ $index == 0 ? 'active' : '' }}"
-                                            aria-current="{{ $index == 0 ? 'true' : 'false' }}" aria-label="Slide {{ $index + 1 }}"></button>
+                                        <button type="button"
+                                            data-bs-target="#carouselHotelImages-{{ $availability->id }}"
+                                            data-bs-slide-to="{{ $index }}"
+                                            class="{{ $index == 0 ? 'active' : '' }}"
+                                            aria-current="{{ $index == 0 ? 'true' : 'false' }}"
+                                            aria-label="Slide {{ $index + 1 }}"></button>
                                     @endforeach
                                 </div>
                                 <div class="carousel-inner">
@@ -460,7 +463,7 @@
                                         <small class="text-muted room-pricing-info">
                                             <span class="me-3 price-info">السعر: <strong
                                                     class="text-success price">{{ number_format($roomType->sale_price, 2) }}
-                                                    ر.س</strong></span>
+                                                    {{ $roomType->currency == 'KWD' ? 'د.ك' : 'ر.س' }}</strong></span>
                                             <span class="allotment-info">المتاح: <strong
                                                     class="text-info allotment">{{ $roomType->allotment }}</strong>
                                                 غرف</span>
@@ -529,16 +532,16 @@
 
     </div>
 @endsection
+<script src="{{ asset('js/preventClick.js') }}"></script>
 
 @push('scripts')
-  
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            
+        document.addEventListener('DOMContentLoaded', function() {
+
             const carousels = document.querySelectorAll('.carousel');
-            
+
             carousels.forEach(carousel => {
-               
+
             });
         });
     </script>

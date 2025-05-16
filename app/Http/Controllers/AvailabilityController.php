@@ -88,12 +88,13 @@ class AvailabilityController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date', // Use uppercase Y
             'status' => 'required|in:active,inactive',
             'notes' => 'nullable|string|max:5000', // Added max length
-            'min_nights' => 'nullable|integer|min:1',  
+            'min_nights' => 'nullable|integer|min:1',
 
             'room_types' => 'required|array|min:1',
             'room_types.*.room_type_id' => 'required|exists:room_types,id|distinct', // Ensure distinct room types
             'room_types.*.cost_price' => 'required|numeric|min:0',
             'room_types.*.sale_price' => 'required|numeric|min:0|gte:room_types.*.cost_price', // Sale price >= cost price
+            'room_types.*.currency' => 'required|in:SAR,KWD', // إضافة التحقق من العملة
             'room_types.*.allotment' => 'nullable|integer|min:1',
         ], [
             'hotel_id.required' => 'يجب اختيار الفندق.',
@@ -116,6 +117,9 @@ class AvailabilityController extends Controller
             'room_types.*.sale_price.required' => 'سعر البيع مطلوب لكل نوع غرفة.',
             'room_types.*.sale_price.min' => 'سعر البيع لا يمكن أن يكون سالباً.',
             'room_types.*.sale_price.gte' => 'سعر البيع يجب أن يكون أكبر من أو يساوي سعر التكلفة.', // Added gte rule message
+            // إضافة رسائل التحقق للعملة
+            'room_types.*.currency.required' => 'يجب تحديد العملة لكل نوع غرفة.',
+            'room_types.*.currency.in' => 'العملة المحددة غير مدعومة.',
             'room_types.*.allotment.integer' => 'عدد الغرف يجب أن يكون رقماً صحيحاً.',
             'room_types.*.allotment.min' => 'عدد الغرف لا يمكن أن يكون سالباً.',
         ]);
@@ -160,6 +164,7 @@ class AvailabilityController extends Controller
                         'room_type_id' => $roomData['room_type_id'],
                         'cost_price' => $roomData['cost_price'],
                         'sale_price' => $roomData['sale_price'],
+                        'currency' => $roomData['currency'] ?? 'SAR', // إضافة العملة
                         'allotment' => $roomData['allotment'] ?? null,
                         // availability_id is added automatically by createMany
                     ];
@@ -250,7 +255,7 @@ class AvailabilityController extends Controller
             // Allow 'expired' only if it's already the status
             'status' => 'required|in:active,inactive' . ($availability->status === 'expired' ? ',expired' : ''),
             'notes' => 'nullable|string|max:5000',
-            'min_nights' => 'nullable|integer|min:1', 
+            'min_nights' => 'nullable|integer|min:1',
 
             'room_types' => 'required|array|min:1',
             // Validate existing IDs belong to this availability
@@ -258,6 +263,8 @@ class AvailabilityController extends Controller
             'room_types.*.room_type_id' => 'required|exists:room_types,id|distinct', // Ensure distinct
             'room_types.*.cost_price' => 'required|numeric|min:0',
             'room_types.*.sale_price' => 'required|numeric|min:0|gte:room_types.*.cost_price',
+            'room_types.*.currency' => 'required|in:SAR,KWD', // إضافة التحقق من العملة
+
             'room_types.*.allotment' => 'nullable|integer|min:1',
         ], [
             // Add specific messages similar to store method
@@ -281,6 +288,8 @@ class AvailabilityController extends Controller
             'room_types.*.sale_price.required' => 'سعر البيع مطلوب لكل نوع غرفة.',
             'room_types.*.sale_price.min' => 'سعر البيع لا يمكن أن يكون سالباً.',
             'room_types.*.sale_price.gte' => 'سعر البيع يجب أن يكون أكبر من أو يساوي سعر التكلفة.',
+            'room_types.*.currency.required' => 'يجب تحديد العملة لكل نوع غرفة.',
+            'room_types.*.currency.in' => 'العملة المحددة غير مدعومة.',
             'room_types.*.allotment.integer' => 'عدد الغرف يجب أن يكون رقماً صحيحاً.',
             'room_types.*.allotment.min' => 'عدد الغرف لا يمكن أن يكون سالباً.',
         ]);
@@ -325,16 +334,16 @@ class AvailabilityController extends Controller
 
 
         // Update availability main data
-         // لا نحدث employee_id عند التعديل عادةً، إلا إذا كان هذا مطلوبًا
-    $availability->update([
-        'hotel_id' => $validatedData['hotel_id'],
-        'agent_id' => $validatedData['agent_id'],
-        'start_date' => $validatedData['start_date'],
-        'end_date' => $validatedData['end_date'],
-        'status' => $validatedData['status'],
-        'notes' => $validatedData['notes'],
-        'min_nights' => $validatedData['min_nights'] ?? null, // *** تمت الإضافة هنا ***
-    ]);
+        // لا نحدث employee_id عند التعديل عادةً، إلا إذا كان هذا مطلوبًا
+        $availability->update([
+            'hotel_id' => $validatedData['hotel_id'],
+            'agent_id' => $validatedData['agent_id'],
+            'start_date' => $validatedData['start_date'],
+            'end_date' => $validatedData['end_date'],
+            'status' => $validatedData['status'],
+            'notes' => $validatedData['notes'],
+            'min_nights' => $validatedData['min_nights'] ?? null, // *** تمت الإضافة هنا ***
+        ]);
         // --- Sync Availability Room Types ---
         $submittedRoomTypes = collect($validatedData['room_types'] ?? []);
         $existingRoomTypeIds = $availability->availabilityRoomTypes()->pluck('id')->all();
@@ -354,6 +363,7 @@ class AvailabilityController extends Controller
                 'room_type_id' => $roomData['room_type_id'],
                 'cost_price' => $roomData['cost_price'],
                 'sale_price' => $roomData['sale_price'],
+                'currency' => $roomData['currency'] ?? 'SAR', // إضافة العملة
                 'allotment' => $roomData['allotment'] ?? null,
             ];
 
@@ -392,8 +402,13 @@ class AvailabilityController extends Controller
 
             // 1. حساب التغييرات للبيانات الأساسية
             $fieldNames = [
-                'start_date' => 'تاريخ البداية', 'end_date' => 'تاريخ النهاية', 'status' => 'الحالة',
-                'notes' => 'الملاحظات', 'hotel_id' => 'الفندق', 'agent_id' => 'جهة الحجز', 'employee_id' => 'الموظف المسؤول',
+                'start_date' => 'تاريخ البداية',
+                'end_date' => 'تاريخ النهاية',
+                'status' => 'الحالة',
+                'notes' => 'الملاحظات',
+                'hotel_id' => 'الفندق',
+                'agent_id' => 'جهة الحجز',
+                'employee_id' => 'الموظف المسؤول',
             ];
             $statusMap = ['active' => 'نشط', 'inactive' => 'غير نشط', 'expired' => 'منتهي'];
             $mainChangedFields = [];
@@ -448,7 +463,7 @@ class AvailabilityController extends Controller
             }
             // مقارنة الحذف
             $deletedIds = $originalRoomTypesById->keys()->diff($currentRoomTypes->keys());
-            foreach($deletedIds as $deletedId) {
+            foreach ($deletedIds as $deletedId) {
                 $deletedType = $originalRoomTypesById->get($deletedId);
                 if ($deletedType) {
                     $deletedRoomTypeName = RoomType::find($deletedType['room_type_id'])->room_type_name ?? "ID: {$deletedType['room_type_id']}";
@@ -497,13 +512,12 @@ class AvailabilityController extends Controller
             } else {
                 Log::warning("AvailabilityController@update: لم يتم العثور على مستلمين صالحين للإشعار ID: {$availability->id}.");
             }
-
         } catch (\Exception $e) {
             Log::error('خطأ في إرسال إشعار تحديث الإتاحة: ' . $e->getMessage(), ['availability_id' => $availability->id, 'exception' => $e]);
         }
         // --- نهاية كود الإشعارات ---
 
-    
+
 
         return redirect()->route('admin.availabilities.index')->with('success', 'تم تحديث الإتاحة وأنواع الغرف بنجاح!');
     }

@@ -509,6 +509,7 @@ class BookingsController extends Controller
                     'room_type' => $roomTypeInfo->roomType->room_type_name ?? 'غير محدد', // اسم نوع الغرفة
                     'cost_price' => $roomTypeInfo->cost_price, // *** جلب السعر من الداتابيز ***
                     'sale_price' => $roomTypeInfo->sale_price, // *** جلب السعر من الداتابيز ***
+                    'currency' => $roomTypeInfo->currency, // العملة
                     // التواريخ الافتراضية (ممكن المستخدم يغيرها)
                     'check_in' => $availability->start_date->format('Y-m-d'),
                     'check_out' => $availability->end_date->format('Y-m-d'),

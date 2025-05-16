@@ -152,9 +152,17 @@
             </div>
         </div>
         {{-- *** نهاية إضافة قسم الرسم البياني لصافي الرصيد *** --}}
-<div class="chart-container" style="position: relative; height:350px; width:100%">
-    <canvas id="netBalanceKWDChart"></canvas>
-</div>
+        <div class="mb-3">
+            <button class="btn btn-outline-info mb-2" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseNetBalanceKWD">
+                صافي الرصيد بالدينار
+            </button>
+            <div class="collapse " id="collapseNetBalanceKWD">
+                <div class="chart-container" style="position: relative; height:350px; width:100%">
+                    <canvas id="netBalanceKWDChart"></canvas>
+                </div>
+            </div>
+        </div>
         {{-- *** الخطوة 3: قائمة أعلى 5 شركات عليها مبالغ *** --}}
         <div class="col-md-4 mb-3">
             <div class=" h-100">
@@ -230,30 +238,50 @@
 
     {{-- *** الخطوة 4: إضافة Canvas للرسوم البيانية *** --}}
     <div class="row mt-3">
-        <div class="col-md-6 mb-3"> {{-- إضافة mb-3 --}}
-            <h5 class="text-center text-danger">المتبقي على الشركات (أعلى 5)</h5>
-            <div class="chart-container" style="position: relative; height:250px; width:100%">
-                <canvas id="topCompaniesChart"></canvas>
+        <div class="col-md-6 mb-3">
+            <button class="btn btn-outline-danger mb-2 w-100" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseTopCompanies">
+                المتبقي على الشركات (أعلى 5)
+            </button>
+            <div class="collapse show" id="collapseTopCompanies">
+                <div class="chart-container" style="position: relative; height:250px; width:100%">
+                    <canvas id="topCompaniesChart"></canvas>
+                </div>
             </div>
         </div>
-        <div class="col-md-6 mb-3"> {{-- إضافة mb-3 --}}
-            <h5 class="text-center text-warning">المتبقي لجهات الحجز (أعلى 5)</h5>
-            <div class="chart-container" style="position: relative; height:250px; width:100%">
-                <canvas id="topAgentsChart"></canvas>
+        <div class="col-md-6 mb-3">
+            <button class="btn btn-outline-warning mb-2 w-100" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseTopAgents">
+                المتبقي لجهات الحجز (أعلى 5)
+            </button>
+            <div class="collapse show" id="collapseTopAgents">
+                <div class="chart-container" style="position: relative; height:250px; width:100%">
+                    <canvas id="topAgentsChart"></canvas>
+                </div>
             </div>
         </div>
 
         {{-- *** إضافة Canvas للرسوم الجديدة *** --}}
         <div class="col-md-6 mb-3">
-            <h5 class="text-center text-info">مقارنة إجمالي المتبقي</h5>
-            <div class="chart-container" style="position: relative; height:250px; width:100%">
-                <canvas id="remainingComparisonChart"></canvas>
+            <button class="btn btn-outline-info mb-2 w-100" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseRemainingComparison">
+                مقارنة إجمالي المتبقي
+            </button>
+            <div class="collapse " id="collapseRemainingComparison">
+                <div class="chart-container" style="position: relative; height:250px; width:100%">
+                    <canvas id="remainingComparisonChart"></canvas>
+                </div>
             </div>
         </div>
         <div class="col-md-6 mb-3">
-            <h5 class="text-center text-success">توزيع الحجوزات (أعلى 5 شركات)</h5>
-            <div class="chart-container" style="position: relative; height:250px; width:100%">
-                <canvas id="companyBookingDistributionChart"></canvas>
+            <button class="btn btn-outline-success mb-2 w-100" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseCompanyBookingDistribution">
+                توزيع الحجوزات (أعلى 5 شركات)
+            </button>
+            <div class="collapse " id="collapseCompanyBookingDistribution">
+                <div class="chart-container" style="position: relative; height:250px; width:100%">
+                    <canvas id="companyBookingDistributionChart"></canvas>
+                </div>
             </div>
         </div>
         {{-- *** نهاية إضافة Canvas *** --}}
@@ -836,6 +864,9 @@
     @push('scripts')
         {{-- 1. تضمين Chart.js (إذا لم يكن مضمنًا في app.blade.php) --}}
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        {{-- حفظ الصفحة صورة أو بي دي اف  --}}
+        <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
         {{-- 2. تمرير البيانات من PHP إلى JavaScript --}}
         <script>
@@ -905,8 +936,143 @@
                 window.getSelection().removeAllRanges();
             }
         </script>
+        <script>
+            // حفظ صورة الصفحة كل دقيقة  وتخزينها في ملف باك أب 
+            // function savePageScreenshot() {
+            //     html2canvas(document.body).then(function(canvas) {
+            //         // حول الصورة لـ base64
+            //         var imageData = canvas.toDataURL('image/png');
+            //         // ابعت الصورة للسيرفر
+            //         fetch('/save-screenshot', {
+            //                 method: 'POST',
+            //                 headers: {
+            //                     'Content-Type': 'application/json',
+            //                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            //                 },
+            //                 body: JSON.stringify({
+            //                     image: imageData
+            //                 })
+            //             }).then(res => res.json())
+            //             .then(data => {
+            //                 console.log('تم حفظ الصورة:', data.path);
+            //             }).catch(err => {
+            //                 console.error('خطأ في رفع الصورة:', err);
+            //             });
+            //     });
+            // }
+
+            // // شغل الدالة أول مرة
+            // savePageScreenshot();
+            // // وجدولها كل 1 دقائق (60000 ms)
+            // setInterval(savePageScreenshot, 60000);
+            //  نهاية دالة حفظ الصورة
+
+            // ==============================================================
+            // function savePagePDF() {
+
+            //     // وسع الكونتينر مؤقتاً
+            //     var container = document.querySelector('.container');
+            //     var oldWidth = null,
+            //         oldMaxWidth = null;
+            //     if (container) {
+            //         oldWidth = container.style.width;
+            //         oldMaxWidth = container.style.maxWidth;
+            //         container.style.width = '100vw';
+            //         container.style.maxWidth = '100vw';
+            //     }
+
+            //     // حدد العنصر اللي عايز تصوره PDF (ممكن document.body أو div معين)
+            //     var element = document.body;
+            //     // إعدادات pdf
+            //     var opt = {
+            //         margin: 0.2,
+            //         filename: 'daily_report_' + new Date().toISOString().replace(/[:.]/g, '-') + '.pdf',
+            //         image: {
+            //             type: 'jpeg',
+            //             quality: 0.98
+            //         },
+            //         html2canvas: {
+            //             scale: 1
+            //         },
+            //         jsPDF: {
+            //             unit: 'in',
+            //             format: 'a4',
+            //             orientation: 'portrait'
+            //         }
+            //     };
+            //     // حول الصفحة لـ PDF (Blob)
+            //     html2pdf().from(element).set(opt).outputPdf('blob').then(function(pdfBlob) {
+            //         // حول الـ Blob لبيانات base64
+
+            //         // رجع الكونتينر زي ما كان
+            //         if (container) {
+            //             container.style.width = oldWidth || '';
+            //             container.style.maxWidth = oldMaxWidth || '';
+            //         }
+
+            //         var reader = new FileReader();
+            //         reader.onloadend = function() {
+            //             var base64data = reader.result.split(',')[1];
+            //             // ابعت الـ PDF للسيرفر
+            //             fetch('/save-pdf', {
+            //                     method: 'POST',
+            //                     headers: {
+            //                         'Content-Type': 'application/json',
+            //                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            //                     },
+            //                     body: JSON.stringify({
+            //                         pdf: base64data
+            //                     })
+            //                 }).then(res => res.json())
+            //                 .then(data => {
+            //                     console.log('تم حفظ الـ PDF:', data.path);
+            //                 }).catch(err => {
+            //                     console.error('خطأ في رفع الـ PDF:', err);
+            //                 });
+            //         };
+            //         reader.readAsDataURL(pdfBlob);
+            //     });
+            // }
+
+            // // شغل الدالة أول مرة
+            // savePagePDF();
+            // // وجدولها كل دقيقة (60000 ms)
+            // setInterval(savePagePDF, 60000);
+            // =====================================================
+            function saveDailyScreenshotIfNeeded() {
+                var today = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
+                var lastSaved = localStorage.getItem('dailyScreenshotDate');
+                if (lastSaved === today) {
+                    // الصورة محفوظة النهاردة بالفعل
+                    return;
+                }
+                html2canvas(document.body).then(function(canvas) {
+                    var imageData = canvas.toDataURL('image/png');
+                    fetch('/save-screenshot', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                image: imageData
+                            })
+                        }).then(res => res.json())
+                        .then(data => {
+                            console.log('تم حفظ صورة اليوم:', data.path);
+                            localStorage.setItem('dailyScreenshotDate', today);
+                        }).catch(err => {
+                            console.error('خطأ في رفع الصورة:', err);
+                        });
+                });
+            }
+
+
+            window.addEventListener('load', function() {
+                setTimeout(saveDailyScreenshotIfNeeded, 3000); // انتظر 3 ثواني بعد تحميل الصفحة
+            });
+        </script>
     @endpush
-    {{-- *** نهاية التعديل *** --}}
 
 
 @endsection

@@ -1202,4 +1202,69 @@ class ReportController extends Controller
         // رجع البيانات للواجهة
         return view('reports.show_company_payment', compact('payment'));
     }
+    // ======================================
+    // حفظ الصورة كل دقيقة في ملف باك أب
+    // public function saveScreenshot(\Illuminate\Http\Request $request)
+    // {
+    //     $img = $request->input('image');
+    //     if (!$img) {
+    //         return response()->json(['error' => 'No image'], 400);
+    //     }
+
+    //     // فك التشفير
+    //     $img = str_replace('data:image/png;base64,', '', $img);
+    //     $img = str_replace(' ', '+', $img);
+    //     $imgData = base64_decode($img);
+
+    //     // اسم الملف
+    //     $fileName = 'screenshot_صفحة التقرير اليومي_' . now()->format('Y-m-d_H-i-s') . '.png';
+    //     $path = storage_path('backups/images/' . $fileName);
+
+    //     // احفظ الصورة
+    //     file_put_contents($path, $imgData);
+
+    //     return response()->json(['success' => true, 'path' => $path]);
+    // }
+    // =====================================
+    // حفظ الصفحة كملف pdf  كل دقيقة أو على حسب الاختيار 
+    // public function savePDF(\Illuminate\Http\Request $request)
+    // {
+    //     $pdf = $request->input('pdf');
+    //     if (!$pdf) {
+    //         return response()->json(['error' => 'No PDF'], 400);
+    //     }
+
+    //     $pdfData = base64_decode($pdf);
+    //     $fileName = 'pdf_صفحة التقرير اليومي_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+    //     $path = storage_path('backups/PDF/' . $fileName);
+
+    //     file_put_contents($path, $pdfData);
+
+    //     return response()->json(['success' => true, 'path' => $path]);
+    // }
+    // ======================================
+
+public function saveScreenshot(\Illuminate\Http\Request $request)
+{
+    $img = $request->input('image');
+    if (!$img) {
+        return response()->json(['error' => 'No image'], 400);
+    }
+    // فك التشفير
+    $img = str_replace('data:image/png;base64,', '', $img);
+    $img = str_replace(' ', '+', $img); // استبدال الفراغات بـ +
+    $imgData = base64_decode($img); // فك تشفير الصورة
+
+    $fileName = 'screenshot_' . now()->format('Y-m-d') . '.png';
+    $path = storage_path('backups/images/' . $fileName);
+
+    // لو الصورة موجودة بالفعل لنفس اليوم، متحفظش تاني
+    if (file_exists($path)) {
+        return response()->json(['success' => true, 'path' => $path, 'message' => 'الصورة محفوظة بالفعل لهذا اليوم.']);
+    }
+
+    file_put_contents($path, $imgData);
+
+    return response()->json(['success' => true, 'path' => $path]);
+}
 }
