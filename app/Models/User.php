@@ -59,4 +59,9 @@ class User extends Authenticatable
         // Eloquent هيفترض إن المفتاح الأجنبي هو company_id بناءً على اسم الدالة
         return $this->belongsTo(Company::class);
     }
+    // *** علاقة المستخدم بالموظف ***
+    public function employee()
+    {
+        return $this->hasOne(Employee::class);
+    }
 }

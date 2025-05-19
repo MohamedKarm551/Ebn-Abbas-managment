@@ -295,7 +295,11 @@
                 </ul>
             </div>
         @endif
-
+        @if ($errors->has('room_types'))
+            <div class="alert alert-danger">
+                {{ $errors->first('room_types') }}
+            </div>
+        @endif
         <form action="{{ route('admin.land-trips.update', $landTrip->id) }}" method="POST" id="edit-trip-form">
             @csrf
             @method('PUT')
@@ -564,6 +568,9 @@
                                 <div class="room-type-row">
                                     <input type="hidden" name="room_types[{{ $index }}][id]"
                                         value="{{ $roomPrice->id }}">
+                                    <input type="hidden" name="room_types[{{ $index }}][action]" value="keep">
+                                    {{-- // إضافة جديدة --}}
+
 
                                     <div class="row g-3">
                                         <div class="col-lg-3 col-md-6">
@@ -648,14 +655,15 @@
 
 @push('scripts')
     <script>
-                let roomTypeIndex = 1; // نبدأ من 1 لأن الغرفة الأولى لديها مؤشر 0 بالفعل
+        let roomTypeIndex = 1; // نبدأ من 1 لأن الغرفة الأولى لديها مؤشر 0 بالفعل
 
-           // حل المشكلة هنا - تسجيل معالج الحدث click بشكل صحيح
-            $('#add-room-type').on('click', function() {
-                const template = `
+        // حل المشكلة هنا - تسجيل معالج الحدث click بشكل صحيح
+        $('#add-room-type').on('click', function() {
+            const template = `
                 <div class="room-type-row new-room">
                     <input type="hidden" name="room_types[${roomTypeIndex}][id]" value="">
-                    
+                        <input type="hidden" name="room_types[${roomTypeIndex}][action]" value="new"> // إضافة جديدة
+
                     <div class="row g-3">
                         <div class="col-lg-3 col-md-6">
                             <label class="form-label">نوع الغرفة <span class="text-danger">*</span></label>
@@ -684,8 +692,8 @@
                         <div class="col-lg-2 col-md-6">
                             <label class="form-label">العملة <span class="text-danger">*</span></label>
                             <select class="form-select" name="room_types[${roomTypeIndex}][currency]" required>
-                                <option value="SAR" selected>ريال سعودي</option>
-                                <option value="KWD">دينار كويتي</option>
+                                <option value="SAR" >ريال سعودي</option>
+                                <option value="KWD" selected>دينار كويتي</option>
                             </select>
                         </div>
                         
@@ -703,45 +711,44 @@
                 </div>
                 `;
 
-                $('#room-types-container').append(template);
+            $('#room-types-container').append(template);
 
-                // تطبيق تأثير دخول للعنصر الجديد
-                const newRoom = $('#room-types-container .new-room').last();
-                setTimeout(function() {
-                    newRoom.removeClass('new-room');
-                }, 100);
+            // تطبيق تأثير دخول للعنصر الجديد
+            const newRoom = $('#room-types-container .new-room').last();
+            setTimeout(function() {
+                newRoom.removeClass('new-room');
+            }, 100);
 
-                roomTypeIndex++;
-            });
+            roomTypeIndex++;
+        });
 
-            // حذف نوع غرفة
-            $(document).on('click', '.remove-room-type', function() {
-                if ($('.room-type-row').length > 1) {
-                    const row = $(this).closest('.room-type-row');
-                    row.addClass('removing');
-                    setTimeout(function() {
-                        row.remove();
-                    }, 300);
-                } else {
-                    Swal.fire({
-                        title: 'تنبيه!',
-                        text: 'يجب إضافة نوع غرفة واحد على الأقل.',
-                        icon: 'warning',
-                        confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#3f51b5',
-                    });
-                }
-            });
+        // حذف نوع غرفة
+        $(document).on('click', '.remove-room-type', function() {
+            if ($('.room-type-row:visible').length > 1) { // تحقق من الصفوف الظاهرة
+                const row = $(this).closest('.room-type-row');
+                row.find('input[name$="[action]"]').val('delete'); // ضع علامة للحذف
+                row.addClass('removing').slideUp(300); // إخفاء الصف مع تأثير
+            } else {
+                Swal.fire({
+                    title: 'تنبيه!',
+                    text: 'يجب إضافة نوع غرفة واحد على الأقل.',
+                    icon: 'warning',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#3f51b5',
+                });
+            }
+        });
         document.addEventListener('DOMContentLoaded', function() {
             // تهيئة حقول التاريخ
             $('.datepicker').datepicker('destroy');
-                if (typeof $.fn.datepicker !== 'undefined') {
-        $.fn.datepicker.defaults.format = 'yyyy-mm-dd';
-        $.fn.datepicker.defaults.autoclose = true;
-        $.fn.datepicker.defaults.todayHighlight = true;
-        $.fn.datepicker.defaults.language = 'ar';
-        $.fn.datepicker.defaults.rtl = true;
-        $.fn.datepicker.defaults.orientation = "auto"; }
+            if (typeof $.fn.datepicker !== 'undefined') {
+                $.fn.datepicker.defaults.format = 'yyyy-mm-dd';
+                $.fn.datepicker.defaults.autoclose = true;
+                $.fn.datepicker.defaults.todayHighlight = true;
+                $.fn.datepicker.defaults.language = 'ar';
+                $.fn.datepicker.defaults.rtl = true;
+                $.fn.datepicker.defaults.orientation = "auto";
+            }
             // تهيئة حقول التاريخ بنفس الإعدادات لضمان التناسق
             if (typeof $.fn.datepicker !== 'undefined') {
                 $('.datepicker').datepicker({
@@ -762,7 +769,7 @@
                         console.log(`تم اختيار التاريخ: ${formattedDate}`);
                     }
                 });
-                
+
                 // تحويل أي تواريخ بالتنسيق القديم
                 $('.datepicker').each(function() {
                     const value = $(this).val();
@@ -772,7 +779,7 @@
                         // التأكد من أن لدينا 3 أجزاء
                         if (parts.length === 3) {
                             let day, month, year;
-                            
+
                             // تحديد الترتيب الصحيح
                             if (parts[2].length === 4) { // إذا كان الجزء الثالث هو السنة (dd/mm/yyyy)
                                 day = parts[0];
@@ -783,7 +790,7 @@
                                 month = parts[1];
                                 day = parts[2];
                             }
-                            
+
                             // إنشاء التنسيق الجديد
                             const newValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
                             $(this).val(newValue);
@@ -791,7 +798,7 @@
                         }
                     }
                 });
-                
+
                 // تغيير النص التوضيحي في حقول التاريخ
                 $('.datepicker').attr('placeholder', 'YYYY-MM-DD');
             }
@@ -801,39 +808,40 @@
                 // التأكد من تنسيق التاريخ قبل الإرسال
                 const departureDate = $('#departure_date').val();
                 const returnDate = $('#return_date').val();
-                
+
                 // طباعة للتشخيص
                 console.log('تاريخ المغادرة قبل الإرسال:', departureDate);
                 console.log('تاريخ العودة قبل الإرسال:', returnDate);
-                
+
                 // تحويل أي تاريخ ما زال بالتنسيق القديم (dd/mm/yyyy)
                 let fixedReturnDate = returnDate;
                 if (returnDate.includes('/')) {
                     const parts = returnDate.split('/');
                     if (parts.length === 3) {
                         if (parts[2].length === 4) { // dd/mm/yyyy
-                            fixedReturnDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            fixedReturnDate =
+                                `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
                             $('#return_date').val(fixedReturnDate);
                         }
                     }
                 }
-                
+
                 // التحقق من صحة تنسيق التاريخ (yyyy-mm-dd)
                 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                
+
                 if (!dateRegex.test(departureDate) || !dateRegex.test($('#return_date').val())) {
                     e.preventDefault();
                     alert('خطأ في تنسيق التاريخ: يجب أن تكون التواريخ بصيغة YYYY-MM-DD (سنة-شهر-يوم)');
                     return false;
                 }
-                
+
                 // التحقق من تسلسل التواريخ
                 if ($('#return_date').val() < departureDate) {
                     e.preventDefault();
                     alert('خطأ في التواريخ: يجب أن يكون تاريخ العودة بعد أو يساوي تاريخ المغادرة');
                     return false;
                 }
-                
+
                 // طباعة للتشخيص
                 console.log('تم قبول النموذج وسيتم إرساله');
                 return true;
@@ -863,7 +871,7 @@
             // إضافة نوع غرفة
             let roomTypeIndex = $('.room-type-row').length;
 
-         
+
 
             // التحقق من صحة النموذج قبل الإرسال
             $('#create-trip-form, #edit-trip-form').on('submit', function(e) {
@@ -1000,7 +1008,7 @@
                 const month = parseInt(parts[1], 10) - 1;
                 const year = parseInt(parts[2], 10);
                 const date = new Date(year, month, day, 12, 0, 0);
-                
+
                 if (isNaN(date.getTime())) {
                     console.error('تاريخ غير صالح بعد التحويل');
                     return new Date();

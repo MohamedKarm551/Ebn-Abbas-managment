@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Models\Employee;
+use App\Models\User;
+use App\Models\Company;
 
 class CompanyLandTripController extends Controller
 {
@@ -78,7 +81,7 @@ class CompanyLandTripController extends Controller
         }
 
         // تحميل العلاقات
-        $landTrip->loadMissing(['tripType', 'agent', 'hotel', 'employee', 'roomPrices.roomType' ]);
+        $landTrip->loadMissing(['tripType', 'agent', 'hotel', 'employee', 'roomPrices.roomType']);
 
         // تجهيز معلومات الغرف
         $roomInfo = [];
@@ -191,7 +194,7 @@ class CompanyLandTripController extends Controller
             DB::commit();
 
             // إنشاء إشعار للأدمن والموظف المسؤول
-            $notificationMessage = "تم إضافة حجز جديد للرحلة رقم: {$landTrip->id} من شركة: " . Auth::user()->company->name .
+            $notificationMessage = "تم إضافة حجز جديد للرحلة رقم: {$landTrip->id} من شركة: " . Auth::user()->company->name . " القائم بالحجز " . Auth::user()->name .
                 " للعميل: {$validatedData['client_name']}. عدد الغرف: {$validatedData['rooms']}";
 
             // إشعار للمدير
@@ -202,13 +205,37 @@ class CompanyLandTripController extends Controller
             ]);
 
             // إشعار للموظف المسؤول عن الرحلة
-            if ($landTrip->employee_id && $landTrip->employee_id != Auth::id()) {
-                Notification::create([
-                    'user_id' => $landTrip->employee_id,
-                    'message' => $notificationMessage,
-                    'type' => 'حجز رحلة',
-                ]);
-            }
+         if ($landTrip->employee_id) {
+    // 1. جلب الموظف المسؤول أولاً
+    $employee = Employee::find($landTrip->employee_id);
+    
+    // 2. التحقق من وجود حساب مستخدم مرتبط بالموظف
+    if ($employee && $employee->user_id) {
+        // إرسال إشعار للمستخدم المرتبط بالموظف
+        Notification::create([
+            'user_id' => $employee->user_id,
+            'message' => $notificationMessage,
+            'title' => 'حجز جديد في رحلتك',
+            'type' => 'حجز رحلة'
+        ]);
+        
+        Log::info("تم إرسال إشعار للموظف المسؤول: {$employee->name}");
+    } else {
+        Log::warning("الموظف المسؤول {$employee->name} ليس له حساب مستخدم مرتبط");
+        
+        // إرسال إشعار للمدراء عن المشكلة
+        $adminUsers = User::where('role', 'Admin')->get();
+        foreach ($adminUsers as $admin) {
+            Notification::create([
+                'user_id' => $admin->id,
+                'title' => 'موظف بدون حساب مستخدم',
+                'message' => "الموظف المسؤول ({$employee->name}) عن الرحلة {$landTrip->id} ليس له حساب مستخدم مرتبط.",
+                'type' => 'تنبيه نظام'
+            ]);
+        }
+    }
+}
+
 
             // توجيه إلى صفحة الفاتورة
             return redirect()->route('company.land-trips.voucher', $booking->id)
@@ -246,7 +273,7 @@ class CompanyLandTripController extends Controller
 
         // تحميل العلاقات اللازمة
         $booking->load(['landTrip.tripType', 'landTrip.agent', 'landTrip.hotel', 'landTrip.employee', 'roomPrice.roomType', 'company']);
-        
+
         // عرض صفحة خاصة ستقوم بتحويل HTML إلى PDF في المتصفح
         return view('company.land-trips.voucher-view', compact('booking'));
     }

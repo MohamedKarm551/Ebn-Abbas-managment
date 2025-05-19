@@ -5,7 +5,11 @@
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h3>إيصال حجز رحلة برية <span class="bg-danger"> لتأكيد الحجز أرسل صور المدنية والتأشيرة للموظف ملاك</span></h3>
+                    <h3>إيصال حجز رحلة برية 
+                        <br>   <br>
+                        <strong class="d-block mb-1 bg-warning">مطلوب للتأكيد:</strong>
+      <span class="bg-danger">لتأكيد الحجز أرسل صور المدنية والتأشيرة للموظف <span class="badge bg-light text-dark p-2">ملاك</span></span>
+                        </h3>
                     <a href="{{ route('company.land-trips.downloadVoucher', $booking->id) }}" class="btn btn-light">
                         <i class="fas fa-download"></i> تحميل PDF
                     </a>
@@ -27,8 +31,8 @@
                         <h5>معلومات الفندق</h5>
                         <p><strong>اسم الفندق:</strong>
                             {{ $booking->landTrip->hotel->name ?? 'غير محدد' }}</p>
-                            <!-- معلومات أخرى ولكن لا تعرض جهة الحجز -->
-                         
+                        <!-- معلومات أخرى ولكن لا تعرض جهة الحجز -->
+
                     </div>
                     <div class="col-md-6">
                         <h5>معلومات الحجز</h5>
@@ -63,11 +67,13 @@
     </div>
 @endsection
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        Swal.fire({
-            title: '<i class="fas fa-info-circle text-primary me-2"></i>تأكيد الحجز',
-            html: `
+    <script src="{{ asset('js/preventClick.js') }}"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: '<i class="fas fa-info-circle text-primary me-2"></i>تأكيد الحجز',
+                html: `
                 <div class="text-right p-3">
                     <div class="alert alert-warning p-3 mb-3">
                         <strong>هام:</strong> لتأكيد الحجز، يرجى إرسال المستندات التالية للموظف <b>ملاك</b>:
@@ -87,45 +93,45 @@
                     </div>
                 </div>
             `,
-            icon: null,
-            confirmButtonText: 'تم الفهم',
-            confirmButtonColor: '#3490dc',
-            allowOutsideClick: false,
-            focusConfirm: false,
-            customClass: {
-                container: 'arabic-sweetalert',
-                title: 'fw-bold fs-5',
-                confirmButton: 'btn btn-lg btn-primary px-4'
-            }
+                icon: null,
+                confirmButtonText: 'تم الفهم',
+                confirmButtonColor: '#3490dc',
+                allowOutsideClick: false,
+                focusConfirm: false,
+                customClass: {
+                    container: 'arabic-sweetalert',
+                    title: 'fw-bold fs-5',
+                    confirmButton: 'btn btn-lg btn-primary px-4'
+                }
+            });
         });
-    });
-</script>
+    </script>
 @endpush
 
 @push('styles')
-<style>
-    .arabic-sweetalert {
-        font-family: 'Cairo', 'Tajawal', sans-serif !important;
-    }
-    
-    .custom-list {
-        text-align: right;
-        direction: rtl;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
-    .custom-list .list-group-item {
-        padding: 12px 16px;
-        border-left: none;
-        border-right: 3px solid #3490dc;
-    }
-    
-    .alert-warning {
-        background-color: #fff3cd;
-        border-color: #ffecb5;
-        color: #664d03;
-        border-radius: 6px;
-    }
-</style>
+    <style>
+        .arabic-sweetalert {
+            font-family: 'Cairo', 'Tajawal', sans-serif !important;
+        }
+
+        .custom-list {
+            text-align: right;
+            direction: rtl;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .custom-list .list-group-item {
+            padding: 12px 16px;
+            border-left: none;
+            border-right: 3px solid #3490dc;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffecb5;
+            color: #664d03;
+            border-radius: 6px;
+        }
+    </style>
 @endpush

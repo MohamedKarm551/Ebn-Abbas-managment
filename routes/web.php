@@ -15,7 +15,7 @@ use App\Http\Controllers\CompanyAvailabilityController;
 use App\Http\Controllers\LandTripController;
 use App\Http\Controllers\CompanyLandTripController;
 use App\Http\Controllers\TripTypeController;
-
+use App\Models\User;
 use Jenssegers\Agent\Agent;
 use App\Models\Notification;
 
@@ -175,23 +175,27 @@ Route::middleware(['auth'])->group(function () {
 // روتات إدارة الرحلات (للأدمن والموظفين)
 Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('land-trips', LandTripController::class);
-        Route::resource('trip-types', TripTypeController::class)->except('show');
+    Route::resource('trip-types', TripTypeController::class)->except('show');
 
     Route::get('land-trips/{land_trip}/bookings', [LandTripController::class, 'showBookings'])->name('land-trips.bookings');
-        // إضافة مسارات إنشاء الحجوزات
+    // إضافة مسارات إنشاء الحجوزات
     Route::get('land-trips/{land_trip}/create-booking', [LandTripController::class, 'createBooking'])->name('land-trips.create-booking');
     Route::post('land-trips/{land_trip}/store-booking', [LandTripController::class, 'storeBooking'])->name('land-trips.store-booking');
 });
-
+// مسارات ربط الموظفين بالمستخدمين
+Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class])->group(function () {
+    Route::post('/admin/employees/create-user', [AdminController::class, 'createEmployeeUser'])->name('admin.createEmployeeUser');
+    Route::post('/admin/employees/link-user', [AdminController::class, 'linkEmployeeUser'])->name('admin.linkEmployeeUser');
+    Route::delete('/admin/employees/{employee}/unlink-user', [AdminController::class, 'unlinkEmployeeUser'])->name('admin.unlinkEmployeeUser');
+});
 // روتات الشركات للحجز
 Route::middleware(['auth', \App\Http\Middleware\IsCompany::class])->prefix('company')->name('company.')->group(function () {
-       // الرحلات البرية
+    // الرحلات البرية
     Route::get('land-trips', [CompanyLandTripController::class, 'index'])->name('land-trips.index');
     Route::get('land-trips/{landTrip}', [CompanyLandTripController::class, 'show'])->name('land-trips.show');
     Route::post('land-trips/{landTrip}/book', [CompanyLandTripController::class, 'book'])->name('land-trips.book');
     Route::get('land-trips/booking/{booking}/voucher', [CompanyLandTripController::class, 'voucher'])->name('land-trips.voucher');
     Route::get('land-trips/booking/{booking}/download-voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.downloadVoucher');
-    
 });
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 Route::get('/', function () {
@@ -206,8 +210,8 @@ Auth::routes();
 // حل يدوي
 // كان في هنا مشكلة لو راح على راوتر اسه لوجين مش هيلاقيه عملته يدوي عشان يويدني صح
 // Route::get('/register', function(){
-//     // return view('auth.register');
-//     return view('welcome');
+//      return view('auth.register');
+//    // return view('welcome');
 // })->name('register');
 
 
@@ -227,12 +231,16 @@ Route::post('/manual-login', function (Request $request) {
         // $isDesktop = $agent->isDesktop();
         $ip = $request->ip();
         if ($user) {
-            Notification::create([
-                'user_id' => $user->id,
-                'title' => 'تسجيل دخول',
-                'message' => "تم تسجيل دخول المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
-                'type' => 'login',
-            ]);
+            // بدلاً من إنشاء إشعار للمستخدم نفسه، نبحث عن المدراء ونرسل لهم
+            $adminUsers = \App\Models\User::where('role', 'Admin')->get();
+            foreach ($adminUsers as $admin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'title' => 'تسجيل دخول',
+                    'message' => "تم تسجيل دخول المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
+                    'type' => 'login',
+                ]);
+            }
         }
         return redirect()->intended('/bookings');
     }
@@ -248,12 +256,16 @@ Route::post('/logout', function (Request $request) {
     $ip = $request->ip();
 
     if ($user) {
-        Notification::create([
-            'user_id' => $user->id,
-            'title' => 'تسجيل خروج',
-            'message' => "تم تسجيل خروج المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
-            'type' => 'logout',
-        ]);
+        // بدلاً من إنشاء إشعار للمستخدم نفسه، نبحث عن المدراء ونرسل لهم
+        $adminUsers = User::where('role', 'Admin')->get();
+        foreach ($adminUsers as $admin) {
+            Notification::create([
+                'user_id' => $admin->id,
+                'title' => 'تسجيل خروج',
+                'message' => "تم تسجيل خروج المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
+                'type' => 'logout',
+            ]);
+        }
     }
     Auth::logout();
     return redirect('/');

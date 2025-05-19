@@ -12,7 +12,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Models\LandTripRoomPrice;
 use App\Models\LandTripBooking;
-
+use App\Models\LandTripEdit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -89,10 +89,10 @@ class LandTripController extends Controller
         $agents = Agent::orderBy('name')->get();
         $employees = Employee::orderBy('name')->get();
         $hotels = Hotel::orderBy('name')->get(); // إضافة الفنادق
-            // إضافة استعلام الحجوزات
-    $allBookings = LandTripBooking::with(['landTrip', 'company', 'roomPrice'])->paginate(10)->withQueryString();
+        // إضافة استعلام الحجوزات
+        $allBookings = LandTripBooking::with(['landTrip', 'company', 'roomPrice'])->paginate(10)->withQueryString();
 
-// SELECT * FROM `land_trip_bookings` WHERE  `id`, `land_trip_id`, `land_trip_room_price_id`, `client_name`, `company_id`, `rooms`, `cost_price`, `sale_price`, `amount_due_to_agent`, `amount_due_from_company`, `currency`, `notes`, `employee_id`, `created_at`, `updated_at`, `deleted_at`
+        // SELECT * FROM `land_trip_bookings` WHERE  `id`, `land_trip_id`, `land_trip_room_price_id`, `client_name`, `company_id`, `rooms`, `cost_price`, `sale_price`, `amount_due_to_agent`, `amount_due_from_company`, `currency`, `notes`, `employee_id`, `created_at`, `updated_at`, `deleted_at`
         // حساب الإحصائيات بطريقة أكثر كفاءة
         $stats = [
             'totalTrips' => LandTrip::count(),
@@ -101,7 +101,7 @@ class LandTripController extends Controller
                 ->whereMonth('departure_date', now()->month)
                 ->count(),
             'totalBookings' => DB::table('land_trip_bookings')->count()
-           
+
         ];
 
         return view('admin.land-trips.index', compact(
@@ -109,7 +109,7 @@ class LandTripController extends Controller
             'tripTypes',
             'agents',
             'employees',
-           'allBookings',
+            'allBookings',
             'hotels'
         ))->with($stats);
     }
@@ -268,7 +268,12 @@ class LandTripController extends Controller
             ];
         }
 
-        return view('admin.land-trips.show', compact('landTrip', 'bookingSummary'));
+        $edits = LandTripEdit::where('land_trip_id', $landTrip->id)
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('admin.land-trips.show', compact('landTrip', 'bookingSummary', 'edits'));
     }
 
     public function edit(LandTrip $landTrip)
@@ -286,6 +291,8 @@ class LandTripController extends Controller
 
     public function update(Request $request, LandTrip $landTrip)
     {
+        // dd($request->all()); // <--- أضف هذا السطر هنا
+
         // الاحتفاظ بالبيانات الأصلية قبل التحديث
         $originalData = $landTrip->getOriginal();
         $originalRoomPrices = $landTrip->roomPrices()->get()->keyBy('id')->toArray();
@@ -294,17 +301,17 @@ class LandTripController extends Controller
         $validatedData = $request->validate([
             'trip_type_id' => 'required|exists:trip_types,id',
             'agent_id' => 'required|exists:agents,id',
-            'hotel_id' => 'required|exists:hotels,id', // إضافة حقل الفندق
+            'hotel_id' => 'required|exists:hotels,id',
             'employee_id' => 'required|exists:employees,id',
             'departure_date' => 'required|date',
             'return_date' => 'required|date|after_or_equal:departure_date',
             'status' => 'required|in:active,inactive' . ($landTrip->status === 'expired' ? ',expired' : ''),
             'notes' => 'nullable|string|max:5000',
 
-            // التحقق من البيانات المتعلقة بالغرف
             'room_types' => 'required|array|min:1',
+            'room_types.*.action' => 'sometimes|string|in:new,update,delete,keep',
             'room_types.*.id' => 'sometimes|nullable|integer|exists:land_trip_room_prices,id,land_trip_id,' . $landTrip->id,
-            'room_types.*.room_type_id' => 'required|exists:room_types,id|distinct',
+            'room_types.*.room_type_id' => 'required|exists:room_types,id', // distinct معالج أدناه
             'room_types.*.cost_price' => 'required|numeric|min:0',
             'room_types.*.sale_price' => 'required|numeric|min:0|gte:room_types.*.cost_price',
             'room_types.*.currency' => 'required|string|in:SAR,KWD',
@@ -312,7 +319,7 @@ class LandTripController extends Controller
         ], [
             'trip_type_id.required' => 'يجب اختيار نوع الرحلة',
             'agent_id.required' => 'يجب اختيار جهة الحجز',
-            'hotel_id.exists' => 'الفندق المحدد غير موجود', // رسالة الخطأ للفندق
+            'hotel_id.exists' => 'الفندق المحدد غير موجود',
             'employee_id.required' => 'يجب اختيار الموظف المسؤول',
             'departure_date.required' => 'تاريخ المغادرة مطلوب',
             'return_date.required' => 'تاريخ العودة مطلوب',
@@ -321,7 +328,6 @@ class LandTripController extends Controller
             'room_types.required' => 'يجب إضافة نوع غرفة واحد على الأقل',
             'room_types.min' => 'يجب إضافة نوع غرفة واحد على الأقل',
             'room_types.*.room_type_id.required' => 'يجب اختيار نوع الغرفة',
-            'room_types.*.room_type_id.distinct' => 'لا يمكن تكرار نفس نوع الغرفة',
             'room_types.*.cost_price.required' => 'سعر التكلفة مطلوب',
             'room_types.*.cost_price.min' => 'سعر التكلفة يجب ألا يكون سالباً',
             'room_types.*.sale_price.required' => 'سعر البيع مطلوب',
@@ -331,23 +337,76 @@ class LandTripController extends Controller
             'room_types.*.currency.in' => 'العملة يجب أن تكون واحدة من: SAR, KWD',
             'room_types.*.allotment.integer' => 'عدد الغرف يجب أن يكون رقماً صحيحاً',
             'room_types.*.allotment.min' => 'عدد الغرف يجب ألا يكون سالباً',
+            'room_types.*.action.in' => 'قيمة الإجراء للغرفة غير صالحة.',
         ]);
 
         // تنسيق التواريخ
         try {
             $departureDate = self::parseDateFlexible($validatedData['departure_date']);
             $returnDate = self::parseDateFlexible($validatedData['return_date']);
-            // dd('صيغة التورايخ الآن', $departureDate, $returnDate);
         } catch (\Exception $e) {
+            // استخدام ValidationException لعرض الخطأ بشكل صحيح في الفورم
             throw ValidationException::withMessages([
-                'departure_date' => 'حدث خطأ في تنسيق التاريخ. يجب استخدام صيغة dd/mm/yyyy أو yyyy-mm-dd',
+                'departure_date' => 'حدث خطأ في تنسيق التاريخ. يجب استخدام صيغة yyyy-mm-dd.',
             ]);
         }
 
+        // حساب عدد الأيام
+        $daysCount = LandTrip::calculateDaysCount($departureDate, $returnDate);
+
+        // تسجيل التغييرات للحقول الأساسية للرحلة
+        $fieldsToTrack = [
+            'trip_type_id',
+            'agent_id',
+            'hotel_id',
+            'employee_id',
+            'status',
+            'notes'
+        ];
+        foreach ($fieldsToTrack as $field) {
+            if ($landTrip->getOriginal($field) != ($validatedData[$field] ?? $landTrip->$field)) {
+                LandTripEdit::create([
+                    'land_trip_id' => $landTrip->id,
+                    'user_id' => Auth::id(),
+                    'field' => $field,
+                    'old_value' => $landTrip->getOriginal($field),
+                    'new_value' => $validatedData[$field] ?? $landTrip->$field,
+                ]);
+            }
+        }
+        // تسجيل تغييرات التواريخ وعدد الأيام بشكل منفصل بعد التحويل والحساب
+        if ($landTrip->getOriginal('departure_date') != $departureDate) {
+            LandTripEdit::create([
+                'land_trip_id' => $landTrip->id,
+                'user_id' => Auth::id(),
+                'field' => 'departure_date',
+                'old_value' => $landTrip->getOriginal('departure_date'),
+                'new_value' => $departureDate,
+            ]);
+        }
+        if ($landTrip->getOriginal('return_date') != $returnDate) {
+            LandTripEdit::create([
+                'land_trip_id' => $landTrip->id,
+                'user_id' => Auth::id(),
+                'field' => 'return_date',
+                'old_value' => $landTrip->getOriginal('return_date'),
+                'new_value' => $returnDate,
+            ]);
+        }
+        if ($landTrip->getOriginal('days_count') != $daysCount) {
+            LandTripEdit::create([
+                'land_trip_id' => $landTrip->id,
+                'user_id' => Auth::id(),
+                'field' => 'days_count',
+                'old_value' => $landTrip->getOriginal('days_count'),
+                'new_value' => $daysCount,
+            ]);
+        }
+
+
         // تحقق من حالة الرحلة المنتهية
         if ($landTrip->status === 'expired' && $validatedData['status'] !== 'expired') {
-            // يمكن تغيير حالة 'expired' فقط إذا تم تمديد تاريخ العودة إلى المستقبل
-            $returnDateObj = Carbon::parse($returnDate);
+            $returnDateObj = Carbon::parse($returnDate); // استخدم $returnDate المحولة
             if ($returnDateObj->isPast()) {
                 throw ValidationException::withMessages([
                     'status' => 'لا يمكن تغيير حالة الرحلة المنتهية إلا إذا تم تعديل تاريخ العودة ليكون في المستقبل.',
@@ -355,8 +414,6 @@ class LandTripController extends Controller
             }
         }
 
-        // حساب عدد الأيام
-        $daysCount = LandTrip::calculateDaysCount($departureDate, $returnDate);
 
         DB::beginTransaction();
 
@@ -365,7 +422,7 @@ class LandTripController extends Controller
             $landTrip->update([
                 'trip_type_id' => $validatedData['trip_type_id'],
                 'agent_id' => $validatedData['agent_id'],
-                'hotel_id' => $validatedData['hotel_id'], // إضافة حقل الفندق
+                'hotel_id' => $validatedData['hotel_id'],
                 'employee_id' => $validatedData['employee_id'],
                 'departure_date' => $departureDate,
                 'return_date' => $returnDate,
@@ -374,22 +431,126 @@ class LandTripController extends Controller
                 'notes' => $validatedData['notes'],
             ]);
 
-            // مزامنة أسعار الغرف
-            $submittedRoomTypes = collect($validatedData['room_types'] ?? []);
-            $existingRoomPriceIds = $landTrip->roomPrices()->pluck('id')->all();
-            $submittedIds = $submittedRoomTypes->pluck('id')->filter()->all(); // فلتر القيم الفارغة (null)
+            $submittedRoomTypesOriginal = collect($validatedData['room_types'] ?? []);
+            $idsToDeleteDueToTypeChange = [];
 
-            // الأسعار التي يجب حذفها
-            $idsToDelete = array_diff($existingRoomPriceIds, $submittedIds);
-            if (!empty($idsToDelete)) {
-                LandTripRoomPrice::whereIn('id', $idsToDelete)
-                    ->where('land_trip_id', $landTrip->id)
-                    ->delete();
+            // 1. معالجة الحذف الصريح أولاً
+            foreach ($submittedRoomTypesOriginal as $index => $roomData) {
+                if (isset($roomData['action']) && $roomData['action'] === 'delete' && !empty($roomData['id'])) {
+                    $roomPriceToDelete = LandTripRoomPrice::find($roomData['id']);
+                    if ($roomPriceToDelete) {
+                        if ($roomPriceToDelete->land_trip_id != $landTrip->id) {
+                            DB::rollBack();
+                            return redirect()->back()->withInput()->withErrors(['room_types' => "محاولة حذف سعر غرفة لا يخص هذه الرحلة (ID: {$roomData['id']})."]);
+                        }
+                        if ($roomPriceToDelete->bookings()->count() > 0) {
+                            DB::rollBack();
+                            return redirect()->back()->withInput()
+                                ->withErrors(['room_types' => "لا يمكن حذف نوع الغرفة '{$roomPriceToDelete->roomType->room_type_name}' (ID: {$roomData['id']}) لوجود حجوزات مرتبطة به."]);
+                        }
+
+                        $originalRoomForEdit = $originalRoomPrices[$roomData['id']] ?? null;
+                        if ($originalRoomForEdit) {
+                            foreach (['room_type_id', 'cost_price', 'sale_price', 'currency', 'allotment'] as $field) {
+                                LandTripEdit::create([
+                                    'land_trip_id' => $landTrip->id,
+                                    'user_id' => Auth::id(),
+                                    'field' => "room_price_deleted:$field:{$roomData['id']}",
+                                    'old_value' => $originalRoomForEdit[$field],
+                                    'new_value' => null,
+                                ]);
+                            }
+                        }
+                        $roomPriceToDelete->delete();
+                    }
+                }
             }
 
-            // تحديث أو إنشاء الأسعار
-            foreach ($submittedRoomTypes as $roomData) {
-                $priceData = [
+            $submittedRoomTypesForProcessing = $submittedRoomTypesOriginal->filter(function ($roomData) {
+                return !(isset($roomData['action']) && $roomData['action'] === 'delete' && !empty($roomData['id']));
+            })->values();
+
+
+            // 2. معالجة تغيير نوع الغرفة والتحقق من التكرار
+            $processedRoomTypeIdsInRequest = []; // لتتبع أنواع الغرف في الطلب الحالي لمنع التكرار داخل الطلب
+            $roomTypeChanges = []; // مصفوفة جديدة لتخزين التغييرات المراد تطبيقها لاحقًا
+
+            foreach ($submittedRoomTypesForProcessing as $i => $roomData) {
+                $currentId = $roomData['id'] ?? null;
+                $action = $roomData['action'] ?? ($currentId ? 'update' : 'new'); // استنتاج الأكشن إذا لم يرسل
+                $roomTypeId = $roomData['room_type_id'];
+
+                // التحقق من التكرار داخل الطلب الحالي
+                if (in_array($roomTypeId, $processedRoomTypeIdsInRequest)) {
+                    // إذا كان هذا السطر هو نفسه الذي أضاف النوع المكرر (في حالة تغيير نوع غرفة موجودة إلى نوع مكرر في الطلب)
+                    // وكان هذا السطر هو الذي سيتم اعتباره "جديد" بعد تغيير النوع، نسمح به مؤقتًا هنا
+                    // وسيتم التحقق منه لاحقًا مقابل قاعدة البيانات.
+                    // أما إذا كان سطرًا جديدًا تمامًا أو تحديثًا لسطر آخر بنفس النوع المكرر، فهذا خطأ.
+                    $isSelfDuplicateOnChange = ($action === 'new_after_type_change' || (empty($currentId) && $action === 'new'));
+                    if (!$isSelfDuplicateOnChange) {
+                        DB::rollBack(); // التراجع عن المعاملات
+                        $tempRoomTypeName = RoomType::find($roomTypeId)->room_type_name ?? $roomTypeId;
+                        return redirect()->back()->withInput()->withErrors(['room_types' => "لا يمكن تكرار نوع الغرفة '{$tempRoomTypeName}' في نفس الطلب."]);
+                    }
+                }
+                $processedRoomTypeIdsInRequest[] = $roomTypeId;
+
+
+                if (!empty($currentId) && $action !== 'new' && $action !== 'delete') { // عنصر موجود قد يتم تغيير نوعه
+                    $existingRoomPriceInDb = LandTripRoomPrice::find($currentId);
+
+                    if ($existingRoomPriceInDb && $existingRoomPriceInDb->room_type_id != $roomData['room_type_id']) {
+                        // تم تغيير room_type_id
+                        if ($existingRoomPriceInDb->bookings()->count() > 0) {
+                            DB::rollBack();
+                            return redirect()->back()->withInput()
+                                ->withErrors(['room_types' => "لا يمكن تغيير نوع الغرفة '{$existingRoomPriceInDb->roomType->room_type_name}' (ID: {$currentId}) إلى نوع آخر لوجود حجوزات. يرجى حذف السطر وإضافة سطر جديد بالنوع المطلوب."]);
+                        }
+                        // التحقق من أن النوع الجديد ليس مكررًا مع أي غرفة أخرى موجودة بالفعل في قاعدة البيانات
+                        $isNewTypeDuplicateInDb = LandTripRoomPrice::where('land_trip_id', $landTrip->id)
+                            ->where('room_type_id', $roomData['room_type_id'])
+                            ->where('id', '!=', $currentId) // استبعد السطر الحالي من المقارنة
+                            ->exists();
+                        if ($isNewTypeDuplicateInDb) {
+                            DB::rollBack();
+                            $tempRoomTypeName = RoomType::find($roomData['room_type_id'])->room_type_name ?? $roomData['room_type_id'];
+                            return redirect()->back()->withInput()->withErrors(['room_types' => "نوع الغرفة الجديد '{$tempRoomTypeName}' موجود بالفعل في غرفة أخرى لهذه الرحلة."]);
+                        }
+
+                        $idsToDeleteDueToTypeChange[] = $existingRoomPriceInDb->id;
+                        // $roomDataRef['original_id_before_type_change'] = $existingRoomPriceInDb->id;
+                        // $roomDataRef['id'] = null;
+                        // $roomDataRef['action'] = 'new_after_type_change';
+                        // تخزين التغييرات في المصفوفة المؤقتة بدلاً من تعديل $roomDataRef مباشرة
+                        $roomTypeChanges[$i] = [
+                            'original_id_before_type_change' => $existingRoomPriceInDb->id,
+                            'id' => null,
+                            'action' => 'new_after_type_change'
+                        ];
+                    }
+                }
+            }
+            // unset($roomDataRef);
+                        // ** مهم جدًا: تطبيق التغييرات من $roomTypeChanges على $submittedRoomTypesForProcessing **
+            foreach ($roomTypeChanges as $index => $changes) {
+                $submittedRoomTypesForProcessing[$index] = array_merge(
+                    $submittedRoomTypesForProcessing[$index],
+                    $changes
+                );
+            }
+
+            // إضافة تسجيل لفهم البيانات بعد التغييرات
+            Log::info('Room data after changes applied:', [
+                'processed_data' => $submittedRoomTypesForProcessing->toArray(),
+                'ids_to_delete' => $idsToDeleteDueToTypeChange
+            ]);
+
+            // 3. معالجة التحديثات والإضافات الجديدة
+            foreach ($submittedRoomTypesForProcessing as $roomData) {
+                $currentId = $roomData['id'] ?? null;
+                $action = $roomData['action'] ?? ($currentId ? 'update' : 'new');
+
+                $priceDataPayload = [
                     'room_type_id' => $roomData['room_type_id'],
                     'cost_price' => $roomData['cost_price'],
                     'sale_price' => $roomData['sale_price'],
@@ -397,43 +558,113 @@ class LandTripController extends Controller
                     'allotment' => $roomData['allotment'] ?? null,
                 ];
 
-                if (isset($roomData['id']) && !empty($roomData['id'])) {
-                    // تحديث السعر الموجود
-                    LandTripRoomPrice::where('id', $roomData['id'])
+                if (($action === 'update' || $action === 'keep') && !empty($currentId)) {
+                    $roomToUpdate = LandTripRoomPrice::where('id', $currentId)
                         ->where('land_trip_id', $landTrip->id)
-                        ->update($priceData);
-                } else {
-                    // البحث عن سعر موجود بنفس نوع الغرفة
-                    $existing = $landTrip->roomPrices()
-                        ->where('room_type_id', $roomData['room_type_id'])
                         ->first();
+                    if ($roomToUpdate) {
+                        // قبل التحديث، تأكد أن room_type_id لم يتغير إلى نوع مكرر (إذا لم يتم التعامل معه كـ new_after_type_change)
+                        if ($roomToUpdate->room_type_id != $priceDataPayload['room_type_id']) {
+                            // هذا السيناريو يجب أن يكون قد تم التعامل معه في الخطوة 2 وأصبح action = new_after_type_change
+                            // لكن كإجراء احترازي
+                            $checkDuplicate = LandTripRoomPrice::where('land_trip_id', $landTrip->id)
+                                ->where('room_type_id', $priceDataPayload['room_type_id'])
+                                ->where('id', '!=', $currentId)
+                                ->exists();
+                            if ($checkDuplicate) {
+                                DB::rollBack();
+                                $tempRoomTypeName = RoomType::find($priceDataPayload['room_type_id'])->room_type_name ?? $priceDataPayload['room_type_id'];
+                                return redirect()->back()->withInput()->withErrors(['room_types' => "عند تحديث الغرفة (ID: {$currentId})، النوع الجديد '{$tempRoomTypeName}' مكرر."]);
+                            }
+                        }
 
-                    if (!$existing) {
-                        // إنشاء سعر جديد
-                        $priceData['land_trip_id'] = $landTrip->id;
-                        LandTripRoomPrice::create($priceData);
-                    } else {
-                        // تحديث السعر الموجود
-                        $existing->update($priceData);
+                        $roomToUpdate->update($priceDataPayload);
+                        $originalRoomForEdit = $originalRoomPrices[$currentId] ?? null;
+                        if ($originalRoomForEdit) {
+                            foreach (['room_type_id', 'cost_price', 'sale_price', 'currency', 'allotment'] as $field) {
+                                if (($originalRoomForEdit[$field] ?? null) != ($priceDataPayload[$field] ?? null)) {
+                                    LandTripEdit::create([
+                                        'land_trip_id' => $landTrip->id,
+                                        'user_id' => Auth::id(),
+                                        'field' => "room_price_updated:$field:{$currentId}",
+                                        'old_value' => $originalRoomForEdit[$field],
+                                        'new_value' => $priceDataPayload[$field] ?? null,
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                } elseif ($action === 'new' || $action === 'new_after_type_change') {
+                    // التحقق من التكرار مرة أخرى قبل الإضافة النهائية (خاصة للـ action 'new')
+                    $isDuplicateInDb = LandTripRoomPrice::where('land_trip_id', $landTrip->id)
+                        ->where('room_type_id', $priceDataPayload['room_type_id'])
+                        ->exists();
+                    if ($isDuplicateInDb && $action !== 'new_after_type_change') {
+                        DB::rollBack();
+                        $tempRoomTypeName = RoomType::find($priceDataPayload['room_type_id'])->room_type_name ?? $priceDataPayload['room_type_id'];
+                        return redirect()->back()->withInput()->withErrors(['room_types' => "نوع الغرفة '{$tempRoomTypeName}' موجود بالفعل لهذه الرحلة ولا يمكن إضافته مرة أخرى."]);
+                    }
+
+                    $priceDataPayload['land_trip_id'] = $landTrip->id;
+                    $newRoomPrice = LandTripRoomPrice::create($priceDataPayload);
+
+                    $fieldPrefix = ($action === 'new_after_type_change' && isset($roomData['original_id_before_type_change'])) ?
+                        "room_price_type_changed_to_new:{$roomData['original_id_before_type_change']}_to_{$newRoomPrice->id}" :
+                        "room_price_created:{$newRoomPrice->id}";
+
+                    foreach (['room_type_id', 'cost_price', 'sale_price', 'currency', 'allotment'] as $field) {
+                        LandTripEdit::create([
+                            'land_trip_id' => $landTrip->id,
+                            'user_id' => Auth::id(),
+                            'field' => "$fieldPrefix:$field",
+                            'old_value' => ($action === 'new_after_type_change' && isset($roomData['original_id_before_type_change'])) ? ($originalRoomPrices[$roomData['original_id_before_type_change']][$field] ?? null) : null,
+                            'new_value' => $newRoomPrice->$field ?? ($priceDataPayload[$field] ?? null),
+                        ]);
+                    }
+                }
+            }
+
+            // 4. حذف أسعار الغرف القديمة التي تم تغيير نوعها
+            if (!empty($idsToDeleteDueToTypeChange)) {
+                foreach ($idsToDeleteDueToTypeChange as $idToDelete) {
+                    $roomPriceInstance = LandTripRoomPrice::find($idToDelete);
+                    if ($roomPriceInstance) {
+                        $originalRoomForEdit = $originalRoomPrices[$idToDelete] ?? null;
+                        if ($originalRoomForEdit) {
+                            foreach (['room_type_id', 'cost_price', 'sale_price', 'currency', 'allotment'] as $field) {
+                                LandTripEdit::create([
+                                    'land_trip_id' => $landTrip->id,
+                                    'user_id' => Auth::id(),
+                                    'field' => "room_price_type_change_old_deleted:$field:{$idToDelete}",
+                                    'old_value' => $originalRoomForEdit[$field],
+                                    'new_value' => null,
+                                ]);
+                            }
+                        }
+                        $roomPriceInstance->delete();
                     }
                 }
             }
 
             DB::commit();
 
-            // إنشاء إشعار مع تفاصيل التغييرات
-            $this->createUpdateNotification($landTrip, $originalData);
+            $this->createUpdateNotification($landTrip, $originalData); // تأكد أن هذه الدالة موجودة وتعمل بشكل صحيح
 
             return redirect()->route('admin.land-trips.index')
                 ->with('success', 'تم تحديث الرحلة وأسعار الغرف بنجاح!');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            Log::warning("LandTrip Update Validation Error: ", $e->errors());
+            return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("خطأ في تحديث الرحلة: " . $e->getMessage(), ['exception' => $e]);
+            Log::error("خطأ في تحديث الرحلة: " . $e->getMessage() . " في الملف " . $e->getFile() . " السطر " . $e->getLine(), ['exception' => $e]);
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['db_error' => 'حدث خطأ أثناء حفظ البيانات: ' . $e->getMessage()]);
         }
     }
+
 
     public function destroy(LandTrip $landTrip)
     {

@@ -7,13 +7,16 @@ use App\Models\Company;
 use App\Models\Agent;
 use App\Models\Hotel;
 use App\Models\Booking;
-use App\Models\ArchivedBooking; // <--- 2. نضيف ArchivedBooking
-use App\Models\EditLog; // فوق في أول الملف
+use App\Models\ArchivedBooking; 
+use App\Models\EditLog; 
+use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -218,7 +221,99 @@ class AdminController extends Controller
         // سنفترض أنه AJAX بناءً على الكود الأصلي.
         return response()->json(['success' => true, 'newName' => $employee->name]); // إرجاع الاسم الجديد قد يكون مفيدًا
     }
+    public function createEmployeeUser(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8',
+            'role' => 'required|in:employee,Admin',
+        ]);
 
+        DB::beginTransaction();
+
+        try {
+            // إنشاء المستخدم
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'role' => $validated['role'],
+            ]);
+
+            // ربط المستخدم بالموظف
+            $employee = Employee::findOrFail($validated['employee_id']);
+            $employee->update(['user_id' => $user->id]);
+
+            // إنشاء إشعار
+            Notification::create([
+                'user_id' => Auth::id(),
+                'title' => 'إنشاء حساب مستخدم',
+                'message' => "تم إنشاء حساب مستخدم للموظف {$employee->name}",
+                'type' => 'تنبيه نظام',
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.employees')
+                ->with('success', "تم إنشاء حساب المستخدم وربطه بالموظف {$employee->name} بنجاح");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("خطأ في إنشاء حساب مستخدم للموظف: " . $e->getMessage());
+            return redirect()->route('admin.employees')
+                ->with('error', "حدث خطأ أثناء إنشاء الحساب: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * ربط موظف بحساب مستخدم موجود
+     */
+    public function linkEmployeeUser(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'user_id' => 'required|exists:users,id|unique:employees,user_id',
+        ], [
+            'user_id.unique' => 'هذا المستخدم مرتبط بموظف آخر بالفعل'
+        ]);
+
+        $employee = Employee::findOrFail($validated['employee_id']);
+        $user = User::findOrFail($validated['user_id']);
+
+        $employee->update(['user_id' => $user->id]);
+
+        Notification::create([
+            'user_id' => Auth::id(),
+            'title' => 'ربط حساب مستخدم',
+            'message' => "تم ربط الموظف {$employee->name} بحساب المستخدم {$user->name}",
+            'type' => 'تنبيه نظام',
+        ]);
+
+        return redirect()->route('admin.employees')
+            ->with('success', "تم ربط الموظف {$employee->name} بحساب المستخدم {$user->name} بنجاح");
+    }
+
+    /**
+     * إلغاء ربط موظف بحساب مستخدم
+     */
+    public function unlinkEmployeeUser($id)
+    {
+        $employee = Employee::findOrFail($id);
+        $userName = $employee->user ? $employee->user->name : 'غير معروف';
+
+        $employee->update(['user_id' => null]);
+
+        Notification::create([
+            'user_id' => Auth::id(),
+            'title' => 'إلغاء ربط حساب مستخدم',
+            'message' => "تم إلغاء ربط الموظف {$employee->name} من حساب المستخدم {$userName}",
+            'type' => 'تنبيه نظام',
+        ]);
+
+        return redirect()->route('admin.employees')
+            ->with('success', "تم إلغاء ربط الموظف {$employee->name} من حساب المستخدم بنجاح");
+    }
     public function companies()
     {
         $companies = Company::all();

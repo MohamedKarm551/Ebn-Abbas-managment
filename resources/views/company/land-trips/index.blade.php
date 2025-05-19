@@ -94,6 +94,8 @@
 @endsection
 
 @push('scripts')
+        <script src="{{ asset('js/preventClick.js') }}"></script>
+
 <script>
     // تهيئة حقول التاريخ
     $(document).ready(function() {
