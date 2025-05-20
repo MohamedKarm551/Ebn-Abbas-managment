@@ -194,6 +194,7 @@ Route::middleware(['auth', \App\Http\Middleware\IsCompany::class])->prefix('comp
     Route::get('land-trips', [CompanyLandTripController::class, 'index'])->name('land-trips.index');
     Route::get('land-trips/{landTrip}', [CompanyLandTripController::class, 'show'])->name('land-trips.show');
     Route::post('land-trips/{landTrip}/book', [CompanyLandTripController::class, 'book'])->name('land-trips.book');
+    Route::get('my-bookings', [CompanyLandTripController::class, 'myBookings'])->name('land-trips.my-bookings');
     Route::get('land-trips/booking/{booking}/voucher', [CompanyLandTripController::class, 'voucher'])->name('land-trips.voucher');
     Route::get('land-trips/booking/{booking}/download-voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.downloadVoucher');
 });

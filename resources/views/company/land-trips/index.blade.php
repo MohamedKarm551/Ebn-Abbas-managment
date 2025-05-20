@@ -3,7 +3,9 @@
 @section('content')
 <div class="container">
     <h1 class="mb-4">الرحلات البرية المتاحة</h1>
-    
+   <a href="{{ route('company.land-trips.my-bookings') }}" class="btn btn-primary mb-3">
+    <i class="fas fa-list-alt me-1"></i> حجوزاتي 
+</a>
     {{-- نموذج البحث والفلترة --}}
     <div class="card mb-4">
         <div class="card-body">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LandTrip;
+use App\Models\TripType;
 use App\Models\LandTripRoomPrice;
 use App\Models\LandTripBooking;
 use App\Models\Notification;
@@ -277,4 +278,105 @@ class CompanyLandTripController extends Controller
         // عرض صفحة خاصة ستقوم بتحويل HTML إلى PDF في المتصفح
         return view('company.land-trips.voucher-view', compact('booking'));
     }
+    public function myBookings(Request $request)
+{
+    $query = LandTripBooking::with(['landTrip.tripType', 'landTrip.agent', 'landTrip.hotel', 'landTrip.employee', 'roomPrice.roomType'])
+        ->where('company_id', Auth::user()->company_id)
+        ->latest();
+    
+    // تطبيق فلاتر البحث
+    if ($request->filled('search')) {
+        $search = $request->input('search');
+        $query->where(function($q) use ($search) {
+            $q->where('client_name', 'like', "%{$search}%")
+              ->orWhereHas('landTrip', function($q2) use ($search) {
+                  $q2->where('id', 'like', "%{$search}%");
+              });
+        });
+    }
+    
+    if ($request->filled('start_date')) {
+        try {
+            $startDate = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+            $query->whereHas('landTrip', function($q) use ($startDate) {
+                $q->whereDate('departure_date', '>=', $startDate);
+            });
+        } catch (\Exception $e) {
+            Log::error("خطأ في تنسيق تاريخ البداية: " . $e->getMessage());
+        }
+    }
+    
+    if ($request->filled('end_date')) {
+        try {
+            $endDate = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
+            $query->whereHas('landTrip', function($q) use ($endDate) {
+                $q->whereDate('return_date', '<=', $endDate);
+            });
+        } catch (\Exception $e) {
+            Log::error("خطأ في تنسيق تاريخ النهاية: " . $e->getMessage());
+        }
+    }
+    
+    if ($request->filled('trip_type_id')) {
+        $query->whereHas('landTrip', function($q) use ($request) {
+            $q->where('trip_type_id', $request->input('trip_type_id'));
+        });
+    }
+
+    if ($request->filled('status')) {
+        $today = Carbon::today();
+        if ($request->input('status') === 'upcoming') {
+            $query->whereHas('landTrip', function($q) use ($today) {
+                $q->whereDate('departure_date', '>=', $today);
+            });
+        } elseif ($request->input('status') === 'current') {
+            $query->whereHas('landTrip', function($q) use ($today) {
+                $q->whereDate('departure_date', '<=', $today)
+                  ->whereDate('return_date', '>=', $today);
+            });
+        } elseif ($request->input('status') === 'past') {
+            $query->whereHas('landTrip', function($q) use ($today) {
+                $q->whereDate('return_date', '<', $today);
+            });
+        }
+    }
+    
+  
+    // جلب تفاصيل المدفوعات حسب العملة
+    $paymentsByСurrency = LandTripBooking::where('company_id', Auth::user()->company_id)
+        ->select('currency', DB::raw('SUM(amount_due_from_company) as total'))
+        ->groupBy('currency')
+        ->get()
+        ->pluck('total', 'currency')
+        ->toArray();
+
+    // عمل قاموس لرموز العملات
+    $currencySymbols = [
+        'SAR' => 'ر.س',
+        'KWD' => 'دينار كويتي',
+        'USD' => '$',
+        'EUR' => '€',
+    ];
+    
+    // حساب إحصائيات 
+    $stats = [
+        'totalBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)->count(),
+        'upcomingBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)
+            ->whereHas('landTrip', function($q) {
+                $q->whereDate('departure_date', '>=', Carbon::today());
+            })->count(),
+        'currentMonthBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->count(),
+        'totalSpent' => LandTripBooking::where('company_id', Auth::user()->company_id)
+            ->sum('amount_due_from_company'),
+        'paymentsByCurrency' => $paymentsByСurrency,
+        'currencySymbols' => $currencySymbols
+    ];
+    
+    $bookings = $query->paginate(10)->withQueryString();
+    $tripTypes = TripType::orderBy('name')->get();
+    return view('company.land-trips.my-bookings', compact('bookings', 'tripTypes', 'stats'));
+}
 }
