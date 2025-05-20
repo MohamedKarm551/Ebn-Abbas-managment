@@ -27,23 +27,23 @@ document.addEventListener("keydown", function (event) {
 //  
 // كود بسيط: أي أمر في الكونسول ينفذ تسجيل الخروج مع إشعار أمني
 
-function showOverlayAndLogout() {
-    var csrf = document.querySelector('meta[name="csrf-token"]');
-    if (!csrf) {
-        alert("CSRF Token غير موجود في الصفحة!");
-        return;
-    }
-    fetch("/devtools-logout", {
-        method: "POST",
-        headers: {
-            "X-CSRF-TOKEN": csrf.content,
-            "Accept": "application/json"
-        }
-    }).then(() => {
-        // alert("تم تسجيل خروجك بسبب محاولة فحص الصفحة.");
-        window.location.href = "/login";
-    });
-}
+// function showOverlayAndLogout() {
+//     var csrf = document.querySelector('meta[name="csrf-token"]');
+//     if (!csrf) {
+//         alert("CSRF Token غير موجود في الصفحة!");
+//         return;
+//     }
+//     fetch("/devtools-logout", {
+//         method: "POST",
+//         headers: {
+//             "X-CSRF-TOKEN": csrf.content,
+//             "Accept": "application/json"
+//         }
+//     }).then(() => {
+//         // alert("تم تسجيل خروجك بسبب محاولة فحص الصفحة.");
+//         window.location.href = "/login";
+//     });
+// }
 
 // مراقبة الكونسول (في الـ global scope)
 // ["log", "warn", "error", "info", "debug", "table", "clear"].forEach(function (method) {
