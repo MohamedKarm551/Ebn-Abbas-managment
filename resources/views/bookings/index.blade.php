@@ -77,7 +77,8 @@
                         <label for="search" class="form-label">بحث عن العميل، الموظف، الشركة، جهة حجز،
                             فندق</label>
                         <input type="text" name="search" id="search" class="form-control"
-                            value="{{ request('search') }}">
+                            placeholder="بحث عن العميل، الموظف، الشركة، جهة حجز، فندق" pattern="[^<>\(\){}\[\];]*"
+                            title="لا يسمح بإدخال رموز خاصة مثل: <> () {} []" value="{{ request('search') }}" />
                     </div>
                     <div class="col-md-4 mb-2">
                         <label for="start_date" class="form-label">من تاريخ</label>
@@ -507,8 +508,8 @@
                             } else {
                                 // console.warn('مش لاقي حاوية الجدول أو بيانات الجدول مرجعتش.');
                             }
-                            
-                            
+
+
                             // ب. تحديث أزرار التنقل بين الصفحات
                             if (paginationContainer && response.data.pagination !== undefined) {
                                 const tempDiv = document.createElement('div');
@@ -769,7 +770,62 @@
             </script>
 
             {{-- كود تفعيل الـ Accordion لجدول الحجوزات --}}
-           
+
+            {{-- منع إدخال أكواد برمجية ضارة  --}}
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // الحصول على حقل البحث وفورم البحث
+                    const searchInput = document.getElementById('search');
+                    const filterForm = document.getElementById('filterForm');
+
+                    if (searchInput && filterForm) {
+                        // دالة التحقق من المحتوى الخطر
+                        function validateSearchInput() {
+                            const dangerousPatterns =
+                                /(<|>|\(|\)|{|}|\[|\]|script|alert|javascript:|onerror|onclick|eval)/i;
+                            const value = searchInput.value;
+
+                            if (dangerousPatterns.test(value)) {
+                                // إظهار رسالة خطأ
+                                searchInput.classList.add('is-invalid');
+
+                                // تحقق إذا كان هناك رسالة خطأ مضافة مسبقاً
+                                let errorFeedback = searchInput.nextElementSibling;
+                                if (!errorFeedback || !errorFeedback.classList.contains('invalid-feedback')) {
+                                    errorFeedback = document.createElement('div');
+                                    errorFeedback.className = 'invalid-feedback';
+                                    errorFeedback.id = 'search-error';
+                                    errorFeedback.style.display = 'block';
+                                    searchInput.parentNode.appendChild(errorFeedback);
+                                }
+
+                                errorFeedback.textContent = 'يُمنع إدخال أكواد برمجية أو رموز خاصة';
+                                return false;
+                            }
+
+                            // إزالة رسالة الخطأ إذا كان المدخل صحيحًا
+                            searchInput.classList.remove('is-invalid');
+                            const errorFeedback = document.getElementById('search-error');
+                            if (errorFeedback) {
+                                errorFeedback.style.display = 'none';
+                            }
+
+                            return true;
+                        }
+
+                        // التحقق عند الكتابة
+                        searchInput.addEventListener('input', validateSearchInput);
+
+                        // التحقق قبل إرسال النموذج
+                        filterForm.addEventListener('submit', function(e) {
+                            if (!validateSearchInput()) {
+                                e.preventDefault();
+                                alert('يرجى إزالة الأكواد البرمجية من البحث');
+                            }
+                        });
+                    }
+                });
+            </script>
         @endpush
 
     </div>
@@ -971,8 +1027,8 @@
 
         /* Remove the rotation from the main hover effect if pulse is applied */
         /* .admin-menu-container:hover .admin-circle {
-                                                                transform: rotate(360deg) scale(1.1);
-                                                            } */
+                                                                        transform: rotate(360deg) scale(1.1);
+                                                                    } */
 
 
 

@@ -241,7 +241,8 @@
                                         </td>
                                         <td>
                                             <div>{{ $booking->created_at->format('d/m/Y') }}</div>
-                                            <small class="text-#6c757d">{{ $booking->created_at->format('h:i A') }}</small>
+                                            <small
+                                                class="text-#6c757d">{{ $booking->created_at->format('h:i A') }}</small>
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
@@ -357,7 +358,53 @@
         });
     </script>
 @endpush
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchForm = document.querySelector('form[method="GET"]');
+        const searchInput = document.querySelector('input[name="search"]');
 
+        if (searchForm && searchInput) {
+            // منع الأحرف والأنماط الخطرة
+            searchInput.addEventListener('input', function(e) {
+                const value = this.value;
+                const dangerousPattern =
+                    /(<|>|\(|\)|{|}|\[|\]|script|alert|javascript:|onerror|onclick|eval)/i;
+
+                if (dangerousPattern.test(value)) {
+                    // تغيير لون حدود الحقل للتنبيه
+                    this.style.borderColor = 'red';
+                    this.dataset.hasError = 'true';
+
+                    // إظهار رسالة تحذير
+                    let errorMessage = this.parentNode.querySelector('.search-error-message');
+                    if (!errorMessage) {
+                        errorMessage = document.createElement('div');
+                        errorMessage.className = 'search-error-message text-danger small mt-1';
+                        this.parentNode.appendChild(errorMessage);
+                    }
+                    errorMessage.textContent = 'يحتوي البحث على محتوى غير مسموح به';
+                } else {
+                    // إزالة التنسيق والرسالة عند تصحيح المدخلات
+                    this.style.borderColor = '';
+                    this.dataset.hasError = 'false';
+
+                    const errorMessage = this.parentNode.querySelector('.search-error-message');
+                    if (errorMessage) {
+                        errorMessage.remove();
+                    }
+                }
+            });
+
+            // التحقق قبل إرسال النموذج
+            searchForm.addEventListener('submit', function(e) {
+                if (searchInput.dataset.hasError === 'true') {
+                    e.preventDefault();
+                    alert('الرجاء إزالة المحتوى غير المسموح به قبل البحث');
+                }
+            });
+        }
+    });
+</script>
 @push('styles')
     <style>
         /* تخصيص مظهر جدول البيانات */

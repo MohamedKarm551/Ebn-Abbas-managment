@@ -82,6 +82,7 @@ class BookingsController extends Controller
         if ($request->filled('search')) {
             // نحصل على قيمة البحث من الطلب.
             $searchTerm = $request->input('search');
+            $searchTerm = preg_replace('/[^\p{L}\p{N}\s\-_.,]/u', '', $searchTerm); // يزيل الأحرف الخاصة مع الحفاظ على النص الأساسي
 
             // نستخدم `where` مع دالة Closure لتجميع شروط البحث معًا باستخدام `OR`.
             // هذا يضمن أن البحث يتم في أي من الحقول المحددة.
@@ -377,6 +378,7 @@ class BookingsController extends Controller
         // طبق نفس الفلاتر على المؤرشفة
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
+            $searchTerm = preg_replace('/[^\p{L}\p{N}\s\-_.,]/u', '', $searchTerm); // يزيل الأحرف الخاصة مع الحفاظ على النص الأساسي
             $archivedQuery->where(function ($q) use ($searchTerm) {
                 $q->where('client_name', 'like', "%{$searchTerm}%")
                     ->orWhereHas('employee', function ($subQ) use ($searchTerm) {
