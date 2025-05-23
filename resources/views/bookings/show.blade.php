@@ -91,53 +91,54 @@
                             $checkoutDate = \Carbon\Carbon::parse($booking->check_out)->startOfDay();
                             // نحسب الفرق بالأيام الصحيحة (مع تجاهل الإشارة السالبة لو التاريخ فات)
                         $remaining_days = $today->diffInDays($checkoutDate, false); @endphp
-                        {{ $remaining_days > 0 ?  intval($remaining_days) . ' يوم' : 'انتهى الحجز' }}
+                        {{ $remaining_days > 0 ? intval($remaining_days) . ' يوم' : 'انتهى الحجز' }}
                     </td>
 
                 </tr>
                 <tr>
                     <td>10</td>
                     <td> السعر من الفندق <i class="fas fa-money-bill-wave text-success"></i></td>
-                    <td>{{ $booking->cost_price }} ريال</td>
+                    <td>{{ $booking->cost_price }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <!-- صف المستحق للفندق المحسوب ديناميكياً -->
                 <tr id="hotel-due-row">
                     <td>11</td>
                     <td>المستحق للفندق <i class="fas fa-hand-holding-usd text-info"></i></td>
-                    <td id="hotel-due-value">{{ $total_nights * $booking->rooms * $booking->cost_price }} ريال</td>
+                    <td id="hotel-due-value">{{ $total_nights * $booking->rooms * $booking->cost_price }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>12</td>
                     <td> المبلغ المدفوع للفندق <i class="fas fa-money-check-alt text-primary"></i></td>
-                    <td>{{ $booking->amount_paid_to_hotel }} ريال</td>
+                    <td>{{ $booking->amount_paid_to_hotel }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>13</td>
                     <td> الباقي للفندق <i class="fas fa-money-check text-danger"></i></td>
-                    <td>{{ $booking->amount_due_to_hotel - $booking->amount_paid_to_hotel }} ريال</td>
+                    <td>{{ $booking->amount_due_to_hotel - $booking->amount_paid_to_hotel }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>14</td>
                     <td> سعر البيع للشركة <i class="fas fa-tag text-warning"></i> </td>
-                    <td>{{ $booking->sale_price }} ريال</td>
+                    <td>{{ $booking->sale_price }}  {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>15</td>
                     <td>المبلغ المستحق من الشركة <i class="fas fa-hand-holding-usd text-success"></i> </td>
-                    {{ number_format($booking->amount_due_from_company, 2) }}
-    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  </td>
+                    <td>{{ number_format($booking->amount_due_from_company, 2) }}
+                    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                    </td>
                 </tr>
                 <tr>
                     <td>16</td>
                     <td> المبلغ المدفوع من الشركة<i class="fas fa-wallet text-info"></i> </td>
                     <td>{{ number_format($booking->amount_paid_by_company, 2) }}
-                    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  </td>
+                        {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }} </td>
                 </tr>
                 <tr>
                     <td>17</td>
                     <td>الباقي من الشركة <i class="fas fa-balance-scale text-danger"></i> </td>
                     <td>{{ number_format($booking->amount_due_from_company - $booking->amount_paid_by_company, 2) }}
-                    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  </td>
+                        {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }} </td>
                 </tr>
                 <tr>
                     <td>18</td>
@@ -351,10 +352,10 @@
         }
     </style>
 
-   
-          
-          <script src="{{ asset('js/preventClick.js') }}"></script>
-          <script>
+
+
+    <script src="{{ asset('js/preventClick.js') }}"></script>
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             const copyButton = document.getElementById('copyBookingDetails');
             if (copyButton) {

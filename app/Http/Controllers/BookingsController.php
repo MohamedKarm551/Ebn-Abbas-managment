@@ -1433,7 +1433,30 @@ class BookingsController extends Controller
 
         // جلب سجل التعديلات المرتبطة بالحجز
         $editLogs = \App\Models\EditLog::where('booking_id', $id)->orderBy('created_at', 'desc')->get();
+        // التحقق من صلاحية الوصول للشركات
+        $user = Auth::user();
+        if ($user->role === 'Company') {
+            // التأكد أن الشركة تستطيع فقط عرض حجوزاتها الخاصة
+            if (!$user->company_id || $booking->company_id != $user->company_id) {
+                Log::warning("محاولة وصول غير مصرح بها لتفاصيل حجز ID: {$id} من قبل شركة: {$user->name} (User ID: {$user->id}, Company ID: {$user->company_id}). الحجز يخص Company ID: {$booking->company_id}.");
+                // إشعار للأدمن 
+                // جلب جميع مستخدمي الأدمن
+                $adminUsers = \App\Models\User::where('role', 'Admin')->get();
 
+                // إنشاء إشعار لكل مستخدم أدمن
+                foreach ($adminUsers as $admin) {
+                    Notification::create([
+                        'user_id' => $admin->id, // user_id للأدمن وليس للمستخدم الحالي
+                        'message' => 'محاولة وصول غير مصرح بها لتفاصيل حجز ID: ' . $id . ' من قبل شركة: ' . $user->name   . '
+                        
+                        email : ' . $user->email, 
+                        'type' => 'محاولة وصول غير مصرح بها',
+                    ]);
+                }
+                return redirect()->route('bookings.index')
+                    ->with('error', 'لا يمكنك الوصول إلى تفاصيل هذا الحجز لأنه لا يخص شركتك.');
+            }
+        }
         return view('bookings.show', compact('booking', 'editLogs', 'id'));
     }
 
