@@ -104,28 +104,31 @@
                 <tr id="hotel-due-row">
                     <td>11</td>
                     <td>المستحق للفندق <i class="fas fa-hand-holding-usd text-info"></i></td>
-                    <td id="hotel-due-value">{{ $total_nights * $booking->rooms * $booking->cost_price }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
+                    <td id="hotel-due-value">{{ $total_nights * $booking->rooms * $booking->cost_price }}
+                        {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>12</td>
                     <td> المبلغ المدفوع للفندق <i class="fas fa-money-check-alt text-primary"></i></td>
-                    <td>{{ $booking->amount_paid_to_hotel }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
+                    <td>{{ $booking->amount_paid_to_hotel }}
+                        {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>13</td>
                     <td> الباقي للفندق <i class="fas fa-money-check text-danger"></i></td>
-                    <td>{{ $booking->amount_due_to_hotel - $booking->amount_paid_to_hotel }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
+                    <td>{{ $booking->amount_due_to_hotel - $booking->amount_paid_to_hotel }}
+                        {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>14</td>
                     <td> سعر البيع للشركة <i class="fas fa-tag text-warning"></i> </td>
-                    <td>{{ $booking->sale_price }}  {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
+                    <td>{{ $booking->sale_price }} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}</td>
                 </tr>
                 <tr>
                     <td>15</td>
                     <td>المبلغ المستحق من الشركة <i class="fas fa-hand-holding-usd text-success"></i> </td>
                     <td>{{ number_format($booking->amount_due_from_company, 2) }}
-                    {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                        {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
                     </td>
                 </tr>
                 <tr>
@@ -147,8 +150,82 @@
                 </tr>
                 <tr>
                     <td>19</td>
-                    <td> الملاحظات <i class="fas fa-sticky-note text-warning"></i> </td>
-                    <td>{{ $booking->notes }}</td>
+                    <td>الملاحظات <i class="fas fa-sticky-note text-warning"></i></td>
+                    <td class="notes-cell">
+                        @php
+                            $notes = $booking->notes ?? '';
+
+                            if (!empty($notes)) {
+                                // نمط للتعرف على الروابط
+                                $pattern =
+                                    '/(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/i';
+
+                                // تقسيم النص عند الروابط للتعامل معها بشكل منفصل
+                                $parts = preg_split($pattern, $notes, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+                                $formatted = '';
+                                $wordCount = 0;
+
+                                foreach ($parts as $index => $part) {
+                                    // تحديد ما إذا كان هذا الجزء رابطاً
+                                    if ($index % 2 === 1 || preg_match($pattern, $part)) {
+                                        // هذا رابط - نحوله إلى زر
+                                        $url = $part;
+                                        if (!str_starts_with($url, 'http')) {
+                                            $url = 'https://' . $url;
+                                        }
+
+                                        // تحديد نوع الزر بناء على الرابط
+                                        $btnClass = 'btn-primary';
+                                        $btnText = 'فتح الرابط';
+                                        $btnIcon = 'link';
+
+                                        if (strpos($url, 'drive.google.com') !== false) {
+                                            $btnClass = 'btn-success';
+                                            $btnText = 'فتح الملف';
+                                            $btnIcon = 'file';
+                                        }
+
+                                        // إضافة الزر بتنسيق Bootstrap
+                                        $formatted .=
+                                            ' <a href="' .
+                                            e($url) .
+                                            '" target="_blank" class="btn btn-sm ' .
+                                            $btnClass .
+                                            '" style="white-space: nowrap; margin: 2px;"><i class="fas fa-' .
+                                            $btnIcon .
+                                            '"></i> ' .
+                                            $btnText .
+                                            '</a> ';
+
+                                        // إضافة سطر جديد بعد الزر
+                                        $formatted .= '<br>';
+                                        $wordCount = 0;
+                                    } else {
+                                        // هذا نص عادي - نقسمه إلى كلمات
+                                        $words = preg_split('/\s+/', $part);
+                                        foreach ($words as $word) {
+                                            if (!empty($word)) {
+                                                $formatted .= $word . ' ';
+                                                $wordCount++;
+
+                                                // إضافة سطر جديد بعد كل 7 كلمات
+                                                if ($wordCount >= 7) {
+                                                    $formatted .= '<br>';
+                                                    $wordCount = 0;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // إزالة أي <br> زائد في النهاية
+                                $formatted = rtrim($formatted, '<br>');
+                                $notes = $formatted;
+                            }
+                        @endphp
+                        {!! $notes !!}
+                    </td>
                 </tr>
             </tbody>
         </table>
