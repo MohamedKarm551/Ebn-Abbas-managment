@@ -1,4 +1,5 @@
 @extends('layouts.app')
+    <title>@yield('title', 'الرحلات البرية المتاحة')</title>
 
 @section('content')
 <div class="container">

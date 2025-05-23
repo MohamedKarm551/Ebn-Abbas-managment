@@ -1,4 +1,5 @@
 @extends('layouts.app')
+<title>@yield('title', ' تفاصيل الرحلة وإضافة حجز جديد')</title>
 
 @section('content')
     <div class="container">
@@ -105,7 +106,7 @@
                                         @foreach ($companyBookings as $index => $booking)
                                             <tr>
                                                 <td>{{ $index + 1 }}</td>
-                                                <td>{{ $booking->client_name }}</td>
+                                                <td>{{ htmlspecialchars($booking->client_name) }}</td>
                                                 <td>{{ $booking->roomPrice->roomType->room_type_name }}</td>
                                                 <td>{{ $booking->rooms }}</td>
                                                 <td>{{ number_format($booking->amount_due_from_company) }}</td>
@@ -183,8 +184,13 @@
 
                             <div class="mb-3">
                                 <label for="notes" class="form-label">ملاحظات</label>
-                                <textarea class="form-control" id="notes" name="notes" rows="3">{{ old('notes') }}</textarea>
+                                <textarea class="form-control @error('notes') is-invalid @enderror" id="notes" name="notes" rows="3">{{ old('notes') }}</textarea>
+                                @error('notes')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
+
+
 
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-success">تأكيد الحجز</button>

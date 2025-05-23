@@ -623,7 +623,17 @@ class BookingsController extends Controller
         // 2. قواعد الـ Validation الأساسية
         // ================================================================
         $rules = [
-            'client_name' => 'required|string|max:255',
+            'client_name' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[^<>{}()\[\];]*$/', // منع الرموز الخاصة بالبرمجة
+                function ($attribute, $value, $fail) {
+                    if (preg_match('/(script|alert|onerror|onclick|javascript:|eval\()/i', $value)) {
+                        $fail('اسم العميل يحتوي على محتوى غير مسموح به.');
+                    }
+                },
+            ],
             'company_id' => 'required|exists:companies,id',
             'agent_id' => 'required|exists:agents,id',
             'hotel_id' => 'required|exists:hotels,id',
@@ -637,7 +647,17 @@ class BookingsController extends Controller
             'sale_price' => 'required|numeric|min:0',
             'currency' => 'required|in:SAR,KWD', // إضافة التحقق من العملة
             'employee_id' => 'required|exists:employees,id',
-            'notes' => 'nullable|string',
+            'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+                'regex:/^[^<>{}()\[\];]*$/', // منع الرموز الخاصة بالبرمجة
+                function ($attribute, $value, $fail) {
+                    if ($value && preg_match('/(script|alert|onerror|onclick|javascript:|eval\()/i', $value)) {
+                        $fail('الملاحظات تحتوي على محتوى غير مسموح به.');
+                    }
+                },
+            ],
         ];
 
         $messages = [
@@ -656,6 +676,8 @@ class BookingsController extends Controller
             'client_name.required' => 'اسم العميل مطلوب.',
             'client_name.string' => 'اسم العميل يجب أن يكون نصًا.',
             'client_name.max' => 'اسم العميل يجب أن لا يتجاوز 255 حرفًا.',
+            'client_name.regex' => 'اسم العميل يحتوي على رموز غير مسموح بها.',
+            'notes.regex' => 'الملاحظات تحتوي على رموز غير مسموح بها.',
             // ... أضف رسائل أخرى حسب الحاجة ...
         ];
 
@@ -663,6 +685,11 @@ class BookingsController extends Controller
         // 3. تنفيذ الـ Validation
         // ================================================================
         $validatedData = $request->validate($rules, $messages);
+        // تنظيف البيانات
+        $validatedData['client_name'] = htmlspecialchars(strip_tags($validatedData['client_name']), ENT_QUOTES, 'UTF-8');
+        if (!empty($validatedData['notes'])) {
+            $validatedData['notes'] = htmlspecialchars(strip_tags($validatedData['notes']), ENT_QUOTES, 'UTF-8');
+        }
         Log::info('نجح الـ Validation الأساسي');
         // ====================================
         // *** بداية الإضافة: التحقق من أقل عدد ليالي للحجز ***

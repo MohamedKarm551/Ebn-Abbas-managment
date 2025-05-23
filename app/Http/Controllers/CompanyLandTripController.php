@@ -119,16 +119,29 @@ class CompanyLandTripController extends Controller
         // التحقق من البيانات
         $validatedData = $request->validate([
             'land_trip_room_price_id' => 'required|exists:land_trip_room_prices,id',
-            'client_name' => 'required|string|max:255',
+            'client_name' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[^<>{}()\[\]]*$/' // منع الأقواس والعلامات التي قد تستخدم في JavaScript
+            ],
             'rooms' => 'required|integer|min:1',
-            'notes' => 'nullable|string|max:1000',
+            'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+                'regex:/^[^<>{}()\[\]]*$/' // منع الأقواس والعلامات التي قد تستخدم في JavaScript
+            ],
             'employee_id' => 'required|exists:employees,id', // التحقق من employee_id
 
         ], [
             'land_trip_room_price_id.required' => 'يجب اختيار نوع الغرفة',
             'client_name.required' => 'اسم العميل مطلوب',
+            'client_name.regex' => 'اسم العميل يحتوي على حروف غير مسموح بها',
             'rooms.required' => 'عدد الغرف مطلوب',
             'rooms.min' => 'عدد الغرف يجب أن يكون على الأقل 1',
+            'notes.regex' => 'الملاحظات تحتوي على حروف غير مسموح بها',
+
         ]);
 
         // جلب سعر الغرفة المختارة
@@ -171,7 +184,7 @@ class CompanyLandTripController extends Controller
             $booking = LandTripBooking::create([
                 'land_trip_id' => $landTrip->id,
                 'land_trip_room_price_id' => $roomPrice->id,
-                'client_name' => strip_tags($validatedData['client_name']),
+                'client_name' => htmlspecialchars(strip_tags($validatedData['client_name'])),
                 'company_id' => Auth::user()->company_id,
                 'employee_id' => $validatedData['employee_id'], // إضافة employee_id
                 'rooms' => $validatedData['rooms'],
@@ -180,7 +193,7 @@ class CompanyLandTripController extends Controller
                 'amount_due_to_agent' => $totalDueToAgent,
                 'amount_due_from_company' => $totalDueFromCompany,
                 'currency' => $roomPrice->currency, // إضافة حقل العملة
-                'notes' => strip_tags($validatedData['notes']),
+                'notes' => htmlspecialchars(strip_tags($validatedData['notes'])),
             ]);
 
             // تأكد من إنشاء الجدول الوسيط في قاعدة البيانات
@@ -206,36 +219,36 @@ class CompanyLandTripController extends Controller
             ]);
 
             // إشعار للموظف المسؤول عن الرحلة
-         if ($landTrip->employee_id) {
-    // 1. جلب الموظف المسؤول أولاً
-    $employee = Employee::find($landTrip->employee_id);
-    
-    // 2. التحقق من وجود حساب مستخدم مرتبط بالموظف
-    if ($employee && $employee->user_id) {
-        // إرسال إشعار للمستخدم المرتبط بالموظف
-        Notification::create([
-            'user_id' => $employee->user_id,
-            'message' => $notificationMessage,
-            'title' => 'حجز جديد في رحلتك',
-            'type' => 'حجز رحلة'
-        ]);
-        
-        Log::info("تم إرسال إشعار للموظف المسؤول: {$employee->name}");
-    } else {
-        Log::warning("الموظف المسؤول {$employee->name} ليس له حساب مستخدم مرتبط");
-        
-        // إرسال إشعار للمدراء عن المشكلة
-        $adminUsers = User::where('role', 'Admin')->get();
-        foreach ($adminUsers as $admin) {
-            Notification::create([
-                'user_id' => $admin->id,
-                'title' => 'موظف بدون حساب مستخدم',
-                'message' => "الموظف المسؤول ({$employee->name}) عن الرحلة {$landTrip->id} ليس له حساب مستخدم مرتبط.",
-                'type' => 'تنبيه نظام'
-            ]);
-        }
-    }
-}
+            if ($landTrip->employee_id) {
+                // 1. جلب الموظف المسؤول أولاً
+                $employee = Employee::find($landTrip->employee_id);
+
+                // 2. التحقق من وجود حساب مستخدم مرتبط بالموظف
+                if ($employee && $employee->user_id) {
+                    // إرسال إشعار للمستخدم المرتبط بالموظف
+                    Notification::create([
+                        'user_id' => $employee->user_id,
+                        'message' => $notificationMessage,
+                        'title' => 'حجز جديد في رحلتك',
+                        'type' => 'حجز رحلة'
+                    ]);
+
+                    Log::info("تم إرسال إشعار للموظف المسؤول: {$employee->name}");
+                } else {
+                    Log::warning("الموظف المسؤول {$employee->name} ليس له حساب مستخدم مرتبط");
+
+                    // إرسال إشعار للمدراء عن المشكلة
+                    $adminUsers = User::where('role', 'Admin')->get();
+                    foreach ($adminUsers as $admin) {
+                        Notification::create([
+                            'user_id' => $admin->id,
+                            'title' => 'موظف بدون حساب مستخدم',
+                            'message' => "الموظف المسؤول ({$employee->name}) عن الرحلة {$landTrip->id} ليس له حساب مستخدم مرتبط.",
+                            'type' => 'تنبيه نظام'
+                        ]);
+                    }
+                }
+            }
 
 
             // توجيه إلى صفحة الفاتورة
@@ -279,104 +292,104 @@ class CompanyLandTripController extends Controller
         return view('company.land-trips.voucher-view', compact('booking'));
     }
     public function myBookings(Request $request)
-{
-    $query = LandTripBooking::with(['landTrip.tripType', 'landTrip.agent', 'landTrip.hotel', 'landTrip.employee', 'roomPrice.roomType'])
-        ->where('company_id', Auth::user()->company_id)
-        ->latest();
-    
-    // تطبيق فلاتر البحث
-    if ($request->filled('search')) {
-        $search = $request->input('search');
-        $query->where(function($q) use ($search) {
-            $q->where('client_name', 'like', "%{$search}%")
-              ->orWhereHas('landTrip', function($q2) use ($search) {
-                  $q2->where('id', 'like', "%{$search}%");
-              });
-        });
-    }
-    
-    if ($request->filled('start_date')) {
-        try {
-            $startDate = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
-            $query->whereHas('landTrip', function($q) use ($startDate) {
-                $q->whereDate('departure_date', '>=', $startDate);
-            });
-        } catch (\Exception $e) {
-            Log::error("خطأ في تنسيق تاريخ البداية: " . $e->getMessage());
-        }
-    }
-    
-    if ($request->filled('end_date')) {
-        try {
-            $endDate = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
-            $query->whereHas('landTrip', function($q) use ($endDate) {
-                $q->whereDate('return_date', '<=', $endDate);
-            });
-        } catch (\Exception $e) {
-            Log::error("خطأ في تنسيق تاريخ النهاية: " . $e->getMessage());
-        }
-    }
-    
-    if ($request->filled('trip_type_id')) {
-        $query->whereHas('landTrip', function($q) use ($request) {
-            $q->where('trip_type_id', $request->input('trip_type_id'));
-        });
-    }
+    {
+        $query = LandTripBooking::with(['landTrip.tripType', 'landTrip.agent', 'landTrip.hotel', 'landTrip.employee', 'roomPrice.roomType'])
+            ->where('company_id', Auth::user()->company_id)
+            ->latest();
 
-    if ($request->filled('status')) {
-        $today = Carbon::today();
-        if ($request->input('status') === 'upcoming') {
-            $query->whereHas('landTrip', function($q) use ($today) {
-                $q->whereDate('departure_date', '>=', $today);
-            });
-        } elseif ($request->input('status') === 'current') {
-            $query->whereHas('landTrip', function($q) use ($today) {
-                $q->whereDate('departure_date', '<=', $today)
-                  ->whereDate('return_date', '>=', $today);
-            });
-        } elseif ($request->input('status') === 'past') {
-            $query->whereHas('landTrip', function($q) use ($today) {
-                $q->whereDate('return_date', '<', $today);
+        // تطبيق فلاتر البحث
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('client_name', 'like', "%{$search}%")
+                    ->orWhereHas('landTrip', function ($q2) use ($search) {
+                        $q2->where('id', 'like', "%{$search}%");
+                    });
             });
         }
-    }
-    
-  
-    // جلب تفاصيل المدفوعات حسب العملة
-    $paymentsByСurrency = LandTripBooking::where('company_id', Auth::user()->company_id)
-        ->select('currency', DB::raw('SUM(amount_due_from_company) as total'))
-        ->groupBy('currency')
-        ->get()
-        ->pluck('total', 'currency')
-        ->toArray();
 
-    // عمل قاموس لرموز العملات
-    $currencySymbols = [
-        'SAR' => 'ر.س',
-        'KWD' => 'دينار كويتي',
-        'USD' => '$',
-        'EUR' => '€',
-    ];
-    
-    // حساب إحصائيات 
-    $stats = [
-        'totalBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)->count(),
-        'upcomingBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)
-            ->whereHas('landTrip', function($q) {
-                $q->whereDate('departure_date', '>=', Carbon::today());
-            })->count(),
-        'currentMonthBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)
-            ->whereYear('created_at', Carbon::now()->year)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->count(),
-        'totalSpent' => LandTripBooking::where('company_id', Auth::user()->company_id)
-            ->sum('amount_due_from_company'),
-        'paymentsByCurrency' => $paymentsByСurrency,
-        'currencySymbols' => $currencySymbols
-    ];
-    
-    $bookings = $query->paginate(10)->withQueryString();
-    $tripTypes = TripType::orderBy('name')->get();
-    return view('company.land-trips.my-bookings', compact('bookings', 'tripTypes', 'stats'));
-}
+        if ($request->filled('start_date')) {
+            try {
+                $startDate = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+                $query->whereHas('landTrip', function ($q) use ($startDate) {
+                    $q->whereDate('departure_date', '>=', $startDate);
+                });
+            } catch (\Exception $e) {
+                Log::error("خطأ في تنسيق تاريخ البداية: " . $e->getMessage());
+            }
+        }
+
+        if ($request->filled('end_date')) {
+            try {
+                $endDate = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->endOfDay();
+                $query->whereHas('landTrip', function ($q) use ($endDate) {
+                    $q->whereDate('return_date', '<=', $endDate);
+                });
+            } catch (\Exception $e) {
+                Log::error("خطأ في تنسيق تاريخ النهاية: " . $e->getMessage());
+            }
+        }
+
+        if ($request->filled('trip_type_id')) {
+            $query->whereHas('landTrip', function ($q) use ($request) {
+                $q->where('trip_type_id', $request->input('trip_type_id'));
+            });
+        }
+
+        if ($request->filled('status')) {
+            $today = Carbon::today();
+            if ($request->input('status') === 'upcoming') {
+                $query->whereHas('landTrip', function ($q) use ($today) {
+                    $q->whereDate('departure_date', '>=', $today);
+                });
+            } elseif ($request->input('status') === 'current') {
+                $query->whereHas('landTrip', function ($q) use ($today) {
+                    $q->whereDate('departure_date', '<=', $today)
+                        ->whereDate('return_date', '>=', $today);
+                });
+            } elseif ($request->input('status') === 'past') {
+                $query->whereHas('landTrip', function ($q) use ($today) {
+                    $q->whereDate('return_date', '<', $today);
+                });
+            }
+        }
+
+
+        // جلب تفاصيل المدفوعات حسب العملة
+        $paymentsByСurrency = LandTripBooking::where('company_id', Auth::user()->company_id)
+            ->select('currency', DB::raw('SUM(amount_due_from_company) as total'))
+            ->groupBy('currency')
+            ->get()
+            ->pluck('total', 'currency')
+            ->toArray();
+
+        // عمل قاموس لرموز العملات
+        $currencySymbols = [
+            'SAR' => 'ر.س',
+            'KWD' => 'دينار كويتي',
+            'USD' => '$',
+            'EUR' => '€',
+        ];
+
+        // حساب إحصائيات 
+        $stats = [
+            'totalBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)->count(),
+            'upcomingBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)
+                ->whereHas('landTrip', function ($q) {
+                    $q->whereDate('departure_date', '>=', Carbon::today());
+                })->count(),
+            'currentMonthBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)
+                ->whereYear('created_at', Carbon::now()->year)
+                ->whereMonth('created_at', Carbon::now()->month)
+                ->count(),
+            'totalSpent' => LandTripBooking::where('company_id', Auth::user()->company_id)
+                ->sum('amount_due_from_company'),
+            'paymentsByCurrency' => $paymentsByСurrency,
+            'currencySymbols' => $currencySymbols
+        ];
+
+        $bookings = $query->paginate(10)->withQueryString();
+        $tripTypes = TripType::orderBy('name')->get();
+        return view('company.land-trips.my-bookings', compact('bookings', 'tripTypes', 'stats'));
+    }
 }

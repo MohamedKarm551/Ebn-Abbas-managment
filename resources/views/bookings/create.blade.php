@@ -1,6 +1,6 @@
 @extends('layouts.app')
 {{-- عاوز تايتل الصفحة يبقا اسمه إتمام حجز الإتاحة --}}
-@section('title', 'إتمام حجز الإتاحة')
+@section('title', 'حجز جديد - حجز إتاحة  ')
 
 {{-- إضافة كلاس خاص بالصفحة --}}
 @section('content')
@@ -370,4 +370,74 @@
             }
         });
     </script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // التحقق من المدخلات للأمان
+    function validateSecurity(input) {
+        const value = input.value;
+        // نمط للبحث عن محتوى برمجي محتمل
+        const dangerousPattern = /(<|>|\(|\)|{|}|\[|\]|script|alert|javascript:|eval|onerror|onclick)/i;
+        
+        if (dangerousPattern.test(value)) {
+            input.classList.add('is-invalid');
+            
+            // إنشاء رسالة خطأ
+            let feedbackElement = input.nextElementSibling;
+            if (!feedbackElement || !feedbackElement.classList.contains('invalid-feedback')) {
+                feedbackElement = document.createElement('div');
+                feedbackElement.className = 'invalid-feedback';
+                input.parentNode.appendChild(feedbackElement);
+            }
+            
+            feedbackElement.textContent = 'هذا الحقل يحتوي على محتوى غير مسموح به.';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            
+            const feedbackElement = input.nextElementSibling;
+            if (feedbackElement && feedbackElement.classList.contains('invalid-feedback')) {
+                feedbackElement.remove();
+            }
+            return true;
+        }
+    }
+    
+    // إضافة مستمعي الأحداث
+    const clientNameField = document.getElementById('client_name');
+    const notesField = document.getElementById('notes');
+    
+    if (clientNameField) {
+        clientNameField.addEventListener('blur', function() {
+            validateSecurity(this);
+        });
+    }
+    
+    if (notesField) {
+        notesField.addEventListener('blur', function() {
+            validateSecurity(this);
+        });
+    }
+    
+    // التحقق قبل إرسال النموذج
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            if (clientNameField) {
+                isValid = validateSecurity(clientNameField) && isValid;
+            }
+            
+            if (notesField) {
+                isValid = validateSecurity(notesField) && isValid;
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('يرجى إزالة المحتوى غير المسموح به قبل الإرسال.');
+            }
+        });
+    }
+});
+</script>
 @endpush
