@@ -440,7 +440,6 @@ class ReportController extends Controller
     public function advanced(Request $request)
     {
         // إذا تم تحديد تاريخ، نستخدمه، وإلا نستخدم تاريخ اليوم
-        // إذا تم تحديد تاريخ، نستخدمه، وإلا نستخدم تاريخ اليوم
         if ($request->has('date')) {
             try {
                 $today = Carbon::createFromFormat('Y-m-d', $request->input('date'));
@@ -454,23 +453,101 @@ class ReportController extends Controller
 
         $tomorrow = (clone $today)->addDay();
 
-        // بنجيب كل الحجوزات النشطة اللي موجودة في التاريخ المحدد
-        $activeBookings = Booking::whereDate('check_in', '<=', $today)
+        // 1. بنجيب الحجوزات المباشرة النشطة (من جدول bookings)
+        $directActiveBookings = Booking::whereDate('check_in', '<=', $today)
             ->whereDate('check_out', '>', $today)
             ->with(['hotel', 'company', 'agent'])
             ->get();
 
-        // بنجيب الحجوزات اللي هتدخل في التاريخ المحدد
-        $checkingInToday = Booking::whereDate('check_in', $today)
+        // 2. بنجيب حجوزات الرحلات البرية النشطة (جديد)
+        $landTripActiveBookings = \App\Models\LandTripBooking::with(['landTrip.hotel', 'company'])
+            ->whereHas('landTrip', function ($query) use ($today) {
+                $query->whereDate('departure_date', '<=', $today)
+                    ->whereDate('return_date', '>', $today)
+                    ->where('status', 'active');
+            })
+            ->get()
+            ->map(function ($booking) {
+                // تحويل حجز الرحلة البرية لصيغة متوافقة مع الحجز العادي
+                return (object)[
+                    'id' => 'LT-' . $booking->id,
+                    'client_name' => $booking->client_name,
+                    'hotel' => $booking->landTrip->hotel,
+                    'hotel_id' => $booking->landTrip->hotel_id,
+                    'company' => $booking->company,
+                    'check_in' => \Carbon\Carbon::parse($booking->landTrip->departure_date),
+                    'check_out' => \Carbon\Carbon::parse($booking->landTrip->return_date),
+                    'rooms' => $booking->rooms,
+                    'days' => $booking->landTrip->days_count, // لعرض عدد أيام الرحلة
+                    'is_land_trip' => true,
+                    // أضف هذا السطر لنسخ كامل كائن الرحلة البرية إذا كنت بحاجة إليه
+                    'landTrip' => $booking->landTrip
+                ];
+            });
+
+        // 3. دمج الحجوزات المباشرة وحجوزات الرحلات البرية
+        $activeBookings = $directActiveBookings->concat($landTripActiveBookings);
+
+        // 4. بنجيب الحجوزات المباشرة اللي هتدخل في التاريخ المحدد
+        $directCheckingInToday = Booking::whereDate('check_in', $today)
             ->with(['hotel', 'company', 'agent'])
             ->get();
 
-        // بنجيب الحجوزات اللي هتخرج في اليوم التالي للتاريخ المحدد
-        $checkingOutTomorrow = Booking::whereDate('check_out', $tomorrow)
+        // 5. بنجيب حجوزات الرحلات البرية اللي هتدخل في التاريخ المحدد (جديد)
+        $landTripCheckingInToday = \App\Models\LandTripBooking::with(['landTrip.hotel', 'company'])
+            ->whereHas('landTrip', function ($query) use ($today) {
+                $query->whereDate('departure_date', $today)
+                    ->where('status', 'active');
+            })
+            ->get()
+            ->map(function ($booking) {
+                return (object)[
+                    'id' => 'LT-' . $booking->id,
+                    'client_name' => $booking->client_name,
+                    'hotel' => $booking->landTrip->hotel,
+                    'hotel_id' => $booking->landTrip->hotel_id,
+                    'company' => $booking->company,
+                    'check_in' => \Carbon\Carbon::parse($booking->landTrip->departure_date),
+                    'check_out' => \Carbon\Carbon::parse($booking->landTrip->return_date),
+                    'rooms' => $booking->rooms,
+                    'is_land_trip' => true
+                ];
+            });
+
+        // 6. دمج حجوزات اليوم (الدخول)
+        $checkingInToday = $directCheckingInToday->concat($landTripCheckingInToday);
+
+        // 7. بنجيب الحجوزات المباشرة اللي هتخرج في اليوم التالي للتاريخ المحدد
+        $directCheckingOutTomorrow = Booking::whereDate('check_out', $tomorrow)
             ->with(['hotel', 'company', 'agent'])
             ->get();
-        // ملخص إحصائي عن الفنادق
-        $hotelStats = Hotel::withCount(['bookings as active_bookings' => function ($query) use ($today) {
+
+        // 8. بنجيب حجوزات الرحلات البرية اللي هتخرج في اليوم التالي (جديد)
+        $landTripCheckingOutTomorrow = \App\Models\LandTripBooking::with(['landTrip.hotel', 'company'])
+            ->whereHas('landTrip', function ($query) use ($tomorrow) {
+                $query->whereDate('return_date', $tomorrow)
+                    ->where('status', 'active');
+            })
+            ->get()
+            ->map(function ($booking) {
+                return (object)[
+                    'id' => 'LT-' . $booking->id,
+                    'client_name' => $booking->client_name,
+                    'hotel' => $booking->landTrip->hotel,
+                    'hotel_id' => $booking->landTrip->hotel_id,
+                    'company' => $booking->company,
+                    'check_in' => $booking->landTrip->departure_date,
+                    'check_out' => $booking->landTrip->return_date,
+                    'rooms' => $booking->rooms,
+                    'is_land_trip' => true
+                ];
+            });
+
+        // 9. دمج حجوزات الغد (الخروج)
+        $checkingOutTomorrow = $directCheckingOutTomorrow->concat($landTripCheckingOutTomorrow);
+
+        // 10. ملخص إحصائي عن الفنادق - معدل بليشمل كل الحجوزات
+        $hotelStats = Hotel::withCount(['bookings as direct_bookings_count' => function ($query) use ($today) {
             $query->whereDate('check_in', '<=', $today)
                 ->whereDate('check_out', '>', $today);
         }])
@@ -482,15 +559,20 @@ class ReportController extends Controller
             }])
             ->withCount('bookings as total_bookings')
             ->get()
-            ->map(function ($hotel) use ($activeBookings) {
-                // نستخدم قيمة افتراضية لعدد الغرف (30 غرفة لكل فندق)
-                $defaultRooms = 30;
+            ->map(function ($hotel) use ($activeBookings, $checkingInToday, $checkingOutTomorrow) {
+                // قيمة افتراضية لعدد الغرف (30 غرفة لكل فندق)
+                $defaultRooms = $hotel->purchased_rooms_count ?? 30;
 
-                // بنحسب معدل الإشغال للفندق النهاردة
+                // بنحسب معدل الإشغال للفندق النهاردة (الآن يشمل الرحلات البرية)
                 $occupiedRooms = $activeBookings->where('hotel_id', $hotel->id)->sum('rooms');
-                $hotel->occupancy_rate = $defaultRooms > 0 ? round(($occupiedRooms / $defaultRooms) * 100) : 0;
 
-                // إضافة حقل total_rooms بقيمة افتراضية لكل فندق
+                // تحديث عدد الدخول والخروج ليشمل الرحلات البرية
+                $hotel->active_bookings = $occupiedRooms;
+                $hotel->checking_in_today = $checkingInToday->where('hotel_id', $hotel->id)->count();
+                $hotel->checking_out_tomorrow = $checkingOutTomorrow->where('hotel_id', $hotel->id)->count();
+
+                // حساب معدل الإشغال الشامل (الحجوزات المباشرة + الرحلات البرية)
+                $hotel->occupancy_rate = $defaultRooms > 0 ? round(($occupiedRooms / $defaultRooms) * 100) : 0;
                 $hotel->total_rooms = $defaultRooms;
 
                 return $hotel;
@@ -522,9 +604,9 @@ class ReportController extends Controller
     {
         $result = [];
         $startDate = $startDate ?? Carbon::today();
-        $endDate = $startDate->addDays(6); // أسبوع كامل
+        $endDate = (clone $startDate)->addDays(6); // أسبوع كامل
 
-        // جلب قائمة الفنادق (بدون total_rooms لأنه غير موجود)
+        // جلب قائمة الفنادق
         $hotels = Hotel::select('id', 'name')->get();
 
         // نقوم بتعيين عدد غرف افتراضي لكل فندق (يمكنك تغيير هذه القيمة)
@@ -532,7 +614,6 @@ class ReportController extends Controller
 
         // إنشاء مصفوفة تحتوي على عدد الغرف لكل فندق
         $totalRoomsByHotelId = $hotels->mapWithKeys(function ($hotel) use ($defaultRoomsPerHotel) {
-            // هنا نستخدم عدد غرف افتراضي بما أن العمود غير موجود
             return [$hotel->id => $defaultRoomsPerHotel];
         });
 
@@ -543,8 +624,8 @@ class ReportController extends Controller
             $dateString = $date->format('Y-m-d');
             $dateLabel = $date->format('d/m');
 
-            // جلب الحجوزات في هذا اليوم مع عدد الغرف
-            $bookings = Booking::whereDate('check_in', '<=', $dateString)
+            // 1. جلب الحجوزات المباشرة في هذا اليوم مع عدد الغرف
+            $directBookings = Booking::whereDate('check_in', '<=', $dateString)
                 ->whereDate('check_out', '>', $dateString)
                 ->select('hotel_id', DB::raw('SUM(rooms) as booked_rooms'))
                 ->groupBy('hotel_id')
@@ -552,14 +633,35 @@ class ReportController extends Controller
                 ->pluck('booked_rooms', 'hotel_id')
                 ->toArray();
 
-            // حساب الغرف المحجوزة والمتاحة لكل فندق
+            // 2. جلب حجوزات الرحلات البرية في هذا اليوم (جديد)
+            $landTripBookings = \App\Models\LandTripBooking::select(
+                'land_trips.hotel_id',
+                DB::raw('SUM(land_trip_bookings.rooms) as booked_rooms')
+            )
+                ->join('land_trips', 'land_trips.id', '=', 'land_trip_bookings.land_trip_id')
+                ->whereDate('land_trips.departure_date', '<=', $dateString)
+                ->whereDate('land_trips.return_date', '>', $dateString)
+                ->where('land_trips.status', 'active')
+                ->groupBy('land_trips.hotel_id')
+                ->get()
+                ->pluck('booked_rooms', 'hotel_id')
+                ->toArray();
+
+            // 3. دمج الحجوزات من كلا المصدرين
+            $allBookings = [];
+            foreach ($hotels as $hotel) {
+                $directBooked = $directBookings[$hotel->id] ?? 0;
+                $landTripBooked = $landTripBookings[$hotel->id] ?? 0;
+                $allBookings[$hotel->id] = $directBooked + $landTripBooked;
+            }
+
+            // 4. حساب الغرف المشغولة والمتاحة لكل فندق
             $occupancyByHotel = [];
             $totalBooked = 0;
 
             foreach ($hotels as $hotel) {
-                // استخدم القيمة الافتراضية التي قمنا بتعيينها
                 $hotelTotalRooms = $totalRoomsByHotelId[$hotel->id];
-                $booked = $bookings[$hotel->id] ?? 0;
+                $booked = $allBookings[$hotel->id] ?? 0;
                 $available = max(0, $hotelTotalRooms - $booked);
                 $occupancyRate = $hotelTotalRooms > 0 ? round(($booked / $hotelTotalRooms) * 100, 1) : 0;
 
@@ -567,14 +669,14 @@ class ReportController extends Controller
                     'name' => $hotel->name,
                     'booked' => $booked,
                     'available' => $available,
-                    'total' => $hotelTotalRooms, // استخدام القيمة الافتراضية
+                    'total' => $hotelTotalRooms,
                     'rate' => $occupancyRate
                 ];
 
                 $totalBooked += $booked;
             }
 
-            // إضافة البيانات لهذا اليوم
+            // 5. إضافة البيانات لهذا اليوم
             $overallRate = $totalRooms > 0 ? round(($totalBooked / $totalRooms) * 100, 1) : 0;
             $result[] = [
                 'date' => $dateString,
@@ -1244,27 +1346,27 @@ class ReportController extends Controller
     // }
     // ======================================
 
-public function saveScreenshot(\Illuminate\Http\Request $request)
-{
-    $img = $request->input('image');
-    if (!$img) {
-        return response()->json(['error' => 'No image'], 400);
+    public function saveScreenshot(\Illuminate\Http\Request $request)
+    {
+        $img = $request->input('image');
+        if (!$img) {
+            return response()->json(['error' => 'No image'], 400);
+        }
+        // فك التشفير
+        $img = str_replace('data:image/png;base64,', '', $img);
+        $img = str_replace(' ', '+', $img); // استبدال الفراغات بـ +
+        $imgData = base64_decode($img); // فك تشفير الصورة
+
+        $fileName = 'screenshot_' . now()->format('Y-m-d') . '.png';
+        $path = storage_path('backups/images/' . $fileName);
+
+        // لو الصورة موجودة بالفعل لنفس اليوم، متحفظش تاني
+        if (file_exists($path)) {
+            return response()->json(['success' => true, 'path' => $path, 'message' => 'الصورة محفوظة بالفعل لهذا اليوم.']);
+        }
+
+        file_put_contents($path, $imgData);
+
+        return response()->json(['success' => true, 'path' => $path]);
     }
-    // فك التشفير
-    $img = str_replace('data:image/png;base64,', '', $img);
-    $img = str_replace(' ', '+', $img); // استبدال الفراغات بـ +
-    $imgData = base64_decode($img); // فك تشفير الصورة
-
-    $fileName = 'screenshot_' . now()->format('Y-m-d') . '.png';
-    $path = storage_path('backups/images/' . $fileName);
-
-    // لو الصورة موجودة بالفعل لنفس اليوم، متحفظش تاني
-    if (file_exists($path)) {
-        return response()->json(['success' => true, 'path' => $path, 'message' => 'الصورة محفوظة بالفعل لهذا اليوم.']);
-    }
-
-    file_put_contents($path, $imgData);
-
-    return response()->json(['success' => true, 'path' => $path]);
-}
 }

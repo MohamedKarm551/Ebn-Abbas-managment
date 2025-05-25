@@ -8,6 +8,7 @@ use App\Models\RoomType;
 use App\Models\Employee;
 use App\Models\Agent;
 use App\Models\Hotel;
+use App\Models\Company;
 use App\Models\Notification;
 use App\Models\User;
 use App\Models\LandTripRoomPrice;
@@ -183,7 +184,7 @@ class LandTripController extends Controller
         // حساب عدد الأيام
         $daysCount = LandTrip::calculateDaysCount($departureDate, $returnDate);
 
-        DB::beginTransaction();
+        DB::beginTransaction(); // بدء المعاملة
 
         try {
             // إنشاء الرحلة
@@ -531,7 +532,7 @@ class LandTripController extends Controller
                 }
             }
             // unset($roomDataRef);
-                        // ** مهم جدًا: تطبيق التغييرات من $roomTypeChanges على $submittedRoomTypesForProcessing **
+            // ** مهم جدًا: تطبيق التغييرات من $roomTypeChanges على $submittedRoomTypesForProcessing **
             foreach ($roomTypeChanges as $index => $changes) {
                 $submittedRoomTypesForProcessing[$index] = array_merge(
                     $submittedRoomTypesForProcessing[$index],
@@ -920,16 +921,24 @@ class LandTripController extends Controller
         $totalDueToAgent = $validatedData['rooms'] * $costPrice * $landTrip->days_count;
         $totalDueFromCompany = $validatedData['rooms'] * $salePrice * $landTrip->days_count;
 
-        DB::beginTransaction();
+        // البحث عن الموظف المرتبط بالمستخدم الحالي
+        $employee = Employee::where('user_id', Auth::id())->first();
 
+        if (!$employee) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'لا يمكنك إنشاء الحجز: حسابك غير مرتبط بسجل موظف في النظام.');
+        }
+        DB::beginTransaction(); // بدء المعاملة
+        // dd($validatedData);
         try {
             // إنشاء الحجز
-            $booking = \App\Models\LandTripBooking::create([
+            $booking =  LandTripBooking::create([
                 'land_trip_id' => $landTrip->id,
                 'land_trip_room_price_id' => $roomPrice->id,
                 'client_name' => strip_tags($validatedData['client_name']),
                 'company_id' => $validatedData['company_id'],
-                'employee_id' => Auth::id(), // الموظف الحالي هو من يقوم بالحجز
+                'employee_id' => $employee->id, // الموظف الحالي هو من يقوم بالحجز
                 'rooms' => $validatedData['rooms'],
                 'cost_price' => $costPrice,
                 'sale_price' => $salePrice,
@@ -949,10 +958,10 @@ class LandTripController extends Controller
             ]);
 
             // إنشاء إشعار
-            $company = \App\Models\Company::find($validatedData['company_id']);
+            $company = Company::find($validatedData['company_id']);
             $notificationMessage = "تم إضافة حجز جديد للرحلة رقم: {$landTrip->id} للعميل: {$validatedData['client_name']} من شركة: {$company->name}. عدد الغرف: {$validatedData['rooms']}";
 
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => Auth::id(),
                 'message' => $notificationMessage,
                 'type' => 'حجز رحلة',

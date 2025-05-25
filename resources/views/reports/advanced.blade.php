@@ -73,23 +73,23 @@
             .no-print {
                 display: none !important;
             }
-            
+
             .container-fluid {
                 width: 100%;
                 max-width: 100%;
                 padding: 0;
             }
-            
+
             body {
                 background-color: white;
             }
-            
+
             .card {
                 box-shadow: none !important;
                 border: 1px solid #ddd !important;
                 break-inside: avoid;
             }
-            
+
             .chart-container {
                 height: 250px !important;
                 break-inside: avoid;
@@ -114,8 +114,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* تنسيقات للأجهزة المحمولة */
@@ -349,10 +354,11 @@
                     <div class="chart-container" style="height: 260px;">
                         <canvas id="roomStatusChart"></canvas>
                     </div>
-                    <div class="mt-3">
-                        <table class="table table-sm">
+                    <div class="mt-3 shadow">
+                        <table class="table table-sm table-striped table-hover  shadow">
                             <thead>
                                 <tr>
+                                    <th>#</th>
                                     <th>الفندق</th>
                                     <th>مشغولة</th>
                                     <th>متاحة</th>
@@ -362,14 +368,22 @@
                             <tbody>
                                 @foreach ($hotelStats as $hotel)
                                     <tr>
+                                        <td>{{ $loop->iteration }}</td>
+
                                         <td>{{ $hotel->name }}</td>
                                         <td>{{ $hotel->active_bookings }}</td>
-                                        <td>{{ $hotel->total_rooms - $hotel->active_bookings }}</td>
+                                        <td>{{ $hotel->total_rooms - $hotel->active_bookings }}
+                                            <br>
+                                            <div class="small text-muted">
+                                                من : {{ $hotel->purchased_rooms_count }}
+                                            </div>
+                                        </td>
                                         <td>
                                             <div class="progress" style="height: 5px;">
                                                 <div class="progress-bar bg-{{ $hotel->occupancy_rate > 80 ? 'danger' : ($hotel->occupancy_rate > 50 ? 'warning' : 'success') }}"
                                                     style="width: {{ $hotel->occupancy_rate }}%">
                                                 </div>
+
                                             </div>
                                             <small>{{ $hotel->occupancy_rate }}%</small>
                                         </td>
@@ -430,18 +444,35 @@
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
                                             <td>
-                                                <a href="{{ route('bookings.show', $booking->id) }}">
-                                                    {{ $booking->client_name }}
-                                                </a>
-                                                <div class="small text-muted">{{ $booking->company->name }}</div>
+                                                @if (isset($booking->is_land_trip) && $booking->is_land_trip)
+                                                    <a
+                                                        href="{{ route('admin.land-trips.show', str_replace('LT-', '', $booking->id)) }}">
+                                                        {{ $booking->client_name }}
+                                                    </a>
+                                                    <div class="small">
+                                                        <span class="badge bg-info">رحلة برية</span>
+                                                        <span class="text-muted">{{ $booking->company->name }}</span>
+                                                    </div>
+                                                @else
+                                                    <a href="{{ route('bookings.show', $booking->id) }}">
+                                                        {{ $booking->client_name }}
+                                                    </a>
+                                                    <div class="small text-muted">{{ $booking->company->name }}</div>
+                                                @endif
                                             </td>
                                             <td>{{ $booking->hotel->name }}</td>
                                             <td>{{ $booking->check_in->format('d/m/Y') }}</td>
                                             <td>{{ $booking->check_out->format('d/m/Y') }}</td>
-                                            <td>
-                                                {{ $booking->rooms }} غرفة
-                                                <div class="small text-muted">{{ $booking->days }} ليلة</div>
+                                            <td> {{ $booking->rooms }} غرفة
+                                                <div class="small text-muted">
+                                                    @if (isset($booking->is_land_trip) && $booking->is_land_trip && isset($booking->landTrip))
+                                                        {{ $booking->landTrip->days_count }} ليلة
+                                                    @else
+                                                        {{ $booking->days ?? 1 }} ليلة
+                                                    @endif
+                                                </div>
                                             </td>
+
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -481,14 +512,31 @@
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
                                             <td>
-                                                <a href="{{ route('bookings.show', $booking->id) }}">
-                                                    {{ $booking->client_name }}
-                                                </a>
-                                                <div class="small text-muted">{{ $booking->company->name }}</div>
+                                                @if (isset($booking->is_land_trip) && $booking->is_land_trip)
+                                                    <a
+                                                        href="{{ route('admin.land-trips.show', str_replace('LT-', '', $booking->id)) }}">
+                                                        {{ $booking->client_name }}
+                                                    </a>
+                                                    <div class="small">
+                                                        <span class="badge bg-info">رحلة برية</span>
+                                                        <span class="text-muted">{{ $booking->company->name }}</span>
+                                                    </div>
+                                                @else
+                                                    <a href="{{ route('bookings.show', $booking->id) }}">
+                                                        {{ $booking->client_name }}
+                                                    </a>
+                                                    <div class="small text-muted">{{ $booking->company->name }}</div>
+                                                @endif
                                             </td>
                                             <td>{{ $booking->hotel->name }}</td>
                                             <td>{{ $booking->check_in->format('d/m/Y') }}</td>
-                                            <td>{{ $booking->days }} ليلة</td>
+                                            <td>
+                                                @if (isset($booking->is_land_trip) && $booking->is_land_trip && isset($booking->landTrip))
+                                                    {{ $booking->landTrip->days_count }} ليلة
+                                                @else
+                                                    {{ $booking->days ?? 1 }} ليلة
+                                                @endif
+                                            </td>
                                             <td>{{ $booking->rooms }} غرفة</td>
                                         </tr>
                                     @endforeach
@@ -500,7 +548,7 @@
             </div>
         </div>
     </div>
-    </div>
+
 @endsection
 
 @push('scripts')
@@ -886,7 +934,7 @@
             document.getElementById('printReport')?.addEventListener('click', function() {
                 window.print();
             });
-        
+
 
             // حفظ التقرير كصورة
             document.getElementById('saveAsImage')?.addEventListener('click', async function() {
@@ -894,7 +942,8 @@
                     showLoadingOverlay('جاري تجهيز الصورة...');
                     await new Promise(resolve => setTimeout(resolve, 200));
                     // إخفاء العناصر غير المرغوبة
-                    const elementsToHide = document.querySelectorAll('.no-print, .dropdown-menu, #loadingOverlay');
+                    const elementsToHide = document.querySelectorAll(
+                        '.no-print, .dropdown-menu, #loadingOverlay');
                     const originalDisplays = [];
                     elementsToHide.forEach((el, i) => {
                         originalDisplays[i] = el.style.display;
@@ -940,7 +989,8 @@
                 try {
                     showLoadingOverlay('جاري تجهيز ملف PDF...');
                     await new Promise(resolve => setTimeout(resolve, 200));
-                    const elementsToHide = document.querySelectorAll('.no-print, .dropdown-menu, #loadingOverlay');
+                    const elementsToHide = document.querySelectorAll(
+                        '.no-print, .dropdown-menu, #loadingOverlay');
                     const originalDisplays = [];
                     elementsToHide.forEach((el, i) => {
                         originalDisplays[i] = el.style.display;
@@ -964,7 +1014,9 @@
                     });
                     showLoadingOverlay('جاري حفظ ملف PDF...');
                     await new Promise(resolve => setTimeout(resolve, 100));
-                    const { jsPDF } = window.jspdf;
+                    const {
+                        jsPDF
+                    } = window.jspdf;
                     const imgData = canvas.toDataURL('image/jpeg', 0.95);
                     const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
                     const pdf = new jsPDF(orientation, 'mm', 'a4');
@@ -991,7 +1043,7 @@
                     alert('حدث خطأ أثناء حفظ ملف PDF: ' + error.message);
                 }
             });
-            
+
         });
     </script>
 @endpush

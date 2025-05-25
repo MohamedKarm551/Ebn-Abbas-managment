@@ -16,13 +16,14 @@ class Hotel extends Model
         // 'image_path', 
         'description',
         'color',
-    ];
+        'purchased_rooms_count', // عدد الغرف المشتراة
+     ];
 
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'hotel_id');
     }
-        // العلاقة مع الرحلات البرية
+    // العلاقة مع الرحلات البرية
     public function landTrips()
     {
         return $this->hasMany(LandTrip::class);
@@ -71,13 +72,12 @@ class Hotel extends Model
     //     return null; // أو رابط صورة افتراضية
     // }
     public function getTotalDueByCurrencyAttribute()
-{
-    // تجميع الحجوزات حسب العملة وحساب المبالغ المستحقة
-    return $this->bookings()
-        ->select('currency', \Illuminate\Support\Facades\DB::raw('SUM(amount_due_to_hotel) as total'))
-        ->groupBy('currency')
-        ->pluck('total', 'currency')
-        ->toArray();
-}
-
+    {
+        // تجميع الحجوزات حسب العملة وحساب المبالغ المستحقة
+        return $this->bookings()
+            ->select('currency', \Illuminate\Support\Facades\DB::raw('SUM(amount_due_to_hotel) as total'))
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+    }
 }

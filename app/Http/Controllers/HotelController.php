@@ -51,6 +51,7 @@ class HotelController extends Controller
                 'regex:/^[\pL\pN\s\-()]+$/u'
             ],
             'location' => 'nullable|string|max:255',
+            'purchased_rooms_count' => 'nullable|integer|min:0', // التحقق من أن purchased_rooms_count هو عدد صحيح (اختياري)
             'description' => 'nullable|string',
             // التحقق من أن image_urls مصفوفة وأن كل عنصر فيها هو URL صالح (اختياري)
             'image_urls' => 'nullable|array',
@@ -69,6 +70,7 @@ class HotelController extends Controller
             'name' => $validatedData['name'],
             'location' => $validatedData['location'] ?? null,
             'description' => $validatedData['description'] ?? null,
+            'purchased_rooms_count' => $validatedData['purchased_rooms_count'] ?? 30, // استخدام القيمة الافتراضية 30 إذا لم يتم توفيرها
             // 'color' => $validatedData['color'] ?? '#000000', // إذا كان لديك حقل لون
         ]);
         // حفظ الصور المتعددة إذا تم توفيرها
@@ -123,6 +125,7 @@ class HotelController extends Controller
                 'regex:/^[\pL\pN\s\-()]+$/u'
             ],
             'location' => 'nullable|string|max:255',
+            'purchased_rooms_count' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
             'image_urls' => 'nullable|array',
             'image_urls.*' => 'nullable|url|max:1024', // التحقق من أن كل عنصر في المصفوفة هو URL صالح
@@ -137,6 +140,8 @@ class HotelController extends Controller
             'name' => $validatedData['name'],
             'location' => $validatedData['location'] ?? null,
             'description' => $validatedData['description'] ?? null,
+            // 'color' => $validatedData['color'] ?? '#000000', // إذا كان لديك حقل لون
+            'purchased_rooms_count' => $validatedData['purchased_rooms_count'] ?? 30, // استخدام القيمة الافتراضية 30 إذا لم يتم توفيرها
         ]);
 
         // معالجة الصور

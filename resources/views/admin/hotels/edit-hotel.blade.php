@@ -28,6 +28,15 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
+                <div class="col-md-6">
+                    <label for="purchased_rooms_count" class="form-label">عدد الغرف المشتراة (الافتراضي 30)</label>
+                    <input type="number" name="purchased_rooms_count" id="purchased_rooms_count"
+                        class="form-control @error('purchased_rooms_count') is-invalid @enderror"
+                        value="{{ old('purchased_rooms_count', $hotel->purchased_rooms_count ?? 30) }}" min="0">
+                    @error('purchased_rooms_count')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
                 <div class="col-12">
                     <label for="description" class="form-label">الوصف (اختياري)</label>
                     <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description"
@@ -183,7 +192,7 @@
                                         // إذا كان آخر حقل، قم فقط بمسح قيمته بدلاً من حذفه بالكامل
                                         // واجعل زر الحذف غير مرئي
                                         const inputField = groupToRemove.querySelector(
-                                        'input[name="image_urls[]"]');
+                                            'input[name="image_urls[]"]');
                                         if (inputField) {
                                             inputField.value = '';
                                         }
