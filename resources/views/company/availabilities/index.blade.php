@@ -458,7 +458,9 @@
                                     class="list-group-item px-0 py-3 room-type-item d-flex flex-column flex-sm-row justify-content-sm-between align-items-sm-center">
                                     <div class="room-details mb-2 mb-sm-0 text-center text-sm-start">
                                         <div class="mb-1">
-                                            <strong class="room-type-name fs-6">{{ $roomType->room_type_name }}</strong>
+                                            <strong class="room-type-name fs-6">
+                                                {{ $roomType->roomType ? $roomType->roomType->room_type_name : 'نوع غرفة غير محدد' }}
+                                            </strong>
                                         </div>
                                         <small class="text-muted room-pricing-info">
                                             <span class="me-3 price-info">السعر: <strong
