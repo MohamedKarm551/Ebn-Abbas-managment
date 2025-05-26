@@ -19,11 +19,8 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('company.land-trips.index') }}"><i
                                     class="fas fa-bus me-1"></i>الرحلات البرية</a>
-
                         </li>
-                    @endauth
-                @endif
-                @auth
+                    @endif
                     @if (auth()->user()->role != 'Company')
                         <li class="nav-item">
                             <a class="nav-link" href="/bookings/create">
@@ -31,8 +28,6 @@
                             </a>
                         </li>
                     @endif
-                @endauth
-                @auth
                     @if (auth()->user()->role === 'employee')
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('admin.availabilities.index') }}">الإتاحات <i
@@ -43,17 +38,13 @@
                                     class="fas fa-bus me-1"></i></a>
                         </li>
                     @endif
-                @endauth
-                @auth
                     @if (auth()->user()->role === 'Admin')
                         <li class="nav-item">
                             <a class="nav-link" href="/reports/daily">
                                 <i class="fas fa-chart-bar me-1"></i>
                                 التقارير اليومية
-
                             </a>
                         </li>
-
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button"
                                 data-bs-toggle="dropdown" aria-expanded="false">
@@ -69,104 +60,134 @@
                                 <li><a class="dropdown-item" href="{{ route('admin.hotels') }}">الفنادق <i
                                             class="fas fa-hotel me-1"></i></a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.room_types.index') }}">أنواع الغرف <i
-                                            class="fas fa-bed me-1"></i></a>
-                                </li> {{-- *** أضف هذا السطر *** --}}
-                                <li><a class="dropdown-item" href="{{ route('admin.availabilities.index') }}">الإتاحات
-                                        <i class="fas fa-clock me-1"></i></a>
-                                </li>
-
-
-                                <li><a class="dropdown-item" href="{{ route('admin.archived_bookings') }}">
-                                        الحجوزات المؤرشفة <i class="fas fa-archive me-1"></i> </a></li>
-                                @auth
-                                    @if (auth()->user()->role === 'Admin' || auth()->user()->role === 'employee')
-                                        <li><a class="dropdown-item" href="{{ route('admin.land-trips.index') }}">
-                                            الرحلات البرية <i class="fas fa-bus me-1"></i>
-                                            </a>
-                                        </li>
-                                    @endif
-                                @endauth <li><a class="dropdown-item" href="{{ route('admin.notifications') }}">
-                                        الإشعارات<i class="fas fa-bell me-1"></i>
-                                    </a></li>
-                                </a>
+                                            class="fas fa-bed me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.availabilities.index') }}">الإتاحات <i
+                                            class="fas fa-clock me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.archived_bookings') }}">الحجوزات
+                                        المؤرشفة <i class="fas fa-archive me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.land-trips.index') }}">الرحلات البرية <i
+                                            class="fas fa-bus me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.notifications') }}">الإشعارات <i
+                                            class="fas fa-bell me-1"></i></a></li>
+                            </ul>
                         </li>
-                </ul>
-                </li>
-                {{-- *** نهاية الإضافة *** --}}
-                @endif
-
-
-
-
-            @endauth
+                    @endif
+                @endauth
             </ul>
+
             <div class="d-flex align-items-center gap-2">
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="darkModeSwitch">
                     <label class="form-check-label" for="darkModeSwitch">دارك مود</label>
                 </div>
+
                 @auth
                     @if (auth()->user()->role === 'Admin' || auth()->user()->role === 'employee')
-                        {{-- أو أي دور تستخدمه للإشعارات --}}
-                        {{-- @php
-                            $unreadNotificationsCount = \App\Models\Notification::where('is_read', false)->count();
-                        @endphp --}}
                         <li class="nav-item dropdown position-relative mx-2 list-unstyled">
                             <a class="nav-link position-relative d-flex align-items-center" href="#"
                                 id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <svg id="notification-bell-svg" xmlns="http://www.w3.org/2000/svg" width="24"
-                                    height="24" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
-                                    {{-- المسار الداخلي (جسم الجرس واللسان) - زي ما هو --}}
-                                    <path
-                                        d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm0-14.082L7.203 2.08a4.002 4.002 0 0 0-3.203 3.92c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.918z" />
-                                    {{-- المسار الخارجي (الحدود اللي النقطة هتمشي عليها) - عدلناه عشان يبقى مسار واحد واديناه ID --}}
-                                    <path id="bell-outline-path" fill="none" stroke="currentColor" stroke-width="0.1"
-                                        {{-- خليناه خط رفيع جداً وغير مرئي تقريباً بس عشان نحدد المسار --}}
-                                        d="M14.22,12 C14.443,12.447 14.701,12.801 15,13 L1,13 C1.299,12.801 1.557,12.447 1.78,12 C2.68,10.2 3,6.88 3,6 C3,3.58 4.72,1.56 7.005,1.099 A1,1 0 0 1 8,1 A1,1 0 0 1 8.995,1.099 A5.002,5.002 0 0 1 13,6 C13,6.88 13.32,10.2 14.22,12 Z" />
-                                    {{-- عنصر النقطة اللي هتتحرك (هنضيفه هنا) --}}
-                                    <circle id="moving-dot" r="0.5" fill="rgba(220, 53, 69, 0.8)"> {{-- نقطة حمراء نص شفافة --}}
-                                        {{-- هنا هنطبق الأنيميشن بالـ CSS --}}
-                                    </circle>
-                                </svg>
+                                <i class="fas fa-bell fa-lg"></i>
                                 @if (isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
                                     <span
-                                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        class="position-absolute top-10 start-100 translate-middle badge rounded-pill bg-danger">
                                         {{ $unreadNotificationsCount }}
                                     </span>
                                 @endif
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2 notif-dropdown"
+                           
+                            <ul class="dropdown-menu dropdown-menu-end shadow text-end mt-2 notif-dropdown animate__animated animate__fadeIn"
                                 aria-labelledby="notifDropdown"
-                                style="min-width: 320px; max-width: 90vw; direction: rtl;">
-                                <li class="dropdown-header fw-bold">آخر 5 إشعارات</li>
-                                @forelse($lastNotifications as $notification)
-                                    <li>
-                                        <div class="dropdown-item small {{ $notification->is_read ? 'opacity-50' : '' }} text-wrap"
-                                            style="white-space: normal;">
-                                            <span class="fw-bold">{{ $notification->type }}</span> -
-                                            {{ \Illuminate\Support\Str::limit($notification->message, 50) }}
-                                            <br>
-                                            <span
-                                                class="text-muted small">{{ $notification->created_at->diffForHumans() }}</span>
-                                        </div>
-                                    </li>
-                                @empty
-                                    <li><span class="dropdown-item text-muted small">لا توجد إشعارات</span></li>
-                                @endforelse
-                                <li>
-                                    <hr class="dropdown-divider">
+                                style="min-width: 320px; max-width: 90vw; direction: rtl; border-radius: 0.5rem; border: none;">
+
+                                <!-- رأس القائمة بتصميم محسن -->
+                                <li class="dropdown-header bg-light p-3 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-bell-exclamation text-primary me-2"></i>
+                                        <span class="fw-bold">آخر الإشعارات</span>
+                                    </div>
+                                    @if (isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
+                                        <span class="badge bg-primary rounded-pill">{{ $unreadNotificationsCount }}</span>
+                                    @endif
                                 </li>
+
+                                <!-- منطقة قابلة للتمرير -->
+                                <div class="notification-scroll" style="max-height: 350px; overflow-y: auto;">
+                                    @forelse($lastNotifications as $notification)
+                                        <li
+                                            class="notification-item {{ !$notification->is_read ? 'unread-notification' : '' }}">
+                                            <div class="dropdown-item small text-wrap py-2 px-3 d-flex align-items-start">
+
+                                                <!-- أيقونة ديناميكية حسب نوع الإشعار -->
+                                                <div class="notification-icon me-2">
+                                                    @if (Str::contains(strtolower($notification->type), 'تعديل'))
+                                                        <div class="icon-circle bg-warning">
+                                                            <i class="fas fa-edit text-white"></i>
+                                                        </div>
+                                                    @elseif(Str::contains(strtolower($notification->type), 'إضافة'))
+                                                        <div class="icon-circle bg-success">
+                                                            <i class="fas fa-plus text-white"></i>
+                                                        </div>
+                                                    @elseif(Str::contains(strtolower($notification->type), 'حذف'))
+                                                        <div class="icon-circle bg-danger">
+                                                            <i class="fas fa-trash text-white"></i>
+                                                        </div>
+                                                    @elseif(Str::contains(strtolower($notification->type), 'دفعة'))
+                                                        <div class="icon-circle bg-info">
+                                                            <i class="fas fa-money-bill-wave text-white"></i>
+                                                        </div>
+                                                    @elseif(Str::contains(strtolower($notification->type), 'حجز'))
+                                                        <div class="icon-circle bg-primary">
+                                                            <i class="fas fa-calendar-check text-white"></i>
+                                                        </div>
+                                                    @else
+                                                        <div class="icon-circle bg-secondary">
+                                                            <i class="fas fa-bell text-white"></i>
+                                                        </div>
+                                                    @endif
+                                                </div>
+
+                                                <!-- نص الإشعار بترتيب محسن -->
+                                                <div
+                                                    class="notification-content flex-grow-1 {{ $notification->is_read ? 'opacity-75' : '' }}">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="fw-bold">{{ $notification->type }}</span>
+                                                        <small
+                                                            class="text-muted ms-2">{{ $notification->created_at->diffForHumans() }}</small>
+                                                    </div>
+                                                    <p class="mb-0 small notification-message">
+                                                        {{ \Illuminate\Support\Str::limit($notification->message, 50) }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    @empty
+                                        <!-- تصميم محسن للحالة الفارغة -->
+                                        <li class="py-4">
+                                            <div class="text-center empty-state">
+                                                <i class="far fa-bell-slash text-muted mb-2"
+                                                    style="font-size: 2rem; opacity: 0.5;"></i>
+                                                <p class="text-muted mb-0">لا توجد إشعارات جديدة</p>
+                                            </div>
+                                        </li>
+                                    @endforelse
+                                </div>
+
+                                <!-- الفوتر -->
                                 <li>
-                                    <a class="dropdown-item text-center text-primary"
+                                    <hr class="dropdown-divider mb-0 mt-0">
+                                </li>
+                                <li class="p-2 bg-light">
+                                    <a class="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center"
                                         href="{{ route('admin.notifications') }}">
+                                        <i class="fas fa-list-ul me-2"></i>
                                         عرض كل الإشعارات
                                     </a>
                                 </li>
                             </ul>
                         </li>
                     @endif
-
                 @endauth
+
                 @auth
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button"
