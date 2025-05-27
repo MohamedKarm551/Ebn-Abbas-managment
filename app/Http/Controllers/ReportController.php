@@ -1369,4 +1369,164 @@ class ReportController extends Controller
 
         return response()->json(['success' => true, 'path' => $path]);
     }
+    /**
+     * عرض صفحة مخطط العلاقات
+     */
+    public function networkGraph()
+    {
+        return view('reports.network_graph');
+    }
+
+    /**
+     * جلب بيانات الشبكة للمخطط التفاعلي
+     */
+    public function getNetworkData(Request $request)
+    {
+        // الحصول على المعاملات من الطلب
+        $limit = $request->input('limit', 50); // عدد الحجوزات المراد عرضها
+        $agentId = $request->input('agent_id'); // تصفية حسب جهة الحجز
+        $hotelId = $request->input('hotel_id'); // تصفية حسب الفندق
+        $companyId = $request->input('company_id'); // تصفية حسب الشركة
+
+        // قم بجلب آخر الحجوزات مع العلاقات
+        $query = Booking::with(['hotel', 'agent', 'company'])
+            ->latest('created_at');
+
+        // تطبيق الفلاتر إذا كانت موجودة
+        if ($agentId) {
+            $query->where('agent_id', $agentId);
+        }
+
+        if ($hotelId) {
+            $query->where('hotel_id', $hotelId);
+        }
+
+        if ($companyId) {
+            $query->where('company_id', $companyId);
+        }
+
+        $bookings = $query->take($limit)->get();
+
+        // تجهيز بيانات المخطط
+        $nodes = [];
+        $links = [];
+        $nodeIds = [];
+
+        // إضافة عقد للشركات
+        $companies = [];
+        foreach ($bookings as $booking) {
+            if ($booking->company && !isset($companies[$booking->company_id])) {
+                $companies[$booking->company_id] = $booking->company;
+            }
+        }
+
+        foreach ($companies as $company) {
+            $nodeId = 'company_' . $company->id;
+            if (!in_array($nodeId, $nodeIds)) {
+                $nodes[] = [
+                    'id' => $nodeId,
+                    'name' => $company->name,
+                    'type' => 'company',
+                    'value' => 15, // حجم العقدة
+                ];
+                $nodeIds[] = $nodeId;
+            }
+        }
+
+        // إضافة عقد لجهات الحجز
+        $agents = [];
+        foreach ($bookings as $booking) {
+            if ($booking->agent && !isset($agents[$booking->agent_id])) {
+                $agents[$booking->agent_id] = $booking->agent;
+            }
+        }
+
+        foreach ($agents as $agent) {
+            $nodeId = 'agent_' . $agent->id;
+            if (!in_array($nodeId, $nodeIds)) {
+                $nodes[] = [
+                    'id' => $nodeId,
+                    'name' => $agent->name,
+                    'type' => 'agent',
+                    'value' => 12, // حجم العقدة
+                ];
+                $nodeIds[] = $nodeId;
+            }
+
+            // إضافة رابط بين الشركة وجهة الحجز (إذا وجدت)
+            foreach ($bookings as $booking) {
+                if ($booking->agent_id == $agent->id && $booking->company) {
+                    $links[] = [
+                        'source' => 'company_' . $booking->company_id,
+                        'target' => 'agent_' . $agent->id,
+                        'value' => 2, // سمك الخط
+                    ];
+                }
+            }
+        }
+
+        // إضافة عقد للفنادق
+        $hotels = [];
+        foreach ($bookings as $booking) {
+            if ($booking->hotel && !isset($hotels[$booking->hotel_id])) {
+                $hotels[$booking->hotel_id] = $booking->hotel;
+            }
+        }
+
+        foreach ($hotels as $hotel) {
+            $nodeId = 'hotel_' . $hotel->id;
+            if (!in_array($nodeId, $nodeIds)) {
+                $nodes[] = [
+                    'id' => $nodeId,
+                    'name' => $hotel->name,
+                    'type' => 'hotel',
+                    'value' => 10, // حجم العقدة
+                ];
+                $nodeIds[] = $nodeId;
+            }
+
+            // إضافة روابط بين جهات الحجز والفنادق
+            foreach ($bookings as $booking) {
+                if ($booking->hotel_id == $hotel->id && $booking->agent) {
+                    $links[] = [
+                        'source' => 'agent_' . $booking->agent_id,
+                        'target' => 'hotel_' . $hotel->id,
+                        'value' => 2, // سمك الخط
+                    ];
+                }
+            }
+        }
+
+        // إضافة عقد للعملاء/الحجوزات
+        foreach ($bookings as $index => $booking) {
+            $nodeId = 'booking_' . $booking->id;
+            if (!in_array($nodeId, $nodeIds)) {
+                $nodes[] = [
+                    'id' => $nodeId,
+                    'name' => $booking->client_name ?: 'حجز #' . $booking->id,
+                    'type' => 'booking',
+                    'value' => 8, // حجم العقدة
+                    'booking_id' => $booking->id,
+                    'check_in' => $booking->check_in ? $booking->check_in->format('Y-m-d') : '',
+                    'check_out' => $booking->check_out ? $booking->check_out->format('Y-m-d') : '',
+                    'rooms' => $booking->rooms,
+                ];
+                $nodeIds[] = $nodeId;
+            }
+
+            // إضافة رابط بين الفندق والحجز
+            if ($booking->hotel) {
+                $links[] = [
+                    'source' => 'hotel_' . $booking->hotel_id,
+                    'target' => 'booking_' . $booking->id,
+                    'value' => 1, // سمك الخط
+                ];
+            }
+        }
+
+        return response()->json([
+            'nodes' => $nodes,
+            'links' => $links
+        ]);
+    }
 }

@@ -21,6 +21,10 @@
             <a href="{{ route('reports.advanced') }}" class="btn btn-primary btn-lg mb-3 mb-md-0 ms-md-3">
                 <i class="fas fa-chart-line me-2"></i> عرض التقارير المتقدمة
             </a>
+            <!-- زر مخطط العلاقات -->
+            <a href="{{ route('network.graph') }}" class="btn btn-success btn-lg mb-3 mb-md-0 ms-md-3">
+                <i class="fas fa-project-diagram me-2"></i> مخطط العلاقات
+            </a>
             {{-- *** بداية التعديل: إضافة التاريخ والوقت فوق الصورة *** --}}
             {{-- حاوية الصورة والنص (Relative Positioning) --}}
             <div style="position: relative;max-width: 200px;filter: drop-shadow(2px 2px 10px #000);"> {{-- نفس العرض الأقصى للصورة --}}

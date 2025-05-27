@@ -142,7 +142,9 @@ Route::middleware(['auth'])->group(function () {
         // عرض دفعة وكيل (قد لا تحتاجها إذا كان العرض ضمن صفحة السجل)
         // Route::get('reports/agent/payment/{id}', [ReportController::class, 'showAgentPayment'])
         //     ->name('reports.agent.payment.show');
-
+        // إضافة مسار لعرض مخطط العلاقات
+        Route::get('/network-graph', [ReportController::class, 'networkGraph'])->name('network.graph');
+        Route::get('/network-data', [ReportController::class, 'getNetworkData'])->name('network.data');
     });
     Route::post('/save-screenshot', [\App\Http\Controllers\ReportController::class, 'saveScreenshot']);
     Route::post('/save-pdf', [\App\Http\Controllers\ReportController::class, 'savePDF']);
