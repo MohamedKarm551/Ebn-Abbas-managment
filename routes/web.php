@@ -15,6 +15,7 @@ use App\Http\Controllers\CompanyAvailabilityController;
 use App\Http\Controllers\LandTripController;
 use App\Http\Controllers\CompanyLandTripController;
 use App\Http\Controllers\TripTypeController;
+use App\Http\Controllers\HotelRoomController;
 use App\Models\User;
 use Jenssegers\Agent\Agent;
 use App\Models\Notification;
@@ -74,6 +75,26 @@ Route::middleware(['auth'])->group(function () {
 
         // إدارة الإتاحات
         Route::resource('availabilities', AvailabilityController::class);
+    });
+    // مسارات إدارة غرف الفنادق
+    Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->group(function () {
+
+        Route::get('/hotel-rooms', [HotelRoomController::class, 'index'])->name('hotel.rooms.index');
+        Route::get('/hotel-rooms/hotel/{id}', [HotelRoomController::class, 'showHotel'])->name('hotel.rooms.hotel');
+        Route::get('/hotel-rooms/{id}', [HotelRoomController::class, 'showRoom'])->name('hotel.rooms.show');
+        Route::post('/hotel-rooms/create', [HotelRoomController::class, 'createRooms'])->name('hotel.rooms.create');
+        Route::post('/hotel-rooms/assign', [HotelRoomController::class, 'assignRoom'])->name('hotel.rooms.assign');
+        // 1. عرض صفحة نموذج تعديل غرفة واحدة
+        Route::get('/hotels/rooms/{room}/edit', [HotelRoomController::class, 'edit'])->name('hotel.rooms.edit');
+
+        // 2. استقبال عملية الحفظ بعد التعديل
+        Route::patch('/hotels/rooms/{room}', [HotelRoomController::class, 'update'])->name('hotel.rooms.update');
+
+        // 3. حذف غرفة نهائيًا
+        Route::delete('/hotels/rooms/{room}', [HotelRoomController::class, 'destroy'])->name('hotel.rooms.destroy');
+        Route::patch('/hotel-rooms/end-assignment/{id}', [HotelRoomController::class, 'endAssignment'])->name('hotel.rooms.end-assignment');
+        Route::post('/hotel-rooms/assign-multiple', [HotelRoomController::class, 'assignMultipleRooms'])->name('hotel.rooms.assign-multiple');
+        Route::post('/hotel-rooms/add-guest', [HotelRoomController::class, 'addGuest'])->name('hotel.rooms.add-guest');
     });
     // *** مجموعة روتات الشركات ***
     // *** هنشيل middleware(['isCompany']) من هنا مؤقتاً ***

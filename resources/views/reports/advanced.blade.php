@@ -348,7 +348,9 @@
         <div class="col-lg-5 mb-4">
             <div class="  h-100">
                 <div class="card-header">
-                    <h5 class="mb-2">حالة الغرف اليوم</h5>
+                    <h5 class="mb-2"> <a href="{{ route('hotel.rooms.index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-chart-pie me-1"></i> عرض حالة الغرف
+                        </a> </h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 260px;">

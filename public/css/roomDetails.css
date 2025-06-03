@@ -1,0 +1,299 @@
+   /* ------------------------------------------------ */
+   /* 1. جعل بطاقة الغرفة عمودية Flex Container بالكامل */
+   /* ------------------------------------------------ */
+   .room-card .card {
+       display: flex;
+       flex-direction: column;
+       height: 100%;
+   }
+
+   /* ------------------------------------------------ */
+   /* 2. تقييد هيدر البطاقة بالغرف فقط */
+   /* ------------------------------------------------ */
+   .room-card .room-card-header {
+       background: linear-gradient(135deg, #667eea, #764ba2);
+       color: #fff;
+       border-bottom: none;
+       padding: 0.75rem 1rem;
+       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+   }
+
+   /* ------------------------------------------------ */
+   /* 3. جسم البطاقة الغرف: مرن Flex ليدفع الفوتر للأسفل */
+   /* ------------------------------------------------ */
+   .room-card .room-card-body {
+       background-color: #fff;
+       /* خلفية بيضاء */
+       display: flex;
+       flex-direction: column;
+       padding: 1rem;
+       flex: 1;
+       /* يشغل المساحة المتبقية داخل البطاقة */
+       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+   }
+
+   /* ------------------------------------------------ */
+   /* 4. الفوتر: ثابت أسفل البطاقة ولا يتداخل مع الجسم */
+   /* ------------------------------------------------ */
+   .room-card .room-card-footer {
+       background-color: #fff;
+       padding: 0.5rem 0.75rem;
+       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+       border-top: 1px solid #e9ecef;
+   }
+
+   /*  إضافات لتحسين توزيع الأزرار في فوتر البطاقة */
+   /* ------------------------------------------ */
+   .room-card .room-card-footer {
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       flex-wrap: wrap;
+       /* يسمح بانتقال الأزرر إلى سطر جديد عند ضيق المساحة */
+       gap: 0.5rem;
+       /* مسافة أفقية/عمودية بين الأزرر عند الانتقال للسطر الثاني */
+       padding: 0.5rem 0.75rem;
+       background-color: #fff;
+       border-top: 1px solid #e9ecef;
+   }
+
+   /*  نجعل كل زر يأخذ تقريبًا ثلث العرض إذا توافرت المساحة، أو ينتقل للسطر التالي  */
+   .room-card .room-card-footer .btn {
+       flex: 1 1 calc(33.333% - 0.5rem);
+       /* 1 1: السماح بالتمدّد والانكماش، calc(...) لضمان التوزيع الثلاثي */
+       margin: 0;
+       /* المسافات الداخلية من gap */
+       white-space: nowrap;
+       /* يمنع انكسار الكلام داخل الزر */
+       font-size: 0.85rem;
+       /* حجم مصغر قليلاً حتى تتسع النصوص */
+       display: flex;
+       justify-content: center;
+       align-items: center;
+   }
+
+   /*  إن كان هناك نص طويل نسبيًا (مثلاً "عرض التفاصيل")، يمكن تقصيره أو اختصاره في HTML */
+   /*  ولكن هذه القاعدة تمنع التفاف النص داخل الزر نفسه.  */
+
+   /*  إذا كنت تريد أن يظهر كل زر بمظهر ذي حواف أكثر سلاسة:  */
+   .room-card .room-card-footer .btn i {
+       margin-right: 0.25rem;
+       /* مسافة بين الأيقونة والنص */
+       pointer-events: none;
+       /* منع الأيقونة نفسها من التقاط النقر مباشرة */
+   }
+
+   /*  (تكملة للقواعد السابقة الخاصة بنمط الأزرار) */
+   .btn-info {
+       background: linear-gradient(135deg, #0099f7, #f11712);
+       border: none;
+       color: #fff;
+       transition: opacity 0.3s ease;
+   }
+
+   .btn-info:hover {
+       opacity: 0.85;
+   }
+
+   .btn-warning {
+       background: linear-gradient(135deg, #f7971e, #ffd200);
+       border: none;
+       color: #333;
+       transition: opacity 0.3s ease;
+   }
+
+   .btn-warning:hover {
+       opacity: 0.85;
+   }
+
+   .btn-danger {
+       background: linear-gradient(135deg, #e52d27, #b31217);
+       border: none;
+       color: #fff;
+       transition: opacity 0.3s ease;
+   }
+
+   .btn-danger:hover {
+       opacity: 0.85;
+   }
+
+   /* ------------------------------------------------ */
+   /* 5. تأثير التحويم العام على الكارد (Smooth Hover) */
+   /* ------------------------------------------------ */
+   .hover-card {
+       border-radius: 1.5rem;
+       /* زوايا مستديرة جدًا */
+       /* overflow: hidden; */
+       transition: transform 0.3s ease, box-shadow 0.3s ease;
+   }
+
+   .hover-card:hover {
+       transform: translateY(-8px);
+       box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.2);
+   }
+
+   /* ------------------------------------------------ */
+   /* 6. تنسيق أسلاك الأسرة بشكل ناعم */
+   /* ------------------------------------------------ */
+   .bed-icons .fa-bed {
+       filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.1));
+       transition: transform 0.3s ease, color 0.3s ease;
+       font-size: 1.2rem;
+   }
+
+   .bed-icons .fa-bed:hover {
+       transform: translateY(-4px);
+   }
+
+   /* ------------------------------------------------ */
+   /* 7. تدرّج لوني خفيف لصناديق الـ Alerts */
+   /* ------------------------------------------------ */
+   .alert-warning {
+       background: linear-gradient(135deg, #fdfd96, #ffda79);
+       color: #444;
+   }
+
+   .alert-danger {
+       background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+       color: #333;
+   }
+
+   .alert-success {
+       background: linear-gradient(135deg, #a8e063, #56ab2f);
+       color: #fff;
+   }
+
+   /* ------------------------------------------------ */
+   /* 8. زوايا مستديرة جدًا للنوافذ المنبثقة (Modals) */
+   /* ------------------------------------------------ */
+   .modal-content {
+       border-radius: 1rem;
+       overflow: hidden;
+   }
+
+   .modal-header {
+       background: linear-gradient(135deg, #667eea, #764ba2);
+       color: #fff;
+       border-bottom: none;
+   }
+
+   .modal-footer {
+       border-top: none;
+       background-color: #f8f9fa;
+   }
+
+   /* ------------------------------------------------ */
+   /* 9. تنسيق أزرار الغرف (تدرّج لوني) */
+   /* ------------------------------------------------ */
+   .btn-info {
+       background: linear-gradient(135deg, #0099f7, #f11712);
+       border: none;
+       color: #fff;
+       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+       transition: opacity 0.3s ease;
+   }
+
+   .btn-info:hover {
+       opacity: 0.85;
+   }
+
+   .btn-warning {
+       background: linear-gradient(135deg, #f7971e, #ffd200);
+       border: none;
+       color: #333;
+       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+       transition: opacity 0.3s ease;
+   }
+
+   .btn-warning:hover {
+       opacity: 0.85;
+   }
+
+   .btn-danger {
+       background: linear-gradient(135deg, #e52d27, #b31217);
+       border: none;
+       color: #fff;
+       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+       transition: opacity 0.3s ease;
+   }
+
+   .btn-danger:hover {
+       opacity: 0.85;
+   }
+
+   /* ------------------------------------------------ */
+   /* 10. تنسيق أيقونات الإجراءات داخل الكارد */
+   /* ------------------------------------------------ */
+   .card-footer i {
+       font-size: 1rem;
+   }
+
+   /* ------------------------------------------------ */
+   /* 11. تحسين عام للخط والحجم ليتناسب مع المظهر العصري */
+   /* ------------------------------------------------ */
+   .card,
+   .card-body,
+   .card-footer,
+   .card-header {
+       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+   }
+
+   /* ------------------------------------------------ */
+   /* 12. تلوين خلفية الصفحة بطريقة ناعمة */
+   /* ------------------------------------------------ */
+   body {
+       background-color: #f2f5f9;
+   }
+
+   /* ------------------------------------------------ */
+   /* 13. ضمان عدم انتقال الضغط من الأزرار إلى الرابط */
+   /* ------------------------------------------------ */
+   .btn-warning,
+   .btn-danger {
+       cursor: pointer;
+   }
+
+   .btn-warning i,
+   .btn-danger i {
+       pointer-events: none;
+       /* منع الأيقونة نفسها من التقاط النقر مباشرة */
+   }
+
+   .bed-occupied-tooltip {
+       transition: all 0.2s ease;
+   }
+
+   .bed-occupied-tooltip:hover {
+       transform: scale(1.2);
+       filter: drop-shadow(0 0 3px rgba(220, 53, 69, 0.5));
+   }
+
+   /* تحسين مظهر الـ tooltip */
+   .tooltip .tooltip-inner {
+       background-color: #dc3545;
+       color: white;
+       font-size: 0.85rem;
+       font-weight: 500;
+       padding: 8px 12px;
+       border-radius: 6px;
+       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+   }
+
+   .tooltip .tooltip-arrow::before {
+       border-top-color: #dc3545 !important;
+   }
+
+   /* ضروري حتى تعمل التحويلات (transform) عند الـ hover */
+   .bed-icons .fa-bed {
+       display: inline-block;
+       transition: transform 0.2s ease, filter 0.2s ease;
+   }
+
+   .bed-icons .fa-bed:hover {
+       transform: translateY(-4px);
+   }
+
+   .bed-occupied-tooltip:hover {
+       transform: scale(1.2);
+       filter: drop-shadow(0 0 3px rgba(220, 53, 69, 0.7));
+   }

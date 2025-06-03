@@ -61,6 +61,12 @@
                                             class="fas fa-hotel me-1"></i></a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.room_types.index') }}">أنواع الغرف <i
                                             class="fas fa-bed me-1"></i></a></li>
+                                            {{-- عرض حالة الغرف  --}}
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('hotel.rooms.index') }}"> حالة الغرف <i
+                                                        class="fas fa-door-open me-1"></i>
+                                                    </a>
+                                            </li>
                                 <li><a class="dropdown-item" href="{{ route('admin.availabilities.index') }}">الإتاحات <i
                                             class="fas fa-clock me-1"></i></a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.archived_bookings') }}">الحجوزات
@@ -187,7 +193,31 @@
                         </li>
                     @endif
                 @endauth
+                        <!-- تنبيه للحجوزات التي تحتاج لتخصيص غرف -->
+@auth
+    @if(auth()->user()->role === 'Admin' || auth()->user()->role === 'employee')
+        @php
+            $unassignedBookingsCount = \App\Models\Booking::whereDate('check_in', '<=', now())
+                ->whereDate('check_out', '>', now())
+                ->whereDoesntHave('roomAssignment', function($q) {
+                    $q->where('status', 'active');
+                })->count();
+        @endphp
 
+        @if($unassignedBookingsCount > 0)
+        <li class="nav-item dropdown position-relative mx-2 list-unstyled">
+            <a class="nav-link position-relative d-flex align-items-center text-danger" 
+               href="{{ route('hotel.rooms.index') }}"
+               title="حجوزات بحاجة لتخصيص غرف">
+                <i class="fas fa-door-open fa-lg"></i>
+                <span class="position-absolute top-10 start-100 translate-middle badge rounded-pill bg-danger animation-pulse">
+                    {{ $unassignedBookingsCount }}
+                </span>
+            </a>
+        </li>
+        @endif
+    @endif
+@endauth
                 @auth
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button"
@@ -209,3 +239,23 @@
         </div>
     </div>
 </nav>
+
+<style>
+    .animation-pulse {
+        animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+        70% {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+</style>

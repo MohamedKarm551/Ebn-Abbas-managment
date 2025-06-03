@@ -4,6 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\RoomAssignment;
 use Carbon\Carbon;
 
 class Booking extends Model
@@ -171,4 +172,21 @@ class Booking extends Model
     {
         return $this->total_nights * $this->rooms * $this->cost_price;
     }
+    // *** علاقة الحجز بالغرف المخصصة ***
+    /**
+ * العلاقة مع تخصيص الغرفة
+ * تمثل تخصيص الغرفة لهذا الحجز
+ */
+public function roomAssignment()
+{
+    return $this->hasOne(RoomAssignment::class);
+}
+
+/**
+ * إذا كان الحجز يمكن أن يكون له أكثر من تخصيص غرفة (تاريخياً)
+ */
+public function roomAssignments()
+{
+    return $this->hasMany(RoomAssignment::class);
+}
 }

@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage; // *** استيراد Storage ***
+use App\Models\HotelRoom;
 
 class Hotel extends Model
 {
     use HasFactory;
-
+    
     protected $fillable = [
         'name',
         'location',
@@ -80,4 +81,8 @@ class Hotel extends Model
             ->pluck('total', 'currency')
             ->toArray();
     }
+    public function rooms()
+{
+    return $this->hasMany(HotelRoom::class, 'hotel_id');
+}
 }

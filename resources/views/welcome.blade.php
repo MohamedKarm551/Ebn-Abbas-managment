@@ -379,5 +379,6 @@
                 }, 500);
             });
             </script> 
+            <script src="{{ asset('js/preventClick.js') }}"></script>
     </body>
 </html>

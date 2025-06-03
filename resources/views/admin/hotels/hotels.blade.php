@@ -31,7 +31,7 @@
                     <label for="purchased_rooms_count" class="form-label">عدد الغرف المشتراة (الافتراضي 30)</label>
                     <input type="number" name="purchased_rooms_count" id="purchased_rooms_count"
                         class="form-control @error('purchased_rooms_count') is-invalid @enderror"
-                        value="{{ old('purchased_rooms_count', $hotel->purchased_rooms_count ?? 30) }}" min="0">
+                        value="{{ old('purchased_rooms_count', $hotel->purchased_rooms_count ?? 30) }}" min="0" readonly
                     @error('purchased_rooms_count')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
