@@ -243,7 +243,9 @@
                                                         @endphp
                                                         <i class="fas fa-bed text-danger mx-1 bed-occupied-tooltip"
                                                             data-bs-toggle="tooltip" data-bs-placement="top"
-                                                            title="{{ $guestName }}" style="cursor: pointer;"></i>
+                                                            title="{{ $guestName }}"
+                                                            data-bs-title="{{ $guestName }}"
+                                                            style="cursor: pointer;"></i>
                                                     @else
                                                         <i class="fas fa-bed text-success mx-1" title="سرير متاح"></i>
                                                     @endif
@@ -942,13 +944,18 @@
                         document.getElementById('delete_room_number').textContent = roomNumber;
                     });
                 }
-                // any icon has : bed-occupied-tooltip put title attribute = title="مشغول: {{ $guestName }}"
-                // if guestName exists
-                @if(isset($guestName))
-                    document.querySelectorAll('.bed-occupied-tooltip').forEach(function(icon) {
-                        icon.setAttribute('title', '{{ $guestName }}');
+
+            });
+            // بعد تحميل الصفحة، لكل أيقونة ذات الصنف bed-occupied-tooltip
+            document.querySelectorAll('.bed-occupied-tooltip').forEach(function(el) {
+                el.addEventListener('mouseover', function() {
+                    var tooltip = new bootstrap.Tooltip(el, {
+                        html: true,
+                        trigger: 'hover',
+                        container: 'body'
                     });
-                @endif
+                    tooltip.show();
+                });
             });
         </script>
     @endpush
