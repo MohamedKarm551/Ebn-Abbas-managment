@@ -942,10 +942,13 @@
                         document.getElementById('delete_room_number').textContent = roomNumber;
                     });
                 }
-                // any icon has : bed-occupied-tooltip put title attribute =             title="مشغول: {{ $guestName }}"
-                document.querySelectorAll('.bed-occupied-tooltip').forEach(function(icon) {
-                    icon.setAttribute('title', ' {{ $guestName }}');
-                });
+                // any icon has : bed-occupied-tooltip put title attribute = title="مشغول: {{ $guestName }}"
+                // if guestName exists
+                @if(isset($guestName))
+                    document.querySelectorAll('.bed-occupied-tooltip').forEach(function(icon) {
+                        icon.setAttribute('title', '{{ $guestName }}');
+                    });
+                @endif
             });
         </script>
     @endpush
