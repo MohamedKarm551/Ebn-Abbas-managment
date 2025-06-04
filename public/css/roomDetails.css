@@ -259,29 +259,7 @@
        /* منع الأيقونة نفسها من التقاط النقر مباشرة */
    }
 
-   .bed-occupied-tooltip {
-       transition: all 0.2s ease;
-   }
-
-   .bed-occupied-tooltip:hover {
-       transform: scale(1.2);
-       filter: drop-shadow(0 0 3px rgba(220, 53, 69, 0.5));
-   }
-
-   /* تحسين مظهر الـ tooltip */
-   .tooltip .tooltip-inner {
-       background-color: #dc3545;
-       color: white;
-       font-size: 0.85rem;
-       font-weight: 500;
-       padding: 8px 12px;
-       border-radius: 6px;
-       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-   }
-
-   .tooltip .tooltip-arrow::before {
-       border-top-color: #dc3545 !important;
-   }
+ 
 
    /* ضروري حتى تعمل التحويلات (transform) عند الـ hover */
    .bed-icons .fa-bed {
@@ -292,8 +270,4 @@
    .bed-icons .fa-bed:hover {
        transform: translateY(-4px);
    }
-
-   .bed-occupied-tooltip:hover {
-       transform: scale(1.2);
-       filter: drop-shadow(0 0 3px rgba(220, 53, 69, 0.7));
-   }
+ 

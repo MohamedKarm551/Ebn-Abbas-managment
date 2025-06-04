@@ -241,15 +241,16 @@
                                                                 ? $guestNames[$guestIndex]
                                                                 : 'نزيل غير معروف';
                                                         @endphp
-                                                        <i class="fas fa-bed text-danger mx-1 bed-occupied-tooltip"
-                                                            data-bs-toggle="tooltip" data-bs-placement="top"
-                                                            title="{{ $guestName }}"
-                                                            data-bs-title="{{ $guestName }}"
+                                                        {{-- أيقونة سرير مشغول مع title فقط --}}
+                                                        <i class="fas fa-bed text-danger mx-1"
+                                                            title="مشغول: {{ $guestName }}"
                                                             style="cursor: pointer;"></i>
                                                     @else
+                                                        {{-- أيقونة سرير متاح مع title فقط --}}
                                                         <i class="fas fa-bed text-success mx-1" title="سرير متاح"></i>
                                                     @endif
                                                 @endfor
+
 
                                                 <div class="small text-muted mt-1">
                                                     {{ $occupiedBeds }}/{{ $bedsCount }} مشغول
@@ -690,31 +691,7 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // ===== 1. تهيئة جميع عناصر الـ Tooltip الموجودة في الصفحة عند التحميل =====
-                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.forEach(function(tooltipTriggerEl) {
-                    new bootstrap.Tooltip(tooltipTriggerEl, {
-                        html: true,
-                        trigger: 'hover',
-                        container: 'body'
-                    });
-                });
-
-                // ===== 2. إعادة تهيئة الـ Tooltips عند فتح أي مودال جديد =====
-                var modals = document.querySelectorAll('.modal');
-                modals.forEach(function(modalEl) {
-                    modalEl.addEventListener('shown.bs.modal', function() {
-                        var modalTooltips = [].slice.call(modalEl.querySelectorAll(
-                            '[data-bs-toggle="tooltip"]'));
-                        modalTooltips.forEach(function(tooltipTriggerEl) {
-                            new bootstrap.Tooltip(tooltipTriggerEl, {
-                                html: true,
-                                trigger: 'hover focus',
-                                container: 'body'
-                            });
-                        });
-                    });
-                });
+             
 
                 // ===== 3. تبديل طريقة العرض (بطاقات / قائمة) =====
                 const viewCards = document.getElementById('viewCards');
@@ -945,17 +922,6 @@
                     });
                 }
 
-            });
-            // بعد تحميل الصفحة، لكل أيقونة ذات الصنف bed-occupied-tooltip
-            document.querySelectorAll('.bed-occupied-tooltip').forEach(function(el) {
-                el.addEventListener('mouseover', function() {
-                    var tooltip = new bootstrap.Tooltip(el, {
-                        html: true,
-                        trigger: 'hover',
-                        container: 'body'
-                    });
-                    tooltip.show();
-                });
             });
         </script>
     @endpush
