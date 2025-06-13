@@ -169,7 +169,7 @@
                 <span class="value">{{ $booking->rooms }}</span>
             </div>
             <div class="row-item">
-                <span class="label">السعر اليومي:</span>
+                <span class="label">السعر الإجمالي:</span>
                 <span class="value">{{ number_format($booking->sale_price, 2) }} {{ $booking->currency == 'KWD' ? 'د.ك' : 'ر.س' }}</span>
             </div>
             <div class="row-item">

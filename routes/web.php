@@ -166,6 +166,17 @@ Route::middleware(['auth'])->group(function () {
         // إضافة مسار لعرض مخطط العلاقات
         Route::get('/network-graph', [ReportController::class, 'networkGraph'])->name('network.graph');
         Route::get('/network-data', [ReportController::class, 'getNetworkData'])->name('network.data');
+        // روتات إدارة المصاريف الشهرية
+        Route::get('/admin/monthly-expenses', [App\Http\Controllers\MonthlyExpenseController::class, 'index'])
+            ->name('admin.monthly-expenses.index');
+        Route::post('/admin/monthly-expenses', [App\Http\Controllers\MonthlyExpenseController::class, 'store'])
+            ->name('admin.monthly-expenses.store');
+        Route::post('/admin/calculate-profit', [App\Http\Controllers\MonthlyExpenseController::class, 'calculateProfit'])
+            ->name('admin.calculate-profit');
+        Route::get('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'show'])
+            ->name('admin.monthly-expenses.show');
+        Route::delete('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'destroy'])
+            ->name('admin.monthly-expenses.destroy');
     });
     Route::post('/save-screenshot', [\App\Http\Controllers\ReportController::class, 'saveScreenshot']);
     Route::post('/save-pdf', [\App\Http\Controllers\ReportController::class, 'savePDF']);
@@ -240,7 +251,7 @@ Auth::routes();
 
 
 Route::get('/login', function () {
-    return redirect('/'); // أو أي صفحة أنت عايزها
+    return redirect('/');
 })->name('login');
 Route::post('/manual-login', function (Request $request) {
     $credentials = $request->only('email', 'password');

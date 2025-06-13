@@ -444,9 +444,8 @@
                     @endif
 
                     @php
-                        $availableRoomTypes = $availability->availabilityRoomTypes->filter(
-                            fn($rt) => $rt->allotment > 0,
-                        );
+                        $availableRoomTypes = $availability->availabilityRoomTypes;
+                        // Filter room types based on availability كان في مشكلة هنا لانه بيفلتر لو عدد الغرف المتاحة موجود لغيته خلاص
                     @endphp
 
                     @if ($availableRoomTypes->count() > 0)
@@ -511,7 +510,7 @@
         @endforelse
 
         {{-- Pagination Links --}}
-        <div class="d-flex justify-content-center mt-4">
+        <div class="d-flex justify-content-center">
             {{ $availabilities->appends(request()->query())->links() }}
         </div>
         {{-- *** بداية إضافة كود الـ Modal (تأكد من وجوده مرة واحدة في الصفحة أو في layout) *** --}}
@@ -539,7 +538,7 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-
+            // Add click event to all images in the carousel
             const carousels = document.querySelectorAll('.carousel');
 
             carousels.forEach(carousel => {

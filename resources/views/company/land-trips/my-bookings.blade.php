@@ -237,7 +237,7 @@
                                                 {{ number_format($booking->amount_due_from_company) }}
                                                 {{ $booking->currency }}</h6>
                                             <small class="text-#6c757d">{{ number_format($booking->sale_price) }} ×
-                                                {{ $booking->rooms }} × {{ $booking->landTrip->days_count }}</small>
+                                                {{ $booking->rooms }} </small>
                                         </td>
                                         <td>
                                             <div>{{ $booking->created_at->format('d/m/Y') }}</div>

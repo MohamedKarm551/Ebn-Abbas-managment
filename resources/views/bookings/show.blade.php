@@ -513,7 +513,7 @@
                 totalDueToHotel = nightsStayed * {{ $booking->rooms }} * {{ $booking->cost_price }};
 
                 // تحديث صف "المستحق للفندق" بالقيمة المحسوبة
-                document.getElementById('hotel-due-value').innerText = totalDueToHotel + ' ريال';
+                document.getElementById('hotel-due-value').innerText = totalDueToHotel + ' {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}';
 
                 // حساب المكسب
                 profitPerNight = ({{ $booking->sale_price }} - {{ $booking->cost_price }}) *
@@ -531,22 +531,22 @@
 
                 // بناء رسالة التنبيه بالتفاصيل بما في ذلك المستحق للفندق
                 let alertMessage = `💲 الإجمالي حتى الآن: 💲
-            
-ما لك من الشركة: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة = ${totalDueFromCompany} ريال
-ما عليك للفندق: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق = ${totalDueToHotel} ريال
+
+ما لك من الشركة: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة = ${totalDueFromCompany} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  
+ما عليك للفندق: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق = ${totalDueToHotel} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  
 
 💰 المكسب:
-- المكسب لكل ليلة: ${profitPerNight} ريال
-- المكسب حتى الآن: ${profitSoFar} ريال
-- المكسب الإجمالي: ${totalProfit} ريال
+- المكسب لكل ليلة: ${profitPerNight} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+- المكسب حتى الآن: ${profitSoFar} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+- المكسب الإجمالي: ${totalProfit} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
 
 💳 المبالغ المدفوعة:
-- المدفوع من الشركة: ${amountPaidByCompany} ريال
-- المدفوع للفندق: ${amountPaidToHotel} ريال
+- المدفوع من الشركة: ${amountPaidByCompany} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+- المدفوع للفندق: ${amountPaidToHotel} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
 
 ⚖️ المبالغ المتبقية:
-- المتبقي من الشركة: ${remainingFromCompany} ريال
-- المتبقي للفندق: ${remainingToHotel} ريال`;
+- المتبقي من الشركة: ${remainingFromCompany} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+- المتبقي للفندق: ${remainingToHotel} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}`;
 
                 showAlert(alertMessage, 'info');
             });

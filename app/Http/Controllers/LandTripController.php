@@ -90,8 +90,8 @@ class LandTripController extends Controller
         $agents = Agent::orderBy('name')->get();
         $employees = Employee::orderBy('name')->get();
         $hotels = Hotel::orderBy('name')->get(); // إضافة الفنادق
-        // إضافة استعلام الحجوزات
-        $allBookings = LandTripBooking::with(['landTrip', 'company', 'roomPrice'])->paginate(10)->withQueryString();
+        // إضافة استعلام الحجوزات وترتيب حسب الأحدث
+        $allBookings = LandTripBooking::with(['landTrip', 'company', 'roomPrice'])->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         // SELECT * FROM `land_trip_bookings` WHERE  `id`, `land_trip_id`, `land_trip_room_price_id`, `client_name`, `company_id`, `rooms`, `cost_price`, `sale_price`, `amount_due_to_agent`, `amount_due_from_company`, `currency`, `notes`, `employee_id`, `created_at`, `updated_at`, `deleted_at`
         // حساب الإحصائيات بطريقة أكثر كفاءة
@@ -918,8 +918,10 @@ class LandTripController extends Controller
         // حساب المبالغ
         $costPrice = $roomPrice->cost_price;
         $salePrice = $roomPrice->sale_price;
-        $totalDueToAgent = $validatedData['rooms'] * $costPrice * $landTrip->days_count;
-        $totalDueFromCompany = $validatedData['rooms'] * $salePrice * $landTrip->days_count;
+        // حساب المبالغ المستحقة للوكيل والشركة عدد الغرف في السعر وليس السعر الموجود سعر ليلة بل السعر الكلي
+        $totalDueToAgent = $validatedData['rooms'] * $costPrice ;
+        $totalDueFromCompany = $validatedData['rooms'] * $salePrice ;
+
 
         // البحث عن الموظف المرتبط بالمستخدم الحالي
         $employee = Employee::where('user_id', Auth::id())->first();

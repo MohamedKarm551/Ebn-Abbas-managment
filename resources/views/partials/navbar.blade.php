@@ -75,6 +75,8 @@
                                             class="fas fa-bus me-1"></i></a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.notifications') }}">الإشعارات <i
                                             class="fas fa-bell me-1"></i></a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.monthly-expenses.index') }}">المصاريف
+                                        الشهرية <i class="fas fa-money-bill-wave me-1"></i></a></li>
                             </ul>
                         </li>
                     @endif

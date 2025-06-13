@@ -39,7 +39,7 @@
                         <p><strong>اسم العميل:</strong> {{ $booking->client_name }}</p>
                         <p><strong>نوع الغرفة:</strong> {{ $booking->roomPrice->roomType->room_type_name }}</p>
                         <p><strong>عدد الغرف:</strong> {{ $booking->rooms }}</p>
-                        <p><strong>السعر اليومي:</strong> {{ $booking->sale_price }}</p>
+                        <p><strong>السعر  :</strong> {{ $booking->sale_price }}</p>
                         <p><strong>المبلغ الإجمالي:</strong> {{ $booking->amount_due_from_company }}</p>
                     </div>
                 </div>

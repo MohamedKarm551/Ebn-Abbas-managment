@@ -25,4 +25,7 @@ storage/backups/csv/bookings.csv
 storage/backups/txt/bookings_deleted.txt
 storage/backups/txt/bookings_updates.txt
 storage/backups/txt/bookings.txt
+storage/backups
+
+
 

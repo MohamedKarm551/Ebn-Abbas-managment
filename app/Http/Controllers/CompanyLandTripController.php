@@ -174,8 +174,8 @@ class CompanyLandTripController extends Controller
         // حساب المبالغ
         $costPrice = $roomPrice->cost_price;
         $salePrice = $roomPrice->sale_price;
-        $totalDueToAgent = $validatedData['rooms'] * $costPrice * $landTrip->days_count;
-        $totalDueFromCompany = $validatedData['rooms'] * $salePrice * $landTrip->days_count;
+        $totalDueToAgent = $validatedData['rooms'] * $costPrice  ;
+        $totalDueFromCompany = $validatedData['rooms'] * $salePrice  ;
 
         DB::beginTransaction();
 
