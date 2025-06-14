@@ -405,14 +405,14 @@
                                 </td>
                                 <td>
                                     @php
-                                        $remainingByCurrency = $company->remaining_by_currency ?? [
-                                            'SAR' => $company->remaining,
-                                        ];
+                                        $remainingBookingsByCurrency = $company->remaining_bookings_by_currency;
                                     @endphp
-                                    @foreach ($remainingByCurrency as $currency => $amount)
+
+                                    @foreach ($remainingBookingsByCurrency as $currency => $amount)
                                         {{ number_format($amount, 2) }}
                                         {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
                                     @endforeach
+
                                 </td>
                                 <td>
                                     <div class="d-grid gap-2 d-md-flex justify-content-md-center">
@@ -566,7 +566,7 @@
                                 </td>
                                 <td>
                                     @php
-                                        $remainingByCurrency = $agent->remaining_by_currency ?? [
+                                        $remainingByCurrency = $agent->remaining_bookings_by_currency ?? [
                                             'SAR' => $agent->remaining,
                                         ];
                                     @endphp
@@ -574,6 +574,7 @@
                                         {{ number_format($amount, 2) }}
                                         {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
                                     @endforeach
+
                                 </td>
                                 <td>
                                     <div class="d-grid gap-2 d-md-flex justify-content-md-center">

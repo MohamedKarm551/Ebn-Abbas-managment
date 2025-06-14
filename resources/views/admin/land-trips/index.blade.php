@@ -196,6 +196,28 @@
             padding: 0.25rem 0.65rem;
             border-radius: 50px;
         }
+
+        .hover-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .hover-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.12) !important;
+        }
+
+        .hover-card:hover .card-body {
+            background-color: rgba(13, 110, 253, 0.02);
+        }
+
+        .quick-access-btn {
+            transition: all 0.2s ease;
+        }
+
+        .quick-access-btn:hover {
+            transform: translateY(-1px);
+        }
     </style>
 @endpush
 
@@ -223,6 +245,17 @@
                             <i class="fas fa-plus-circle me-1"></i>
                             <span class="button-text">إضافة رحلة</span>
                         </a>
+                        {{-- الزر الجديد لمدفوعات الشركات --}}
+                        <a href="{{ route('admin.company-payments.index') }}" class="btn btn-outline-success mb-2">
+                            <i class="fas fa-money-bill-wave me-1"></i>
+                            <span class="button-text">مدفوعات الشركات</span>
+                        </a>
+
+                        <a href="{{ route('admin.land-trips.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-1"></i>
+                            <span class="button-text">إضافة رحلة</span>
+                        </a>
+
                     </div>
                 </div>
             </div>
@@ -237,7 +270,7 @@
                             <i class="fas fa-bus fa-2x text-primary"></i>
                         </div>
                         <div>
-                            <h6 class="text-muted mb-1 fs-sm">إجمالي الرحلات</h6>
+                            <h6 class="mb-1 fs-sm">إجمالي الرحلات</h6>
                             <h4 class="mb-0">{{ $totalTrips ?? 0 }}</h4>
                         </div>
                     </div>
@@ -251,7 +284,7 @@
                             <i class="fas fa-check-circle fa-2x text-success"></i>
                         </div>
                         <div>
-                            <h6 class="text-muted mb-1 fs-sm">الرحلات النشطة</h6>
+                            <h6 class="mb-1 fs-sm">الرحلات النشطة</h6>
                             <h4 class="mb-0">{{ $activeTrips ?? 0 }}</h4>
                         </div>
                     </div>
@@ -265,7 +298,7 @@
                             <i class="fas fa-calendar-alt fa-2x text-warning"></i>
                         </div>
                         <div>
-                            <h6 class="text-muted mb-1 fs-sm">رحلات الشهر الحالي</h6>
+                            <h6 class=" mb-1 fs-sm">رحلات الشهر الحالي</h6>
                             <h4 class="mb-0">{{ $currentMonthTrips ?? 0 }}</h4>
                         </div>
                     </div>
@@ -279,15 +312,67 @@
                             <i class="fas fa-users fa-2x text-info"></i>
                         </div>
                         <div>
-                            <h6 class="text-muted mb-1 fs-sm">إجمالي الحجوزات</h6>
+                            <h6 class=" mb-1 fs-sm">إجمالي الحجوزات</h6>
                             <h4 class="mb-0">{{ $totalBookings ?? 0 }}</h4>
                         </div>
 
                     </div>
                 </div>
             </div>
-        </div>
+            {{-- البطاقة الجديدة للمدفوعات --}}
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ route('admin.company-payments.index') }}" class="text-decoration-none">
+                    <div class="card stats-card shadow-sm border-0 h-100 hover-card">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fs-sm text-dark">مدفوعات الشركات</h6>
+                                <small class="text-muted">إدارة المدفوعات</small>
+                                <div class="mt-1">
+                                    <i class="fas fa-external-link-alt fa-sm text-primary"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
 
+        </div>
+        @auth
+         @if(auth()->user()->role === 'Admin')
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 bg-light">
+                    <div class="card-body py-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-link text-primary me-2"></i>
+                                <span class="fw-bold text-dark">وصول سريع:</span>
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ route('admin.company-payments.index') }}"
+                                    class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-money-bill-wave me-1"></i>
+                                    مدفوعات الشركات
+                                </a>
+                                <a href="{{ route('admin.monthly-expenses.index') }}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    المصاريف الشهرية
+                                </a>
+                                <a href="{{ route('reports.daily') }}" class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-chart-bar me-1"></i>
+                                    التقارير
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+        @endauth
         <!-- قسم الفلتر الذي يظهر/يختفي -->
         <div class="card shadow-sm mb-4 trip-filter-drawer" :class="{ 'show': showFilters }">
             <div class="card-body">
@@ -371,7 +456,7 @@
         <!-- عرض الفلاتر المطبقة حاليًا -->
         @if (request()->anyFilled(['trip_type_id', 'agent_id', 'status', 'employee_id', 'start_date', 'end_date']))
             <div class="filter-pills mb-3">
-                <span class="me-2 text-muted">الفلاتر المطبقة:</span>
+                <span class="me-2 ">الفلاتر المطبقة:</span>
 
                 @if (request('trip_type_id'))
                     <span class="filter-pill">
@@ -469,6 +554,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#" @click.prevent="setTab('upcoming')"
                             :class="{ 'active': currentTab === 'upcoming' }">الرحلات القادمة</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.company-payments.index') }}" target="_blank">
+                            <i class="fas fa-external-link-alt me-1"></i>المدفوعات
+                        </a>
                     </li>
                 </ul>
 
@@ -627,10 +717,10 @@
                                 @endforelse
                             </tbody>
                         </table>
-                       
+
                     </div>
-                      <div  class="d-flex justify-content-center mt-4">
-                                   {{ $allBookings->onEachSide(1)->links('vendor.pagination.bootstrap-4') }}
+                    <div class="d-flex justify-content-center mt-4">
+                        {{ $allBookings->onEachSide(1)->links('vendor.pagination.bootstrap-4') }}
 
                     </div>
                 </div>

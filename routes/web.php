@@ -12,6 +12,7 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\RoomTypeController;
 use App\Http\Controllers\CompanyAvailabilityController;
+use App\Http\Controllers\CompanyPaymentController;
 use App\Http\Controllers\LandTripController;
 use App\Http\Controllers\CompanyLandTripController;
 use App\Http\Controllers\TripTypeController;
@@ -180,6 +181,18 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::post('/save-screenshot', [\App\Http\Controllers\ReportController::class, 'saveScreenshot']);
     Route::post('/save-pdf', [\App\Http\Controllers\ReportController::class, 'savePDF']);
+    // 
+        // مسارات مدفوعات الشركات
+    Route::prefix('admin/company-payments')->name('admin.company-payments.')->group(function () {
+        Route::get('/', [CompanyPaymentController::class, 'index'])->name('index');
+        Route::get('/{company}', [CompanyPaymentController::class, 'show'])->name('show');
+        Route::get('/{company}/create', [CompanyPaymentController::class, 'create'])->name('create');
+        Route::post('/{company}', [CompanyPaymentController::class, 'store'])->name('store');
+        Route::get('/{company}/{payment}/edit', [CompanyPaymentController::class, 'edit'])->name('edit');
+        Route::put('/{company}/{payment}', [CompanyPaymentController::class, 'update'])->name('update');
+        Route::delete('/{company}/{payment}', [CompanyPaymentController::class, 'destroy'])->name('destroy');
+    });
+
     // ==================================================
     // *** نهاية مجموعة روتات التقارير والدفعات (أدمن فقط) ***
     // ==================================================

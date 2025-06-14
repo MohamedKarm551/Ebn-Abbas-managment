@@ -45,4 +45,30 @@ class LandTripBooking extends Model
     {
         return $this->belongsTo(Employee::class);
     }
+        // إضافة العلاقة المفقودة مع Agent عبر LandTrip
+    public function agent()
+    {
+        return $this->hasOneThrough(
+            Agent::class,
+            LandTrip::class,
+            'id', // Foreign key على LandTrip table
+            'id', // Foreign key على Agent table
+            'land_trip_id', // Local key على LandTripBooking table
+            'agent_id' // Local key على LandTrip table
+        );
+    }
+
+    // إضافة العلاقة مع Hotel عبر LandTrip
+    public function hotel()
+    {
+        return $this->hasOneThrough(
+            Hotel::class,
+            LandTrip::class,
+            'id', // Foreign key على LandTrip table
+            'id', // Foreign key على Hotel table
+            'land_trip_id', // Local key على LandTripBooking table
+            'hotel_id' // Local key على LandTrip table
+        );
+    }
+
 }

@@ -4,18 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Payment;
-use Illuminate\Notifications\Notifiable; // إذا كنت تستخدم الإشعارات
-use App\Models\User;
-use Illuminate\Support\Facades\DB; // تأكد من إضافة هذا السطر
+use Illuminate\Support\Facades\DB;
 
 class Company extends Model
 {
     use HasFactory;
 
-    // الحقول المسموح بتخصيصها جماعيًا
-    protected $fillable = ['name'];
+    protected $fillable = [
+        'name',
+        'email',
+        'phone',
+        'address'
+    ];
 
+    // ========== العلاقات ==========
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'company_id');
@@ -26,43 +28,56 @@ class Company extends Model
         return $this->hasMany(Payment::class);
     }
 
-    public function getTotalPaidAttribute()
+    public function companyPayments()
     {
-        // التأكد من أن هناك دفعات قبل الحساب
-        return $this->payments()->sum('amount') ?? 0;
-    }
-    public function getTotalDueAttribute()
-    {
-        // حساب إجمالي المستحق من الحجوزات
-        return $this->bookings->sum(function ($booking) {
-            return $booking->sale_price * $booking->rooms * $booking->days;
-        });
-    }
-    public function getRemainingAttribute()
-    {
-        // التأكد من أن هناك حجوزات قبل الحساب
-        $totalDue = $this->bookings->sum(function ($booking) {
-            // تأكد أن هذه القيم دائمًا أرقام في قاعدة البيانات
-            return ($booking->sale_price ?? 0) * ($booking->rooms ?? 0) * ($booking->days ?? 0);
-        });
-
-        $totalPaid = $this->total_paid; // تستخدم الـ accessor الآخر
-
-        // *** التأكد من أن القيمة المرتجعة هي رقم عشري (float) ***
-        return (float) ($totalDue - $totalPaid);
+        return $this->hasMany(CompanyPayment::class, 'company_id');
     }
 
-    /**
-     * Get the users associated with the company.
-     * علاقة الشركة بالمستخدمين (الشركة لديها عدة مستخدمين)
-     */
     public function users()
     {
         return $this->hasMany(User::class);
     }
 
+    // ========== الحسابات الإجمالية ==========
+    // 1. إجمالي المستحق من الحجوزات (معادلة النظام القديم: sale_price * rooms * days)
+    public function getTotalDueAttribute()
+    {
+        // return $this->bookings->sum(function ($booking) {
+        //     return ($booking->sale_price ?? 0) * ($booking->rooms ?? 0) * ($booking->days ?? 0);
+        // });
+        // المستحق من الحجوزات العادية
+        $regularBookingsDue = $this->bookings()->sum(DB::raw('sale_price * rooms * days'));
+
+        // المستحق من الرحلات البرية
+        $landTripsDue = $this->landTripBookings()->sum('amount_due_from_company');
+
+        return $regularBookingsDue + $landTripsDue;
+    }
+
+    // 2. إجمالي المدفوع (مجموع كل المدفوعات: Payments & CompanyPayments)
+    public function getTotalPaidAttribute()
+    {
+        // $paid1 = $this->payments()->sum('amount') ?? 0;
+        // $paid2 = $this->companyPayments()->sum('amount') ?? 0;
+        // return $paid1 + $paid2;
+        // المدفوعات القديمة (من جدول payments)
+        $oldPayments = $this->payments()->sum('amount') ?? 0;
+
+        // المدفوعات الجديدة (من جدول company_payments)
+        $newPayments = $this->companyPayments()->sum('amount') ?? 0;
+
+        return $oldPayments + $newPayments;
+    }
+
+    // 3. المتبقي = المستحق - المدفوع
+    public function getRemainingAmountAttribute()
+    {
+        return (float) ($this->total_due - $this->total_paid);
+    }
+
+    // ========== الإحصائيات حسب العملة ==========
     /**
-     * حساب إجمالي المستحق من الشركة مصنف حسب العملة
+     * إجمالي المستحق من الحجوزات حسب العملة (يعتمد على حقل جديد "amount_due_from_company")
      */
     public function getTotalDueByCurrencyAttribute()
     {
@@ -74,9 +89,183 @@ class Company extends Model
     }
 
     /**
-     * حساب المدفوع من الشركة مصنف حسب العملة
+     * إجمالي المدفوع حسب العملة (يدعم كلا Payments وCompanyPayments)
      */
     public function getTotalPaidByCurrencyAttribute()
+    {
+        return $this->companyPayments()
+            ->select('currency', DB::raw('SUM(amount) as total'))
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+    }
+
+    /**
+     * المتبقي على الشركة مصنف حسب العملة
+     */
+    public function getRemainingByCurrencyAttribute()
+    {
+        $dueByCurrency = $this->total_due_by_currency;
+        $paidByCurrency = $this->total_paid_by_currency;
+        $remainingByCurrency = [];
+
+        // استخدم جميع العملات الموجودة في أي من الاثنين
+        $currencies = array_unique(array_merge(array_keys($dueByCurrency), array_keys($paidByCurrency)));
+
+        foreach ($currencies as $currency) {
+            $due = $dueByCurrency[$currency] ?? 0;
+            $paid = $paidByCurrency[$currency] ?? 0;
+            $remainingByCurrency[$currency] = $due - $paid;
+        }
+
+        return $remainingByCurrency;
+    }
+
+    // ========== دوال التوافق القديم ==========
+    /**
+     * حساب عدد الحجوزات
+     */
+    public function getBookingsCountAttribute()
+    {
+        return $this->bookings()->count();
+    }
+    /**
+     * عدد الحجوزات الإجمالي (عادية + رحلات برية)
+     */
+    public function getTotalBookingsCountAttribute()
+    {
+        return $this->bookings()->count() + $this->landTripBookings()->count();
+    }
+
+    /**
+     * @deprecated استخدم remaining_amount بدلاً منه
+     */
+    public function getRemainingAttribute()
+    {
+        return $this->remaining_amount;
+    }
+
+    public function getTotalsByCurrency()
+    {
+        // 1. المستحق من الحجوزات العادية حسب العملة
+        $regularBookingsDue = $this->bookings()
+            ->select('currency', DB::raw('SUM(sale_price * rooms * days) as total_due'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
+
+        // 2. المستحق من الرحلات البرية حسب العملة
+        $landTripsDue = $this->landTripBookings()
+            ->select('currency', DB::raw('SUM(amount_due_from_company) as total_due'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
+
+        // 3. المدفوعات القديمة حسب العملة
+        $oldPayments = $this->payments()
+            ->select('currency', DB::raw('SUM(amount) as total_paid'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
+
+        // 4. المدفوعات الجديدة حسب العملة
+        $newPayments = $this->companyPayments()
+            ->select('currency', DB::raw('SUM(amount) as total_paid'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
+
+        // اجمع كل العملات المستخدمة فعلياً
+        $currencies = collect([$regularBookingsDue, $landTripsDue, $oldPayments, $newPayments])
+            ->flatMap(fn($col) => $col->keys())
+            ->unique()
+            ->values()
+            ->all();
+
+        $result = [];
+
+        foreach ($currencies as $currency) {
+            $regularDue = isset($regularBookingsDue[$currency]) ? (float)$regularBookingsDue[$currency]->total_due : 0;
+            $landTripDue = isset($landTripsDue[$currency]) ? (float)$landTripsDue[$currency]->total_due : 0;
+            $totalDue = $regularDue + $landTripDue;
+
+            $oldPaid = isset($oldPayments[$currency]) ? (float)$oldPayments[$currency]->total_paid : 0;
+            $newPaid = isset($newPayments[$currency]) ? (float)$newPayments[$currency]->total_paid : 0;
+            $totalPaid = $oldPaid + $newPaid;
+
+            $result[$currency] = [
+                'due' => $totalDue,
+                'paid' => $totalPaid,
+                'remaining' => $totalDue - $totalPaid,
+            ];
+        }
+
+        return $result;
+    }
+
+    // أضف العلاقة مع LandTripBooking
+    public function landTripBookings()
+    {
+        return $this->hasMany(LandTripBooking::class);
+    }
+
+    // تعديل getTotalDueAttribute للاستخدام الصحيح
+    public function getTotalDueAttributeLandTrip()
+    {
+        // استخدم LandTripBooking بدلاً من bookings العادية
+        $landTripBookings = DB::table('land_trip_bookings')
+            ->where('company_id', $this->id)
+            ->select('currency', DB::raw('SUM(amount_due_from_company) as total_due'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
+
+        // استخدم الـ payments العادية
+        $payments = $this->payments()
+            ->select('currency', DB::raw('SUM(amount) as total_paid'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
+
+        $currencies = ['SAR', 'KWD'];
+        $result = [];
+
+        foreach ($currencies as $currency) {
+            $due = isset($landTripBookings[$currency]) ? (float)$landTripBookings[$currency]->total_due : 0;
+            $paid = isset($payments[$currency]) ? (float)$payments[$currency]->total_paid : 0;
+
+            $result[$currency] = [
+                'due' => $due,
+                'paid' => $paid,
+                'remaining' => $due - $paid,
+            ];
+        }
+
+        return $result;
+    }
+    public function agents()
+    {
+        return $this->hasManyThrough(
+            Agent::class,
+            LandTripBooking::class,
+            'company_id', // Foreign key على land_trip_bookings table
+            'id', // Foreign key على agents table  
+            'id', // Local key على companies table
+            'agent_id' // Local key على land_trip_bookings table (عبر land_trip)
+        )->distinct();
+    }
+    // إجمالي المستحق من الحجوزات العادية حسب العملة
+    public function getTotalDueBookingsByCurrencyAttribute()
+    {
+        return $this->bookings()
+            ->select('currency', DB::raw('SUM(sale_price * rooms * days) as total'))
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+    }
+
+    // إجمالي المدفوع حسب العملة (Payments فقط، تجاهل CompanyPayments)
+    public function getTotalPaidBookingsByCurrencyAttribute()
     {
         return $this->payments()
             ->select('currency', DB::raw('SUM(amount) as total'))
@@ -85,20 +274,15 @@ class Company extends Model
             ->toArray();
     }
 
-    /**
-     * حساب المتبقي على الشركة مصنف حسب العملة
-     */
-    public function getRemainingByCurrencyAttribute()
+    // المتبقي من الحجوزات فقط (بدون الرحلات البرية)
+    public function getRemainingBookingsByCurrencyAttribute()
     {
-        $dueByCurrency = $this->total_due_by_currency;
-        $paidByCurrency = $this->total_paid_by_currency;
-        $remainingByCurrency = [];
-        
-        foreach ($dueByCurrency as $currency => $due) {
-            $paid = $paidByCurrency[$currency] ?? 0;
-            $remainingByCurrency[$currency] = $due - $paid;
+        $due = $this->total_due_bookings_by_currency;
+        $paid = $this->total_paid_bookings_by_currency;
+        $result = [];
+        foreach (array_unique(array_merge(array_keys($due), array_keys($paid))) as $currency) {
+            $result[$currency] = ($due[$currency] ?? 0) - ($paid[$currency] ?? 0);
         }
-        
-        return $remainingByCurrency;
+        return $result;
     }
 }
