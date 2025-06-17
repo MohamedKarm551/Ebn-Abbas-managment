@@ -400,7 +400,14 @@
             @endif
 
             @php
-                $landTripTypes = ['إضافة رحلة', 'تعديل رحلة', 'حذف رحلة', 'حجز رحلة', 'تحديث_تلقائي'];
+                $landTripTypes = [
+                    'إضافة رحلة',
+                    'تعديل رحلة',
+                    'حذف رحلة',
+                    'حجز رحلة',
+                    'تحديث_تلقائي',
+                    'تحديث حجز رحلة',
+                ];
                 $hasSecurityAlert = $notifications->contains(function ($n) {
                     return $n->type == 'تنبيه أمني';
                 });
@@ -466,7 +473,7 @@
                                 $itemClass .= ' availability';
                                 $typeClass = 'booking';
                                 $typeIcon = 'fas fa-calendar-alt';
-                            }   elseif (str_contains($notification->type, 'حذف')) {
+                            } elseif (str_contains($notification->type, 'حذف')) {
                                 $itemClass .= ' delete';
                                 $typeClass = 'delete';
                                 $typeIcon = 'fas fa-trash-alt';

@@ -310,3 +310,6 @@
     </div>
 </div>
 @endsection
+@push('scripts')
+            <script src="{{ asset('js/preventClick.js') }}"></script>
+@endpush

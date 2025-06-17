@@ -687,7 +687,7 @@
 @endsection
 
 
- 
+
 @push('scripts')
     <script>
         // متغيرات العداد للأقسام الجديدة
@@ -1107,7 +1107,7 @@
 
                 const title = section.querySelector('h6');
                 if (title) title.innerHTML =
-                `<span class="section-counter">${index + 1}</span>نقل رقم ${index + 1}`;
+                    `<span class="section-counter">${index + 1}</span>نقل رقم ${index + 1}`;
             });
 
             // تحديث عدادات الفنادق
@@ -1326,4 +1326,5 @@
             }
         });
     </script>
+    <script src="{{ asset('js/preventClick.js') }}"></script>
 @endpush

@@ -1111,4 +1111,6 @@
             }
         });
     </script>
+                <script src="{{ asset('js/preventClick.js') }}"></script>
+
 @endpush
