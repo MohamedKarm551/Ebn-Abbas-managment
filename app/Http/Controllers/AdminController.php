@@ -7,8 +7,8 @@ use App\Models\Company;
 use App\Models\Agent;
 use App\Models\Hotel;
 use App\Models\Booking;
-use App\Models\ArchivedBooking; 
-use App\Models\EditLog; 
+use App\Models\ArchivedBooking;
+use App\Models\EditLog;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
@@ -71,6 +71,17 @@ class AdminController extends Controller
                             ->orWhere('message', 'LIKE', '%availability%') // كلمة "availability"
                             ->orWhere('message', 'LIKE', '%allotment%'); // كلمة "allotment"
                     });
+                    break;
+                case 'land-trips':
+                    $landTripTypes = [
+                        'إضافة رحلة',
+                        'تعديل رحلة',
+                        'حذف رحلة',
+                        'حجز رحلة',
+                        'تحديث_تلقائي',
+                        'تحديث حجز رحلة',
+                    ];
+                    $query->whereIn('type', $landTripTypes);
                     break;
                 case 'logins':
                     $query->where(function ($q) {
