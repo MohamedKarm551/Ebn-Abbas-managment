@@ -310,7 +310,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label class="form-label">نصيب محمد حسن (50%)</label>
+                                                    <label class="form-label">نصيب ش . محمد حسن (50%)</label>
                                                     <div class="input-group">
                                                         <input type="number" step="0.01" min="0"
                                                             class="form-control" id="mohamed_share_SAR"
@@ -354,7 +354,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label class="form-label">نصيب محمد حسن (50%)</label>
+                                                    <label class="form-label">نصيب ش . محمد حسن (50%)</label>
                                                     <div class="input-group">
                                                         <input type="number" step="0.01" min="0"
                                                             class="form-control" id="mohamed_share_KWD"
@@ -404,20 +404,21 @@
                             @foreach ($expenses as $index => $expense)
                                 <tr class="text-center">
                                     <td class="fw-bold">{{ $expenses->firstItem() + $index }}</td>
-                               <td class="p-0 align-middle text-center">
-    <div class="bg-light-subtle rounded-4 shadow-sm d-inline-block p-2 mb-1 w-100" style="min-width: 120px; max-width: 170px;">
-        <span class="fw-bold text-dark d-block" style="font-size: 1.1rem;">
-            {{ $expense->month_year }}
-        </span>
-        <span class="d-block text-muted small mt-1" style="line-height:1.4;">
-            من<br>
-            <span class="fw-bold">{{ $expense->start_date->format('d-m-Y') }}</span>
-            <br>
-            إلى<br>
-            <span class="fw-bold">{{ $expense->end_date->format('d-m-Y') }}</span>
-        </span>
-    </div>
-</td>
+                                    <td class="p-0 align-middle text-center">
+                                        <div class="bg-light-subtle rounded-4 shadow-sm d-inline-block p-2 mb-1 w-100"
+                                            style="min-width: 120px; max-width: 170px;">
+                                            <span class="fw-bold text-dark d-block" style="font-size: 1.1rem;">
+                                                {{ $expense->month_year }}
+                                            </span>
+                                            <span class="d-block text-muted small mt-1" style="line-height:1.4;">
+                                                من<br>
+                                                <span class="fw-bold">{{ $expense->start_date->format('d-m-Y') }}</span>
+                                                <br>
+                                                إلى<br>
+                                                <span class="fw-bold">{{ $expense->end_date->format('d-m-Y') }}</span>
+                                            </span>
+                                        </div>
+                                    </td>
 
 
                                     <td>
@@ -431,13 +432,74 @@
                                         </span>
                                     </td>
 
-                                    <td>
-                                        <span
-                                            class="badge bg-secondary bg-opacity-25 text-dark fs-6 px-3 py-2 rounded-pill">
-                                            {{ number_format($expense->total_expenses, 2) }}
-                                            <span class="ms-1">ريال</span>
-                                        </span>
-                                    </td>
+<td>
+    @php
+        $totalSAR = 0;
+        $totalKWD = 0;
+        
+        // جلب معلومات العملات من expenses_currencies
+        $currencies = $expense->expenses_currencies ?? [];
+        
+        // حساب المصاريف بالريال
+        if(isset($currencies['salaries']) && $currencies['salaries'] === 'SAR') {
+            $totalSAR += $expense->salaries;
+        }
+        if(isset($currencies['advertising']) && $currencies['advertising'] === 'SAR') {
+            $totalSAR += $expense->advertising;
+        }
+        if(isset($currencies['rent']) && $currencies['rent'] === 'SAR') {
+            $totalSAR += $expense->rent;
+        }
+        if(isset($currencies['staff_commissions']) && $currencies['staff_commissions'] === 'SAR') {
+            $totalSAR += $expense->staff_commissions;
+        }
+        
+        // حساب المصاريف بالدينار
+        if(isset($currencies['salaries']) && $currencies['salaries'] === 'KWD') {
+            $totalKWD += $expense->salaries;
+        }
+        if(isset($currencies['advertising']) && $currencies['advertising'] === 'KWD') {
+            $totalKWD += $expense->advertising;
+        }
+        if(isset($currencies['rent']) && $currencies['rent'] === 'KWD') {
+            $totalKWD += $expense->rent;
+        }
+        if(isset($currencies['staff_commissions']) && $currencies['staff_commissions'] === 'KWD') {
+            $totalKWD += $expense->staff_commissions;
+        }
+        
+        // إضافة المصاريف الأخرى
+        if(!empty($expense->other_expenses)) {
+            foreach($expense->other_expenses as $otherExpense) {
+                if(isset($otherExpense['currency'])) {
+                    if($otherExpense['currency'] === 'SAR') {
+                        $totalSAR += $otherExpense['amount'];
+                    } elseif($otherExpense['currency'] === 'KWD') {
+                        $totalKWD += $otherExpense['amount'];
+                    }
+                }
+            }
+        }
+    @endphp
+    
+    @if($totalSAR > 0)
+        <span class="badge bg-success fs-6 mb-1 rounded-pill shadow-sm d-block">
+            <i class="fa-solid fa-receipt me-1"></i>
+            {{ number_format($totalSAR, 2) }} ريال
+        </span>
+    @endif
+    @if($totalKWD > 0)
+        <span class="badge bg-primary fs-6 mb-1 rounded-pill shadow-sm d-block">
+            <i class="fa-solid fa-receipt me-1"></i>
+            {{ number_format($totalKWD, 2) }} دينار
+        </span>
+    @endif
+    
+    @if($totalSAR == 0 && $totalKWD == 0)
+        <span class="badge bg-secondary fs-6 rounded-pill">لا توجد مصاريف</span>
+    @endif
+</td>
+
                                     <td>
                                         @if ($expense->total_monthly_profit_SAR > 0)
                                             <span class="badge bg-success fs-6   mb-1 rounded-pill shadow-sm">
@@ -653,7 +715,7 @@
                 const expensesKWD = parseFloat(window.totalExpensesKWD) || 0;
                 const netProfitKWD = Math.max(0, totalProfitKWD - expensesKWD);
 
-                // تعيين قيم صافي الربح
+                // ✅ عرض النتائج بالعملة الصحيحة
                 if (isUnifiedSAR) {
                     // إذا تم توحيد العملة بالريال السعودي
                     document.getElementById('net_profit_SAR').value = netProfitSAR.toFixed(2);
@@ -695,21 +757,51 @@
                     document.getElementById('net_profit_SAR').classList.add('text-muted');
 
                 } else {
-                    // الحالة العادية بدون توحيد العملات
-                    document.getElementById('net_profit_SAR').value = netProfitSAR.toFixed(2);
-                    document.getElementById('net_profit_KWD').value = netProfitKWD.toFixed(2);
+                    // ✅ الحالة العادية - عرض العملات بناءً على البيانات الفعلية
+                    const profitsByCurrency = window.calculatedProfitsByCurrency || {};
 
-                    // توزيع الأرباح بالريال (50% لكل شريك)
-                    const ismailShareSAR = netProfitSAR * 0.5;
-                    const mohamedShareSAR = netProfitSAR * 0.5;
-                    document.getElementById('ismail_share_SAR').value = ismailShareSAR.toFixed(2);
-                    document.getElementById('mohamed_share_SAR').value = mohamedShareSAR.toFixed(2);
+                    // إذا كان هناك أرباح بالدينار فقط
+                    if (profitsByCurrency.KWD > 0 && (!profitsByCurrency.SAR || profitsByCurrency.SAR === 0)) {
+                        document.getElementById('net_profit_KWD').value = netProfitKWD.toFixed(2);
+                        document.getElementById('net_profit_SAR').value = "0.00";
 
-                    // توزيع الأرباح بالدينار (50% لكل شريك)
-                    const ismailShareKWD = netProfitKWD * 0.5;
-                    const mohamedShareKWD = netProfitKWD * 0.5;
-                    document.getElementById('ismail_share_KWD').value = ismailShareKWD.toFixed(2);
-                    document.getElementById('mohamed_share_KWD').value = mohamedShareKWD.toFixed(2);
+                        const ismailShareKWD = netProfitKWD * 0.5;
+                        const mohamedShareKWD = netProfitKWD * 0.5;
+                        document.getElementById('ismail_share_KWD').value = ismailShareKWD.toFixed(2);
+                        document.getElementById('mohamed_share_KWD').value = mohamedShareKWD.toFixed(2);
+                        document.getElementById('ismail_share_SAR').value = "0.00";
+                        document.getElementById('mohamed_share_SAR').value = "0.00";
+
+                    } else if (profitsByCurrency.SAR > 0 && (!profitsByCurrency.KWD || profitsByCurrency.KWD ===
+                            0)) {
+                        // إذا كان هناك أرباح بالريال فقط
+                        document.getElementById('net_profit_SAR').value = netProfitSAR.toFixed(2);
+                        document.getElementById('net_profit_KWD').value = "0.00";
+
+                        const ismailShareSAR = netProfitSAR * 0.5;
+                        const mohamedShareSAR = netProfitSAR * 0.5;
+                        document.getElementById('ismail_share_SAR').value = ismailShareSAR.toFixed(2);
+                        document.getElementById('mohamed_share_SAR').value = mohamedShareSAR.toFixed(2);
+                        document.getElementById('ismail_share_KWD').value = "0.00";
+                        document.getElementById('mohamed_share_KWD').value = "0.00";
+
+                    } else {
+                        // إذا كان هناك أرباح بالعملتين أو لا يوجد أرباح
+                        document.getElementById('net_profit_SAR').value = netProfitSAR.toFixed(2);
+                        document.getElementById('net_profit_KWD').value = netProfitKWD.toFixed(2);
+
+                        // توزيع الأرباح بالريال (50% لكل شريك)
+                        const ismailShareSAR = netProfitSAR * 0.5;
+                        const mohamedShareSAR = netProfitSAR * 0.5;
+                        document.getElementById('ismail_share_SAR').value = ismailShareSAR.toFixed(2);
+                        document.getElementById('mohamed_share_SAR').value = mohamedShareSAR.toFixed(2);
+
+                        // توزيع الأرباح بالدينار (50% لكل شريك)
+                        const ismailShareKWD = netProfitKWD * 0.5;
+                        const mohamedShareKWD = netProfitKWD * 0.5;
+                        document.getElementById('ismail_share_KWD').value = ismailShareKWD.toFixed(2);
+                        document.getElementById('mohamed_share_KWD').value = mohamedShareKWD.toFixed(2);
+                    }
 
                     // إزالة التنسيق الخاص
                     document.getElementById('net_profit_SAR').classList.remove('fw-bold', 'bg-success',
@@ -770,21 +862,23 @@
 
                         // عرض الأرباح حسب العملة
                         let hasData = false;
+                        let displayText = '';
                         for (const [currency, profit] of Object.entries(data.profits_by_currency)) {
                             if (profit > 0) {
                                 hasData = true;
                                 const currencyLabel = currency === 'SAR' ? 'ريال' : 'دينار';
-                                const profitItem = document.createElement('div');
-                                profitItem.innerHTML =
-                                    `<div class="mb-1">${profit.toFixed(2)} ${currencyLabel}</div>`;
-                                profitItem.classList.add('text-success');
-                                profitDisplay.appendChild(profitItem);
+                                displayText +=
+                                    `<div class="mb-1 text-${currency === 'SAR' ? 'success' : 'primary'}">${profit.toFixed(2)} ${currencyLabel}</div>`;
                             }
                         }
 
-                        // إذا لم تكن هناك أرباح
+                        // إذا لم تكن هناك أرباح، استخدم العملة الأساسية من الاستجابة
                         if (!hasData) {
-                            profitDisplay.innerHTML = '<div>0.00 ريال</div>';
+                            const defaultCurrency = data.primary_currency || 'SAR';
+                            const defaultLabel = defaultCurrency === 'SAR' ? 'ريال' : 'دينار';
+                            profitDisplay.innerHTML = `<div>0.00 ${defaultLabel}</div>`;
+                        } else {
+                            profitDisplay.innerHTML = displayText;
                         }
 
                         // حفظ قيم الأرباح حسب العملة للاستخدام لاحقاً
@@ -801,18 +895,36 @@
 
             // استخدام نتيجة الحساب
             document.getElementById('use-result-btn').addEventListener('click', function() {
-                document.getElementById('month_year').value = document.getElementById(
-                        'month-year-display')
+                document.getElementById('month_year').value = document.getElementById('month-year-display')
                     .textContent +
                     '(من ' + window.startDateValue + ' إلى ' + window.endDateValue + ')';
 
-                // إنشاء عنصر لعرض تفاصيل الأرباح حسب العملة في نموذج المصاريف
+                // ✅ تحديث الحقول بناءً على العملة الفعلية
+                const profitsByCurrency = window.calculatedProfitsByCurrency;
+                const primaryCurrency = Object.keys(profitsByCurrency).reduce((a, b) =>
+                    profitsByCurrency[a] > profitsByCurrency[b] ? a : b, 'SAR');
+
+                // تصفير جميع الحقول أولاً
+                document.getElementById('total_monthly_profit_SAR').value = '0.00';
+                document.getElementById('total_monthly_profit_KWD').value = '0.00';
+
+                // ملء الحقول بناءً على البيانات الفعلية
+                for (const [currency, amount] of Object.entries(profitsByCurrency)) {
+                    if (amount > 0) {
+                        document.getElementById(`total_monthly_profit_${currency}`).value = amount.toFixed(
+                            2);
+                    }
+                }
+
+                document.getElementById('start_date_hidden').value = window.startDateValue;
+                document.getElementById('end_date_hidden').value = window.endDateValue;
+
+                // ✅ تحديث تفاصيل الأرباح مع العملات الصحيحة
                 let profitDetailsDiv = document.getElementById('profit-details');
                 if (!profitDetailsDiv) {
                     profitDetailsDiv = document.createElement('div');
                     profitDetailsDiv.id = 'profit-details';
-
-                    // إضافة العنصر بعد حقل إجمالي الربح الشهري
+                    profitDetailsDiv.className = 'alert alert-info mt-2';
                     const profitCardBody = document.querySelector('.card-body h6.card-title').closest(
                         '.card-body');
                     if (profitCardBody) {
@@ -820,19 +932,17 @@
                     }
                 }
 
-                // تحديث محتوى عنصر تفاصيل الأرباح
-                profitDetailsDiv.innerHTML = '';
-                profitDetailsDiv.classList.add('small', 'text-muted', 'mt-2');
+                let detailsHTML = '<strong>تفاصيل الأرباح حسب العملة:</strong><br>';
+                for (const [currency, amount] of Object.entries(profitsByCurrency)) {
+                    if (amount > 0) {
+                        const currencyLabel = currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي';
+                        const badgeClass = currency === 'SAR' ? 'text-currency-sar' : 'text-currency-kwd';
+                        detailsHTML +=
+                            `<span class="currency-badge ${badgeClass}">${amount.toFixed(2)} ${currencyLabel}</span> `;
+                    }
+                }
 
-                // تعيين قيم الأرباح لكل عملة
-                let sarAmount = window.calculatedProfitsByCurrency.SAR || 0;
-                let kwdAmount = window.calculatedProfitsByCurrency.KWD || 0;
-
-                // تعيين القيم في حقول النموذج
-                document.getElementById('total_monthly_profit_SAR').value = sarAmount.toFixed(2);
-                document.getElementById('total_monthly_profit_KWD').value = kwdAmount.toFixed(2);
-                document.getElementById('start_date_hidden').value = window.startDateValue;
-                document.getElementById('end_date_hidden').value = window.endDateValue;
+                profitDetailsDiv.innerHTML = detailsHTML;
 
                 // إضافة حقول مخفية لقيم كل عملة (للتوافق)
                 for (const [currency, profit] of Object.entries(window.calculatedProfitsByCurrency)) {
@@ -1091,7 +1201,6 @@
         });
     </script>
     <script src="{{ asset('js/preventClick.js') }}"></script>
-
 @endpush
 
 @push('styles')
@@ -1151,21 +1260,23 @@
             transform: scale(1.12) rotate(-7deg);
             transition: 0.1s;
         }
-        /* تصميم إضافي لجعل الخانات دائماً مناسبة للموبايل والديسكتوب */
-@media (max-width: 575px) {
-    .custom-expenses-table td,
-    .custom-expenses-table th {
-        font-size: 13px !important;
-        padding: 0.3rem 0.2rem !important;
-        white-space: normal !important;
-    }
-    .custom-expenses-table .bg-light-subtle {
-        max-width: 99vw !important;
-        min-width: unset !important;
-        padding-left: 4px !important;
-        padding-right: 4px !important;
-    }
-}
 
+        /* تصميم إضافي لجعل الخانات دائماً مناسبة للموبايل والديسكتوب */
+        @media (max-width: 575px) {
+
+            .custom-expenses-table td,
+            .custom-expenses-table th {
+                font-size: 13px !important;
+                padding: 0.3rem 0.2rem !important;
+                white-space: normal !important;
+            }
+
+            .custom-expenses-table .bg-light-subtle {
+                max-width: 99vw !important;
+                min-width: unset !important;
+                padding-left: 4px !important;
+                padding-right: 4px !important;
+            }
+        }
     </style>
 @endpush

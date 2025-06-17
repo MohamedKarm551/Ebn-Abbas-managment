@@ -96,6 +96,14 @@ class MonthlyExpenseController extends Controller
         // تنسيق تاريخ الفترة كاسم شهر
         $monthYearName = $startDate->format('F Y');
 
+         // تحديد العملة الأساسية بناءً على أكبر مبلغ أرباح
+    $primaryCurrency = 'SAR'; // القيمة الافتراضية
+    if (isset($profitsByCurrency['KWD']) && isset($profitsByCurrency['SAR'])) {
+        $primaryCurrency = $profitsByCurrency['KWD'] >= $profitsByCurrency['SAR'] ? 'KWD' : 'SAR';
+    } elseif (isset($profitsByCurrency['KWD']) && $profitsByCurrency['KWD'] > 0) {
+        $primaryCurrency = 'KWD';
+    }
+    
         return response()->json([
             'profits_by_currency' => $profitsByCurrency,
             'total_profit' => array_sum($profitsByCurrency), // المجموع الكلي (للتوافقية مع الكود القديم)
@@ -104,6 +112,8 @@ class MonthlyExpenseController extends Controller
             'bookings_count_by_currency' => $bookingsCount,
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
+            'primary_currency' => $primaryCurrency, // ✅ إضافة العملة الأساسية
+
         ]);
     }
 
