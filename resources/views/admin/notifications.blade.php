@@ -599,6 +599,10 @@
                 if ($(this).hasClass('active')) return;
                 $('.filter-btn').removeClass('active');
                 $(this).addClass('active');
+
+                // ✅ إضافة تحديث URL بدون reload
+                var url = $(this).data('url');
+                window.history.pushState({}, '', url);
                 // تحميل الإشعارات بالفلتر المطلوب
                 fetchNotifications($(this).data('url'));
             });
@@ -642,29 +646,28 @@
                     });
                 }, 2500);
             }
-                    $(document).on('click', '#pagination-container .page-link', function(e) {
-            e.preventDefault();
-            var url = $(this).attr('href');
-            if (!url || url === '#') return;
+            $(document).on('click', '#pagination-container .page-link', function(e) {
+                e.preventDefault();
+                var url = $(this).attr('href');
+                if (!url || url === '#') return;
 
-            $('#loading-overlay').addClass('visible');
-            $.ajax({
-                url: url,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            }).done(function(html) {
-                var $html = $(html);
-                $('#notifications-content').html($html.find('#notifications-content').html());
-                $('#pagination-container').html($html.find('#pagination-container').html());
-                $('#loading-overlay').removeClass('visible');
-            }).fail(function() {
-                $('#loading-overlay').removeClass('visible');
-                Swal.fire('خطأ', 'حدث خطأ أثناء تحميل الصفحة، يرجى المحاولة مرة أخرى.', 'error');
+                $('#loading-overlay').addClass('visible');
+                $.ajax({
+                    url: url,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).done(function(html) {
+                    var $html = $(html);
+                    $('#notifications-content').html($html.find('#notifications-content').html());
+                    $('#pagination-container').html($html.find('#pagination-container').html());
+                    $('#loading-overlay').removeClass('visible');
+                }).fail(function() {
+                    $('#loading-overlay').removeClass('visible');
+                    Swal.fire('خطأ', 'حدث خطأ أثناء تحميل الصفحة، يرجى المحاولة مرة أخرى.',
+                    'error');
+                });
             });
         });
-    });
-
-  
     </script>
 @endpush

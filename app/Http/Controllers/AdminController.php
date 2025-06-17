@@ -103,9 +103,9 @@ class AdminController extends Controller
             $query->where('user_id', $user->id);
         }
         // لو المستخدم أدمن، مش هنضيف أي شرط إضافي (هيجيب كله)
-
-        $notifications = $query->paginate(20); // تطبيق الـ pagination على الاستعلام النهائي
-
+        
+        $notifications = $query->paginate(20)->appends($request->query());
+        // *** نهاية التعديل: هنا بنجيب الإشعارات حسب الفلتر والصفحة ***
         return view('admin.notifications', compact('notifications', 'currentFilter'));
     }
     public function deleteOldLoginNotifications()
