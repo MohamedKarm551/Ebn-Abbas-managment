@@ -135,98 +135,91 @@
 @endsection
 
 @push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-                    const container = document.getElementById('image_urls_container');
-                    const addButton = document.getElementById('add_image_url_btn');
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تعريف العناصر الأساسية
+    const container = document.getElementById('image_urls_container');      // العنصر الذي يحتوي على حقول الروابط
+    const addButton = document.getElementById('add_image_url_btn');         // زر إضافة رابط جديد
 
-                    function updateImageCounters() {
-                        const inputGroups = container.querySelectorAll('.image-url-input-group');
-                        inputGroups.forEach((group, index) => {
-                            const counterSpan = group.querySelector('.input-group-text');
-                            if (counterSpan) {
-                                // بنحط الرقم + النقطة
-                                counterSpan.textContent = `${index + 1}.`;
-                            }
-                        });
+    // دالة: تحديث ترقيم الحقول وإظهار أرقامها بشكل تسلسلي
+    function updateImageCounters() {
+        const inputGroups = container.querySelectorAll('.image-url-input-group');
+        inputGroups.forEach((group, index) => {
+            const counterSpan = group.querySelector('.input-group-text');
+            if (counterSpan) {
+                counterSpan.textContent = `${index + 1}.`; // 1. 2. 3. إلخ
+            }
+        });
+    }
 
-                        function updateRemoveButtonVisibility() {
-                            const inputGroups = container.querySelectorAll('.image-url-input-group');
-                            inputGroups.forEach((group, index) => {
-                                const removeButton = group.querySelector('.remove-image-url-btn');
-                                if (inputGroups.length > 1) {
-                                    removeButton.style.display = 'inline-block';
-                                } else {
-                                    // إذا كان هناك حقل واحد فقط، لا تظهر زر الحذف إلا إذا كان الحقل يحتوي على قيمة
-                                    const inputField = group.querySelector('input[name="image_urls[]"]');
-                                    if (inputField && inputField.value.trim() !== '') {
-                                        removeButton.style.display = 'inline-block';
-                                    } else {
-                                        removeButton.style.display = 'none';
-                                    }
-                                }
-                            });
-                            updateImageCounters(); // تحديث الأرقام بعد تغيير رؤية أزرار الحذف
-                        }
+    // دالة: إظهار أو إخفاء زر الحذف حسب عدد الحقول أو محتوى الحقل الوحيد
+    function updateRemoveButtonVisibility() {
+        const inputGroups = container.querySelectorAll('.image-url-input-group');
+        inputGroups.forEach((group) => {
+            const removeButton = group.querySelector('.remove-image-url-btn');
+            const inputField = group.querySelector('input[name="image_urls[]"]');
+            if (inputGroups.length > 1) {
+                // لو فيه أكثر من حقل، زر الحذف يظهر للجميع
+                removeButton.style.display = 'inline-block';
+            } else {
+                // لو فيه حقل واحد فقط، الزر يظهر فقط لو فيه قيمة بالحقل
+                if (inputField && inputField.value.trim() !== '') {
+                    removeButton.style.display = 'inline-block';
+                } else {
+                    removeButton.style.display = 'none';
+                }
+            }
+        });
+        updateImageCounters();
+    }
 
-                        if (addButton && container) {
-                            addButton.addEventListener('click', function() {
-                                const newGroup = document.createElement('div');
-                                newGroup.classList.add('input-group', 'mb-2', 'image-url-input-group');
-                                newGroup.innerHTML = `
-                <input type="url" name="image_urls[]" class="form-control" placeholder="https://example.com/image.jpg">
-                <button type="button" class="btn btn-danger remove-image-url-btn">-</button>
-            `;
-                                container.appendChild(newGroup);
-                                updateRemoveButtonVisibility();
-                            });
+    // دالة: إنشاء مجموعة حقل جديدة (input + رقم + زر حذف)
+    function createImageInputGroup() {
+        const group = document.createElement('div');
+        group.classList.add('input-group', 'mb-2', 'image-url-input-group');
+        group.innerHTML = `
+            <span class="input-group-text" style="font-weight: bold; min-width: 40px; text-align: center;"></span>
+            <input type="url" name="image_urls[]" class="form-control" placeholder="https://example.com/image.jpg">
+            <button type="button" class="btn btn-danger remove-image-url-btn">-</button>
+        `;
+        return group;
+    }
 
-                            container.addEventListener('click', function(e) {
-                                if (e.target && e.target.classList.contains('remove-image-url-btn')) {
-                                    const groupToRemove = e.target.closest('.image-url-input-group');
-                                    const inputGroups = container.querySelectorAll('.image-url-input-group');
+    // حدث: عند الضغط على زر "إضافة"
+    addButton.addEventListener('click', function() {
+        const newGroup = createImageInputGroup();
+        container.appendChild(newGroup);
+        updateRemoveButtonVisibility();
+    });
 
-                                    if (inputGroups.length > 1) {
-                                        groupToRemove.remove();
-                                    } else if (inputGroups.length === 1) {
-                                        // إذا كان آخر حقل، قم فقط بمسح قيمته بدلاً من حذفه بالكامل
-                                        // واجعل زر الحذف غير مرئي
-                                        const inputField = groupToRemove.querySelector(
-                                            'input[name="image_urls[]"]');
-                                        if (inputField) {
-                                            inputField.value = '';
-                                        }
-                                        e.target.style.display = 'none'; // إخفاء زر الحذف
-                                    }
-                                    updateRemoveButtonVisibility();
-                                }
-                            });
+    // حدث: عند الضغط على زر "حذف" لأي حقل
+    container.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('remove-image-url-btn')) {
+            const groupToRemove = e.target.closest('.image-url-input-group');
+            const inputGroups = container.querySelectorAll('.image-url-input-group');
+            if (inputGroups.length > 1) {
+                // لو فيه أكثر من حقل، إحذف الحقل تمامًا
+                groupToRemove.remove();
+            } else {
+                // لو هو آخر حقل، فقط امسح القيمة وخفي الزر
+                const inputField = groupToRemove.querySelector('input[name="image_urls[]"]');
+                if (inputField) inputField.value = '';
+                e.target.style.display = 'none';
+            }
+            updateRemoveButtonVisibility();
+        }
+    });
 
-                            // تحديث رؤية أزرار الحذف عند تحميل الصفحة لأول مرة (خاصة لصفحة التعديل)
-                            updateRemoveButtonVisibility();
+    // حدث: عند تغيير قيمة أي حقل، راقب إذا لازم يظهر/يختفي زر الحذف
+    container.addEventListener('input', function(e) {
+        if (e.target && e.target.matches('input[name="image_urls[]"]')) {
+            updateRemoveButtonVisibility();
+        }
+    });
 
-                            // تحديث رؤية زر الحذف عند تغيير قيمة الحقل (للحالة التي يكون فيها حقل واحد)
-                            container.addEventListener('input', function(e) {
-                                if (e.target && e.target.matches('input[name="image_urls[]"]')) {
-                                    updateRemoveButtonVisibility();
-                                }
-                            });
-                        }
-
-                        addButton.addEventListener('click', function() {
-                            const newGroup = document.createElement('div');
-                            newGroup.classList.add('input-group', 'mb-2', 'image-url-input-group');
-
-                            // هنضيف السبان اللي فيها الرقم
-                            newGroup.innerHTML = `
-        <span class="input-group-text" style="font-weight: bold; min-width: 40px; text-align: center;"></span>
-        <input type="url" name="image_urls[]" class="form-control" placeholder="https://example.com/image.jpg">
-        <button type="button" class="btn btn-danger remove-image-url-btn">-</button>
-    `;
-                            container.appendChild(newGroup);
-                            updateRemoveButtonVisibility();
-                            updateImageCounters(); // هنعمل فنكشن جديدة تحدث الأرقام
-                        });
-                    });
-    </script>
+    // عند تحميل الصفحة: تأكد أن كل شيء مضبوط (مهم لصفحة التعديل)
+    updateRemoveButtonVisibility();
+});
+</script>
 @endpush
+
