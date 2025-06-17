@@ -174,8 +174,8 @@ class CompanyLandTripController extends Controller
         // حساب المبالغ
         $costPrice = $roomPrice->cost_price;
         $salePrice = $roomPrice->sale_price;
-        $totalDueToAgent = $validatedData['rooms'] * $costPrice  ;
-        $totalDueFromCompany = $validatedData['rooms'] * $salePrice  ;
+        $totalDueToAgent = $validatedData['rooms'] * $costPrice;
+        $totalDueFromCompany = $validatedData['rooms'] * $salePrice;
 
         DB::beginTransaction();
 
@@ -211,12 +211,16 @@ class CompanyLandTripController extends Controller
             $notificationMessage = "تم إضافة حجز جديد للرحلة رقم: {$landTrip->id} من شركة: " . Auth::user()->company->name . " القائم بالحجز " . Auth::user()->name .
                 " للعميل: {$validatedData['client_name']}. عدد الغرف: {$validatedData['rooms']}";
 
-            // إشعار للمدير
-            Notification::create([
-                'user_id' => Auth::id(),
-                'message' => $notificationMessage,
-                'type' => 'حجز رحلة',
-            ]);
+            // إشعار لكل أدمن 
+            $adminUsers = User::where('role', 'Admin')->get();
+            foreach ($adminUsers as $admin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'message' => $notificationMessage,
+                    'title' => 'حجز جديد في رحلة برية',
+                    'type' => 'حجز رحلة'
+                ]);
+            }
 
             // إشعار للموظف المسؤول عن الرحلة
             if ($landTrip->employee_id) {
@@ -265,29 +269,56 @@ class CompanyLandTripController extends Controller
     }
     public function voucher(LandTripBooking $booking)
     {
-        // التأكد من أن الحجز يخص الشركة الحالية
-        if ($booking->company_id != Auth::user()->company_id) {
-            return redirect()->route('company.land-trips.index')
-                ->with('error', 'لا يمكنك الوصول إلى هذا الحجز');
+        // التحقق من الصلاحيات
+        $user = Auth::user();
+
+        // للشركة: التحقق من أن المستخدم ينتمي لنفس الشركة
+        if ($user->role === 'Company' && $user->company_id !== $booking->company_id) {
+            abort(403, 'غير مصرح لك بعرض هذا الفاوتشر');
         }
 
-        // تحميل العلاقات اللازمة
-        $booking->load(['landTrip.tripType', 'landTrip.agent', 'landTrip.employee', 'roomPrice.roomType']);
+        // للأدمن والموظف: السماح بعرض أي فاوتشر
+        if (!in_array($user->role, ['Admin', 'employee', 'Company'])) {
+            abort(403, 'غير مصرح لك بعرض هذا الفاوتشر');
+        }
 
+        // تحميل العلاقات المطلوبة
+        $booking->load([
+            'landTrip.tripType',
+            'landTrip.agent',
+            'landTrip.hotel',
+            'landTrip.employee',
+            'company',
+            'roomPrice.roomType'
+        ]);
         return view('company.land-trips.voucher', compact('booking'));
     }
 
     public function downloadVoucher(LandTripBooking $booking)
     {
-        // التأكد من أن الحجز يخص الشركة الحالية
-        if ($booking->company_id != Auth::user()->company_id) {
-            return redirect()->route('company.land-trips.index')
-                ->with('error', 'لا يمكنك الوصول إلى هذا الحجز');
+        // التحقق من الصلاحيات
+        $user =  Auth::user();
+
+        // للشركة: التحقق من أن المستخدم ينتمي لنفس الشركة
+        if ($user->role === 'Company' && $user->company_id !== $booking->company_id) {
+            abort(403, 'غير مصرح لك بعرض هذا الفاوتشر');
+        }
+
+        // للأدمن والموظف: السماح بعرض أي فاوتشر
+        if (!in_array($user->role, ['Admin', 'employee', 'Company'])) {
+            abort(403, 'غير مصرح لك بعرض هذا الفاوتشر');
         }
 
         // تحميل العلاقات اللازمة
-        $booking->load(['landTrip.tripType', 'landTrip.agent', 'landTrip.hotel', 'landTrip.employee', 'roomPrice.roomType', 'company']);
-
+        // تحميل العلاقات المطلوبة
+        $booking->load([
+            'landTrip.tripType',
+            'landTrip.agent',
+            'landTrip.hotel',
+            'landTrip.employee',
+            'company',
+            'roomPrice.roomType'
+        ]);
         // عرض صفحة خاصة ستقوم بتحويل HTML إلى PDF في المتصفح
         return view('company.land-trips.voucher-view', compact('booking'));
     }

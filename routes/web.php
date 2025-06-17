@@ -20,6 +20,8 @@ use App\Http\Controllers\HotelRoomController;
 use App\Models\User;
 use Jenssegers\Agent\Agent;
 use App\Models\Notification;
+use App\Http\Controllers\BookingOperationReportController;
+use App\Models\Company;
 
 Route::middleware(['auth'])->group(function () {
     // تصدير جدول الحجز
@@ -182,7 +184,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/save-screenshot', [\App\Http\Controllers\ReportController::class, 'saveScreenshot']);
     Route::post('/save-pdf', [\App\Http\Controllers\ReportController::class, 'savePDF']);
     // 
-        // مسارات مدفوعات الشركات
+    // مسارات مدفوعات الشركات
     Route::prefix('admin/company-payments')->name('admin.company-payments.')->group(function () {
         Route::get('/', [CompanyPaymentController::class, 'index'])->name('index');
         Route::get('/{company}', [CompanyPaymentController::class, 'show'])->name('show');
@@ -225,10 +227,39 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
     Route::resource('trip-types', TripTypeController::class)->except('show');
 
     Route::get('land-trips/{land_trip}/bookings', [LandTripController::class, 'showBookings'])->name('land-trips.bookings');
-    // إضافة مسارات إنشاء الحجوزات
     Route::get('land-trips/{land_trip}/create-booking', [LandTripController::class, 'createBooking'])->name('land-trips.create-booking');
     Route::post('land-trips/{land_trip}/store-booking', [LandTripController::class, 'storeBooking'])->name('land-trips.store-booking');
-});
+    Route::get('land-trips/bookings/{booking}/edit', [LandTripController::class, 'editBooking'])->name('land-trips.bookings.edit');
+    Route::put('land-trips/bookings/{booking}/update', [LandTripController::class, 'updateBooking'])->name('land-trips.update-booking');
+ Route::get('land-trips/bookings/{booking}/voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.bookings.voucher');
+
+    // مسارات تقارير العمليات
+    Route::prefix('operation-reports')->name('operation-reports.')->group(function () {
+        Route::get('/', [BookingOperationReportController::class, 'index'])->name('index');
+        Route::get('/create', [BookingOperationReportController::class, 'create'])->name('create');
+        // إضافة route للتحليلات الرسومية
+        Route::get('/charts', [BookingOperationReportController::class, 'charts'])->name('charts');
+
+        // ** ضع روتات API أولاً قبل المعاملات الديناميكية **
+        Route::get('/get-booking-details', [BookingOperationReportController::class, 'getBookingDetails'])
+            ->name('get-booking-details');
+        Route::get('/get-client-data', [BookingOperationReportController::class, 'getClientData'])
+            ->name('get-client-data');
+        Route::get('/get-booking-data', [BookingOperationReportController::class, 'getBookingData'])
+            ->name('get-booking-data');
+        Route::get('/api/clients/search', [BookingOperationReportController::class, 'searchClients'])
+            ->name('api.clients.search');
+        Route::get('/api/client/latest-booking/{name}', [BookingOperationReportController::class, 'getClientLatestBooking'])
+            ->name('api.client.latest-booking');
+
+        // ** ثم ضع المعاملات الديناميكية في النهاية **
+        Route::post('/', [BookingOperationReportController::class, 'store'])->name('store');
+        Route::get('/{operationReport}', [BookingOperationReportController::class, 'show'])->name('show');
+        Route::get('/{operationReport}/edit', [BookingOperationReportController::class, 'edit'])->name('edit');
+        Route::put('/{operationReport}', [BookingOperationReportController::class, 'update'])->name('update');
+        Route::delete('/{operationReport}', [BookingOperationReportController::class, 'destroy'])->name('destroy');
+    });
+}); // <-- قوس واحد فقط لإغلاق المجموعة الرئيسية
 // مسارات ربط الموظفين بالمستخدمين
 Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class])->group(function () {
     Route::post('/admin/employees/create-user', [AdminController::class, 'createEmployeeUser'])->name('admin.createEmployeeUser');
@@ -249,18 +280,26 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 Route::get('/', function () {
     return view('welcome');
 });
-
 // مش راضي يشتغل على الهوستنجر عشان هما لسه لم يحدثوا الكومبوسر
-Auth::routes();
-//  Route::get('/login', function () {
-//     return view('welcome');
-// })->name('login');
-// حل يدوي
-// كان في هنا مشكلة لو راح على راوتر اسه لوجين مش هيلاقيه عملته يدوي عشان يويدني صح
-// Route::get('/register', function(){
-//      return view('auth.register');
-//    // return view('welcome');
-// })->name('register');
+Auth::routes(['register' => false]); // إلغاء التسجيل من خلال Auth::routes
+
+// ✅ تسجيل للأدمن فقط (أكثر أماناً)
+Route::middleware(['auth'])->group(function () {
+    // فحص إذا كان المستخدم أدمن يدوياً
+    Route::get('/admin/register-user', function () {
+        if (Auth::user()->role !== 'Admin') {
+            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+        }
+        return app(\App\Http\Controllers\Auth\RegisterController::class)->showRegistrationForm();
+    })->name('admin.register.user');
+
+    Route::post('/admin/register-user', function (\Illuminate\Http\Request $request) {
+        if (Auth::user()->role !== 'Admin') {
+            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+        }
+        return app(\App\Http\Controllers\Auth\RegisterController::class)->register($request);
+    })->name('admin.register.user.post');
+});
 
 
 Route::get('/login', function () {

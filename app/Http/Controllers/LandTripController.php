@@ -835,7 +835,7 @@ class LandTripController extends Controller
             'type' => 'تعديل رحلة',
         ]);
     }
-
+    // دالة لإنشاء حجز جديد لرحلة برية
     public function createBooking(LandTrip $landTrip)
     {
         // التحقق من أن الرحلة نشطة
@@ -867,7 +867,7 @@ class LandTripController extends Controller
 
         return view('admin.land-trips.create-booking', compact('landTrip', 'companies', 'roomAvailability'));
     }
-
+    // دالة لتخزين الحجز 
     public function storeBooking(Request $request, LandTrip $landTrip)
     {
         // التحقق من أن الرحلة نشطة
@@ -962,13 +962,26 @@ class LandTripController extends Controller
             // إنشاء إشعار
             $company = Company::find($validatedData['company_id']);
             $notificationMessage = "تم إضافة حجز جديد للرحلة رقم: {$landTrip->id} للعميل: {$validatedData['client_name']} من شركة: {$company->name}. عدد الغرف: {$validatedData['rooms']}";
-
+            // إشعار للموظف
             Notification::create([
                 'user_id' => Auth::id(),
                 'message' => $notificationMessage,
                 'type' => 'حجز رحلة',
             ]);
-
+            // إشعار للادمن 
+            
+            // إرسال إشعار للأدمن أيضاً
+            $adminUsers = User::where('role', 'Admin')->get(); // أو أي طريقة تحدد بها الأدمن
+            foreach ($adminUsers as $admin) {
+                // تجنب إرسال إشعار مكرر إذا كان الأدمن هو نفسه من قام بالحجز
+                if ($admin->id !== Auth::id()) {
+                    Notification::create([
+                        'user_id' => $admin->id,
+                        'message' => $notificationMessage . " - بواسطة: " . Auth::user()->name,
+                        'type' => 'حجز رحلة',
+                    ]);
+                }
+            }
             DB::commit();
 
             return redirect()->route('admin.land-trips.bookings', $landTrip->id)
@@ -982,4 +995,157 @@ class LandTripController extends Controller
                 ->with('error', 'حدث خطأ أثناء إنشاء الحجز: ' . $e->getMessage());
         }
     }
+    // دالة لتعديل الحجز 
+    public function editBooking(LandTripBooking $booking)
+    {
+        // التحقق من أن الحجز ينتمي للرحلة البرية
+        $landTrip = $booking->landTrip;
+        if (!$landTrip) {
+            return redirect()->route('admin.land-trips.index')
+                ->with('error', 'الحجز غير مرتبط برحلة برية.');
+        }
+
+        // تحميل العلاقات اللازمة
+        $landTrip->loadMissing(['tripType', 'agent', 'hotel', 'employee', 'roomPrices.roomType']);
+        $companies = Company::orderBy('name')->get();
+
+        // حساب الغرف المتاحة لكل نوع غرفة
+        $roomAvailability = [];
+        foreach ($landTrip->roomPrices as $roomPrice) {
+            $bookedRooms = DB::table('land_trip_booking_room_price')
+                ->where('land_trip_room_price_id', $roomPrice->id)
+                ->sum('rooms');
+
+            $availableRooms = $roomPrice->allotment ? $roomPrice->allotment - $bookedRooms : null;
+
+            $roomAvailability[$roomPrice->id] = [
+                'booked' => $bookedRooms,
+                'available' => $availableRooms,
+            ];
+        }
+
+        return view('admin.land-trips.edit-booking', compact('booking', 'landTrip', 'companies', 'roomAvailability'));
+    }
+    public function updateBooking(Request $request, LandTripBooking $booking)
+{
+    // التحقق من أن الحجز ينتمي للرحلة البرية
+    $landTrip = $booking->landTrip;
+    if (!$landTrip) {
+        return redirect()->route('admin.land-trips.index')
+            ->with('error', 'الحجز غير مرتبط برحلة برية.');
+    }
+
+    // التحقق من البيانات
+    $validatedData = $request->validate([
+        'company_id' => 'required|exists:companies,id',
+        'client_name' => 'required|string|max:255',
+        'land_trip_room_price_id' => 'required|exists:land_trip_room_prices,id',
+        'rooms' => 'required|integer|min:1',
+        'notes' => 'nullable|string|max:1000',
+    ], [
+        'company_id.required' => 'يرجى تحديد الشركة',
+        'company_id.exists' => 'الشركة المختارة غير موجودة',
+        'client_name.required' => 'اسم العميل مطلوب',
+        'client_name.max' => 'اسم العميل لا يجب أن يزيد عن 255 حرف',
+        'land_trip_room_price_id.required' => 'يرجى اختيار نوع الغرفة',
+        'land_trip_room_price_id.exists' => 'نوع الغرفة المختار غير موجود',
+        'rooms.required' => 'يرجى تحديد عدد الغرف',
+        'rooms.integer' => 'عدد الغرف يجب أن يكون رقماً صحيحاً',
+        'rooms.min' => 'عدد الغرف يجب أن يكون على الأقل 1',
+        'notes.max' => 'الملاحظات لا يجب أن تزيد عن 1000 حرف',
+    ]);
+
+    // جلب سعر الغرفة المختارة
+    $roomPrice = \App\Models\LandTripRoomPrice::findOrFail($validatedData['land_trip_room_price_id']);
+
+    // التحقق من أن سعر الغرفة ينتمي للرحلة المحددة
+    if ($roomPrice->land_trip_id !== $landTrip->id) {
+        return redirect()->back()
+            ->withInput()
+            ->withErrors(['land_trip_room_price_id' => 'بيانات الحجز غير صحيحة']);
+    }
+
+    // التحقق من توفر الغرف إذا كان هناك حد أقصى
+    if ($roomPrice->allotment !== null) {
+        $bookedRooms = DB::table('land_trip_booking_room_price')
+            ->where('land_trip_room_price_id', $roomPrice->id)
+            ->where('booking_id', '!=', $booking->id) // استبعاد الحجز الحالي
+            ->sum('rooms');
+        $availableRooms = max(0, $roomPrice->allotment - $bookedRooms);
+
+        if ($validatedData['rooms'] > $availableRooms) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['rooms' => "لا يوجد عدد كافٍ من الغرف المتاحة. العدد المتاح: {$availableRooms}"]);
+        }
+    }
+
+    // حساب التكاليف الجديدة
+    $costPrice = $roomPrice->cost_price;
+    $salePrice = $roomPrice->sale_price;
+    $totalDueToAgent = $validatedData['rooms'] * $costPrice;
+    $totalDueFromCompany = $validatedData['rooms'] * $salePrice;
+
+    DB::beginTransaction();
+
+    try {
+        // تحديث بيانات الحجز
+        $booking->update([
+            'company_id' => $validatedData['company_id'],
+            'client_name' => strip_tags($validatedData['client_name']),
+            'land_trip_room_price_id' => $validatedData['land_trip_room_price_id'],
+            'rooms' => $validatedData['rooms'],
+            'cost_price' => $costPrice,
+            'sale_price' => $salePrice,
+            'amount_due_to_agent' => $totalDueToAgent,
+            'amount_due_from_company' => $totalDueFromCompany,
+            'currency' => $roomPrice->currency,
+            'notes' => strip_tags($validatedData['notes'] ?? ''),
+        ]);
+
+        // تحديث السجل في الجدول الوسيط
+        DB::table('land_trip_booking_room_price')
+            ->where('booking_id', $booking->id)
+            ->update([
+                'land_trip_room_price_id' => $roomPrice->id,
+                'rooms' => $validatedData['rooms'],
+                'updated_at' => now(),
+            ]);
+
+        // إنشاء إشعار بالتحديث
+        $company = Company::find($validatedData['company_id']);
+        $notificationMessage = "تم تحديث حجز الرحلة رقم: {$landTrip->id} للعميل: {$validatedData['client_name']} من شركة: {$company->name}. عدد الغرف: {$validatedData['rooms']}";
+        
+        Notification::create([
+            'user_id' => Auth::id(),
+            'message' => $notificationMessage,
+            'type' => 'تحديث حجز رحلة',
+        ]);
+
+        // إرسال إشعار للأدمن إذا لم يكن هو من قام بالتحديث
+        $adminUsers = User::where('role', 'Admin')->get();
+        foreach ($adminUsers as $admin) {
+            if ($admin->id !== Auth::id()) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'message' => $notificationMessage . " - بواسطة: " . Auth::user()->name,
+                    'type' => 'تحديث حجز رحلة',
+                ]);
+            }
+        }
+
+        DB::commit();
+
+        return redirect()->route('admin.land-trips.bookings', $landTrip->id)
+            ->with('success', 'تم تحديث الحجز بنجاح');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("خطأ في تحديث الحجز: " . $e->getMessage());
+
+        return redirect()->back()
+            ->withInput()
+            ->with('error', 'حدث خطأ أثناء تحديث الحجز: ' . $e->getMessage());
+    }
+}
 }

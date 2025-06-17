@@ -241,10 +241,7 @@
                             <span class="button-text">أنواع الرحلات</span>
                         </a>
 
-                        <a href="{{ route('admin.land-trips.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus-circle me-1"></i>
-                            <span class="button-text">إضافة رحلة</span>
-                        </a>
+                       
                         {{-- الزر الجديد لمدفوعات الشركات --}}
                         <a href="{{ route('admin.company-payments.index') }}" class="btn btn-outline-success mb-2">
                             <i class="fas fa-money-bill-wave me-1"></i>
