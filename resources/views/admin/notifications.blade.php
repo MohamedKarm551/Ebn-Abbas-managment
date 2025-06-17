@@ -1,5 +1,9 @@
 @extends('layouts.app')
+@section('title', ' الإشعارات')
+@section('favicon')
 
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/cover.jpg') }}">
+@endsection
 @push('styles')
     <style>
         /* تحسينات الشكل */
@@ -400,14 +404,7 @@
             @endif
 
             @php
-                $landTripTypes = [
-                    'إضافة رحلة',
-                    'تعديل رحلة',
-                    'حذف رحلة',
-                    'حجز رحلة',
-                    'تحديث_تلقائي',
-                    'تحديث حجز رحلة',
-                ];
+                $landTripTypes = ['إضافة رحلة', 'تعديل رحلة', 'حذف رحلة', 'حجز رحلة', 'تحديث_تلقائي', 'تحديث حجز رحلة'];
                 $hasSecurityAlert = $notifications->contains(function ($n) {
                     return $n->type == 'تنبيه أمني';
                 });
@@ -645,6 +642,29 @@
                     });
                 }, 2500);
             }
+                    $(document).on('click', '#pagination-container .page-link', function(e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+            if (!url || url === '#') return;
+
+            $('#loading-overlay').addClass('visible');
+            $.ajax({
+                url: url,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).done(function(html) {
+                var $html = $(html);
+                $('#notifications-content').html($html.find('#notifications-content').html());
+                $('#pagination-container').html($html.find('#pagination-container').html());
+                $('#loading-overlay').removeClass('visible');
+            }).fail(function() {
+                $('#loading-overlay').removeClass('visible');
+                Swal.fire('خطأ', 'حدث خطأ أثناء تحميل الصفحة، يرجى المحاولة مرة أخرى.', 'error');
+            });
         });
+    });
+
+  
     </script>
 @endpush
