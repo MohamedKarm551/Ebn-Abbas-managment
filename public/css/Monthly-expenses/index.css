@@ -1,0 +1,1984 @@
+/* ========================================
+   متغيرات CSS المتقدمة
+======================================== */
+:root {
+    /* الألوان الأساسية */
+    --primary-gradient: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+    --secondary-gradient: linear-gradient(120deg, #2563eb 60%, #10b981 100%);
+    --success-gradient: linear-gradient(120deg, #10b981 60%, #16a34a 100%);
+    --warning-gradient: linear-gradient(120deg, #f59e0b 60%, #eab308 100%);
+    --danger-gradient: linear-gradient(120deg, #ef4444 60%, #dc2626 100%);
+    --info-gradient: linear-gradient(120deg, #06b6d4 60%, #0891b2 100%);
+
+    /* ألوان العملات */
+    --sar-gradient: linear-gradient(120deg, #10b981 60%, #059669 100%);
+    --kwd-gradient: linear-gradient(120deg, #2563eb 60%, #1d4ed8 100%);
+    --mixed-gradient: linear-gradient(120deg, #10b981 30%, #2563eb 70%);
+
+    /* الخلفيات */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #edf2f7;
+    --bg-dark: #1f2937;
+
+    /* الظلال المتقدمة */
+    --shadow-soft: 0 2px 15px 0 rgba(16, 185, 129, 0.08);
+    --shadow-medium: 0 8px 30px 0 rgba(37, 99, 235, 0.12);
+    --shadow-strong: 0 15px 50px 0 rgba(16, 185, 129, 0.15);
+    --shadow-hover: 0 20px 60px 0 rgba(37, 99, 235, 0.2);
+
+    /* الانتقالات */
+    --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-medium: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* الزوايا */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+}
+
+/* ========================================
+   تنسيق الحاوي الرئيسي
+======================================== */
+.container-fluid {
+    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+    min-height: 100vh;
+    padding: 1.5rem 0.8rem;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.container-fluid::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+/* ========================================
+   العنوان الرئيسي
+======================================== */
+h1.h3 {
+    background: linear-gradient(120deg, #ffffff 40%, #f0f9ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   تنسيق البطاقات المتقدم
+======================================== */
+.card {
+    background: var(--bg-primary);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary-gradient);
+    opacity: 0;
+    transition: var(--transition-medium);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+/* ========================================
+   هيدر البطاقات
+======================================== */
+.card-header {
+    background: var(--primary-gradient);
+    border-bottom: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    padding: 1rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.card-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    animation: headerFloat 8s ease-in-out infinite;
+}
+
+.card-header h6 {
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    margin: 0;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.card-header i {
+    font-size: 1.1rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* ========================================
+   محتوى البطاقات
+======================================== */
+.card-body {
+    padding: 1.5rem;
+    background: var(--bg-primary);
+    position: relative;
+}
+
+/* ========================================
+   تنسيق النماذج المتقدم
+======================================== */
+.form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+    font-size: 0.9rem;
+    position: relative;
+    display: inline-block;
+}
+
+.form-label::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 30%;
+    height: 2px;
+    background: var(--primary-gradient);
+    border-radius: 1px;
+    opacity: 0;
+    transition: var(--transition-medium);
+}
+
+.form-control:focus+.form-label::after,
+.form-select:focus+.form-label::after {
+    opacity: 1;
+    width: 100%;
+}
+
+.form-control,
+.form-select {
+    border: 2px solid #e5e7eb;
+    border-radius: var(--radius-md);
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+    transition: var(--transition-medium);
+    background: var(--bg-secondary);
+    position: relative;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: transparent;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    background: var(--bg-primary);
+    transform: translateY(-2px);
+    outline: none;
+}
+
+.form-control:focus {
+    background: linear-gradient(120deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+/* ========================================
+   مجموعات الإدخال المتقدمة
+======================================== */
+.input-group {
+    position: relative;
+    margin-bottom: 0.8rem;
+}
+
+.input-group-text {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    font-weight: 600;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.input-group .form-control {
+    border-left: none;
+    border-radius: 0;
+}
+
+.input-group .form-select {
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    border-left: 1px solid #e5e7eb;
+    background: var(--warning-gradient);
+    color: white;
+    font-weight: 600;
+    max-width: 90px;
+}
+
+.input-group .form-select option {
+    background: white;
+    color: #333;
+}
+
+/* ========================================
+   الأزرار المتقدمة
+======================================== */
+.btn {
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    padding: 0.6rem 1.2rem;
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-size: 0.85rem;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: var(--transition-medium);
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-medium);
+    background: linear-gradient(120deg, #059669 60%, #1d4ed8 100%);
+}
+
+.btn-success {
+    background: var(--success-gradient);
+    color: white;
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-success:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-medium);
+}
+
+.btn-warning {
+    background: var(--warning-gradient);
+    color: white;
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-medium);
+}
+
+.btn-danger {
+    background: var(--danger-gradient);
+    color: white;
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-medium);
+}
+
+.btn-outline-primary {
+    border: 2px solid transparent;
+    background: linear-gradient(white, white) padding-box,
+        var(--primary-gradient) border-box;
+    color: #10b981;
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-gradient);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   بطاقات العملات المميزة
+======================================== */
+.card.border-success {
+    background: linear-gradient(120deg, #ffffff 0%, #f0fdf4 100%);
+    border: 2px solid transparent !important;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.card.border-success::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    background: var(--sar-gradient);
+    border-radius: var(--radius-lg);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+}
+
+.card.border-primary {
+    background: linear-gradient(120deg, #ffffff 0%, #eff6ff 100%);
+    border: 2px solid transparent !important;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.card.border-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    background: var(--kwd-gradient);
+    border-radius: var(--radius-lg);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+}
+
+.card.border-warning {
+    background: linear-gradient(120deg, #ffffff 0%, #fffbeb 100%);
+    border: 2px solid transparent !important;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.card.border-warning::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    background: var(--warning-gradient);
+    border-radius: var(--radius-lg);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+}
+
+/* ========================================
+   هيدرات البطاقات الخاصة
+======================================== */
+.card-header.bg-success {
+    background: var(--sar-gradient) !important;
+}
+
+.card-header.bg-primary {
+    background: var(--kwd-gradient) !important;
+}
+
+.card-header.bg-warning {
+    background: var(--warning-gradient) !important;
+}
+
+/* ========================================
+   الشارات المتقدمة
+======================================== */
+.badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+}
+
+.badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: var(--transition-fast);
+}
+
+.badge:hover::before {
+    left: 100%;
+}
+
+.badge.bg-success {
+    background: var(--sar-gradient) !important;
+}
+
+.badge.bg-primary {
+    background: var(--kwd-gradient) !important;
+}
+
+/* ========================================
+   التنبيهات المتقدمة
+======================================== */
+.alert {
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 1.2rem;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.alert::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: currentColor;
+}
+
+.alert-success {
+    background: linear-gradient(120deg, rgba(16, 185, 129, 0.1) 0%, rgba(21, 128, 61, 0.1) 100%);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.alert-info {
+    background: linear-gradient(120deg, rgba(6, 182, 212, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%);
+    color: #0891b2;
+    border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.alert-warning {
+    background: linear-gradient(120deg, rgba(245, 158, 11, 0.1) 0%, rgba(234, 179, 8, 0.1) 100%);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* ========================================
+   الجدول المتقدم - محسن للحجم
+======================================== */
+.modern-table-container {
+    background: var(--bg-primary);
+    border-radius: var(--radius-xl);
+    padding: 1.2rem;
+    margin-top: 1.5rem;
+    box-shadow: var(--shadow-medium);
+    position: relative;
+    overflow: hidden;
+    /* منع الـ overflow الأفقي */
+    max-width: 100%;
+}
+
+.modern-table-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary-gradient);
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+}
+
+.modern-expenses-table {
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.8rem;
+    width: 100%;
+    min-width: 800px;
+    /* الحد الأدنى للعرض */
+}
+
+.modern-expenses-table thead {
+    background: var(--primary-gradient);
+}
+
+.modern-expenses-table thead th {
+    border: none;
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 0.8rem 0.5rem;
+    position: relative;
+    font-size: 0.75rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.modern-expenses-table thead th:first-child {
+    border-radius: var(--radius-md) 0 0 0;
+    width: 60px;
+}
+
+.modern-expenses-table thead th:last-child {
+    border-radius: 0 var(--radius-md) 0 0;
+    width: 120px;
+}
+
+.th-content {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.th-content i {
+    font-size: 0.9rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.th-content span {
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
+
+.modern-expenses-table tbody tr {
+    transition: var(--transition-medium);
+    background: var(--bg-primary);
+}
+
+.modern-expenses-table tbody tr:hover {
+    background: linear-gradient(120deg, #f0fdf4 0%, #eff6ff 100%);
+    transform: scale(1.005);
+    box-shadow: var(--shadow-soft);
+}
+
+.modern-expenses-table tbody td {
+    padding: 0.8rem 0.4rem;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+    text-align: center;
+    font-size: 0.75rem;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ========================================
+   عناصر الجدول المخصصة - مضغوطة
+======================================== */
+.row-number {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.number-badge {
+    background: var(--primary-gradient);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.month-card {
+    background: linear-gradient(120deg, #f8fafc 0%, #f0fdf4 100%);
+    border-radius: var(--radius-md);
+    padding: 0.6rem;
+    text-align: center;
+    border: 1px solid rgba(16, 185, 129, 0.1);
+    max-width: 140px;
+    margin: 0 auto;
+}
+
+.month-header {
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+}
+
+.month-header i {
+    font-size: 0.7rem;
+}
+
+.month-title {
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
+
+.month-dates {
+    font-size: 0.65rem;
+    color: #6b7280;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+}
+
+.date-item {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.date-separator {
+    margin: 0 0.2rem;
+}
+
+.duration-badge {
+    background: var(--info-gradient);
+    color: white;
+    padding: 0.8rem 1rem;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    box-shadow: var(--shadow-soft);
+    max-width: 160px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-medium);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.duration-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: var(--transition-medium);
+}
+
+.duration-badge:hover::before {
+    left: 100%;
+}
+
+.duration-badge:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: var(--shadow-medium);
+}
+
+.duration-content {
+    font-weight: 600;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    position: relative;
+    z-index: 2;
+}
+
+.duration-from,
+.duration-to {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin: 0.2rem 0;
+    padding: 0.2rem 0.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    backdrop-filter: blur(5px);
+}
+
+.duration-arrow {
+    margin: 0.3rem 0;
+    font-size: 1rem;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translateY(0);
+    }
+
+    40% {
+        transform: translateY(-3px);
+    }
+
+    60% {
+        transform: translateY(-2px);
+    }
+}
+
+/* ========================================
+   تحسين أزرار العمليات المتقدم
+======================================== */
+.actions-container {
+    text-align: center;
+    max-width: 140px;
+    margin: 0 auto;
+    padding: 0.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.3rem;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    text-decoration: none;
+    margin-bottom: 0.3rem;
+    padding: 0.2rem;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    min-width: 80px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* تأثير الموجة للأزرار */
+.action-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+    z-index: 1;
+}
+
+.action-btn:hover::before {
+    width: 120%;
+    height: 120%;
+}
+
+.action-btn i,
+.action-btn .btn-text {
+    position: relative;
+    z-index: 2;
+}
+
+/* أزرار العرض */
+.action-view {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    color: white;
+}
+
+.action-view:hover {
+    transform: translateY(-4px) scale(1.08) rotate(2deg);
+    box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.action-view:active {
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* أزرار التعديل */
+.action-edit {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.action-edit:hover {
+    transform: translateY(-4px) scale(1.08) rotate(-2deg);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.action-edit:active {
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* أزرار الحذف */
+.action-delete {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.action-delete:hover {
+    transform: translateY(-4px) scale(1.08) rotate(2deg);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    border-color: rgba(255, 255, 255, 0.3);
+    animation: shake 0.5s ease-in-out;
+}
+
+.action-delete:active {
+    transform: translateY(-2px) scale(1.05);
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateY(-4px) scale(1.08) rotate(0deg);
+    }
+
+    25% {
+        transform: translateY(-4px) scale(1.08) rotate(2deg);
+    }
+
+    75% {
+        transform: translateY(-4px) scale(1.08) rotate(-2deg);
+    }
+}
+
+/* تأثير النبض للأيقونات */
+.action-btn i {
+    transition: var(--transition-medium);
+}
+
+.action-btn:hover i {
+    animation: pulse-icon 0.6s ease-in-out;
+}
+
+@keyframes pulse-icon {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+}
+
+/* تأثير التوهج */
+.action-btn {
+    position: relative;
+}
+
+.action-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 25px;
+    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
+    opacity: 0;
+    transform: translateX(-100%);
+    transition: all 0.6s ease;
+}
+
+.action-btn:hover::after {
+    opacity: 1;
+    transform: translateX(100%);
+}
+
+/* ========================================
+   تحسين عمود الشهر والفترة
+======================================== */
+.month-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    text-align: center;
+    border: 2px solid rgba(16, 185, 129, 0.1);
+    max-width: 180px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-medium);
+    box-shadow: var(--shadow-soft);
+}
+
+.month-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(from 0deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+    animation: rotate 4s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.month-card:hover::before {
+    opacity: 1;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.month-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.month-header {
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    position: relative;
+    z-index: 2;
+}
+
+.month-header i {
+    font-size: 0.8rem;
+    color: #10b981;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+.month-title {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    background: linear-gradient(135deg, #10b981 0%, #2563eb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+}
+
+.month-dates {
+    font-size: 0.7rem;
+    color: #6b7280;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.date-item {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.4rem;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 10px;
+    transition: var(--transition-fast);
+}
+
+.date-item:hover {
+    background: rgba(16, 185, 129, 0.2);
+    transform: scale(1.05);
+}
+
+.date-separator {
+    margin: 0 0.3rem;
+    color: #10b981;
+    font-weight: bold;
+    /* animation: pulse 2s ease-in-out infinite; */
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* ========================================
+   تنسيق محسن وبسيط لحاوي المصاريف
+======================================== */
+.expenses-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    min-height: 90px;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.expenses-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* خط علوي بسيط */
+.expenses-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ef4444 0%, #f59e0b 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+/* شارات المصاريف البسيطة */
+.expense-badge {
+    padding: 0.2rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 85px;
+    justify-content: center;
+    text-align: center;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.expense-badge:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* شارة الريال السعودي */
+.expense-sar {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.expense-sar:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* شارة الدينار الكويتي */
+.expense-kwd {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.expense-kwd:hover {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* علامات العملة المبسطة */
+.expense-sar::after {
+    content: 'ر.س';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: white;
+    color: #059669;
+    font-size: 0.5rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    border-radius: 8px;
+    border: 1px solid #10b981;
+    line-height: 1;
+}
+
+.expense-kwd::after {
+    content: 'د.ك';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: white;
+    color: #2563eb;
+    font-size: 0.5rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    border-radius: 8px;
+    border: 1px solid #3b82f6;
+    line-height: 1;
+}
+
+/* الأيقونات */
+.expense-icon {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+/* المبالغ */
+.expense-amount {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* حالة عدم وجود مصاريف */
+.no-expenses {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(156, 163, 175, 0.05);
+    border-radius: 10px;
+    border: 1px dashed #d1d5db;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.no-expenses::before {
+    content: '💸';
+    font-size: 1.2rem;
+    opacity: 0.7;
+}
+
+.no-expenses-text {
+    font-weight: 500;
+    font-size: 0.7rem;
+}
+
+/* تحسين الاستجابة */
+@media (max-width: 768px) {
+    .expenses-container {
+        padding: 0.6rem;
+        min-height: 80px;
+        gap: 0.3rem;
+    }
+    
+    .expense-badge {
+        min-width: 75px;
+        font-size: 0.7rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
+    .expense-amount {
+        font-size: 0.7rem;
+    }
+    
+    .expense-icon {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .expenses-container {
+        padding: 0.5rem;
+        min-height: 70px;
+    }
+    
+    .expense-badge {
+        min-width: 70px;
+        font-size: 0.65rem;
+        padding: 0.35rem 0.5rem;
+    }
+    
+    .expense-amount {
+        font-size: 0.65rem;
+    }
+    
+    .no-expenses {
+        padding: 0.8rem;
+        font-size: 0.7rem;
+    }
+    
+    .no-expenses::before {
+        font-size: 1rem;
+    }
+}
+
+/* إزالة التأثيرات المعقدة للطباعة */
+@media print {
+    .expenses-container {
+        background: white !important;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        transform: none !important;
+    }
+    
+    .expense-badge {
+        background: #f5f5f5 !important;
+        color: #333 !important;
+        box-shadow: none !important;
+    }
+    
+    .expenses-container::before {
+        display: none !important;
+    }
+}
+
+/* تحسين للمبالغ الكبيرة */
+.large-expense .expense-amount {
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* تحسين العرض في الجدول */
+.modern-expenses-table .expenses-container {
+    margin: 0 auto;
+    max-width: 120px;
+}
+
+/* فئات خاصة للمصاريف */
+.expense-high {
+    border-left: 3px solid #ef4444;
+}
+
+.expense-medium {
+    border-left: 3px solid #f59e0b;
+}
+
+.expense-low {
+    border-left: 3px solid #10b981;
+}
+
+/* تحسين النصوص العربية */
+.expense-badge {
+    direction: rtl;
+    text-align: center;
+}
+
+.expense-amount {
+    font-family: 'Arial', sans-serif;
+    direction: ltr;
+}
+
+/* تحسين الألوان للوضع الليلي */
+@media (prefers-color-scheme: dark) {
+    .expenses-container {
+        background: rgba(31, 41, 55, 0.8);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #f9fafb;
+    }
+    
+    .no-expenses {
+        background: rgba(75, 85, 99, 0.3);
+        border-color: rgba(156, 163, 175, 0.3);
+        color: #d1d5db;
+    }
+}
+/* ========================================
+   تنسيق بسيط لحاوي الأرباح
+======================================== */
+.profits-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    min-height: 90px;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.profits-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* خط علوي للأرباح */
+.profits-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+/* شارات الأرباح */
+.profit-badge {
+    padding: 0.2rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 85px;
+    justify-content: center;
+    text-align: center;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profit-badge:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* شارة الريال السعودي للأرباح */
+.profit-sar {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.profit-sar:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* شارة الدينار الكويتي للأرباح */
+.profit-kwd {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.profit-kwd:hover {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* علامات العملة للأرباح */
+.profit-sar::after {
+    content: 'ر.س';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: white;
+    color: #059669;
+    font-size: 0.5rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    border-radius: 8px;
+    border: 1px solid #10b981;
+    line-height: 1;
+}
+
+.profit-kwd::after {
+    content: 'د.ك';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: white;
+    color: #2563eb;
+    font-size: 0.5rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    border-radius: 8px;
+    border: 1px solid #3b82f6;
+    line-height: 1;
+}
+
+/* أيقونات ومبالغ الأرباح */
+.profit-icon {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.profit-amount {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* حالة عدم وجود أرباح */
+.no-profits {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(16, 185, 129, 0.05);
+    border-radius: 10px;
+    border: 1px dashed #10b981;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.no-profits::before {
+    content: '💰';
+    font-size: 1.2rem;
+    opacity: 0.7;
+}
+
+.no-profits-text {
+    font-weight: 500;
+    font-size: 0.7rem;
+    color: #059669;
+}
+
+/* ========================================
+   تنسيق بسيط لحاوي صافي الربح
+======================================== */
+.net-profit-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    min-height: 90px;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.net-profit-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* خط علوي لصافي الربح */
+.net-profit-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+/* شارات صافي الربح */
+.net-profit-badge {
+    padding: 0.2rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 85px;
+    justify-content: center;
+    text-align: center;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.net-profit-badge:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* شارة الريال السعودي لصافي الربح */
+.net-profit-sar {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+}
+
+.net-profit-sar:hover {
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* شارة الدينار الكويتي لصافي الربح */
+.net-profit-kwd {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.net-profit-kwd:hover {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* علامات العملة لصافي الربح */
+.net-profit-sar::after {
+    content: 'ر.س';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: white;
+    color: #7c3aed;
+    font-size: 0.5rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    border-radius: 8px;
+    border: 1px solid #8b5cf6;
+    line-height: 1;
+}
+
+.net-profit-kwd::after {
+    content: 'د.ك';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: white;
+    color: #4f46e5;
+    font-size: 0.5rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    border-radius: 8px;
+    border: 1px solid #6366f1;
+    line-height: 1;
+}
+
+/* أيقونات ومبالغ صافي الربح */
+.net-profit-icon {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.net-profit-amount {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* حالة الربح الصفري أو السالب */
+.no-net-profit {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 10px;
+    border: 1px dashed #8b5cf6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.no-net-profit::before {
+    content: '📊';
+    font-size: 1.2rem;
+    opacity: 0.7;
+}
+
+.no-net-profit-text {
+    font-weight: 500;
+    font-size: 0.7rem;
+    color: #7c3aed;
+}
+
+/* حالة الخسارة */
+.net-loss {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: #ef4444;
+}
+
+.net-loss::before {
+    content: '📉';
+}
+
+.net-loss .no-net-profit-text {
+    color: #dc2626;
+}
+
+/* ========================================
+   تحسين الاستجابة للجميع
+======================================== */
+@media (max-width: 768px) {
+    .profits-container,
+    .net-profit-container {
+        padding: 0.6rem;
+        min-height: 80px;
+        gap: 0.3rem;
+    }
+    
+    .profit-badge,
+    .net-profit-badge {
+        min-width: 75px;
+        font-size: 0.7rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
+    .profit-amount,
+    .net-profit-amount {
+        font-size: 0.7rem;
+    }
+    
+    .profit-icon,
+    .net-profit-icon {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .profits-container,
+    .net-profit-container {
+        padding: 0.5rem;
+        min-height: 70px;
+    }
+    
+    .profit-badge,
+    .net-profit-badge {
+        min-width: 70px;
+        font-size: 0.65rem;
+        padding: 0.35rem 0.5rem;
+    }
+    
+    .profit-amount,
+    .net-profit-amount {
+        font-size: 0.65rem;
+    }
+    
+    .no-profits,
+    .no-net-profit {
+        padding: 0.8rem;
+        font-size: 0.7rem;
+    }
+    
+    .no-profits::before,
+    .no-net-profit::before {
+        font-size: 1rem;
+    }
+}
+
+/* ========================================
+   تحسين للطباعة
+======================================== */
+@media print {
+    .profits-container,
+    .net-profit-container {
+        background: white !important;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        transform: none !important;
+    }
+    
+    .profit-badge,
+    .net-profit-badge {
+        background: #f5f5f5 !important;
+        color: #333 !important;
+        box-shadow: none !important;
+    }
+    
+    .profits-container::before,
+    .net-profit-container::before {
+        display: none !important;
+    }
+}
+
+/* ========================================
+   فئات خاصة للقيم
+======================================== */
+.profit-high .profit-amount,
+.net-profit-high .net-profit-amount {
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.profit-negative,
+.net-profit-negative {
+    border-left: 3px solid #ef4444;
+}
+
+.profit-positive,
+.net-profit-positive {
+    border-left: 3px solid #10b981;
+}
+
+/* ========================================
+   تحسين النصوص العربية
+======================================== */
+.profit-badge,
+.net-profit-badge {
+    direction: rtl;
+    text-align: center;
+}
+
+.profit-amount,
+.net-profit-amount {
+    font-family: 'Arial', sans-serif;
+    direction: ltr;
+}
+
+/* ========================================
+   دعم الوضع الليلي
+======================================== */
+@media (prefers-color-scheme: dark) {
+    .profits-container,
+    .net-profit-container {
+        background: rgba(31, 41, 55, 0.8);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #f9fafb;
+    }
+    
+    .no-profits,
+    .no-net-profit {
+        background: rgba(75, 85, 99, 0.3);
+        border-color: rgba(156, 163, 175, 0.3);
+        color: #d1d5db;
+    }
+}
+
+/* ========================================
+   تحسين العرض في الجدول
+======================================== */
+.modern-expenses-table .profits-container,
+.modern-expenses-table .net-profit-container {
+    margin: 0 auto;
+    max-width: 120px;
+}
+/* ========================================
+   تحسين responsiveness للعمليات
+======================================== */
+@media (max-width: 768px) {
+    .actions-container {
+        max-width: 120px;
+        padding: 0.3rem;
+    }
+
+    .action-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.7rem;
+        min-width: 70px;
+        gap: 0.3rem;
+    }
+
+    .action-btn i {
+        font-size: 0.7rem;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-3px) scale(1.05) rotate(1deg);
+    }
+
+    .duration-badge {
+        max-width: 140px;
+        padding: 0.6rem 0.8rem;
+    }
+
+    .duration-content {
+        font-size: 0.75rem;
+    }
+
+    .duration-from,
+    .duration-to {
+        font-size: 0.7rem;
+    }
+
+    .month-card {
+        max-width: 160px;
+        padding: 0.8rem;
+    }
+
+    .month-header {
+        font-size: 0.8rem;
+    }
+
+    .month-title {
+        font-size: 0.75rem;
+    }
+
+    .month-dates {
+        font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .action-buttons {
+        gap: 0.2rem;
+    }
+
+    .action-btn {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.65rem;
+        min-width: 60px;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px) scale(1.03);
+    }
+
+    .duration-badge {
+        max-width: 120px;
+        padding: 0.5rem 0.6rem;
+    }
+
+    .month-card {
+        max-width: 140px;
+        padding: 0.6rem;
+    }
+}
+
+/* ========================================
+   تأثيرات إضافية للتفاعل
+======================================== */
+.action-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+
+.action-btn:focus:not(:hover) {
+    transform: scale(1.02);
+}
+
+/* تأثير الضغط */
+.action-btn:active {
+    transition: all 0.1s ease;
+}
+
+/* تأثير التحميل للأزرار */
+.action-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.action-btn.loading::before {
+    width: 100%;
+    height: 100%;
+    background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    animation: loading-spin 1s linear infinite;
+}
+
+@keyframes loading-spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+/* تحسين للطباعة */
+@media print {
+
+    .action-btn,
+    .action-buttons,
+    .actions-container {
+        display: none !important;
+    }
+
+    .duration-badge,
+    .month-card {
+        box-shadow: none !important;
+        transform: none !important;
+    }
+}
+
+/* ========================================
+   إصلاح مشكلة الـ Overflow
+======================================== */
+.table-responsive {
+    /* تمكين التمرير الأفقي للجدول فقط */
+    overflow-x: auto;
+    overflow-y: visible;
+    max-width: 100%;
+}
+
+.modern-table-container {
+    /* منع الـ overflow للحاوي */
+    overflow: visible;
+}
+
+/* تحسين عرض الجدول على الشاشات الصغيرة */
+@media (max-width: 992px) {
+    .modern-expenses-table {
+        min-width: 800px;
+        /* ضمان عرض مناسب */
+    }
+}
+
+@media (max-width: 768px) {
+    .modern-expenses-table {
+        min-width: 700px;
+    }
+}
+
+@media (max-width: 576px) {
+    .modern-expenses-table {
+        min-width: 600px;
+    }
+}

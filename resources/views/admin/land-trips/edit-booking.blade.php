@@ -17,7 +17,36 @@
             padding: 20px;
             border-radius: 15px 15px 0 0;
             margin-bottom: 0;
+            background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+      
+        
+          
+            position: relative;
+            overflow: hidden;
         }
+        
+ .booking-header::before {
+     content: '';
+     position: absolute;
+     top: -50%;
+     right: -50%;
+     width: 200%;
+     height: 200%;
+     background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+     animation: headerFloat 6s ease-in-out infinite;
+ }
+
+ @keyframes headerFloat {
+
+     0%,
+     100% {
+         transform: translate(0, 0) rotate(0deg);
+     }
+
+     50% {
+         transform: translate(-20px, -20px) rotate(180deg);
+     }
+ }
 
         .booking-form {
             background: white;

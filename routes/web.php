@@ -178,6 +178,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('admin.calculate-profit');
         Route::get('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'show'])
             ->name('admin.monthly-expenses.show');
+        Route::get('/admin/monthly-expenses/{id}/edit', [App\Http\Controllers\MonthlyExpenseController::class, 'edit'])
+            ->name('admin.monthly-expenses.edit');
+        Route::put('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'update'])
+            ->name('admin.monthly-expenses.update');
         Route::delete('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'destroy'])
             ->name('admin.monthly-expenses.destroy');
     });
@@ -231,7 +235,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
     Route::post('land-trips/{land_trip}/store-booking', [LandTripController::class, 'storeBooking'])->name('land-trips.store-booking');
     Route::get('land-trips/bookings/{booking}/edit', [LandTripController::class, 'editBooking'])->name('land-trips.bookings.edit');
     Route::put('land-trips/bookings/{booking}/update', [LandTripController::class, 'updateBooking'])->name('land-trips.update-booking');
- Route::get('land-trips/bookings/{booking}/voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.bookings.voucher');
+    Route::get('land-trips/bookings/{booking}/voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.bookings.voucher');
 
     // مسارات تقارير العمليات
     Route::prefix('operation-reports')->name('operation-reports.')->group(function () {

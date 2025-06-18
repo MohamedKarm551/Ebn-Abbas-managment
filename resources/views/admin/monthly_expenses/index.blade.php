@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('title', 'إدارة المصاريف الشهرية')
+<link rel="stylesheet" href="{{ asset('css/Monthly-expenses/index.css') }}">
+
+
+@section('title', 'إدارة المصاريف الشهرية')
 
 @section('content')
     <div class="container-fluid py-3">
@@ -20,7 +24,7 @@
                     <div class="col-md-5">
                         <div class="card shadow mb-4">
                             <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-primary">حساب الربح في فترة محددة</h6>
+                                <h6 class="m-0 font-weight-bold ">حساب الربح في فترة محددة</h6>
                             </div>
                             <div class="card-body">
                                 <form id="profit-calculator-form">
@@ -72,7 +76,7 @@
                     <div class="col-md-7">
                         <div class="card shadow mb-4">
                             <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-primary">تسجيل المصاريف الشهرية</h6>
+                                <h6 class="m-0 font-weight-bold ">تسجيل المصاريف الشهرية</h6>
                             </div>
                             <div class="card-body">
                                 <form action="{{ route('admin.monthly-expenses.store') }}" method="POST"
@@ -310,7 +314,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label class="form-label">نصيب ش . محمد حسن (50%)</label>
+                                                    <label class="form-label">نصيب محمد حسن (50%)</label>
                                                     <div class="input-group">
                                                         <input type="number" step="0.01" min="0"
                                                             class="form-control" id="mohamed_share_SAR"
@@ -324,7 +328,7 @@
 
                                     <!-- بطاقة الدينار الكويتي -->
                                     <div class="card mb-3 border-primary">
-                                        <div class="card-header bg-primary bg-opacity-10 text-primary">
+                                        <div class="card-header bg-primary bg-opacity-10 ">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <h6 class="mb-0"><i class="fas fa-money-bill-wave me-1"></i> الأرباح
                                                     بالدينار الكويتي</h6>
@@ -354,7 +358,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label class="form-label">نصيب ش . محمد حسن (50%)</label>
+                                                    <label class="form-label">نصيب محمد حسن (50%)</label>
                                                     <div class="input-group">
                                                         <input type="number" step="0.01" min="0"
                                                             class="form-control" id="mohamed_share_KWD"
@@ -386,186 +390,405 @@
                 </div>
 
                 <!-- جدول السجلات السابقة -->
-                <div class="table-responsive">
-                    <table class="table align-middle shadow-sm border-0 rounded-3 custom-expenses-table">
-                        <thead class="table-light">
-                            <tr class="text-center align-middle">
-                                <th>#</th>
-                                <th>الشهر</th>
-                                <th>الفترة</th>
-                                <th>إجمالي المصاريف</th>
-                                <th>الأرباح والعملات</th>
-                                <th>صافي الربح</th>
-                                <th>تاريخ الإضافة</th>
-                                <th>العمليات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($expenses as $index => $expense)
-                                <tr class="text-center">
-                                    <td class="fw-bold">{{ $expenses->firstItem() + $index }}</td>
-                                    <td class="p-0 align-middle text-center">
-                                        <div class="bg-light-subtle rounded-4 shadow-sm d-inline-block p-2 mb-1 w-100"
-                                            style="min-width: 120px; max-width: 170px;">
-                                            <span class="fw-bold text-dark d-block" style="font-size: 1.1rem;">
-                                                {{ $expense->month_year }}
-                                            </span>
-                                            <span class="d-block text-muted small mt-1" style="line-height:1.4;">
-                                                من<br>
-                                                <span class="fw-bold">{{ $expense->start_date->format('d-m-Y') }}</span>
-                                                <br>
-                                                إلى<br>
-                                                <span class="fw-bold">{{ $expense->end_date->format('d-m-Y') }}</span>
-                                            </span>
+                <div class="modern-table-container">
+                    <div class="table-responsive">
+                        <table class="table modern-expenses-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-hashtag me-2"></i>
+                                            <span>الرقم</span>
                                         </div>
-                                    </td>
-
-
-                                    <td>
-                                        <span
-                                            class="badge bg-secondary-subtle text-dark px-3 py-2 rounded-pill shadow-sm d-inline-flex align-items-center"
-                                            style="font-size:15px;">
-                                            <i class="fa-solid fa-calendar-days me-1 text-info"></i>
-                                            {{ $expense->start_date->format('Y-m-d') }}
-                                            <span class="mx-1 text-muted" style="font-size:18px;">→</span>
-                                            {{ $expense->end_date->format('Y-m-d') }}
-                                        </span>
-                                    </td>
-
-<td>
-    @php
-        $totalSAR = 0;
-        $totalKWD = 0;
-        
-        // جلب معلومات العملات من expenses_currencies
-        $currencies = $expense->expenses_currencies ?? [];
-        
-        // حساب المصاريف بالريال
-        if(isset($currencies['salaries']) && $currencies['salaries'] === 'SAR') {
-            $totalSAR += $expense->salaries;
-        }
-        if(isset($currencies['advertising']) && $currencies['advertising'] === 'SAR') {
-            $totalSAR += $expense->advertising;
-        }
-        if(isset($currencies['rent']) && $currencies['rent'] === 'SAR') {
-            $totalSAR += $expense->rent;
-        }
-        if(isset($currencies['staff_commissions']) && $currencies['staff_commissions'] === 'SAR') {
-            $totalSAR += $expense->staff_commissions;
-        }
-        
-        // حساب المصاريف بالدينار
-        if(isset($currencies['salaries']) && $currencies['salaries'] === 'KWD') {
-            $totalKWD += $expense->salaries;
-        }
-        if(isset($currencies['advertising']) && $currencies['advertising'] === 'KWD') {
-            $totalKWD += $expense->advertising;
-        }
-        if(isset($currencies['rent']) && $currencies['rent'] === 'KWD') {
-            $totalKWD += $expense->rent;
-        }
-        if(isset($currencies['staff_commissions']) && $currencies['staff_commissions'] === 'KWD') {
-            $totalKWD += $expense->staff_commissions;
-        }
-        
-        // إضافة المصاريف الأخرى
-        if(!empty($expense->other_expenses)) {
-            foreach($expense->other_expenses as $otherExpense) {
-                if(isset($otherExpense['currency'])) {
-                    if($otherExpense['currency'] === 'SAR') {
-                        $totalSAR += $otherExpense['amount'];
-                    } elseif($otherExpense['currency'] === 'KWD') {
-                        $totalKWD += $otherExpense['amount'];
-                    }
-                }
-            }
-        }
-    @endphp
-    
-    @if($totalSAR > 0)
-        <span class="badge bg-success fs-6 mb-1 rounded-pill shadow-sm d-block">
-            <i class="fa-solid fa-receipt me-1"></i>
-            {{ number_format($totalSAR, 2) }} ريال
-        </span>
-    @endif
-    @if($totalKWD > 0)
-        <span class="badge bg-primary fs-6 mb-1 rounded-pill shadow-sm d-block">
-            <i class="fa-solid fa-receipt me-1"></i>
-            {{ number_format($totalKWD, 2) }} دينار
-        </span>
-    @endif
-    
-    @if($totalSAR == 0 && $totalKWD == 0)
-        <span class="badge bg-secondary fs-6 rounded-pill">لا توجد مصاريف</span>
-    @endif
-</td>
-
-                                    <td>
-                                        @if ($expense->total_monthly_profit_SAR > 0)
-                                            <span class="badge bg-success fs-6   mb-1 rounded-pill shadow-sm">
-                                                <i class="fa-solid fa-money-bill-wave me-1"></i>
-                                                {{ number_format($expense->total_monthly_profit_SAR, 2) }} ريال
-                                            </span><br>
-                                        @endif
-                                        @if ($expense->total_monthly_profit_KWD > 0)
-                                            <span class="badge bg-primary fs-6   mb-1 rounded-pill shadow-sm">
-                                                <i class="fa-solid fa-coins me-1"></i>
-                                                {{ number_format($expense->total_monthly_profit_KWD, 2) }} دينار
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($expense->net_profit_SAR > 0)
-                                            <span class="badge bg-gradient bg-success fs-6   mb-1 rounded-pill shadow">
-                                                <i class="fa-solid fa-check-circle me-1"></i>
-                                                {{ number_format($expense->net_profit_SAR, 2) }} ريال
-                                            </span><br>
-                                        @endif
-                                        @if ($expense->net_profit_KWD > 0)
-                                            <span class="badge bg-gradient bg-primary fs-6   mb-1 rounded-pill shadow">
-                                                <i class="fa-solid fa-check-circle me-1"></i>
-                                                {{ number_format($expense->net_profit_KWD, 2) }} دينار
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span
-                                            class="badge bg-light text-dark  rounded-pill shadow-sm d-inline-flex align-items-center"
-                                            style="font-size:15px;">
-                                            <i class="bi bi-clock-history me-1 text-primary"></i>
-                                            {{ $expense->created_at->format('Y-m-d') }}
-                                        </span>
-                                    </td>
-
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('admin.monthly-expenses.show', $expense->id) }}"
-                                                class="btn btn-outline-info" title="عرض التفاصيل">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-outline-danger delete-expense-btn"
-                                                data-expense-id="{{ $expense->id }}"
-                                                data-month="{{ $expense->month_year }}" title="حذف">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-calendar-alt me-2"></i>
+                                            <span>الشهر والفترة</span>
                                         </div>
-                                        <form id="delete-form-{{ $expense->id }}"
-                                            action="{{ route('admin.monthly-expenses.destroy', $expense->id) }}"
-                                            method="POST" class="d-none">
-                                            @csrf
-                                            @method('DELETE')
-                                        </form>
-                                    </td>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-clock me-2"></i>
+                                            <span>المدة الزمنية</span>
+                                        </div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-receipt me-2"></i>
+                                            <span>إجمالي المصاريف</span>
+                                        </div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-chart-line me-2"></i>
+                                            <span>الأرباح والعملات</span>
+                                        </div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-trophy me-2"></i>
+                                            <span>صافي الربح</span>
+                                        </div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-clock-history me-2"></i>
+                                            <span>تاريخ الإضافة</span>
+                                        </div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="th-content">
+                                            <i class="fas fa-tools me-2"></i>
+                                            <span>العمليات</span>
+                                        </div>
+                                    </th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                @forelse ($expenses as $index => $expense)
+                                    <tr class="table-row" data-aos="fade-up" data-aos-delay="{{ $index * 50 }}">
+                                        <!-- الرقم -->
+                                        <td>
+                                            <div class="row-number">
+                                                @php
+                                                    // حساب رقم الصف بشكل آمن
+                                                    $rowNumber =
+                                                        $expenses instanceof \Illuminate\Pagination\LengthAwarePaginator
+                                                            ? $expenses->firstItem() + $index
+                                                            : $index + 1;
+                                                @endphp
+                                                <span class="number-badge">{{ $rowNumber }}</span>
+                                            </div>
+                                        </td>
 
+                                        <!-- الشهر والفترة -->
+                                        <td>
+                                            <div class="month-card">
+                                                <div class="month-header">
+                                                    <i class="fas fa-calendar-check me-2"></i>
+                                                    <span
+                                                        class="month-title">{{ $expense->month_year ?? 'غير محدد' }}</span>
+                                                </div>
+                                                @if ($expense->start_date && $expense->end_date)
+                                                    <div class="month-dates">
+                                                        <div class="date-item">
+                                                            <i class="fas fa-play text-success me-1"></i>
+                                                            <span>{{ $expense->start_date->format('d/m/Y') }}</span>
+                                                        </div>
+                                                        <div class="date-separator">
+                                                            <i class="fas fa-arrow-right"></i>
+                                                        </div>
+                                                        <div class="date-item">
+                                                            <i class="fas fa-stop text-danger me-1"></i>
+                                                            <span>{{ $expense->end_date->format('d/m/Y') }}</span>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="text-muted small">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        التواريخ غير محددة
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        <!-- المدة الزمنية -->
+                                        <td>
+                                            @if ($expense->start_date && $expense->end_date)
+                                                <div class="duration-badge">
+                                                    <i class="fas fa-calendar-days me-2"></i>
+                                                    <div class="duration-content">
+                                                        <span
+                                                            class="duration-from">{{ $expense->start_date->format('Y-m-d') }}</span>
+                                                        <div class="duration-arrow">
+                                                            <i class="fas fa-long-arrow-alt-right"></i>
+                                                        </div>
+                                                        <span
+                                                            class="duration-to">{{ $expense->end_date->format('Y-m-d') }}</span>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="text-center text-muted">
+                                                    <i class="fas fa-question-circle"></i>
+                                                    <div class="small">غير محدد</div>
+                                                </div>
+                                            @endif
+                                        </td>
+
+                                        <!-- إجمالي المصاريف -->
+                                        <td>
+                                            <div class="expenses-container">
+                                                @php
+                                                    $totalSAR = 0;
+                                                    $totalKWD = 0;
+                                                    $currencies = $expense->expenses_currencies ?? [];
+
+                                                    // حساب المصاريف بالريال
+                                                    if (
+                                                        isset($currencies['salaries']) &&
+                                                        $currencies['salaries'] === 'SAR'
+                                                    ) {
+                                                        $totalSAR += $expense->salaries ?? 0;
+                                                    }
+                                                    if (
+                                                        isset($currencies['advertising']) &&
+                                                        $currencies['advertising'] === 'SAR'
+                                                    ) {
+                                                        $totalSAR += $expense->advertising ?? 0;
+                                                    }
+                                                    if (isset($currencies['rent']) && $currencies['rent'] === 'SAR') {
+                                                        $totalSAR += $expense->rent ?? 0;
+                                                    }
+                                                    if (
+                                                        isset($currencies['staff_commissions']) &&
+                                                        $currencies['staff_commissions'] === 'SAR'
+                                                    ) {
+                                                        $totalSAR += $expense->staff_commissions ?? 0;
+                                                    }
+
+                                                    // حساب المصاريف بالدينار
+                                                    if (
+                                                        isset($currencies['salaries']) &&
+                                                        $currencies['salaries'] === 'KWD'
+                                                    ) {
+                                                        $totalKWD += $expense->salaries ?? 0;
+                                                    }
+                                                    if (
+                                                        isset($currencies['advertising']) &&
+                                                        $currencies['advertising'] === 'KWD'
+                                                    ) {
+                                                        $totalKWD += $expense->advertising ?? 0;
+                                                    }
+                                                    if (isset($currencies['rent']) && $currencies['rent'] === 'KWD') {
+                                                        $totalKWD += $expense->rent ?? 0;
+                                                    }
+                                                    if (
+                                                        isset($currencies['staff_commissions']) &&
+                                                        $currencies['staff_commissions'] === 'KWD'
+                                                    ) {
+                                                        $totalKWD += $expense->staff_commissions ?? 0;
+                                                    }
+
+                                                    // إضافة المصاريف الأخرى
+                                                    if (
+                                                        !empty($expense->other_expenses) &&
+                                                        is_array($expense->other_expenses)
+                                                    ) {
+                                                        foreach ($expense->other_expenses as $otherExpense) {
+                                                            if (
+                                                                isset($otherExpense['currency']) &&
+                                                                isset($otherExpense['amount'])
+                                                            ) {
+                                                                if ($otherExpense['currency'] === 'SAR') {
+                                                                    $totalSAR += $otherExpense['amount'] ?? 0;
+                                                                } elseif ($otherExpense['currency'] === 'KWD') {
+                                                                    $totalKWD += $otherExpense['amount'] ?? 0;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                @endphp
+
+                                                @if ($totalSAR > 0)
+                                                    <div class="expense-badge expense-sar">
+                                                        <div class="expense-icon">
+                                                            <i class="fas fa-money-bill-wave"></i>
+                                                        </div>
+                                                        <div class="expense-content">
+                                                            <span
+                                                                class="expense-amount">{{ number_format($totalSAR, 2) }}</span>
+                                                            <span class="expense-currency">ريال</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                @if ($totalKWD > 0)
+                                                    <div class="expense-badge expense-kwd">
+                                                        <div class="expense-icon">
+                                                            <i class="fas fa-coins"></i>
+                                                        </div>
+                                                        <div class="expense-content">
+                                                            <span
+                                                                class="expense-amount">{{ number_format($totalKWD, 2) }}</span>
+                                                            <span class="expense-currency">دينار</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                @if ($totalSAR == 0 && $totalKWD == 0)
+                                                    <div class="no-expenses">
+                                                        <i class="fas fa-ban me-2"></i>
+                                                        <span>لا توجد مصاريف</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        <!-- الأرباح والعملات -->
+                                        <td>
+                                            <div class="profits-container">
+                                                @if (($expense->total_monthly_profit_SAR ?? 0) > 0)
+                                                    <div class="profit-badge profit-sar">
+                                                        <div class="profit-icon">
+                                                            <i class="fas fa-trending-up"></i>
+                                                        </div>
+                                                        <div class="profit-content">
+                                                            <span
+                                                                class="profit-amount">{{ number_format($expense->total_monthly_profit_SAR, 2) }}</span>
+                                                            <span class="profit-currency">ريال</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                @if (($expense->total_monthly_profit_KWD ?? 0) > 0)
+                                                    <div class="profit-badge profit-kwd">
+                                                        <div class="profit-icon">
+                                                            <i class="fas fa-chart-line"></i>
+                                                        </div>
+                                                        <div class="profit-content">
+                                                            <span
+                                                                class="profit-amount">{{ number_format($expense->total_monthly_profit_KWD, 2) }}</span>
+                                                            <span class="profit-currency">دينار</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                @if (($expense->total_monthly_profit_SAR ?? 0) == 0 && ($expense->total_monthly_profit_KWD ?? 0) == 0)
+                                                    <div class="no-expenses">
+                                                        <i class="fas fa-chart-line me-2"></i>
+                                                        <span>لا توجد أرباح</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        <!-- صافي الربح -->
+                                        <td>
+                                            <div class="net-profit-container">
+                                                @if (($expense->net_profit_SAR ?? 0) > 0)
+                                                    <div class="net-profit-badge net-profit-sar">
+                                                        <div class="net-profit-icon">
+                                                            <i class="fas fa-trophy"></i>
+                                                        </div>
+                                                        <div class="net-profit-content">
+                                                            <span
+                                                                class="net-profit-amount">{{ number_format($expense->net_profit_SAR, 2) }}</span>
+                                                            <span class="net-profit-currency">ريال</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                @if (($expense->net_profit_KWD ?? 0) > 0)
+                                                    <div class="net-profit-badge net-profit-kwd">
+                                                        <div class="net-profit-icon">
+                                                            <i class="fas fa-award"></i>
+                                                        </div>
+                                                        <div class="net-profit-content">
+                                                            <span
+                                                                class="net-profit-amount">{{ number_format($expense->net_profit_KWD, 2) }}</span>
+                                                            <span class="net-profit-currency">دينار</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                @if (($expense->net_profit_SAR ?? 0) == 0 && ($expense->net_profit_KWD ?? 0) == 0)
+                                                    <div class="no-expenses">
+                                                        <i class="fas fa-trophy me-2"></i>
+                                                        <span>لا يوجد ربح صافي</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        <!-- تاريخ الإضافة -->
+                                        <td>
+                                            <div class="created-date">
+                                                @if ($expense->created_at)
+                                                    <div class="date-badge">
+                                                        <i class="fas fa-clock-history me-2"></i>
+                                                        <span>{{ $expense->created_at->format('Y/m/d') }}</span>
+                                                    </div>
+                                                    <div class="date-time">
+                                                        <small
+                                                            class="text-muted">{{ $expense->created_at->format('H:i') }}</small>
+                                                    </div>
+                                                @else
+                                                    <div class="text-muted text-center">
+                                                        <i class="fas fa-question-circle"></i>
+                                                        <div class="small">غير محدد</div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        <!-- العمليات -->
+                                        <td>
+                                            <div class="actions-container">
+                                                <div class="action-buttons">
+                                                    <a href="{{ route('admin.monthly-expenses.show', $expense->id) }}"
+                                                        class="action-btn action-view" title="عرض التفاصيل"
+                                                        data-bs-toggle="tooltip">
+                                                        <i class="fas fa-eye"></i>
+                                                        <span class="btn-text">عرض</span>
+                                                    </a>
+
+                                                    <a href="{{ route('admin.monthly-expenses.edit', $expense->id) }}"
+                                                        class="action-btn action-edit" title="تعديل التقرير"
+                                                        data-bs-toggle="tooltip">
+                                                        <i class="fas fa-edit"></i>
+                                                        <span class="btn-text">تعديل</span>
+                                                    </a>
+
+                                                    <button type="button"
+                                                        class="action-btn action-delete delete-expense-btn"
+                                                        data-expense-id="{{ $expense->id }}"
+                                                        data-month="{{ $expense->month_year ?? 'غير محدد' }}"
+                                                        title="حذف" data-bs-toggle="tooltip">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                        <span class="btn-text">حذف</span>
+                                                    </button>
+                                                </div>
+
+                                                <form id="delete-form-{{ $expense->id }}"
+                                                    action="{{ route('admin.monthly-expenses.destroy', $expense->id) }}"
+                                                    method="POST" class="d-none">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5">
+                                            <div class="empty-state">
+                                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                                <h5 class="text-muted">لا توجد سجلات مصاريف</h5>
+                                                <p class="text-muted">ابدأ بإضافة أول سجل مصاريف شهرية</p>
+                                                <a href="{{ route('admin.monthly-expenses.create') }}"
+                                                    class="btn btn-primary mt-2">
+                                                    <i class="fas fa-plus me-1"></i> إضافة سجل جديد
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    @if ($expenses instanceof \Illuminate\Pagination\LengthAwarePaginator && $expenses->hasPages())
+                        <div class="d-flex justify-content-center mt-4">
+                            {{ $expenses->links() }}
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
-    </div>
+
 
     <!-- Modal لتأكيد الحذف -->
     <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-hidden="true">
@@ -586,7 +809,6 @@
         </div>
     </div>
 @endsection
-
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -674,20 +896,23 @@
                     }
                 });
 
-                // عرض إجمالي المصاريف حسب العملة
-                document.getElementById('total_expenses_display_SAR').value = totalExpensesSAR.toFixed(2);
-                document.getElementById('total_expenses_display_KWD').value = totalExpensesKWD.toFixed(2);
+                // ✅ تحديث العرض بشكل آمن
+                const totalExpensesSARElement = document.getElementById('total_expenses_display_SAR');
+                const totalExpensesKWDElement = document.getElementById('total_expenses_display_KWD');
+                const totalExpensesElement = document.getElementById('total_expenses');
 
-                // تعيين إجمالي المصاريف بالريال للتوافق مع الكود القديم
-                document.getElementById('total_expenses').value = totalExpensesSAR.toFixed(2);
+                if (totalExpensesSARElement) totalExpensesSARElement.value = totalExpensesSAR.toFixed(2);
+                if (totalExpensesKWDElement) totalExpensesKWDElement.value = totalExpensesKWD.toFixed(2);
+                if (totalExpensesElement) totalExpensesElement.value = totalExpensesSAR.toFixed(2);
 
-                // تخزين القيم للاستخدام في التحويل - إضافة قيم التحكم
-                console.log("تحديث المصاريف:", {
-                    SAR: totalExpensesSAR,
-                    KWD: totalExpensesKWD
-                });
+                // ✅ تخزين القيم بشكل آمن
                 window.totalExpensesSAR = totalExpensesSAR;
                 window.totalExpensesKWD = totalExpensesKWD;
+
+                // console.log("تحديث المصاريف:", {
+                //     SAR: totalExpensesSAR,
+                //     KWD: totalExpensesKWD
+                // });
 
                 // إعادة حساب صافي الربح
                 calculateNetProfit();
@@ -695,137 +920,61 @@
 
             // حساب صافي الربح وتوزيع الأرباح
             function calculateNetProfit() {
-                console.log("حساب صافي الربح - المصاريف:", window.totalExpensesSAR, window.totalExpensesKWD);
+                // ✅ التأكد من وجود القيم أولاً
+                const expensesSAR = window.totalExpensesSAR || 0;
+                const expensesKWD = window.totalExpensesKWD || 0;
 
-                // التأكد من أن قيم المصاريف مُعرَّفة
-                window.totalExpensesSAR = window.totalExpensesSAR || 0;
-                window.totalExpensesKWD = window.totalExpensesKWD || 0;
+                // console.log("حساب صافي الربح - المصاريف:", expensesSAR, expensesKWD);
 
-                // تحقق من وجود العملة الموحدة
-                const isUnifiedSAR = window.totalExpensesKWD === 0 && window.totalExpensesSAR > 0;
-                const isUnifiedKWD = window.totalExpensesSAR === 0 && window.totalExpensesKWD > 0;
+                // ✅ جلب الأرباح مع التحقق من وجود العناصر
+                const profitSARElement = document.getElementById('total_monthly_profit_SAR');
+                const profitKWDElement = document.getElementById('total_monthly_profit_KWD');
 
-                // ريال سعودي
-                const totalProfitSAR = parseFloat(document.getElementById('total_monthly_profit_SAR').value) || 0;
-                const expensesSAR = parseFloat(window.totalExpensesSAR) || 0;
+                const totalProfitSAR = profitSARElement ? (parseFloat(profitSARElement.value) || 0) : 0;
+                const totalProfitKWD = profitKWDElement ? (parseFloat(profitKWDElement.value) || 0) : 0;
+
+                // حساب صافي الربح
                 const netProfitSAR = Math.max(0, totalProfitSAR - expensesSAR);
-
-                // دينار كويتي
-                const totalProfitKWD = parseFloat(document.getElementById('total_monthly_profit_KWD').value) || 0;
-                const expensesKWD = parseFloat(window.totalExpensesKWD) || 0;
                 const netProfitKWD = Math.max(0, totalProfitKWD - expensesKWD);
 
-                // ✅ عرض النتائج بالعملة الصحيحة
-                if (isUnifiedSAR) {
-                    // إذا تم توحيد العملة بالريال السعودي
-                    document.getElementById('net_profit_SAR').value = netProfitSAR.toFixed(2);
-                    document.getElementById('net_profit_KWD').value = "0.00";
+                // ✅ تحديث العرض مع التحقق من وجود العناصر
+                const netProfitSARElement = document.getElementById('net_profit_SAR');
+                const netProfitKWDElement = document.getElementById('net_profit_KWD');
 
-                    // توزيع الأرباح بالريال (50% لكل شريك)
-                    const ismailShareSAR = netProfitSAR * 0.5;
-                    const mohamedShareSAR = netProfitSAR * 0.5;
-                    document.getElementById('ismail_share_SAR').value = ismailShareSAR.toFixed(2);
-                    document.getElementById('mohamed_share_SAR').value = mohamedShareSAR.toFixed(2);
+                if (netProfitSARElement) netProfitSARElement.value = netProfitSAR.toFixed(2);
+                if (netProfitKWDElement) netProfitKWDElement.value = netProfitKWD.toFixed(2);
 
-                    // تصفير الأرباح بالدينار
-                    document.getElementById('ismail_share_KWD').value = "0.00";
-                    document.getElementById('mohamed_share_KWD').value = "0.00";
+                // ✅ توزيع الأرباح مع التحقق من وجود العناصر
+                const ismailShareSAR = netProfitSAR * 0.5;
+                const mohamedShareSAR = netProfitSAR * 0.5;
+                const ismailShareKWD = netProfitKWD * 0.5;
+                const mohamedShareKWD = netProfitKWD * 0.5;
 
-                    // تطبيق التنسيق المناسب
-                    document.getElementById('net_profit_SAR').classList.add('fw-bold', 'bg-success',
-                        'bg-opacity-10');
-                    document.getElementById('net_profit_KWD').classList.add('text-muted');
+                const elements = {
+                    ismail_share_SAR: document.getElementById('ismail_share_SAR'),
+                    mohamed_share_SAR: document.getElementById('mohamed_share_SAR'),
+                    ismail_share_KWD: document.getElementById('ismail_share_KWD'),
+                    mohamed_share_KWD: document.getElementById('mohamed_share_KWD')
+                };
 
-                } else if (isUnifiedKWD) {
-                    // إذا تم توحيد العملة بالدينار الكويتي
-                    document.getElementById('net_profit_SAR').value = "0.00";
-                    document.getElementById('net_profit_KWD').value = netProfitKWD.toFixed(2);
+                if (elements.ismail_share_SAR) elements.ismail_share_SAR.value = ismailShareSAR.toFixed(2);
+                if (elements.mohamed_share_SAR) elements.mohamed_share_SAR.value = mohamedShareSAR.toFixed(2);
+                if (elements.ismail_share_KWD) elements.ismail_share_KWD.value = ismailShareKWD.toFixed(2);
+                if (elements.mohamed_share_KWD) elements.mohamed_share_KWD.value = mohamedShareKWD.toFixed(2);
 
-                    // تصفير الأرباح بالريال
-                    document.getElementById('ismail_share_SAR').value = "0.00";
-                    document.getElementById('mohamed_share_SAR').value = "0.00";
-
-                    // توزيع الأرباح بالدينار (50% لكل شريك)
-                    const ismailShareKWD = netProfitKWD * 0.5;
-                    const mohamedShareKWD = netProfitKWD * 0.5;
-                    document.getElementById('ismail_share_KWD').value = ismailShareKWD.toFixed(2);
-                    document.getElementById('mohamed_share_KWD').value = mohamedShareKWD.toFixed(2);
-
-                    // تطبيق التنسيق المناسب
-                    document.getElementById('net_profit_KWD').classList.add('fw-bold', 'bg-primary',
-                        'bg-opacity-10');
-                    document.getElementById('net_profit_SAR').classList.add('text-muted');
-
-                } else {
-                    // ✅ الحالة العادية - عرض العملات بناءً على البيانات الفعلية
-                    const profitsByCurrency = window.calculatedProfitsByCurrency || {};
-
-                    // إذا كان هناك أرباح بالدينار فقط
-                    if (profitsByCurrency.KWD > 0 && (!profitsByCurrency.SAR || profitsByCurrency.SAR === 0)) {
-                        document.getElementById('net_profit_KWD').value = netProfitKWD.toFixed(2);
-                        document.getElementById('net_profit_SAR').value = "0.00";
-
-                        const ismailShareKWD = netProfitKWD * 0.5;
-                        const mohamedShareKWD = netProfitKWD * 0.5;
-                        document.getElementById('ismail_share_KWD').value = ismailShareKWD.toFixed(2);
-                        document.getElementById('mohamed_share_KWD').value = mohamedShareKWD.toFixed(2);
-                        document.getElementById('ismail_share_SAR').value = "0.00";
-                        document.getElementById('mohamed_share_SAR').value = "0.00";
-
-                    } else if (profitsByCurrency.SAR > 0 && (!profitsByCurrency.KWD || profitsByCurrency.KWD ===
-                            0)) {
-                        // إذا كان هناك أرباح بالريال فقط
-                        document.getElementById('net_profit_SAR').value = netProfitSAR.toFixed(2);
-                        document.getElementById('net_profit_KWD').value = "0.00";
-
-                        const ismailShareSAR = netProfitSAR * 0.5;
-                        const mohamedShareSAR = netProfitSAR * 0.5;
-                        document.getElementById('ismail_share_SAR').value = ismailShareSAR.toFixed(2);
-                        document.getElementById('mohamed_share_SAR').value = mohamedShareSAR.toFixed(2);
-                        document.getElementById('ismail_share_KWD').value = "0.00";
-                        document.getElementById('mohamed_share_KWD').value = "0.00";
-
-                    } else {
-                        // إذا كان هناك أرباح بالعملتين أو لا يوجد أرباح
-                        document.getElementById('net_profit_SAR').value = netProfitSAR.toFixed(2);
-                        document.getElementById('net_profit_KWD').value = netProfitKWD.toFixed(2);
-
-                        // توزيع الأرباح بالريال (50% لكل شريك)
-                        const ismailShareSAR = netProfitSAR * 0.5;
-                        const mohamedShareSAR = netProfitSAR * 0.5;
-                        document.getElementById('ismail_share_SAR').value = ismailShareSAR.toFixed(2);
-                        document.getElementById('mohamed_share_SAR').value = mohamedShareSAR.toFixed(2);
-
-                        // توزيع الأرباح بالدينار (50% لكل شريك)
-                        const ismailShareKWD = netProfitKWD * 0.5;
-                        const mohamedShareKWD = netProfitKWD * 0.5;
-                        document.getElementById('ismail_share_KWD').value = ismailShareKWD.toFixed(2);
-                        document.getElementById('mohamed_share_KWD').value = mohamedShareKWD.toFixed(2);
-                    }
-
-                    // إزالة التنسيق الخاص
-                    document.getElementById('net_profit_SAR').classList.remove('fw-bold', 'bg-success',
-                        'bg-opacity-10', 'text-muted');
-                    document.getElementById('net_profit_KWD').classList.remove('fw-bold', 'bg-primary',
-                        'bg-opacity-10', 'text-muted');
-                }
-
-                console.log("صافي الربح:", {
-                    isUnifiedSAR,
-                    isUnifiedKWD,
-                    SAR: netProfitSAR,
-                    KWD: netProfitKWD
-                });
+                // console.log("صافي الربح:", {
+                //     SAR: netProfitSAR,
+                //     KWD: netProfitKWD
+                // });
             }
 
-            // تحديث الحسابات عند تغيير أي من حقول المصاريف
+            // ✅ تحديث الحسابات عند تغيير المصاريف
             document.querySelectorAll('.expense-field').forEach(function(input) {
                 input.addEventListener('input', recalculateExpenses);
-                // إعادة حساب صافي الربح
-                calculateNetProfit();
             });
 
-            // نموذج حساب الربح
+            // نموذج حساب الربح - الكود المُصحح
+            // ✅ نموذج حساب الربح - مُصحح
             document.getElementById('profit-calculator-form').addEventListener('submit', function(e) {
                 e.preventDefault();
 
@@ -836,6 +985,12 @@
                     alert('يرجى تحديد تاريخ البداية والنهاية');
                     return;
                 }
+
+                // إضافة loading state
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحساب...';
+                submitBtn.disabled = true;
 
                 // إرسال طلب AJAX لحساب الربح
                 fetch('{{ route('admin.calculate-profit') }}', {
@@ -849,118 +1004,207 @@
                             end_date: endDate
                         })
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
+                        // console.log('Response data:', data);
+
+                        if (!data || typeof data !== 'object') {
+                            throw new Error('Invalid response format');
+                        }
+
                         // عرض النتيجة
                         document.getElementById('profit-result').classList.remove('d-none');
-                        document.getElementById('month-year-display').textContent = data.month_year;
-                        document.getElementById('bookings-count').textContent = data.bookings_count;
 
-                        // تفريغ محتوى عرض الأرباح
+                        const monthYearDisplay = document.getElementById('month-year-display');
+                        const bookingsCount = document.getElementById('bookings-count');
+
+                        if (monthYearDisplay) monthYearDisplay.textContent = data.month_year ||
+                            'غير محدد';
+                        if (bookingsCount) bookingsCount.textContent = data.bookings_count || '0';
+
+                        // عرض الأرباح
                         const profitDisplay = document.getElementById('profit-display');
-                        profitDisplay.innerHTML = '';
+                        if (profitDisplay) {
+                            profitDisplay.innerHTML = '';
 
-                        // عرض الأرباح حسب العملة
-                        let hasData = false;
-                        let displayText = '';
-                        for (const [currency, profit] of Object.entries(data.profits_by_currency)) {
-                            if (profit > 0) {
-                                hasData = true;
-                                const currencyLabel = currency === 'SAR' ? 'ريال' : 'دينار';
-                                displayText +=
-                                    `<div class="mb-1 text-${currency === 'SAR' ? 'success' : 'primary'}">${profit.toFixed(2)} ${currencyLabel}</div>`;
+                            const profitsByCurrency = data.profits_by_currency || {};
+                            let hasData = false;
+                            let displayHTML = '';
+
+                            Object.entries(profitsByCurrency).forEach(([currency, profit]) => {
+                                const profitValue = parseFloat(profit) || 0;
+                                if (profitValue > 0) {
+                                    hasData = true;
+                                    const currencyLabel = currency === 'SAR' ? 'ريال' : 'دينار';
+                                    const currencyClass = currency === 'SAR' ? 'success' :
+                                        'primary';
+                                    displayHTML += `
+                                        <div class="profit-item mb-2">
+                                            <span class="badge bg-${currencyClass} me-2">
+                                                <i class="fas fa-money-bill-wave me-1"></i>
+                                                ${profitValue.toFixed(2)} ${currencyLabel}
+                                            </span>
+                                        </div>
+                                    `;
+                                }
+                            });
+
+                            if (!hasData) {
+                                displayHTML =
+                                    '<div class="profit-item"><span class="badge bg-secondary"><i class="fas fa-info-circle me-1"></i>0.00 ريال</span></div>';
                             }
+
+                            profitDisplay.innerHTML = displayHTML;
                         }
 
-                        // إذا لم تكن هناك أرباح، استخدم العملة الأساسية من الاستجابة
-                        if (!hasData) {
-                            const defaultCurrency = data.primary_currency || 'SAR';
-                            const defaultLabel = defaultCurrency === 'SAR' ? 'ريال' : 'دينار';
-                            profitDisplay.innerHTML = `<div>0.00 ${defaultLabel}</div>`;
-                        } else {
-                            profitDisplay.innerHTML = displayText;
-                        }
+                        // ✅ حفظ البيانات للاستخدام اللاحق
+                        window.calculatedProfitsByCurrency = data.profits_by_currency || {};
+                        window.calculatedTotalProfit = data.total_profit || 0;
+                        window.startDateValue = data.start_date || startDate;
+                        window.endDateValue = data.end_date || endDate;
 
-                        // حفظ قيم الأرباح حسب العملة للاستخدام لاحقاً
-                        window.calculatedProfitsByCurrency = data.profits_by_currency;
-                        window.calculatedTotalProfit = data.total_profit;
-                        window.startDateValue = data.start_date;
-                        window.endDateValue = data.end_date;
                     })
                     .catch(error => {
-                        console.error('Error:', error);
+                        console.error('Error details:', error);
+                        document.getElementById('profit-result').classList.add('d-none');
                         alert('حدث خطأ أثناء حساب الربح');
+                    })
+                    .finally(() => {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
                     });
             });
 
-            // استخدام نتيجة الحساب
+            // ✅ استخدام نتيجة الحساب - مُصحح
             document.getElementById('use-result-btn').addEventListener('click', function() {
-                document.getElementById('month_year').value = document.getElementById('month-year-display')
-                    .textContent +
-                    '(من ' + window.startDateValue + ' إلى ' + window.endDateValue + ')';
-
-                // ✅ تحديث الحقول بناءً على العملة الفعلية
-                const profitsByCurrency = window.calculatedProfitsByCurrency;
-                const primaryCurrency = Object.keys(profitsByCurrency).reduce((a, b) =>
-                    profitsByCurrency[a] > profitsByCurrency[b] ? a : b, 'SAR');
-
-                // تصفير جميع الحقول أولاً
-                document.getElementById('total_monthly_profit_SAR').value = '0.00';
-                document.getElementById('total_monthly_profit_KWD').value = '0.00';
-
-                // ملء الحقول بناءً على البيانات الفعلية
-                for (const [currency, amount] of Object.entries(profitsByCurrency)) {
-                    if (amount > 0) {
-                        document.getElementById(`total_monthly_profit_${currency}`).value = amount.toFixed(
-                            2);
+                try {
+                    if (!window.calculatedProfitsByCurrency || !window.startDateValue || !window
+                        .endDateValue) {
+                        alert('لا توجد بيانات محسوبة للاستخدام. يرجى حساب الربح أولاً.');
+                        return;
                     }
+
+                    // تحديث حقل الشهر
+                    const monthYearInput = document.getElementById('month_year');
+                    const monthYearDisplay = document.getElementById('month-year-display');
+
+                    if (monthYearInput && monthYearDisplay) {
+                        const monthText = monthYearDisplay.textContent || 'غير محدد';
+                        monthYearInput.value =
+                            `${monthText} (من ${window.startDateValue} إلى ${window.endDateValue})`;
+                    }
+
+                    // تصفير جميع حقول الربح أولاً
+                    const profitFieldsSAR = document.getElementById('total_monthly_profit_SAR');
+                    const profitFieldsKWD = document.getElementById('total_monthly_profit_KWD');
+
+                    if (profitFieldsSAR) profitFieldsSAR.value = '0.00';
+                    if (profitFieldsKWD) profitFieldsKWD.value = '0.00';
+
+                    // ✅ ملء الحقول بناءً على البيانات الفعلية
+                    const profitsByCurrency = window.calculatedProfitsByCurrency;
+                    Object.entries(profitsByCurrency).forEach(([currency, amount]) => {
+                        const profitValue = parseFloat(amount) || 0;
+                        if (profitValue > 0) {
+                            const field = document.getElementById(
+                                `total_monthly_profit_${currency}`);
+                            if (field) {
+                                field.value = profitValue.toFixed(2);
+                            }
+                        }
+                    });
+
+                    // تحديث الحقول المخفية
+                    const startDateHidden = document.getElementById('start_date_hidden');
+                    const endDateHidden = document.getElementById('end_date_hidden');
+
+                    if (startDateHidden) startDateHidden.value = window.startDateValue;
+                    if (endDateHidden) endDateHidden.value = window.endDateValue;
+
+                    // إعادة حساب المصاريف وصافي الربح
+                    recalculateExpenses();
+
+                    alert('تم استخدام بيانات الربح المحسوبة بنجاح!');
+
+                } catch (error) {
+                    console.error('Error using calculated results:', error);
+                    alert('حدث خطأ أثناء استخدام النتائج المحسوبة.');
                 }
+            });
 
-                document.getElementById('start_date_hidden').value = window.startDateValue;
-                document.getElementById('end_date_hidden').value = window.endDateValue;
-
-                // ✅ تحديث تفاصيل الأرباح مع العملات الصحيحة
+            // دالة مساعدة لتحديث تفاصيل الأرباح
+            function updateProfitDetails(profitsByCurrency) {
                 let profitDetailsDiv = document.getElementById('profit-details');
                 if (!profitDetailsDiv) {
                     profitDetailsDiv = document.createElement('div');
                     profitDetailsDiv.id = 'profit-details';
                     profitDetailsDiv.className = 'alert alert-info mt-2';
-                    const profitCardBody = document.querySelector('.card-body h6.card-title').closest(
-                        '.card-body');
-                    if (profitCardBody) {
-                        profitCardBody.appendChild(profitDetailsDiv);
+
+                    // البحث عن المكان المناسب لإدراج التفاصيل
+                    const profitCardTitle = document.querySelector('.card-body h6.card-title');
+                    if (profitCardTitle && profitCardTitle.closest('.card-body')) {
+                        profitCardTitle.closest('.card-body').appendChild(profitDetailsDiv);
                     }
                 }
 
-                let detailsHTML = '<strong>تفاصيل الأرباح حسب العملة:</strong><br>';
-                for (const [currency, amount] of Object.entries(profitsByCurrency)) {
-                    if (amount > 0) {
+                let detailsHTML =
+                    '<strong><i class="fas fa-chart-line me-2"></i>تفاصيل الأرباح حسب العملة:</strong><br><br>';
+
+                let hasAnyProfit = false;
+                Object.entries(profitsByCurrency).forEach(([currency, amount]) => {
+                    const profitValue = parseFloat(amount) || 0;
+                    if (profitValue > 0) {
+                        hasAnyProfit = true;
                         const currencyLabel = currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي';
-                        const badgeClass = currency === 'SAR' ? 'text-currency-sar' : 'text-currency-kwd';
-                        detailsHTML +=
-                            `<span class="currency-badge ${badgeClass}">${amount.toFixed(2)} ${currencyLabel}</span> `;
+                        const badgeClass = currency === 'SAR' ? 'bg-success' : 'bg-primary';
+                        const icon = currency === 'SAR' ? 'fa-money-bill-wave' : 'fa-coins';
+
+                        detailsHTML += `
+                <span class="badge ${badgeClass} me-2 mb-1" style="font-size: 0.9em;">
+                    <i class="fas ${icon} me-1"></i>
+                    ${profitValue.toFixed(2)} ${currencyLabel}
+                </span>
+            `;
                     }
+                });
+
+                if (!hasAnyProfit) {
+                    detailsHTML +=
+                        '<span class="badge bg-secondary"><i class="fas fa-info-circle me-1"></i>لا توجد أرباح في هذه الفترة</span>';
                 }
 
                 profitDetailsDiv.innerHTML = detailsHTML;
+            }
 
-                // إضافة حقول مخفية لقيم كل عملة (للتوافق)
-                for (const [currency, profit] of Object.entries(window.calculatedProfitsByCurrency)) {
-                    let hiddenInput = document.getElementById(`profit_${currency}`);
-                    if (!hiddenInput) {
-                        hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.id = `profit_${currency}`;
-                        hiddenInput.name = `profit_${currency}`;
-                        document.getElementById('expenses-form').appendChild(hiddenInput);
-                    }
-                    hiddenInput.value = profit.toFixed(2);
+            // دالة مساعدة لعرض رسائل النجاح
+            function showSuccessMessage(message) {
+                // إنشاء عنصر التنبيه
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show mt-2';
+                alertDiv.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+                // إدراج التنبيه في أعلى الصفحة
+                const container = document.querySelector('.container-fluid');
+                if (container) {
+                    container.insertBefore(alertDiv, container.firstChild);
+
+                    // إزالة التنبيه تلقائياً بعد 5 ثواني
+                    setTimeout(() => {
+                        if (alertDiv.parentNode) {
+                            alertDiv.remove();
+                        }
+                    }, 5000);
                 }
-
-                // إعادة حساب صافي الربح
-                recalculateExpenses();
-            });
-
+            }
             // تأكيد حذف السجل
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
             let expenseIdToDelete = null;
@@ -1162,12 +1406,10 @@
                     document.getElementById('total_monthly_profit_KWD').value = window.originalValues.profit_KWD
                         .toFixed(2);
 
-                    // استعادة قيم المصاريف
-                    document.getElementById('total_expenses_display_SAR').value = window.originalValues
-                        .expenses_SAR
+                    // ✅ تصحيح: استعادة قيم المصاريف
+                    document.getElementById('total_expenses_display_SAR').value = window.originalValues.expenses_SAR
                         .toFixed(2);
-                    document.getElementById('total_expenses_display_KWD').value = window.originalValues
-                        .expenses_KWD
+                    document.getElementById('total_expenses_display_KWD').value = window.originalValues.expenses_KWD
                         .toFixed(2);
 
                     // استعادة المتغيرات العامة
@@ -1200,83 +1442,5 @@
             });
         });
     </script>
-    <script src="{{ asset('js/preventClick.js') }}"></script>
-@endpush
-
-@push('styles')
-    <style>
-        #profit-details {
-            font-size: 0.9rem;
-            padding: 0.75rem;
-            border-radius: 0.25rem;
-        }
-
-        .currency-badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            margin: 0.25rem 0;
-            border-radius: 0.25rem;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-        }
-
-        .text-currency-sar {
-            color: #198754;
-            /* نفس لون النجاح */
-        }
-
-        .text-currency-kwd {
-            color: #0d6efd;
-            /* نفس لون الأساسي */
-        }
-
-        /* ظل وبُعد لبطاقات النتائج المالية */
-        .custom-expenses-table th,
-        .custom-expenses-table td {
-            vertical-align: middle !important;
-        }
-
-        .custom-expenses-table .badge {
-            font-size: 1rem !important;
-            letter-spacing: 0.5px;
-        }
-
-        .custom-expenses-table tr {
-            transition: box-shadow 0.15s;
-        }
-
-        .custom-expenses-table tr:hover {
-            box-shadow: 0 2px 12px 0 #cacaca1f;
-            background: #f7fafd !important;
-        }
-
-        .custom-expenses-table tbody tr:hover {
-            background: #eaf7fa !important;
-            box-shadow: 0 2px 16px 0 #c1e3ed70;
-            transition: all .15s;
-        }
-
-        .custom-expenses-table .btn-group .btn:hover {
-            transform: scale(1.12) rotate(-7deg);
-            transition: 0.1s;
-        }
-
-        /* تصميم إضافي لجعل الخانات دائماً مناسبة للموبايل والديسكتوب */
-        @media (max-width: 575px) {
-
-            .custom-expenses-table td,
-            .custom-expenses-table th {
-                font-size: 13px !important;
-                padding: 0.3rem 0.2rem !important;
-                white-space: normal !important;
-            }
-
-            .custom-expenses-table .bg-light-subtle {
-                max-width: 99vw !important;
-                min-width: unset !important;
-                padding-left: 4px !important;
-                padding-right: 4px !important;
-            }
-        }
-    </style>
+    {{-- <script src="{{ asset('js/preventClick.js') }}"></script> --}}
 @endpush
