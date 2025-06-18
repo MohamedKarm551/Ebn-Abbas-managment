@@ -546,7 +546,7 @@ class BookingsController extends Controller
 
 
 
- /**
+    /**
      * Store a new booking.
      *
      * @param Request $request
@@ -853,7 +853,7 @@ class BookingsController extends Controller
         try {
             $checkInDate = Carbon::parse($validatedData['check_in']);
             $checkOutDate = Carbon::parse($validatedData['check_out']);
-            $days = $checkOutDate->diffInDays($checkInDate);
+            $days = $checkInDate->diffInDays($checkOutDate);
 
             if ($days <= 0) {
                 Log::warning("عدد الأيام المحسوب صفر أو أقل للحجز", $validatedData);
@@ -1080,7 +1080,7 @@ class BookingsController extends Controller
      * @param bool $isBookingFromAvailability
      * @param AvailabilityRoomType|null $originalRoomTypeInfo
      */
-   private function sendBookingNotifications(Booking $booking, bool $isBookingFromAvailability, ?AvailabilityRoomType $originalRoomTypeInfo): void
+    private function sendBookingNotifications(Booking $booking, bool $isBookingFromAvailability, ?AvailabilityRoomType $originalRoomTypeInfo): void
     {
         // ================================================================
         // Notifications
