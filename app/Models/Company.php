@@ -93,11 +93,29 @@ class Company extends Model
      */
     public function getTotalPaidByCurrencyAttribute()
     {
-        return $this->companyPayments()
+        // المدفوعات القديمة حسب العملة
+        $oldPayments = $this->payments()
             ->select('currency', DB::raw('SUM(amount) as total'))
             ->groupBy('currency')
             ->pluck('total', 'currency')
             ->toArray();
+
+        // المدفوعات الجديدة حسب العملة  
+        $newPayments = $this->companyPayments()
+            ->select('currency', DB::raw('SUM(amount) as total'))
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+
+        // دمج المدفوعات
+        $result = [];
+        $allCurrencies = array_unique(array_merge(array_keys($oldPayments), array_keys($newPayments)));
+        
+        foreach ($allCurrencies as $currency) {
+            $result[$currency] = ($oldPayments[$currency] ?? 0) + ($newPayments[$currency] ?? 0);
+        }
+        
+        return $result;
     }
 
     /**
@@ -106,7 +124,7 @@ class Company extends Model
     public function getRemainingByCurrencyAttribute()
     {
         $dueByCurrency = $this->total_due_by_currency;
-        $paidByCurrency = $this->total_paid_by_currency;
+        $paidByCurrency = $this->total_paid_by_currency; // الآن يحسب صح
         $remainingByCurrency = [];
 
         // استخدم جميع العملات الموجودة في أي من الاثنين
@@ -161,14 +179,14 @@ class Company extends Model
             ->get()
             ->keyBy('currency');
 
-        // 3. المدفوعات القديمة حسب العملة
+        // 3. ✅ المدفوعات القديمة حسب العملة (من جدول payments)
         $oldPayments = $this->payments()
             ->select('currency', DB::raw('SUM(amount) as total_paid'))
             ->groupBy('currency')
             ->get()
             ->keyBy('currency');
 
-        // 4. المدفوعات الجديدة حسب العملة
+        // 4. ✅ المدفوعات الجديدة حسب العملة (من جدول company_payments)
         $newPayments = $this->companyPayments()
             ->select('currency', DB::raw('SUM(amount) as total_paid'))
             ->groupBy('currency')
@@ -189,6 +207,7 @@ class Company extends Model
             $landTripDue = isset($landTripsDue[$currency]) ? (float)$landTripsDue[$currency]->total_due : 0;
             $totalDue = $regularDue + $landTripDue;
 
+            // ✅ جمع المدفوعات من الجدولين
             $oldPaid = isset($oldPayments[$currency]) ? (float)$oldPayments[$currency]->total_paid : 0;
             $newPaid = isset($newPayments[$currency]) ? (float)$newPayments[$currency]->total_paid : 0;
             $totalPaid = $oldPaid + $newPaid;
@@ -278,7 +297,14 @@ class Company extends Model
     public function getRemainingBookingsByCurrencyAttribute()
     {
         $due = $this->total_due_bookings_by_currency;
-        $paid = $this->total_paid_bookings_by_currency;
+        
+        // ✅ استخدام المدفوعات من جدول payments فقط (للحجوزات العادية)
+        $paid = $this->payments()
+            ->select('currency', DB::raw('SUM(amount) as total'))
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+        
         $result = [];
         foreach (array_unique(array_merge(array_keys($due), array_keys($paid))) as $currency) {
             $result[$currency] = ($due[$currency] ?? 0) - ($paid[$currency] ?? 0);
