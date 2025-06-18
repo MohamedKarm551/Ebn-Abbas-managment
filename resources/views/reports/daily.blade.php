@@ -48,104 +48,297 @@
 
         </div>
         {{-- إضافة ملخص بالعملات في بداية الصفحة --}}
-        {{-- ملخص الأرصدة حسب العملة --}}
-        <div class="  mb-4">
-            <div class="card-header ">
+        <div class="mb-4">
+            <div class="card-header">
                 <h5 class="mb-2 text-warning"><i class="fas fa-money-bill-wave me-2"></i>ملخص الأرصدة حسب العملة</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <h6 class="text-primary">إجمالي المطلوب من الشركات:</h6>
+                        {{-- 📊 إجمالي المطلوب من الشركات --}}
+                        <h6 class="text-primary"><i class="fas fa-coins me-2"></i>إجمالي المطلوب من الشركات:</h6>
                         <ul class="list-unstyled">
-                            <li><i class="fas fa-dollar-sign me-1"></i>
-
-                                @php
-                                    $totalDueByCurrency = [
-                                        'SAR' => 0,
-                                        'KWD' => 0,
-                                    ];
-                                    foreach ($companiesReport as $company) {
-                                        $dueByCurrency = $company->total_due_by_currency ?? [
-                                            'SAR' => $company->total_due,
-                                        ];
-                                        foreach ($dueByCurrency as $currency => $amount) {
-                                            $totalDueByCurrency[$currency] += $amount;
+                            @php
+                                // ✅ حساب إجمالي المستحق من جميع الشركات حسب العملة
+                                $totalDueFromCompaniesByCurrency = ['SAR' => 0, 'KWD' => 0];
+                                foreach ($companiesReport as $company) {
+                                    $dueByCurrency = $company->total_due_by_currency ?? ['SAR' => $company->total_due];
+                                    foreach ($dueByCurrency as $currency => $amount) {
+                                        if (!isset($totalDueFromCompaniesByCurrency[$currency])) {
+                                            $totalDueFromCompaniesByCurrency[$currency] = 0;
                                         }
+                                        $totalDueFromCompaniesByCurrency[$currency] += $amount;
                                     }
-                                @endphp
-                                @foreach ($totalDueByCurrency as $currency => $amount)
-                                    @if ($amount > 0)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endif
-                                @endforeach
-
+                                }
+                            @endphp
+                            @foreach ($totalDueFromCompaniesByCurrency as $currency => $amount)
+                                @if ($amount > 0)
+                                    <li><i class="fas fa-arrow-up me-1 text-info"></i>
+                                        <strong>{{ number_format($amount, 2) }}</strong>
+                                        {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                                    </li>
+                                @endif
+                            @endforeach
                         </ul>
-                        <h6 class="text-success">إجمالي المدفوع من الشركات:</h6>
+
+                        {{-- 💰 إجمالي المدفوع من الشركات --}}
+                        <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>إجمالي المدفوع من الشركات:</h6>
                         <ul class="list-unstyled">
-                            @if (isset($companyPaymentsByCurrency['SAR']))
-                                <li><i class="fas fa-dollar-sign me-1"></i>
-                                    {{ number_format($companyPaymentsByCurrency['SAR'], 2) }} ريال سعودي</li>
-                            @endif
-                            @if (isset($companyPaymentsByCurrency['KWD']))
-                                <li><i class="fas fa-money-bill-wave me-1"></i>
-                                    {{ number_format($companyPaymentsByCurrency['KWD'], 2) }} دينار كويتي</li>
+                            @php
+                                // ✅ حساب إجمالي المدفوع من جميع الشركات حسب العملة (من جدولي payments و company_payments)
+                                $totalPaidByCompaniesByCurrency = ['SAR' => 0, 'KWD' => 0];
+                                foreach ($companiesReport as $company) {
+                                    $paidByCurrency = $company->total_paid_by_currency ?? [];
+                                    foreach ($paidByCurrency as $currency => $amount) {
+                                        if (!isset($totalPaidByCompaniesByCurrency[$currency])) {
+                                            $totalPaidByCompaniesByCurrency[$currency] = 0;
+                                        }
+                                        $totalPaidByCompaniesByCurrency[$currency] += $amount;
+                                    }
+                                }
+                            @endphp
+                            @foreach ($totalPaidByCompaniesByCurrency as $currency => $amount)
+                                @if ($amount > 0)
+                                    <li><i class="fas fa-dollar-sign me-1 text-success"></i>
+                                        <strong>{{ number_format($amount, 2) }}</strong>
+                                        {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                                    </li>
+                                @endif
+                            @endforeach
+                        </ul>
+
+                        {{-- 🔥 الباقي المطلوب من الشركات --}}
+                        <h6 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>الباقي المطلوب من الشركات:
+                        </h6>
+                        <ul class="list-unstyled">
+                            @php
+                                // ✅ حساب المتبقي = المستحق - المدفوع لكل عملة
+                                $totalRemainingFromCompaniesByCurrency = [];
+                                $allCompanyCurrencies = array_unique(
+                                    array_merge(
+                                        array_keys($totalDueFromCompaniesByCurrency),
+                                        array_keys($totalPaidByCompaniesByCurrency),
+                                    ),
+                                );
+
+                                foreach ($allCompanyCurrencies as $currency) {
+                                    $due = $totalDueFromCompaniesByCurrency[$currency] ?? 0;
+                                    $paid = $totalPaidByCompaniesByCurrency[$currency] ?? 0;
+                                    $remaining = $due - $paid;
+
+                                    if ($remaining != 0) {
+                                        // عرض حتى لو سالب
+                                        $totalRemainingFromCompaniesByCurrency[$currency] = $remaining;
+                                    }
+                                }
+                            @endphp
+                            @foreach ($totalRemainingFromCompaniesByCurrency as $currency => $remaining)
+                                <li>
+                                    <i
+                                        class="fas {{ $remaining > 0 ? 'fa-exclamation-triangle text-danger' : 'fa-check-double text-success' }} me-1"></i>
+                                    <span class="{{ $remaining > 0 ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
+                                        {{ $remaining > 0 ? '+' : '' }}{{ number_format($remaining, 2) }}
+                                    </span>
+                                    {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                                    @if ($remaining < 0)
+                                        <small class="text-muted">(دفعوا زيادة)</small>
+                                    @endif
+                                </li>
+                            @endforeach
+                            @if (empty($totalRemainingFromCompaniesByCurrency))
+                                <li><i class="fas fa-check-circle me-1 text-success"></i>
+                                    <span class="text-success fw-bold">جميع مستحقات الشركات مدفوعة! 🎉</span>
+                                </li>
                             @endif
                         </ul>
                     </div>
+
                     <div class="col-md-6">
-                        <h6 class="text-danger">إجمالي المستحق للجهات:</h6>
+                        {{-- 📋 إجمالي المستحق للجهات --}}
+                        <h6 class="text-warning"><i class="fas fa-hand-holding-usd me-2"></i>إجمالي المستحق للجهات:</h6>
                         <ul class="list-unstyled">
-                            <li><i class="fas fa-dollar-sign me-1"></i>
-                                @php
-                                    $totalDueByCurrency = [
-                                        'SAR' => 0,
-                                        'KWD' => 0,
-                                    ];
-                                    foreach ($agentsReport as $agent) {
-                                        $dueByCurrency = $agent->total_due_by_currency ?? [
-                                            'SAR' => $agent->total_due,
-                                        ];
-                                        foreach ($dueByCurrency as $currency => $amount) {
-                                            $totalDueByCurrency[$currency] += $amount;
+                            @php
+                                // ✅ حساب إجمالي المستحق للجهات حسب العملة
+                                $totalDueToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
+                                foreach ($agentsReport as $agent) {
+                                    $dueByCurrency = $agent->total_due_by_currency ?? ['SAR' => $agent->total_due];
+                                    foreach ($dueByCurrency as $currency => $amount) {
+                                        if (!isset($totalDueToAgentsByCurrency[$currency])) {
+                                            $totalDueToAgentsByCurrency[$currency] = 0;
                                         }
+                                        $totalDueToAgentsByCurrency[$currency] += $amount;
                                     }
-                                @endphp
-                                @foreach ($totalDueByCurrency as $currency => $amount)
-                                    @if ($amount > 0)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endif
-                                @endforeach
-                            </li>
+                                }
+                            @endphp
+                            @foreach ($totalDueToAgentsByCurrency as $currency => $amount)
+                                @if ($amount > 0)
+                                    <li><i class="fas fa-arrow-down me-1 text-warning"></i>
+                                        <strong>{{ number_format($amount, 2) }}</strong>
+                                        {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                                    </li>
+                                @endif
+                            @endforeach
                         </ul>
-                        <h6 class="text-success">إجمالي المدفوع للجهات:</h6>
+
+                        {{-- 💳 إجمالي المدفوع للجهات --}}
+                        <h6 class="text-success"><i class="fas fa-credit-card me-2"></i>إجمالي المدفوع للجهات:</h6>
                         <ul class="list-unstyled">
-                            @if (isset($agentPaymentsByCurrency['SAR']))
-                                <li><i class="fas fa-dollar-sign me-1"></i>
-                                    {{ number_format($agentPaymentsByCurrency['SAR'], 2) }} ريال سعودي</li>
-                            @endif
-                            @if (isset($agentPaymentsByCurrency['KWD']))
-                                <li><i class="fas fa-money-bill-wave me-1"></i>
-                                    {{ number_format($agentPaymentsByCurrency['KWD'], 2) }} دينار كويتي</li>
+                            @php
+                                // ✅ حساب إجمالي المدفوع للجهات حسب العملة
+                                $totalPaidToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
+
+                                // استخدام البيانات المُمررة من الـ Controller
+                                if (isset($agentPaymentsByCurrency)) {
+                                    foreach ($agentPaymentsByCurrency as $currency => $amount) {
+                                        $totalPaidToAgentsByCurrency[$currency] = $amount;
+                                    }
+                                }
+                            @endphp
+                            @foreach ($totalPaidToAgentsByCurrency as $currency => $amount)
+                                @if ($amount > 0)
+                                    <li><i class="fas fa-check-circle me-1 text-success"></i>
+                                        <strong>{{ number_format($amount, 2) }}</strong>
+                                        {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                                    </li>
+                                @endif
+                            @endforeach
+                        </ul>
+
+                        {{-- ⚠️ الباقي المطلوب للجهات --}}
+                        <h6 class="text-warning"><i class="fas fa-hourglass-half me-2"></i>الباقي المطلوب للجهات:</h6>
+                        <ul class="list-unstyled">
+                            @php
+                                // ✅ حساب المتبقي للجهات = المستحق - المدفوع
+                                $totalRemainingToAgentsByCurrency = [];
+                                $allAgentCurrencies = array_unique(
+                                    array_merge(
+                                        array_keys($totalDueToAgentsByCurrency),
+                                        array_keys($totalPaidToAgentsByCurrency),
+                                    ),
+                                );
+
+                                foreach ($allAgentCurrencies as $currency) {
+                                    $due = $totalDueToAgentsByCurrency[$currency] ?? 0;
+                                    $paid = $totalPaidToAgentsByCurrency[$currency] ?? 0;
+                                    $remaining = $due - $paid;
+
+                                    if ($remaining > 0) {
+                                        // عرض فقط الموجب
+                                        $totalRemainingToAgentsByCurrency[$currency] = $remaining;
+                                    }
+                                }
+                            @endphp
+                            @foreach ($totalRemainingToAgentsByCurrency as $currency => $remaining)
+                                <li><i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                                    <span class="text-warning fw-bold">{{ number_format($remaining, 2) }}</span>
+                                    {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                                </li>
+                            @endforeach
+                            @if (empty($totalRemainingToAgentsByCurrency))
+                                <li><i class="fas fa-check-circle me-1 text-success"></i>
+                                    <span class="text-success fw-bold">جميع مستحقات الجهات مدفوعة! 🎉</span>
+                                </li>
                             @endif
                         </ul>
+                    </div>
+                </div>
+
+                {{-- ⚖️ صافي الرصيد الإجمالي --}}
+                <hr class="my-4">
+                <div class="row">
+                    <div class="col-12">
+                        <h5 class="text-center mb-3">
+                            <i class="fas fa-balance-scale me-2"></i>
+                            صافي الرصيد الإجمالي
+                        </h5>
+                        @php
+                            // ✅ حساب صافي الرصيد = ما لك من الشركات - ما عليك للجهات
+                            $netBalanceByCurrency = [];
+                            $allCurrencies = array_unique(
+                                array_merge(
+                                    array_keys($totalRemainingFromCompaniesByCurrency ?? []),
+                                    array_keys($totalRemainingToAgentsByCurrency ?? []),
+                                ),
+                            );
+
+                            foreach ($allCurrencies as $currency) {
+                                $fromCompanies = $totalRemainingFromCompaniesByCurrency[$currency] ?? 0; // لك من الشركات
+                                $toAgents = $totalRemainingToAgentsByCurrency[$currency] ?? 0; // عليك للجهات
+                                $netBalance = $fromCompanies - $toAgents;
+
+                                if ($netBalance != 0) {
+                                    $netBalanceByCurrency[$currency] = $netBalance;
+                                }
+                            }
+                        @endphp
+
+                        <div class="text-center">
+                            @foreach ($netBalanceByCurrency as $currency => $netBalance)
+                                <div class="badge {{ $netBalance > 0 ? 'bg-success' : 'bg-danger' }} fs-6 me-3 p-3">
+                                    <i class="fas {{ $netBalance > 0 ? 'fa-arrow-up' : 'fa-arrow-down' }} me-1"></i>
+                                    {{ $netBalance > 0 ? '+' : '' }}{{ number_format($netBalance, 2) }}
+                                    {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                    <br>
+                                    <small>{{ $netBalance > 0 ? 'لك' : 'عليك' }}</small>
+                                </div>
+                            @endforeach
+
+                            @if (empty($netBalanceByCurrency))
+                                <div class="badge bg-secondary fs-6 p-3">
+                                    <i class="fas fa-equals me-1"></i>
+                                    الرصيد متوازن
+                                    <br>
+                                    <small>0.00</small>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- 📈 ملخص تفصيلي سريع --}}
+                        <div class="alert alert-info mt-4">
+                            <h6 class="alert-heading"><i class="fas fa-chart-line me-2"></i>ملخص تفصيلي:</h6>
+                            @foreach ($allCompanyCurrencies ?? [] as $currency)
+                                @php
+                                    $due = $totalDueFromCompaniesByCurrency[$currency] ?? 0;
+                                    $paid = $totalPaidByCompaniesByCurrency[$currency] ?? 0;
+                                    $remaining = $due - $paid;
+                                    $percentage = $due > 0 ? round(($paid / $due) * 100, 1) : 0;
+                                    $currencyName = $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي';
+                                @endphp
+                                @if ($due > 0)
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong>{{ $currencyName }}:</strong>
+                                        <div class="text-end">
+                                            <small class="d-block">
+                                                {{ number_format($due, 2) }} مطلوب -
+                                                {{ number_format($paid, 2) }} مدفوع =
+                                                <span class="{{ $remaining > 0 ? 'text-danger' : 'text-success' }}">
+                                                    {{ number_format($remaining, 2) }} متبقي
+                                                </span>
+                                            </small>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar {{ $percentage >= 80 ? 'bg-success' : ($percentage >= 50 ? 'bg-warning' : 'bg-danger') }}"
+                                                    style="width: {{ $percentage }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ $percentage }}% مدفوع</small>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- *** بداية إضافة قسم الرسم البياني لصافي الرصيد *** --}}
-        <div class="row mt-4"> {{-- صف جديد للرسم البياني --}}
-            <div class="col-md-12 mb-4"> {{-- واخد العرض كله --}}
-                <div class=" shadow-sm">
+        {{-- 📊 الرسوم البيانية --}}
+        <div class="row mt-4">
+            <div class="col-md-12 mb-4">
+                <div class="shadow-sm">
                     <div class="card-header">
-                        <h5 class="mb-2 text-info">اتجاه صافي الرصيد مع الوقت</h5>
+                        <h5 class="mb-2 text-info"><i class="fas fa-chart-line me-2"></i>اتجاه صافي الرصيد مع الوقت</h5>
                     </div>
                     <div class="card-body">
                         <div class="chart-container" style="position: relative; height:350px; width:100%">
-                            {{-- Canvas للرسم البياني الجديد --}}
                             <canvas id="netBalanceChart"></canvas>
                         </div>
                         <p class="text-muted small mt-2 text-center">
@@ -155,165 +348,112 @@
                 </div>
             </div>
         </div>
-        {{-- *** نهاية إضافة قسم الرسم البياني لصافي الرصيد *** --}}
+
+        {{-- 📈 رسم بياني إضافي للدينار --}}
         <div class="mb-3">
             <button class="btn btn-outline-info mb-2" type="button" data-bs-toggle="collapse"
                 data-bs-target="#collapseNetBalanceKWD">
-                صافي الرصيد بالدينار
+                <i class="fas fa-chart-area me-1"></i>
+                صافي الرصيد بالدينار الكويتي
             </button>
-            <div class="collapse " id="collapseNetBalanceKWD">
+            <div class="collapse" id="collapseNetBalanceKWD">
                 <div class="chart-container" style="position: relative; height:350px; width:100%">
                     <canvas id="netBalanceKWDChart"></canvas>
                 </div>
             </div>
         </div>
-        {{-- *** الخطوة 3: قائمة أعلى 5 شركات عليها مبالغ *** --}}
-        <div class="col-md-4 mb-3">
-            <div class=" h-100">
-                <div class="card-body">
-                    <h5 class="card-title text-danger"><i class="fas fa-exclamation-triangle me-1"></i> أعلى 5
-                        شركات عليها مبالغ</h5>
-                    @php
-                        // فرز الشركات حسب المتبقي (الأعلى أولاً) في Blade (الأفضل عمله في Controller)
-                        $topCompanies = $companiesReport->sortByDesc('remaining')->take(5);
-                    @endphp
-                    <ul class="list-unstyled mb-2 small">
-                        @forelse ($topCompanies as $company)
-                            @if ($company->remaining > 0)
-                                {{-- عرض فقط إذا كان المتبقي أكبر من صفر --}}
-                                <li>{{ $company->name }}:
-                                    @php
-                                        $remainingByCurrency = $company->remaining_by_currency ?? [
-                                            'SAR' => $company->remaining,
-                                        ];
-                                    @endphp
-                                    @foreach ($remainingByCurrency as $currency => $amount)
-                                        @if ($amount > 0)
-                                            <span class="fw-bold">{{ number_format($amount) }}
-                                                {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</span>
-                                        @endif
-                                    @endforeach
-                                </li>
-                            @endif
-                        @empty
-                            <li>لا توجد شركات عليها مبالغ متبقية حاليًا.</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-        </div>
-        {{-- *** الخطوة 3: قائمة أعلى 5 جهات لها مبالغ *** --}}
-        <div class="col-md-4 mb-3">
-            <div class=" h-100">
-                <div class="card-body">
-                    <h5 class="card-title text-warning"><i class="fas fa-money-check-alt me-1"></i> أعلى 5
-                        جهات
-                        لها مبالغ</h5>
-                    @php
-                        // فرز الجهات حسب المتبقي (الأعلى أولاً) في Blade (الأفضل عمله في Controller)
-                        $topAgents = $agentsReport->sortByDesc('remaining')->take(5);
-                    @endphp
-                    <ul class="list-unstyled mb-2 small">
-                        @forelse ($topAgents as $agent)
-                            @if ($agent->remaining > 0)
-                                {{-- عرض فقط إذا كان المتبقي أكبر من صفر --}}
-                                <li>{{ $agent->name }}:
-                                    @php
-                                        $remainingByCurrency = $agent->remaining_by_currency ?? [
-                                            'SAR' => $agent->remaining,
-                                        ];
-                                    @endphp
-                                    @foreach ($remainingByCurrency as $currency => $amount)
-                                        @if ($amount > 0)
-                                            <span class="fw-bold">{{ number_format($amount) }}
-                                                {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</span>
-                                        @endif
-                                    @endforeach
-                                </li>
-                            @endif
-                        @empty
-                            <li>لا توجد جهات لها مبالغ متبقية حاليًا.</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    {{-- *** الخطوة 4: إضافة Canvas للرسوم البيانية *** --}}
-    <div class="row mt-3">
-        <div class="col-md-6 mb-3">
-            <button class="btn btn-outline-danger mb-2 w-100" type="button" data-bs-toggle="collapse"
-                data-bs-target="#collapseTopCompanies">
-                المتبقي على الشركات (أعلى 5)
-            </button>
-            <div class="collapse show" id="collapseTopCompanies">
-                <div class="chart-container" style="position: relative; height:250px; width:100%">
-                    <canvas id="topCompaniesChart"></canvas>
+        {{-- 📋 قوائم أعلى الشركات والجهات --}}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            أعلى 5 شركات عليها مبالغ
+                        </h5>
+                        @php
+                            $topCompanies = $companiesReport->sortByDesc('remaining_amount')->take(5);
+                        @endphp
+                        <ul class="list-unstyled mb-2 small">
+                            @forelse ($topCompanies as $company)
+                                @php
+                                    $remainingByCurrency = $company->remaining_by_currency ?? [
+                                        'SAR' => $company->remaining_amount,
+                                    ];
+                                    $hasPositiveRemaining = collect($remainingByCurrency)
+                                        ->filter(fn($amount) => $amount > 0)
+                                        ->isNotEmpty();
+                                @endphp
+                                @if ($hasPositiveRemaining)
+                                    <li class="mb-1">
+                                        <strong>{{ $company->name }}:</strong>
+                                        @foreach ($remainingByCurrency as $currency => $amount)
+                                            @if ($amount > 0)
+                                                <span class="badge bg-danger">
+                                                    {{ number_format($amount, 0) }}
+                                                    {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                                </span>
+                                            @endif
+                                        @endforeach
+                                    </li>
+                                @endif
+                            @empty
+                                <li class="text-muted">لا توجد شركات عليها مبالغ متبقية حاليًا.</li>
+                            @endforelse
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <button class="btn btn-outline-warning mb-2 w-100" type="button" data-bs-toggle="collapse"
-                data-bs-target="#collapseTopAgents">
-                المتبقي لجهات الحجز (أعلى 5)
-            </button>
-            <div class="collapse show" id="collapseTopAgents">
-                <div class="chart-container" style="position: relative; height:250px; width:100%">
-                    <canvas id="topAgentsChart"></canvas>
-                </div>
-            </div>
-        </div>
 
-        {{-- *** إضافة Canvas للرسوم الجديدة *** --}}
-        <div class="col-md-6 mb-3">
-            <button class="btn btn-outline-info mb-2 w-100" type="button" data-bs-toggle="collapse"
-                data-bs-target="#collapseRemainingComparison">
-                مقارنة إجمالي المتبقي
-            </button>
-            <div class="collapse " id="collapseRemainingComparison">
-                <div class="chart-container" style="position: relative; height:250px; width:100%">
-                    <canvas id="remainingComparisonChart"></canvas>
+            <div class="col-md-6 mb-3">
+                <div class="h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">
+                            <i class="fas fa-money-check-alt me-1"></i>
+                            أعلى 5 جهات لها مبالغ
+                        </h5>
+                        @php
+                            $topAgents = $agentsReport->sortByDesc('remaining_amount')->take(5);
+                        @endphp
+                        <ul class="list-unstyled mb-2 small">
+                            @forelse ($topAgents as $agent)
+                                @php
+                                    $remainingByCurrency = $agent->remaining_by_currency ?? [
+                                        'SAR' => $agent->remaining_amount,
+                                    ];
+                                    $hasPositiveRemaining = collect($remainingByCurrency)
+                                        ->filter(fn($amount) => $amount > 0)
+                                        ->isNotEmpty();
+                                @endphp
+                                @if ($hasPositiveRemaining)
+                                    <li class="mb-1">
+                                        <strong>{{ $agent->name }}:</strong>
+                                        @foreach ($remainingByCurrency as $currency => $amount)
+                                            @if ($amount > 0)
+                                                <span class="badge bg-warning">
+                                                    {{ number_format($amount, 0) }}
+                                                    {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                                </span>
+                                            @endif
+                                        @endforeach
+                                    </li>
+                                @endif
+                            @empty
+                                <li class="text-muted">لا توجد جهات لها مبالغ متبقية حاليًا.</li>
+                            @endforelse
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-3">
-            <button class="btn btn-outline-success mb-2 w-100" type="button" data-bs-toggle="collapse"
-                data-bs-target="#collapseCompanyBookingDistribution">
-                توزيع الحجوزات (أعلى 5 شركات)
-            </button>
-            <div class="collapse " id="collapseCompanyBookingDistribution">
-                <div class="chart-container" style="position: relative; height:250px; width:100%">
-                    <canvas id="companyBookingDistributionChart"></canvas>
-                </div>
-            </div>
-        </div>
-        {{-- *** نهاية إضافة Canvas *** --}}
-    </div>
-    </div>
-    </div>
-    {{-- *** الرسم البياني الجديد: الحجوزات اليومية *** --}}
-    <div class="col-md-12 mb-4"> {{-- ممكن تخليه col-md-6 لو عايزه جنب رسم تاني --}}
-        <div class=" shadow-sm">
-            <div class="card-header">
-                <h5 class="mb-0 text-primary">الحجوزات خلال آخر {{ count($chartDates ?? []) }} يومًا</h5>
-            </div>
-            <div class="card-body">
-                <div class="chart-container" style="position: relative; height:350px; width:100%">
-                    {{-- >>>>> السطر ده هو المهم <<<<< --}}
-                    <canvas id="dailyBookingsChart"></canvas>
-                    {{-- >>>>> تأكد إن السطر ده موجود <<< --}}
-                </div>
-            </div>
-        </div>
-    </div>
-    {{-- *** نهاية الرسم البياني الجديد *** --}}
+        {{-- *** نهاية الرسم البياني الجديد *** --}}
 
-    {{-- *** نهاية قسم لوحة المعلومات المصغرة *** --}}
+        {{-- *** نهاية قسم لوحة المعلومات المصغرة *** --}}
 
 
 
-    {{-- <div class=" mb-4">
+        {{-- <div class=" mb-4">
             <div class="card-header">
                 <h3>ملخص اليوم</h3>
             </div>
@@ -341,353 +481,355 @@
             </div>
         </div>
  --}}
-    <!-- جدول الشركات -->
-    <div class="  mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3>حساب المطلوب من الشركات</h3>
-            <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTable')">نسخ الجدول</button>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
+        <!-- جدول الشركات -->
+        <div class="  mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>حساب المطلوب من الشركات</h3>
+                <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTable')">نسخ الجدول</button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
 
-                <table class="table table-bordered table-striped" id="companiesTable">
-                    <thead>
-                        <tr>
-                            <th>الشركة</th>
-                            <th>عدد الحجوزات</th>
-                            <th>إجمالي المستحق</th>
-                            <th>المدفوع</th>
-                            <th>المتبقي</th>
-                            <th>العمليات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($companiesReport as $company)
+                    <table class="table table-bordered table-striped" id="companiesTable">
+                        <thead>
                             <tr>
-                                <td>{{ $loop->iteration }}. {{ $company->name }}
-                                    @php
-                                        $hasEdit =
-                                            $recentCompanyEdits
-                                                ->filter(function ($n) use ($company) {
-                                                    return str_contains($n->first()->message, $company->name);
-                                                })
-                                                ->count() > 0;
-                                    @endphp
-                                    @if ($hasEdit)
-                                        <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
-                                    @endif
-                                </td>
-                                <td>{{ $company->bookings_count }}</td>
-                                <td>
-                                    @php
-                                        $dueByCurrency = $company->total_due_by_currency ?? [
-                                            'SAR' => $company->total_due,
-                                        ];
-                                    @endphp
-                                    @foreach ($dueByCurrency as $currency => $amount)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endforeach
-                                </td>
-                                <td
-                                    @if ($company->total_paid > $company->total_due) style="color: red !important; font-weight: bold;" title="المبلغ المدفوع أكثر من المستحق" @endif>
-                                    @php
-                                        $paymentsByCurrency = $company->payments
-                                            ? $company->payments->groupBy('currency')
-                                            : collect();
-                                    @endphp
-                                    @forelse ($paymentsByCurrency as $currency => $payments)
-                                        {{ number_format($payments->sum('amount'), 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @empty
-                                        0 ريال
-                                    @endforelse
-                                </td>
-                                <td>
-                                    @php
-                                        $remainingBookingsByCurrency = $company->remaining_bookings_by_currency;
-                                    @endphp
-
-                                    @foreach ($remainingBookingsByCurrency as $currency => $amount)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endforeach
-
-                                </td>
-                                <td>
-                                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                                        <a href="{{ route('reports.company.bookings', $company->id) }}"
-                                            class="btn btn-info btn-sm">عرض الحجوزات</a>
-                                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                                            data-bs-target="#paymentModal{{ $company->id }}">
-                                            تسجيل دفعة
-                                        </button>
-                                        <a href="{{ route('reports.company.payments', $company->id) }}"
-                                            class="btn btn-primary btn-sm">كشف حساب </a>
-                                    </div>
-                                </td>
+                                <th>الشركة</th>
+                                <th>عدد الحجوزات</th>
+                                <th>إجمالي المستحق</th>
+                                <th>المدفوع</th>
+                                <th>المتبقي</th>
+                                <th>العمليات</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
+                            @foreach ($companiesReport as $company)
+                                <tr>
+                                    <td>{{ $loop->iteration }}. {{ $company->name }}
+                                        @php
+                                            $hasEdit =
+                                                $recentCompanyEdits
+                                                    ->filter(function ($n) use ($company) {
+                                                        return str_contains($n->first()->message, $company->name);
+                                                    })
+                                                    ->count() > 0;
+                                        @endphp
+                                        @if ($hasEdit)
+                                            <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $company->bookings_count }}</td>
+                                    <td>
+                                        @php
+                                            $dueByCurrency = $company->total_due_by_currency ?? [
+                                                'SAR' => $company->total_due,
+                                            ];
+                                        @endphp
+                                        @foreach ($dueByCurrency as $currency => $amount)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endforeach
+                                    </td>
+                                    <td
+                                        @if ($company->total_paid > $company->total_due) style="color: red !important; font-weight: bold;" title="المبلغ المدفوع أكثر من المستحق" @endif>
+                                        @php
+                                            $paymentsByCurrency = $company->payments
+                                                ? $company->payments->groupBy('currency')
+                                                : collect();
+                                        @endphp
+                                        @forelse ($paymentsByCurrency as $currency => $payments)
+                                            {{ number_format($payments->sum('amount'), 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @empty
+                                            0 ريال
+                                        @endforelse
+                                    </td>
+                                    <td>
+                                        @php
+                                            $remainingBookingsByCurrency = $company->remaining_bookings_by_currency;
+                                        @endphp
 
-                    </tbody>
-                    <tfoot>
-                        <tr class="table-secondary fw-bold">
-                            <td class="text-center">الإجمالي</td>
-                            <td class="text-center">
-                                @php
-                                    $totalBookingsCount = $companiesReport->sum('bookings_count');
-                                @endphp
-                                {{ $totalBookingsCount }}
-                            </td>
-                            <td>
-                                @php
-                                    $totalDueByCurrency = [
-                                        'SAR' => 0,
-                                        'KWD' => 0,
-                                    ];
-                                    foreach ($companiesReport as $company) {
-                                        $dueByCurrency = $company->total_due_by_currency ?? [
-                                            'SAR' => $company->total_due,
-                                        ];
-                                        foreach ($dueByCurrency as $currency => $amount) {
-                                            $totalDueByCurrency[$currency] += $amount;
-                                        }
-                                    }
-                                @endphp
-                                @foreach ($totalDueByCurrency as $currency => $amount)
-                                    @if ($amount > 0)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endif
-                                @endforeach
-                            </td>
-                            <td>
-                                @if (isset($companyPaymentsByCurrency['SAR']))
-                                    {{ number_format($companyPaymentsByCurrency['SAR']) }} ريال<br>
-                                @endif
-                                @if (isset($companyPaymentsByCurrency['KWD']))
-                                    {{ number_format($companyPaymentsByCurrency['KWD']) }} دينار
-                                @endif
-                            </td>
-                            <td>
-                                @php
-                                    $totalRemainingByCurrency = [
-                                        'SAR' => 0,
-                                        'KWD' => 0,
-                                    ];
-                                    $companyRemainingByCurrency = $totalRemainingByCurrency; // إنشاء نسخة من المتغير
+                                        @foreach ($remainingBookingsByCurrency as $currency => $amount)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endforeach
 
-                                    foreach ($companiesReport as $company) {
-                                        $remainingByCurrency = $company->remaining_by_currency ?? [
-                                            'SAR' => $company->remaining,
+                                    </td>
+                                    <td>
+                                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                            <a href="{{ route('reports.company.bookings', $company->id) }}"
+                                                class="btn btn-info btn-sm">عرض الحجوزات</a>
+                                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#paymentModal{{ $company->id }}">
+                                                تسجيل دفعة
+                                            </button>
+                                            <a href="{{ route('reports.company.payments', $company->id) }}"
+                                                class="btn btn-primary btn-sm">كشف حساب </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-secondary fw-bold">
+                                <td class="text-center">الإجمالي</td>
+                                <td class="text-center">
+                                    @php
+                                        $totalBookingsCount = $companiesReport->sum('bookings_count');
+                                    @endphp
+                                    {{ $totalBookingsCount }}
+                                </td>
+                                <td>
+                                    @php
+                                        $totalDueByCurrency = [
+                                            'SAR' => 0,
+                                            'KWD' => 0,
                                         ];
-                                        foreach ($remainingByCurrency as $currency => $amount) {
-                                            $totalRemainingByCurrency[$currency] += $amount;
+                                        foreach ($companiesReport as $company) {
+                                            $dueByCurrency = $company->total_due_by_currency ?? [
+                                                'SAR' => $company->total_due,
+                                            ];
+                                            foreach ($dueByCurrency as $currency => $amount) {
+                                                $totalDueByCurrency[$currency] += $amount;
+                                            }
                                         }
-                                    }
-                                    // حفظ قيم الشركات قبل استخدام المتغير مرة أخرى
-                                    $companyRemainingByCurrency = $totalRemainingByCurrency;
-                                @endphp
-                                @foreach ($totalRemainingByCurrency as $currency => $amount)
-                                    @if ($amount > 0)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                    @endphp
+                                    @foreach ($totalDueByCurrency as $currency => $amount)
+                                        @if ($amount > 0)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endif
+                                    @endforeach
+                                </td>
+                                <td>
+                                    @if (isset($companyPaymentsByCurrency['SAR']))
+                                        {{ number_format($companyPaymentsByCurrency['SAR']) }} ريال<br>
                                     @endif
-                                @endforeach
-                            </td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                                    @if (isset($companyPaymentsByCurrency['KWD']))
+                                        {{ number_format($companyPaymentsByCurrency['KWD']) }} دينار
+                                    @endif
+                                </td>
+                                <td>
+                                    @php
+                                        $totalRemainingByCurrency = [
+                                            'SAR' => 0,
+                                            'KWD' => 0,
+                                        ];
+                                        $companyRemainingByCurrency = $totalRemainingByCurrency; // إنشاء نسخة من المتغير
+
+                                        foreach ($companiesReport as $company) {
+                                            $remainingByCurrency = $company->remaining_by_currency ?? [
+                                                'SAR' => $company->remaining,
+                                            ];
+                                            foreach ($remainingByCurrency as $currency => $amount) {
+                                                $totalRemainingByCurrency[$currency] += $amount;
+                                            }
+                                        }
+                                        // حفظ قيم الشركات قبل استخدام المتغير مرة أخرى
+                                        $companyRemainingByCurrency = $totalRemainingByCurrency;
+                                    @endphp
+                                    @foreach ($totalRemainingByCurrency as $currency => $amount)
+                                        @if ($amount > 0)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endif
+                                    @endforeach
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- جدول جهات الحجز -->
-    <div class="  mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3>حساب المستحق إلى جهات الحجز</h3>
-            <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped" id="agentsTable">
-                    <thead>
-                        <tr>
-                            <th>جهة الحجز</th>
-                            <th>عدد الحجوزات</th>
-                            <th>إجمالي المبالغ</th>
-                            <th>المدفوع</th>
-                            <th>المتبقي</th>
-                            <th>العمليات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($agentsReport as $agent)
+        <!-- جدول جهات الحجز -->
+        <div class="  mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>حساب المستحق إلى جهات الحجز</h3>
+                <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="agentsTable">
+                        <thead>
                             <tr>
-                                <td>{{ $loop->iteration }}.{{ $agent->name }}
-                                    @php
-                                        $hasEdit =
-                                            $resentAgentEdits
-                                                ->filter(function ($n) use ($agent) {
-                                                    return str_contains($n->first()->message, $agent->name);
-                                                })
-                                                ->count() > 0;
-                                    @endphp
-                                    @if ($hasEdit)
-                                        <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
-                                    @endif
-                                </td>
-                                <td>{{ $agent->bookings_count }}</td>
-                                <td>
-                                    @php
-                                        $dueByCurrency = $agent->total_due_by_currency ?? [
-                                            'SAR' => $agent->total_due,
-                                        ];
-                                    @endphp
-                                    @foreach ($dueByCurrency as $currency => $amount)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endforeach
-                                </td>
-                                <td
-                                    @if ($agent->total_paid > $agent->total_due) style="color: red !important; font-weight: bold;" title="المبلغ المدفوع أكثر من المستحق" @endif>
-                                    @php
-                                        $paymentsByCurrency = $agent->payments
-                                            ? $agent->payments->groupBy('currency')
-                                            : collect();
-                                    @endphp
-                                    @forelse ($paymentsByCurrency as $currency => $payments)
-                                        {{ number_format($payments->sum('amount'), 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @empty
-                                        0 ريال
-                                    @endforelse
-                                </td>
-                                <td>
-                                    @php
-                                        $remainingByCurrency = $agent->remaining_bookings_by_currency ?? [
-                                            'SAR' => $agent->remaining,
-                                        ];
-                                    @endphp
-                                    @foreach ($remainingByCurrency as $currency => $amount)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endforeach
-
-                                </td>
-                                <td>
-                                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                                        <a href="{{ route('reports.agent.bookings', $agent->id) }}"
-                                            class="btn btn-info btn-sm">عرض الحجوزات</a>
-                                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                                            data-bs-target="#agentPaymentModal{{ $agent->id }}">
-                                            تسجيل دفعة
-                                        </button>
-                                        <a href="{{ route('reports.agent.payments', $agent->id) }}"
-                                            class="btn btn-primary btn-sm">كشف حساب</a>
-                                    </div>
-                                </td>
+                                <th>جهة الحجز</th>
+                                <th>عدد الحجوزات</th>
+                                <th>إجمالي المبالغ</th>
+                                <th>المدفوع</th>
+                                <th>المتبقي</th>
+                                <th>العمليات</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot>
-                        <tr class="table-secondary fw-bold">
-                            <td class="text-center">الإجمالي</td>
-                            <td class="text-center">
-                                @php
-                                    $totalAgentBookingsCount = $agentsReport->sum('bookings_count');
-                                @endphp
-                                {{ $totalAgentBookingsCount }}
-                            </td>
-                            <td>
-                                @php
-                                    $totalDueByCurrency = [
-                                        'SAR' => 0,
-                                        'KWD' => 0,
-                                    ];
-                                    foreach ($agentsReport as $agent) {
-                                        $dueByCurrency = $agent->total_due_by_currency ?? [
-                                            'SAR' => $agent->total_due,
-                                        ];
-                                        foreach ($dueByCurrency as $currency => $amount) {
-                                            $totalDueByCurrency[$currency] += $amount;
-                                        }
-                                    }
-                                @endphp
-                                @foreach ($totalDueByCurrency as $currency => $amount)
-                                    @if ($amount > 0)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endif
-                                @endforeach
-                            </td>
-                            <td>
-                                @if (isset($agentPaymentsByCurrency['SAR']))
-                                    {{ number_format($agentPaymentsByCurrency['SAR']) }} ريال<br>
-                                @endif
-                                @if (isset($agentPaymentsByCurrency['KWD']))
-                                    {{ number_format($agentPaymentsByCurrency['KWD']) }} دينار
-                                @endif
-                            </td>
-                            <td>
-                                @php
-                                    $totalRemainingByCurrency = [
-                                        'SAR' => 0,
-                                        'KWD' => 0,
-                                    ];
-                                    foreach ($agentsReport as $agent) {
-                                        $remainingByCurrency = $agent->remaining_by_currency ?? [
-                                            'SAR' => $agent->remaining,
-                                        ];
-                                        foreach ($remainingByCurrency as $currency => $amount) {
-                                            $totalRemainingByCurrency[$currency] += $amount;
-                                        }
-                                    }
-                                @endphp
-                                @foreach ($totalRemainingByCurrency as $currency => $amount)
-                                    @if ($amount > 0)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endif
-                                @endforeach
-                            </td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
+                        </thead>
+                        <tbody>
+                            @foreach ($agentsReport as $agent)
+                                <tr>
+                                    <td>{{ $loop->iteration }}.{{ $agent->name }}
+                                        @php
+                                            $hasEdit =
+                                                $resentAgentEdits
+                                                    ->filter(function ($n) use ($agent) {
+                                                        return str_contains($n->first()->message, $agent->name);
+                                                    })
+                                                    ->count() > 0;
+                                        @endphp
+                                        @if ($hasEdit)
+                                            <span class="badge bg-success" style="font-size: 0.7em;">edit</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $agent->bookings_count }}</td>
+                                    <td>
+                                        @php
+                                            $dueByCurrency = $agent->total_due_by_currency ?? [
+                                                'SAR' => $agent->total_due,
+                                            ];
+                                        @endphp
+                                        @foreach ($dueByCurrency as $currency => $amount)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endforeach
+                                    </td>
+                                    <td
+                                        @if ($agent->total_paid > $agent->total_due) style="color: red !important; font-weight: bold;" title="المبلغ المدفوع أكثر من المستحق" @endif>
+                                        @php
+                                            $paymentsByCurrency = $agent->payments
+                                                ? $agent->payments->groupBy('currency')
+                                                : collect();
+                                        @endphp
+                                        @forelse ($paymentsByCurrency as $currency => $payments)
+                                            {{ number_format($payments->sum('amount'), 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @empty
+                                            0 ريال
+                                        @endforelse
+                                    </td>
+                                    <td>
+                                        @php
+                                            $remainingByCurrency = $agent->remaining_bookings_by_currency ?? [
+                                                'SAR' => $agent->remaining,
+                                            ];
+                                        @endphp
+                                        @foreach ($remainingByCurrency as $currency => $amount)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endforeach
 
-                </table>
+                                    </td>
+                                    <td>
+                                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                            <a href="{{ route('reports.agent.bookings', $agent->id) }}"
+                                                class="btn btn-info btn-sm">عرض الحجوزات</a>
+                                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#agentPaymentModal{{ $agent->id }}">
+                                                تسجيل دفعة
+                                            </button>
+                                            <a href="{{ route('reports.agent.payments', $agent->id) }}"
+                                                class="btn btn-primary btn-sm">كشف حساب</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-secondary fw-bold">
+                                <td class="text-center">الإجمالي</td>
+                                <td class="text-center">
+                                    @php
+                                        $totalAgentBookingsCount = $agentsReport->sum('bookings_count');
+                                    @endphp
+                                    {{ $totalAgentBookingsCount }}
+                                </td>
+                                <td>
+                                    @php
+                                        $totalDueByCurrency = [
+                                            'SAR' => 0,
+                                            'KWD' => 0,
+                                        ];
+                                        foreach ($agentsReport as $agent) {
+                                            $dueByCurrency = $agent->total_due_by_currency ?? [
+                                                'SAR' => $agent->total_due,
+                                            ];
+                                            foreach ($dueByCurrency as $currency => $amount) {
+                                                $totalDueByCurrency[$currency] += $amount;
+                                            }
+                                        }
+                                    @endphp
+                                    @foreach ($totalDueByCurrency as $currency => $amount)
+                                        @if ($amount > 0)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endif
+                                    @endforeach
+                                </td>
+                                <td>
+                                    @if (isset($agentPaymentsByCurrency['SAR']))
+                                        {{ number_format($agentPaymentsByCurrency['SAR']) }} ريال<br>
+                                    @endif
+                                    @if (isset($agentPaymentsByCurrency['KWD']))
+                                        {{ number_format($agentPaymentsByCurrency['KWD']) }} دينار
+                                    @endif
+                                </td>
+                                <td>
+                                    @php
+                                        $totalRemainingByCurrency = [
+                                            'SAR' => 0,
+                                            'KWD' => 0,
+                                        ];
+                                        foreach ($agentsReport as $agent) {
+                                            $remainingByCurrency = $agent->remaining_by_currency ?? [
+                                                'SAR' => $agent->remaining,
+                                            ];
+                                            foreach ($remainingByCurrency as $currency => $amount) {
+                                                $totalRemainingByCurrency[$currency] += $amount;
+                                            }
+                                        }
+                                    @endphp
+                                    @foreach ($totalRemainingByCurrency as $currency => $amount)
+                                        @if ($amount > 0)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endif
+                                    @endforeach
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- نماذج تسجيل الدفعات لجهات الحجز -->
-    @foreach ($agentsReport as $agent)
-        <div class="modal fade" id="agentPaymentModal{{ $agent->id }}" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form action="{{ route('reports.agent.payment') }}" method="POST" enctype="multipart/form-data">
-                        @csrf
-                        <input type="hidden" name="agent_id" value="{{ $agent->id }}">
+        <!-- نماذج تسجيل الدفعات لجهات الحجز -->
+        @foreach ($agentsReport as $agent)
+            <div class="modal fade" id="agentPaymentModal{{ $agent->id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form action="{{ route('reports.agent.payment') }}" method="POST"
+                            enctype="multipart/form-data">
+                            @csrf
+                            <input type="hidden" name="agent_id" value="{{ $agent->id }}">
 
-                        <div class="modal-header">
-                            <h5 class="modal-title">تسجيل دفعة - {{ $agent->name }}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">المبلغ المدفوع والعملة</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" class="form-control" name="amount" required>
-                                    <select class="form-select" name="currency" style="max-width: 120px;">
-                                        <option value="SAR" selected>ريال سعودي</option>
-                                        <option value="KWD">دينار كويتي</option>
-                                    </select>
-                                </div>
+                            <div class="modal-header">
+                                <h5 class="modal-title">تسجيل دفعة - {{ $agent->name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
-                            {{-- ***   حقل رفع الملف في مشكلة مع الكومبوسر وجوجل درايف  *** --}}
-                            {{-- <div class="mb-3">
+
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">المبلغ المدفوع والعملة</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" class="form-control" name="amount"
+                                            required>
+                                        <select class="form-select" name="currency" style="max-width: 120px;">
+                                            <option value="SAR" selected>ريال سعودي</option>
+                                            <option value="KWD">دينار كويتي</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {{-- ***   حقل رفع الملف في مشكلة مع الكومبوسر وجوجل درايف  *** --}}
+                                {{-- <div class="mb-3">
                                     <label for="receipt_file_agent_{{ $agent->id }}" class="form-label">إرفاق إيصال
                                         (اختياري)</label>
                                     <input class="form-control" type="file" id="receipt_file_agent_{{ $agent->id }}"
@@ -695,66 +837,68 @@
                                     <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
                                         5MB)</small>
                                 </div> --}}
-                            {{-- *** نهاية حقل رفع الملف *** --}}
-                            <div class="mb-3">
-                                <label class="form-label">ملاحظات</label>
-                                <textarea class="form-control" name="notes"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                            <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endforeach
-
-    <!-- إضافة سكريبت النسخ -->
-    @push('scripts')
-        <script>
-            function copyTable(tableId) {
-                const table = document.getElementById(tableId);
-                const range = document.createRange();
-                range.selectNode(table);
-                window.getSelection().removeAllRanges();
-                window.getSelection().addRange(range);
-                document.execCommand('copy');
-                window.getSelection().removeAllRanges();
-                alert('تم نسخ الجدول');
-            }
-        </script>
-    @endpush
-
-    <!-- نموذج تسجيل الدفعات -->
-    @foreach ($companiesReport as $company)
-        <div class="modal fade" id="paymentModal{{ $company->id }}" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form action="{{ route('reports.company.payment') }}" method="POST" enctype="multipart/form-data">
-                        @csrf
-                        <input type="hidden" name="company_id" value="{{ $company->id }}">
-
-                        <div class="modal-header">
-                            <h5 class="modal-title">تسجيل دفعة - {{ $company->name }}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">المبلغ المدفوع والعملة</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" class="form-control" name="amount" required>
-                                    <select class="form-select" name="currency" style="max-width: 120px;">
-                                        <option value="SAR" selected>ريال سعودي</option>
-                                        <option value="KWD">دينار كويتي</option>
-                                    </select>
+                                {{-- *** نهاية حقل رفع الملف *** --}}
+                                <div class="mb-3">
+                                    <label class="form-label">ملاحظات</label>
+                                    <textarea class="form-control" name="notes"></textarea>
                                 </div>
                             </div>
-                            {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
-                            {{-- <div class="mb-3">
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+
+        <!-- إضافة سكريبت النسخ -->
+        @push('scripts')
+            <script>
+                function copyTable(tableId) {
+                    const table = document.getElementById(tableId);
+                    const range = document.createRange();
+                    range.selectNode(table);
+                    window.getSelection().removeAllRanges();
+                    window.getSelection().addRange(range);
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    alert('تم نسخ الجدول');
+                }
+            </script>
+        @endpush
+
+        <!-- نموذج تسجيل الدفعات -->
+        @foreach ($companiesReport as $company)
+            <div class="modal fade" id="paymentModal{{ $company->id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form action="{{ route('reports.company.payment') }}" method="POST"
+                            enctype="multipart/form-data">
+                            @csrf
+                            <input type="hidden" name="company_id" value="{{ $company->id }}">
+
+                            <div class="modal-header">
+                                <h5 class="modal-title">تسجيل دفعة - {{ $company->name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">المبلغ المدفوع والعملة</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" class="form-control" name="amount"
+                                            required>
+                                        <select class="form-select" name="currency" style="max-width: 120px;">
+                                            <option value="SAR" selected>ريال سعودي</option>
+                                            <option value="KWD">دينار كويتي</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
+                                {{-- <div class="mb-3">
                                     <label for="receipt_file_company_{{ $company->id }}" class="form-label">إرفاق إيصال
                                         (اختياري)
                                     </label>
@@ -764,102 +908,102 @@
                                 <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
                                     5MB)</small>
                             </div> --}}
-                            {{-- *** نهاية حقل رفع الملف *** --}}
-                            <div class="mb-3">
-                                <label class="form-label">ملاحظات <br>
-                                    (إن كانت معك صورة من التحويل ارفعها على درايف وضع الرابط هنا)
-                                </label>
-                                <textarea class="form-control" name="notes"></textarea>
+                                {{-- *** نهاية حقل رفع الملف *** --}}
+                                <div class="mb-3">
+                                    <label class="form-label">ملاحظات <br>
+                                        (إن كانت معك صورة من التحويل ارفعها على درايف وضع الرابط هنا)
+                                    </label>
+                                    <textarea class="form-control" name="notes"></textarea>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                            <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
-                        </div>
-                    </form>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+
+        <!-- جدول الفنادق -->
+        <div class="mb-4">
+            <div class="card-header">
+                <h3>حسابات الفنادق</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>الفندق</th>
+                                <th>عدد الحجوزات</th>
+                                <th>إجمالي المستحق</th>
+                                <th>العمليات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($hotelsReport as $hotel)
+                                <tr>
+                                    <td>{{ $loop->iteration }}. {{ $hotel->name }}</td>
+                                    <td>{{ $hotel->bookings_count }}</td>
+                                    <td>
+                                        @php
+                                            $dueByCurrency = $hotel->total_due_by_currency ?? [
+                                                'SAR' => $hotel->total_due,
+                                            ];
+                                        @endphp
+                                        @foreach ($dueByCurrency as $currency => $amount)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endforeach
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('reports.hotel.bookings', $hotel->id) }}"
+                                            class="btn btn-info btn-sm">عرض الحجوزات</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-secondary fw-bold">
+                                <td class="text-center">الإجمالي</td>
+                                <td class="text-center">
+                                    @php
+                                        $totalHotelBookingsCount = $hotelsReport->sum('bookings_count');
+                                    @endphp
+                                    {{ $totalHotelBookingsCount }}
+                                </td>
+                                <td>
+                                    @php
+                                        $totalDueByCurrency = [
+                                            'SAR' => 0,
+                                            'KWD' => 0,
+                                        ];
+                                        foreach ($hotelsReport as $hotel) {
+                                            $dueByCurrency = $hotel->total_due_by_currency ?? [
+                                                'SAR' => $hotel->total_due,
+                                            ];
+                                            foreach ($dueByCurrency as $currency => $amount) {
+                                                $totalDueByCurrency[$currency] += $amount;
+                                            }
+                                        }
+                                    @endphp
+                                    @foreach ($totalDueByCurrency as $currency => $amount)
+                                        @if ($amount > 0)
+                                            {{ number_format($amount, 2) }}
+                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @endif
+                                    @endforeach
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             </div>
         </div>
-    @endforeach
-
-    <!-- جدول الفنادق -->
-    <div class="mb-4">
-        <div class="card-header">
-            <h3>حسابات الفنادق</h3>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th>الفندق</th>
-                            <th>عدد الحجوزات</th>
-                            <th>إجمالي المستحق</th>
-                            <th>العمليات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($hotelsReport as $hotel)
-                            <tr>
-                                <td>{{ $loop->iteration }}. {{ $hotel->name }}</td>
-                                <td>{{ $hotel->bookings_count }}</td>
-                                <td>
-                                    @php
-                                        $dueByCurrency = $hotel->total_due_by_currency ?? [
-                                            'SAR' => $hotel->total_due,
-                                        ];
-                                    @endphp
-                                    @foreach ($dueByCurrency as $currency => $amount)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endforeach
-                                </td>
-                                <td>
-                                    <a href="{{ route('reports.hotel.bookings', $hotel->id) }}"
-                                        class="btn btn-info btn-sm">عرض الحجوزات</a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot>
-                        <tr class="table-secondary fw-bold">
-                            <td class="text-center">الإجمالي</td>
-                            <td class="text-center">
-                                @php
-                                    $totalHotelBookingsCount = $hotelsReport->sum('bookings_count');
-                                @endphp
-                                {{ $totalHotelBookingsCount }}
-                            </td>
-                            <td>
-                                @php
-                                    $totalDueByCurrency = [
-                                        'SAR' => 0,
-                                        'KWD' => 0,
-                                    ];
-                                    foreach ($hotelsReport as $hotel) {
-                                        $dueByCurrency = $hotel->total_due_by_currency ?? [
-                                            'SAR' => $hotel->total_due,
-                                        ];
-                                        foreach ($dueByCurrency as $currency => $amount) {
-                                            $totalDueByCurrency[$currency] += $amount;
-                                        }
-                                    }
-                                @endphp
-                                @foreach ($totalDueByCurrency as $currency => $amount)
-                                    @if ($amount > 0)
-                                        {{ number_format($amount, 2) }}
-                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                    @endif
-                                @endforeach
-                            </td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
     </div>
 
     <!-- إضافة تنسيقات CSS في القسم الخاص بالستيلات -->
