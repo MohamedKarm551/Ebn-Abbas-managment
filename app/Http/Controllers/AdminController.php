@@ -327,7 +327,9 @@ class AdminController extends Controller
     }
     public function companies()
     {
-        $companies = Company::all();
+        $companies = Company::withCount('bookings')
+            ->orderBy('name', 'asc') // ترتيب الشركات حسب الاسم
+            ->get(); // جلب كل الشركات
         return view('admin.companies', compact('companies'));
     }
 
