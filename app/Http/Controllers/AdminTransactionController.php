@@ -72,6 +72,8 @@ class AdminTransactionController extends Controller
                 ->where('type', 'deposit')->count(),
             'total_withdrawals' => AdminTransaction::where('admin_id', $adminId)
                 ->where('type', 'withdrawal')->count(),
+            'total_transfers' => AdminTransaction::where('admin_id', $adminId)
+                ->where('type', 'transfer')->count(), // ✅ إضافة التحويلات
             'this_month' => AdminTransaction::where('admin_id', $adminId)
                 ->whereMonth('transaction_date', now()->month)
                 ->whereYear('transaction_date', now()->year)
@@ -424,8 +426,10 @@ class AdminTransactionController extends Controller
                 'total_transactions' => $transactions->count(),
                 'total_deposits' => $transactions->where('type', 'deposit')->sum('amount'),
                 'total_withdrawals' => $transactions->where('type', 'withdrawal')->sum('amount'),
+                'total_transfers' => $transactions->where('type', 'transfer')->sum('amount'), // ✅ إضافة التحويلات
                 'net_balance' => $transactions->where('type', 'deposit')->sum('amount') -
-                    $transactions->where('type', 'withdrawal')->sum('amount'),
+                    $transactions->where('type', 'withdrawal')->sum('amount') -
+                    $transactions->where('type', 'transfer')->sum('amount'), // ✅ طرح التحويلات
                 'this_month' => $transactions->filter(function ($t) {
                     return $t->transaction_date->isCurrentMonth();
                 })->count(),
@@ -492,7 +496,9 @@ class AdminTransactionController extends Controller
             $dayDeposits = $dayTransactions->where('type', 'deposit')->sum('amount');
             $dayWithdrawals = $dayTransactions->where('type', 'withdrawal')->sum('amount');
             $dayTransfers = $dayTransactions->where('type', 'transfer')->sum('amount');
-            $dayNet = $dayDeposits - $dayWithdrawals;
+            // ✅ الحساب الصحيح: التحويلات تُطرح من الرصيد
+            $dayNet = $dayDeposits - $dayWithdrawals - $dayTransfers;
+
 
             $runningBalance += $dayNet;
 
@@ -502,7 +508,7 @@ class AdminTransactionController extends Controller
                 'day_arabic' => $this->getDayNameArabic($currentDate->format('l')),
                 'deposits' => (float)$dayDeposits,
                 'withdrawals' => (float)$dayWithdrawals,
-                'transfers' => (float)$dayTransfers,
+                'transfers' => (float)$dayTransfers, // ✅ إضافة التحويلات
                 'net' => (float)$dayNet,
                 'running_balance' => (float)$runningBalance,
                 'transaction_count' => $dayTransactions->count()

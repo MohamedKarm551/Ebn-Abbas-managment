@@ -79,13 +79,20 @@ class AdminTransaction extends Model
         }
         
         return $query->selectRaw('
-            currency,
-            SUM(CASE WHEN type = "deposit" THEN amount ELSE 0 END) as total_deposits,
-            SUM(CASE WHEN type = "withdrawal" THEN amount ELSE 0 END) as total_withdrawals,
-            SUM(CASE WHEN type = "deposit" THEN amount ELSE -amount END) as net_balance
-        ')
-        ->groupBy('currency')
-        ->get();
+        currency,
+        SUM(CASE WHEN type = "deposit" THEN amount ELSE 0 END) as total_deposits,
+        SUM(CASE WHEN type = "withdrawal" THEN amount ELSE 0 END) as total_withdrawals,
+        SUM(CASE WHEN type = "transfer" THEN amount ELSE 0 END) as total_transfers,
+        SUM(CASE 
+            WHEN type = "deposit" THEN amount 
+            WHEN type = "withdrawal" THEN -amount 
+            WHEN type = "transfer" THEN -amount 
+            ELSE 0 
+        END) as net_balance
+    ')
+    ->groupBy('currency')
+    ->get();
+    // يعني أن هذه الدالة تقوم بحساب المجموعات حسب العملة لفترة معينة، حيث يتم جمع المبالغ حسب نوع العملية (إيداع، سحب، تحويل) وتقديم الرصيد الصافي.
     }
 
     // Scope للفلترة حسب النوع

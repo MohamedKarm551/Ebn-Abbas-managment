@@ -6,17 +6,52 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         .stats-card {
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
         }
 
         .stats-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .stats-card .card-body {
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        }
+
+        .currency-icon {
+            opacity: 0.1;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 2rem;
         }
 
         .currency-badge {
             font-size: 0.9rem;
             padding: 0.4rem 0.8rem;
         }
+
+        /* Balance Display */
+        .balance-display {
+            position: relative;
+            z-index: 2;
+        }
+
+        .balance-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .currency-symbol {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
 
         .amount-positive {
             color: #28a745 !important;
@@ -26,6 +61,29 @@
         .amount-negative {
             color: #dc3545 !important;
             font-weight: 600;
+        }
+
+        /* Transaction Breakdown */
+        .transaction-breakdown {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 0 -5px;
+        }
+
+        .transaction-type {
+            display: flex;
+            align-items: center;
+        }
+
+        .transaction-type i {
+            width: 16px;
+            text-align: center;
+        }
+
+        .transaction-amount {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem !important;
         }
 
         .transaction-card {
@@ -170,33 +228,6 @@
 
         <!-- Statistics Cards -->
         @include('admin.transactions.partials.stats', ['totals' => $totals])
-
-        <!-- Quick Stats Summary -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="quick-stats">
-                    <div class="row text-center">
-                        <div class="col-md-3">
-                            <div class="h4 mb-1 text-success">{{ $summary['total_deposits'] ?? 0 }}</div>
-                            <small class="text-muted">إجمالي الإيداعات</small>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="h4 mb-1 text-danger">{{ $summary['total_withdrawals'] ?? 0 }}</div>
-                            <small class="text-muted">إجمالي السحوبات</small>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="h4 mb-1 text-info">{{ $summary['this_month'] ?? 0 }}</div>
-                            <small class="text-muted">معاملات هذا الشهر</small>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="h4 mb-1 text-primary">{{ $summary['avg_transaction'] ?? 0 }}</div>
-                            <small class="text-muted">متوسط المعاملة</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Filters Section -->
         @include('admin.transactions.partials.filters', [
             'currencies' => $currencies,
@@ -372,7 +403,7 @@
                             }
 
                             console.log(
-                            `Found ${response.transactions.length} transactions`); // للتشخيص
+                                `Found ${response.transactions.length} transactions`); // للتشخيص
 
                             // إنشاء ملف Excel من البيانات JSON
                             const wb = XLSX.utils.book_new();
