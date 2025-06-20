@@ -38,12 +38,12 @@
                                     class="fas fa-bus me-1"></i></a>
                         </li>
                     @endif
-                     @if (auth()->user()->role === 'employee')
-                    <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('admin.operation-reports.index') }}">
-                                        <i class="fas fa-chart-line me-1"></i> الحجوزات المؤكدة
-                                    </a>
-                                </li>
+                    @if (auth()->user()->role === 'employee')
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('admin.operation-reports.index') }}">
+                                <i class="fas fa-chart-line me-1"></i> الحجوزات المؤكدة
+                            </a>
+                        </li>
                     @endif
                     @if (auth()->user()->role === 'Admin')
                         <li class="nav-item">
@@ -246,6 +246,14 @@
                             <span>{{ Auth::user()->name }}</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end text-end mt-2" aria-labelledby="userDropdown">
+                            @if (Auth::user()->role == 'Admin')
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('admin.transactions.index') }}">
+                                        <i class="fas fa-wallet"></i>
+                                        <span>معاملاتي المالية</span>
+                                    </a>
+                                </li>
+                            @endif
                             <li>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
