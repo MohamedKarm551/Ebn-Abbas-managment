@@ -267,59 +267,62 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ التحقق من وجود العنصر والبيانات الكافية
-    if (ctxNetBalanceKWD && netBalanceDates.length > 0 && netBalancesKWD.length > 0) {
-        
-        // 📈 إنشاء رسم بياني للدينار الكويتي
-        const kwdChart = new Chart(ctxNetBalanceKWD, {
-            type: "line",  // نوع الرسم البياني (خطي)
+  if (netBalancesKWD && netBalancesKWD.length > 0) {
+    const ctxKWD = document.getElementById("netBalanceKWDChart");
+    if (ctxKWD) {
+        console.log("🎨 إنشاء رسم الدينار الكويتي...");
+
+        const kwdChart = new Chart(ctxKWD, {
+            type: "line",
             data: {
-                labels: netBalanceDates,  // تسميات المحور السيني (التواريخ)
+                labels: netBalanceDates,
                 datasets: [
                     {
-                        label: "صافي الرصيد (دينار كويتي)",           // تسمية البيانات
-                        data: netBalancesKWD,                         // البيانات الفعلية للدينار
-                        borderColor: "rgba(240, 147, 251, 0.9)",      // لون الخط (وردي)
-                        backgroundColor: "rgba(240, 147, 251, 0.15)", // لون التعبئة (وردي شفاف)
-                        borderWidth: 3,                               // سماكة الخط
-                        tension: 0.4,                                 // درجة انحناء الخط
-                        fill: true,                                   // ملء المنطقة تحت الخط
-                        pointRadius: 5,                               // حجم النقاط
-                        pointBackgroundColor: "rgba(240, 147, 251, 0.9)", // لون النقاط
-                        pointBorderColor: "#fff",                     // لون حدود النقاط
-                        pointBorderWidth: 2,                          // سماكة حدود النقاط
+                        label: "صافي الرصيد (دينار كويتي)",
+                        data: netBalancesKWD,
+                        borderColor: "#ff6b35",              // ✅ برتقالي واضح
+                        backgroundColor: "rgba(255, 107, 53, 0.3)", // ✅ برتقالي شفاف لكن واضح
+                        borderWidth: 3,                      // ✅ خط سميك
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: "#ff6b35",     // ✅ نقاط برتقالية
+                        pointBorderColor: "#fff",
+                        pointBorderWidth: 2,
+                        pointRadius: 5,                      // ✅ نقاط أكبر
+                        pointHoverRadius: 8,                 // ✅ تأثير hover أكبر
+                        pointHoverBackgroundColor: "#ff4500", // ✅ لون hover مختلف
+                        pointHoverBorderColor: "#fff",
+                        pointHoverBorderWidth: 3,
                     },
                 ],
             },
             options: {
-                responsive: true,              // الاستجابة لتغيير حجم الشاشة
-                maintainAspectRatio: false,    // عدم الحفاظ على نسبة العرض للارتفاع
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: true,         // عرض مفتاح الرسم البياني
-                        position: "top",       // موضع المفتاح (أعلى)
+                        display: true,
                         labels: {
-                            color: "white",    // لون نص المفتاح (أبيض)
-                            font: { family: "Cairo, sans-serif" }, // نوع الخط
+                            font: { family: "Cairo, sans-serif", size: 12, weight: "bold" },
+                            color: "#2d3748",
+                            usePointStyle: true,
                         },
                     },
                     tooltip: {
-                        backgroundColor: "rgba(240, 147, 251, 0.9)", // لون خلفية التلميح (وردي)
-                        titleColor: "#fff",                          // لون عنوان التلميح
-                        bodyColor: "#fff",                           // لون نص التلميح
+                        backgroundColor: "rgba(45, 55, 72, 0.9)",
+                        titleColor: "#fff",
+                        bodyColor: "#fff",
+                        titleFont: { family: "Cairo, sans-serif", size: 14, weight: "bold" },
+                        bodyFont: { family: "Cairo, sans-serif", size: 12 },
                         callbacks: {
-                            // 🏷️ دالة تخصيص عنوان التلميح
-                            title: function (tooltipItems) {
-                                return "📅 التاريخ: " + tooltipItems[0].label;
-                            },
-                            // 📊 دالة تخصيص محتوى التلميح
                             label: function (context) {
-                                var label = context.dataset.label || "";
+                                let label = context.dataset.label || "";
                                 if (label) label += ": ";
                                 if (context.parsed.y !== null) {
                                     const value = context.parsed.y;
                                     const formattedValue = value.toLocaleString("ar-SA");
                                     const status = value > 0 ? "لك 📈" : value < 0 ? "عليك 📉" : "متوازن ⚖️";
-                                    label += formattedValue + " دينار (" + status + ")";
+                                    label += formattedValue + " د.ك (" + status + ")";
                                 }
                                 return label;
                             },
@@ -327,24 +330,39 @@ document.addEventListener("DOMContentLoaded", function () {
                     },
                 },
                 scales: {
-                    x: {  // إعدادات المحور السيني
+                    x: {
+                        grid: { display: true, color: "rgba(0, 0, 0, 0.05)" },
                         ticks: {
-                            color: "white",    // لون نص التسميات (أبيض)
-                            font: { family: "Cairo, sans-serif" }, // نوع الخط
+                            font: { family: "Cairo, sans-serif", size: 11 },
+                            color: "#4a5568",
                         },
-                        grid: { color: "rgba(255, 255, 255, 0.1)" }, // لون خطوط الشبكة (أبيض شفاف)
                     },
-                    y: {  // إعدادات المحور الصادي
+                    y: {
+                        grid: { display: true, color: "rgba(0, 0, 0, 0.1)" },
                         ticks: {
-                            color: "white",    // لون نص التسميات (أبيض)
-                            font: { family: "Cairo, sans-serif" }, // نوع الخط
-                            // 💰 دالة تنسيق القيم بالدينار الكويتي
+                            font: { family: "Cairo, sans-serif", size: 11 },
+                            color: "#4a5568",
                             callback: function (value) {
                                 return new Intl.NumberFormat("ar-SA").format(value) + " د.ك";
                             },
                         },
-                        grid: { color: "rgba(255, 255, 255, 0.1)" }, // لون خطوط الشبكة
+                        afterDataLimits: function (scale) {
+                            scale.min = Math.min(scale.min, 0);
+                            scale.max = Math.max(scale.max, 0);
+                        },
                     },
+                },
+                elements: {
+                    point: {
+                        hoverRadius: 8,
+                    },
+                    line: {
+                        borderJoinStyle: 'round',
+                    },
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
                 },
             },
         });
@@ -355,9 +373,20 @@ document.addEventListener("DOMContentLoaded", function () {
         // 💾 حفظ مرجع الرسم البياني للدينار
         window.kwdNetBalanceChart = kwdChart;
 
-        // ✅ طباعة رسالة نجاح
         console.log("✅ تم إنشاء رسم الدينار الكويتي بنجاح");
     }
+} else {
+    // 🚫 عرض رسالة عدم وجود بيانات
+    const ctxKWD = document.getElementById("netBalanceKWDChart");
+    if (ctxKWD) {
+        ctxKWD.parentNode.innerHTML = 
+            '<div class="text-center p-4">' +
+                '<i class="fas fa-coins fa-3x text-muted mb-3"></i>' +
+                '<h6 class="text-muted">لا توجد بيانات للدينار الكويتي</h6>' +
+                '<p class="text-muted small">سيتم عرض البيانات عند توفرها</p>' +
+            '</div>';
+    }
+}
 
     // ========================================
     // 🎮 ربط أزرار التحكم بالرسم البياني

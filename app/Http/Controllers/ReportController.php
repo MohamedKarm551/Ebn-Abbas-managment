@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage; // لرفع الملفات
 use Illuminate\Support\Facades\DB; //  لإجراء العمليات على قاعدة البيانات
 use Carbon\CarbonPeriod; // لإجراء العمليات على التواريخ
 use Illuminate\Support\Str; // لاستخدام دالة Str::limit
+use Illuminate\Support\Facades\Log; // لتسجيل الأخطاء في السجل
 
 
 /**
@@ -25,6 +26,7 @@ use Illuminate\Support\Str; // لاستخدام دالة Str::limit
  */
 class ReportController extends Controller
 {
+
     // تقرير يومي لكل الحجوزات والإحصائيات
     public function daily()
     {
@@ -44,10 +46,23 @@ class ReportController extends Controller
         $totalDueFromCompanies = $companiesReport->sum('remaining');
 
         //  تقرير الوكلاء: كل وكيل وعدد حجوزاته وترتيبهم من الأعلى واحد مطلوب منه فلوس للأقل
-        $agentsReport = Agent::withCount('bookings')->get()
-            ->sortByDesc(function ($agent) {
-                return $agent->remaining;
-            })->values();
+        $agentsReport = Agent::with(['bookings', 'payments'])
+            ->withCount('bookings')
+            ->get()
+            ->map(function ($agent) {
+                // إضافة الحسابات المطلوبة لكل وكيل بنفس طريقة الشركات
+                $agent->total_due = $agent->total_due;
+                $agent->total_paid = $agent->total_paid;
+                $agent->remaining_amount = $agent->remaining_amount;
+                $agent->total_due_by_currency = $agent->total_due_by_currency;
+                $agent->total_paid_by_currency = $agent->total_paid_by_currency;
+                $agent->remaining_by_currency = $agent->remaining_by_currency;
+
+                return $agent;
+            })
+            ->sortByDesc('remaining_amount')
+            ->values();
+
 
 
         // إجمالي اللي اتدفع للفنادق (كل اللي اتدفع فعلاً للفنادق عن كل الحجوزات)
@@ -228,7 +243,8 @@ class ReportController extends Controller
             'تعديل',
             'تعديل دفعة',
             'دفعة جديدة',
-            'حذف دفعة'
+            'حذف دفعة' ,
+            'خصم مطبق'
         ])
             ->where('created_at', '>=', now()->subDays(2))
             ->get()
@@ -315,12 +331,23 @@ class ReportController extends Controller
 
         // --- *** نهاية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
 
-        // حساب المدفوعات حسب العملة للشركات
-        $companyPaymentsByCurrency = Payment::select('currency', DB::raw('SUM(amount) as total'))
+        $companyPaymentsByCurrency = [];
+
+        $companyPaymentsData = Payment::select(
+            'currency',
+            DB::raw('SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid'),
+            DB::raw('SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_discounts')
+        )
+            ->whereNotNull('company_id')  // ✅ فقط المدفوعات المرتبطة بالشركات
             ->groupBy('currency')
-            ->get()
-            ->pluck('total', 'currency')
-            ->toArray();
+            ->get();
+
+        foreach ($companyPaymentsData as $payment) {
+            $companyPaymentsByCurrency[$payment->currency] = [
+                'paid' => (float) $payment->total_paid,
+                'discounts' => (float) $payment->total_discounts
+            ];
+        }
 
         // حساب المدفوعات حسب العملة للوكلاء
         $agentPaymentsByCurrency = AgentPayment::select('currency', DB::raw('SUM(amount) as total'))
@@ -358,6 +385,10 @@ class ReportController extends Controller
             'SAR' => 0,
             'KWD' => 0
         ];
+        $totalRemainingToAgentsByCurrency = [
+            'SAR' => 0,
+            'KWD' => 0
+        ];
 
         // تجميع إجماليات الحجوزات حسب العملة
         foreach ($bookingsByCompanyCurrency as $booking) {
@@ -388,13 +419,39 @@ class ReportController extends Controller
             'KWD' => 0,
         ];
         foreach ($agentsReport as $agent) {
-            $remainingByCurrency = $agent->remaining_by_currency ?? [
-                'SAR' => $agent->remaining,
-            ];
-            foreach ($remainingByCurrency as $currency => $amount) {
-                $agentRemainingByCurrency[$currency] += $amount;
+            $agentTotals = $agent->getTotalsByCurrency();
+            foreach ($agentTotals as $currency => $data) {
+                if (isset($totalDueToAgentsByCurrency[$currency])) {
+                    $totalDueToAgentsByCurrency[$currency] += $data['due'];
+                    $totalRemainingToAgentsByCurrency[$currency] += $data['remaining'];
+                }
             }
         }
+        // حساب المدفوعات حسب العملة للوكلاء (للعرض في الجدول)
+        $agentPaymentsByCurrency = [];
+
+        $agentPaymentsData = AgentPayment::select(
+            'currency',
+            DB::raw('SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid'),
+            DB::raw('SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_discounts')
+        )
+            ->groupBy('currency')
+            ->get();
+
+        foreach ($agentPaymentsData as $payment) {
+            $agentPaymentsByCurrency[$payment->currency] = [
+                'paid' => $payment->total_paid,
+                'discounts' => $payment->total_discounts
+            ];
+        }
+        // إضافة متغير منفصل للمدفوعات البسيطة (للعرض في الملخص)
+        $totalPaidToAgentsByCurrency = [];
+        foreach ($agentPaymentsData as $payment) {
+            $totalPaidToAgentsByCurrency[$payment->currency] = $payment->total_paid;
+        }
+
+
+
 
         // حساب صافي الربح حسب العملة
         $netProfitByCurrency = [
@@ -411,6 +468,7 @@ class ReportController extends Controller
             'totalDueFromCompanies',
             'totalPaidToHotels',
             'totalRemainingFromCompanies',
+            'totalRemainingToAgentsByCurrency',
             'totalRemainingToHotels',
             'netProfit',
             'recentCompanyEdits', // إشعار خفيف على آخر شركة تم عليها تعديل
@@ -424,6 +482,7 @@ class ReportController extends Controller
             'agentPaymentsByCurrency',    // المدفوعات حسب العملة للوكلاء
             'totalDueFromCompaniesByCurrency', // إجمالي المستحقات حسب العملة للشركات
             'totalDueToAgentsByCurrency', // إجمالي المستحقات حسب العملة للجهات
+            'totalPaidToAgentsByCurrency',
             'totalRemainingByCurrency',
             'agentRemainingByCurrency',
             'netProfitByCurrency',
@@ -434,6 +493,7 @@ class ReportController extends Controller
             // 'netBalanceDates',
         ));
     }
+
     /**
      * عرض صفحة التقارير المتقدمة
      */
@@ -943,6 +1003,7 @@ class ReportController extends Controller
             'bookings_covered' => 'nullable|array',
             'bookings_covered.*' => 'exists:bookings,id',
             // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // Optional, file type, max size 5MB
+            'is_discount'      => 'nullable|boolean',
         ]);
         // // *** بداية كود رفع الملف ***
         // $receiptPath = null; // نهيئ متغير المسار
@@ -965,6 +1026,14 @@ class ReportController extends Controller
         //     }
         // }
         // // *** نهاية كود رفع الملف ***
+        // التحقق هل هي عملية خصم
+        $isDiscount = $request->input('is_discount') == '1';
+
+        // تعديل القيمة والملاحظات في حالة الخصم
+        if ($isDiscount) {
+            $validated['amount'] = -abs($validated['amount']);  // قيمة سالبة للخصم
+            $validated['notes'] = 'خصم: ' . ($validated['notes'] ?? '');
+        }
 
         // سجل الدفعة في جدول payments
         $payment = Payment::create([
@@ -997,17 +1066,27 @@ class ReportController extends Controller
                 });
         }
 
+        // إنشاء إشعار مناسب حسب نوع العملية
+        $actionType = $isDiscount ? 'تم تطبيق خصم' : 'تم إضافة دفعة جديدة';
+        $notificationType = $isDiscount ? 'خصم مطبق' : 'دفعة جديدة';
+        $amountDisplay = abs($payment->amount); // استخدام القيمة المطلقة للعرض
 
-        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت
         Notification::create([
             'user_id' => Auth::user()->id,
-            'message' => " تم إضافة دفعة جديدة ({$payment->currency}) لشركة {$payment->company->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
-            'type' => 'دفعة جديدة',
+            'message' => "{$actionType} ({$payment->currency}) لشركة {$payment->company->name} بمبلغ {$amountDisplay} في تاريخ {$payment->payment_date}",
+            'type' => $notificationType,
         ]);
+
+        // رسالة نجاح مناسبة
+        $successMsg = $isDiscount ?
+            'تم تطبيق الخصم بنجاح' :
+            'تم تسجيل الدفعة وتخصيصها على الحجوزات بنجاح!';
+
         // رجع للصفحة مع رسالة نجاح
         return redirect()
             ->route('reports.company.payments', $validated['company_id'])
-            ->with('success', 'تم تسجيل الدفعة وتخصيصها على الحجوزات بنجاح!');
+            ->with('success', $successMsg);
     }
 
     // إضافة دفعة جديدة لوكيل
@@ -1020,6 +1099,7 @@ class ReportController extends Controller
             'currency' => 'required|in:SAR,KWD',  // التحقق من العملة
             'notes'    => 'nullable|string',
             // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // *** إضافة التحقق هنا ***
+            // 'is_discount' => 'nullable|boolean', // جديد: علامة إذا كان خصم
 
         ]);
         // // *** بداية كود رفع الملف ***
@@ -1054,19 +1134,92 @@ class ReportController extends Controller
             // 'receipt_path' => $receiptPath, // *** تأكد من إضافة هذا السطر هنا ***
             'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة
         ]);
-        // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
+
+        // إنشاء إشعار للدفعة العادية
         Notification::create([
-            'user_id' => Auth::user()->id,
-            'message' => " تم إضافة دفعة جديدة ({$payment->currency}) لجهة حجز {$payment->agent->name} بمبلغ {$payment->amount} في تاريخ {$payment->payment_date}",
+            'user_id' => Auth::id(),
+            'message' => "تم إضافة دفعة جديدة لجهة الحجز {$payment->agent->name} بمبلغ {$payment->amount} {$payment->currency}",
             'type' => 'دفعة جديدة',
-            // 'receipt_path' => $receiptPath, // *** إضافة مسار الإيصال هنا ***
-            'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة
         ]);
 
-        // رجع للصفحة مع رسالة نجاح
-        return redirect()->back()->with('success', 'تم تسجيل الدفعة بنجاح');
-    }
+        // رسالة نجاح
+        $successMsg = "تم تسجيل الدفعة بقيمة {$payment->amount} {$validated['currency']} بنجاح";
 
+        // رجع للصفحة مع رسالة نجاح
+        return redirect()->back()->with('success', $successMsg);
+    }
+    /**
+     * تطبيق خصم على وكيل كدفعة سالبة (نفس طريقة الشركات)
+     */
+    public function applyAgentDiscount(Request $request, $agentId)
+    {
+        // 1. التحقق من صحة البيانات المدخلة
+        $validated = $request->validate([
+            'discount_amount' => 'required|numeric|min:0.01',
+            'currency' => 'required|in:SAR,KWD',
+            'reason' => 'nullable|string|max:500'
+        ], [
+            'discount_amount.required' => 'مبلغ الخصم مطلوب',
+            'discount_amount.min' => 'مبلغ الخصم يجب أن يكون أكبر من صفر',
+            'currency.required' => 'العملة مطلوبة',
+            'currency.in' => 'العملة يجب أن تكون ريال سعودي أو دينار كويتي'
+        ]);
+
+        try {
+            // 2. العثور على الوكيل
+            $agent = Agent::findOrFail($agentId);
+
+            // 3. الحصول على المتبقي الحالي للوكيل بنفس العملة
+            $remainingByCurrency = $agent->remaining_by_currency ?? [];
+            $currentRemaining = $remainingByCurrency[$validated['currency']] ?? 0;
+
+            // 4. التحقق من أن الخصم لا يتجاوز المبلغ المتبقي
+            if ($validated['discount_amount'] > $currentRemaining) {
+                return redirect()->back()
+                    ->with('error', "مبلغ الخصم ({$validated['discount_amount']} {$validated['currency']}) أكبر من المبلغ المتبقي ({$currentRemaining} {$validated['currency']})");
+            }
+
+            // 5. بدء معاملة قاعدة البيانات لضمان الأمان
+            DB::beginTransaction();
+
+            // 6. إنشاء دفعة بقيمة سالبة (نفس طريقة الشركات)
+            $discountPayment = AgentPayment::create([
+                'agent_id' => $agent->id,
+                'amount' => -$validated['discount_amount'], // 🔥 قيمة سالبة للخصم
+                'currency' => $validated['currency'],
+                'payment_date' => now(),
+                'notes' => 'خصم مطبق: ' . ($validated['reason'] ?: 'خصم'),
+                'employee_id' => Auth::id(),
+            ]);
+
+            // 7. إنشاء إشعار للمدراء
+            Notification::create([
+                'user_id' => Auth::id(),
+                'message' => "تم تطبيق خصم {$validated['discount_amount']} {$validated['currency']} على جهة الحجز {$agent->name}",
+                'type' => 'خصم مطبق',
+            ]);
+
+            // 8. تأكيد المعاملة
+            DB::commit();
+
+            return redirect()->back()
+                ->with('success', "تم تطبيق خصم {$validated['discount_amount']} {$validated['currency']} بنجاح على {$agent->name}");
+        } catch (\Exception $e) {
+            // 9. في حالة حدوث خطأ، إلغاء المعاملة
+            DB::rollBack();
+
+            // تسجيل الخطأ في اللوجز
+            Log::error('خطأ في تطبيق خصم الوكيل: ' . $e->getMessage(), [
+                'agent_id' => $agentId,
+                'discount_amount' => $validated['discount_amount'] ?? 'غير محدد',
+                'currency' => $validated['currency'] ?? 'غير محدد',
+                'user_id' => Auth::id()
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء تطبيق الخصم. يرجى المحاولة مرة أخرى.');
+        }
+    }
     // سجل الدفعات لشركة معينة
     public function companyPayments($id)
     {

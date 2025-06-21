@@ -270,6 +270,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('reports/agent/payment/{id}/edit', [ReportController::class, 'editAgentPayment'])->name('reports.agent.payment.edit');
         Route::put('reports/agent/payment/{id}', [ReportController::class, 'updateAgentPayment'])->name('reports.agent.payment.update');
         Route::delete('reports/agent/payment/{id}', [ReportController::class, 'destroyAgentPayment'])->name('reports.agent.payment.destroy');
+        Route::post('/reports/agent/{agent}/discount', [ReportController::class, 'applyAgentDiscount'])
+            ->name('reports.agent.discount');
 
         // مخطط العلاقات
         Route::get('/network-graph', [ReportController::class, 'networkGraph'])->name('network.graph');
@@ -312,7 +314,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/save-screenshot', [ReportController::class, 'saveScreenshot']);
         Route::post('/save-pdf', [ReportController::class, 'savePDF']);
 
-        // مدفوعات الشركات
+        //  مدفوعات الشركات والخصم
         Route::prefix('admin/company-payments')->name('admin.company-payments.')->group(function () {
             Route::get('/', [CompanyPaymentController::class, 'index'])->name('index');
             Route::get('/{company}', [CompanyPaymentController::class, 'show'])->name('show');
@@ -321,6 +323,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{company}/{payment}/edit', [CompanyPaymentController::class, 'edit'])->name('edit');
             Route::put('/{company}/{payment}', [CompanyPaymentController::class, 'update'])->name('update');
             Route::delete('/{company}/{payment}', [CompanyPaymentController::class, 'destroy'])->name('destroy');
+            Route::post('/{company}/apply-discount', [CompanyPaymentController::class, 'applyDiscount'])->name('apply-discount');
         });
     });
 

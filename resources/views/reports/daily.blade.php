@@ -84,27 +84,37 @@
                         {{-- 💰 إجمالي المدفوع من الشركات --}}
                         <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>إجمالي المدفوع من الشركات:</h6>
                         <ul class="list-unstyled">
-                            @php
-                                // ✅ حساب إجمالي المدفوع من جميع الشركات حسب العملة (من جدولي payments و company_payments)
-                                $totalPaidByCompaniesByCurrency = ['SAR' => 0, 'KWD' => 0];
-                                foreach ($companiesReport as $company) {
-                                    $paidByCurrency = $company->total_paid_by_currency ?? [];
-                                    foreach ($paidByCurrency as $currency => $amount) {
-                                        if (!isset($totalPaidByCompaniesByCurrency[$currency])) {
-                                            $totalPaidByCompaniesByCurrency[$currency] = 0;
-                                        }
-                                        $totalPaidByCompaniesByCurrency[$currency] += $amount;
-                                    }
-                                }
-                            @endphp
-                            @foreach ($totalPaidByCompaniesByCurrency as $currency => $amount)
-                                @if ($amount > 0)
-                                    <li><i class="fas fa-dollar-sign me-1 text-success"></i>
-                                        <strong>{{ number_format($amount, 2) }}</strong>
-                                        {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-                                    </li>
-                                @endif
-                            @endforeach
+
+                            {{-- عرض المدفوعات والخصومات من البيانات المُمررة من الكنترولر --}}
+                            @if (isset($companyPaymentsByCurrency['SAR']))
+                                <li>
+                                    <i class="fas fa-dollar-sign me-1 text-success"></i>
+                                    <strong>{{ number_format($companyPaymentsByCurrency['SAR']['paid'] ?? 0, 2) }}</strong>
+                                    ريال سعودي (مدفوع)
+                                    @if (($companyPaymentsByCurrency['SAR']['discounts'] ?? 0) > 0)
+                                        <br><small class="text-warning ms-3">
+                                            <i class="fas fa-minus-circle me-1"></i>
+                                            خصومات: {{ number_format($companyPaymentsByCurrency['SAR']['discounts'], 2) }}
+                                            ريال
+                                        </small>
+                                    @endif
+                                </li>
+                            @endif
+                            @if (isset($companyPaymentsByCurrency['KWD']))
+                                <li>
+                                    <i class="fas fa-dollar-sign me-1 text-success"></i>
+                                    <strong>{{ number_format($companyPaymentsByCurrency['KWD']['paid'] ?? 0, 2) }}</strong>
+                                    دينار كويتي (مدفوع)
+                                    @if (($companyPaymentsByCurrency['KWD']['discounts'] ?? 0) > 0)
+                                        <br><small class="text-warning ms-3">
+                                            <i class="fas fa-minus-circle me-1"></i>
+                                            خصومات: {{ number_format($companyPaymentsByCurrency['KWD']['discounts'], 2) }}
+                                            دينار
+                                        </small>
+                                    @endif
+                                </li>
+                            @endif
+                        </ul>
                         </ul>
 
                         {{-- 🔥 الباقي المطلوب من الشركات --}}
@@ -112,40 +122,51 @@
                         </h6>
                         <ul class="list-unstyled">
                             @php
-                                // ✅ حساب المتبقي = المستحق - المدفوع لكل عملة
-                                $totalRemainingFromCompaniesByCurrency = [];
-                                $allCompanyCurrencies = array_unique(
-                                    array_merge(
-                                        array_keys($totalDueFromCompaniesByCurrency),
-                                        array_keys($totalPaidByCompaniesByCurrency),
-                                    ),
-                                );
+                                // حساب المتبقي بنفس طريقة footer الجدول
+                                $totalRemainingByCurrency = [
+                                    'SAR' => 0,
+                                    'KWD' => 0,
+                                ];
 
-                                foreach ($allCompanyCurrencies as $currency) {
-                                    $due = $totalDueFromCompaniesByCurrency[$currency] ?? 0;
-                                    $paid = $totalPaidByCompaniesByCurrency[$currency] ?? 0;
-                                    $remaining = $due - $paid;
+                                // حساب المتبقي الصحيح = إجمالي المستحق - إجمالي المدفوع
+                                foreach (['SAR', 'KWD'] as $currency) {
+                                    // 1. إجمالي المستحق حسب العملة (من المتغير المحسوب مسبقاً)
+                                    $totalDue = $totalDueFromCompaniesByCurrency[$currency] ?? 0;
+
+                                    // 2. إجمالي المدفوع حسب العملة (من المتغير المحسوب مسبقاً)
+                                    $totalPaid = $companyPaymentsByCurrency[$currency]['paid'] ?? 0;
+                                    $totalDiscounts = $companyPaymentsByCurrency[$currency]['discounts'] ?? 0;
+
+                                    // 3. حساب المتبقي = المستحق - (المدفوع + الخصومات)
+                                    // ملاحظة: الخصومات موجبة في المتغير لكنها تقلل من المدفوع
+                                    $netPaid = $totalPaid + $totalDiscounts; // الخصومات تضاف للمدفوع الفعلي
+                                    $remaining = $totalDue - $netPaid;
 
                                     if ($remaining != 0) {
-                                        // عرض حتى لو سالب
-                                        $totalRemainingFromCompaniesByCurrency[$currency] = $remaining;
+                                        $totalRemainingByCurrency[$currency] = $remaining;
                                     }
                                 }
                             @endphp
-                            @foreach ($totalRemainingFromCompaniesByCurrency as $currency => $remaining)
-                                <li>
-                                    <i
-                                        class="fas {{ $remaining > 0 ? 'fa-exclamation-triangle text-danger' : 'fa-check-double text-success' }} me-1"></i>
-                                    <span class="{{ $remaining > 0 ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
-                                        {{ $remaining > 0 ? '+' : '' }}{{ number_format($remaining, 2) }}
-                                    </span>
-                                    {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-                                    @if ($remaining < 0)
-                                        <small class="text-muted">(دفعوا زيادة)</small>
-                                    @endif
-                                </li>
+
+                            @foreach ($totalRemainingByCurrency as $currency => $remaining)
+                                @if ($remaining != 0)
+                                    <li>
+                                        <i
+                                            class="fas {{ $remaining > 0 ? 'fa-exclamation-triangle text-danger' : 'fa-check-double text-success' }} me-1"></i>
+                                        <span
+                                            class="{{ $remaining > 0 ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
+                                            {{ $remaining > 0 ? '+' : '' }}{{ number_format($remaining, 2) }}
+                                        </span>
+                                        {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
+                                        @if ($remaining < 0)
+                                            <small class="text-muted">(دفعوا زيادة)</small>
+                                        @endif
+                                    </li>
+                                @endif
                             @endforeach
-                            @if (empty($totalRemainingFromCompaniesByCurrency))
+
+                            {{-- إذا كان المجموع صفر في كل العملات --}}
+                            @if (empty(array_filter($totalRemainingByCurrency)))
                                 <li><i class="fas fa-check-circle me-1 text-success"></i>
                                     <span class="text-success fw-bold">جميع مستحقات الشركات مدفوعة! 🎉</span>
                                 </li>
@@ -184,24 +205,33 @@
                         <h6 class="text-success"><i class="fas fa-credit-card me-2"></i>إجمالي المدفوع للجهات:</h6>
                         <ul class="list-unstyled">
                             @php
-                                // ✅ حساب إجمالي المدفوع للجهات حسب العملة
-                                $totalPaidToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
+                                // ✅ استخدام البيانات الصحيحة من الكنترولر
+                                $displayPaidToAgents = $totalPaidToAgentsByCurrency ?? [];
 
-                                // استخدام البيانات المُمررة من الـ Controller
-                                if (isset($agentPaymentsByCurrency)) {
-                                    foreach ($agentPaymentsByCurrency as $currency => $amount) {
-                                        $totalPaidToAgentsByCurrency[$currency] = $amount;
+                                // في حالة عدم وجود البيانات، نحسبها من agentPaymentsByCurrency
+                                if (empty($displayPaidToAgents) && isset($agentPaymentsByCurrency)) {
+                                    foreach ($agentPaymentsByCurrency as $currency => $data) {
+                                        if (is_array($data) && isset($data['paid'])) {
+                                            $displayPaidToAgents[$currency] = $data['paid'];
+                                        }
                                     }
                                 }
                             @endphp
-                            @foreach ($totalPaidToAgentsByCurrency as $currency => $amount)
+
+                            @foreach ($displayPaidToAgents as $currency => $amount)
                                 @if ($amount > 0)
                                     <li><i class="fas fa-check-circle me-1 text-success"></i>
-                                        <strong>{{ number_format($amount, 2) }}</strong>
+                                        <strong>{{ number_format((float) $amount, 2) }}</strong>
                                         {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
                                     </li>
                                 @endif
                             @endforeach
+
+                            @if (empty($displayPaidToAgents) || array_sum($displayPaidToAgents) == 0)
+                                <li><i class="fas fa-info-circle me-1 text-muted"></i>
+                                    لا توجد مدفوعات مسجلة للجهات حتى الآن
+                                </li>
+                            @endif
                         </ul>
 
                         {{-- ⚠️ الباقي المطلوب للجهات --}}
@@ -691,18 +721,37 @@
                                                 : collect();
                                         @endphp
                                         @forelse ($paymentsByCurrency as $currency => $payments)
-                                            {{ number_format($payments->sum('amount'), 2) }}
-                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                            @php
+                                                $positivePaid = $payments->where('amount', '>=', 0)->sum('amount');
+                                                $discounts = $payments->where('amount', '<', 0)->sum('amount');
+                                                $discountsAbsolute = abs($discounts);
+                                            @endphp
+                                            <div class="mb-1">
+                                                <strong
+                                                    class="text-success">{{ number_format($positivePaid, 2) }}</strong>
+                                                {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                                @if ($discountsAbsolute > 0)
+                                                    <br><small class="text-warning">
+                                                        <i class="fas fa-minus-circle me-1"></i>
+                                                        خصومات: {{ number_format($discountsAbsolute, 2) }}
+                                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                                    </small>
+                                                @endif
+                                            </div>
                                         @empty
                                             0 ريال
                                         @endforelse
                                     </td>
                                     <td>
                                         @php
+                                            // حساب المتبقي حسب العملة
+                                            //  $company->remaining_bookings_by_currency : يعني المبلغ المتبقي لكل عملة
                                             $remainingBookingsByCurrency = $company->remaining_bookings_by_currency;
+                                            //
                                         @endphp
 
                                         @foreach ($remainingBookingsByCurrency as $currency => $amount)
+                                            {{-- print  --}}
                                             {{ number_format($amount, 2) }}
                                             {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
                                         @endforeach
@@ -744,50 +793,96 @@
                                                 'SAR' => $company->total_due,
                                             ];
                                             foreach ($dueByCurrency as $currency => $amount) {
-                                                $totalDueByCurrency[$currency] += $amount;
+                                                $totalDueByCurrency[$currency] += (float) $amount; // ✅ إصلاح: $amount هو رقم مباشرة
                                             }
                                         }
                                     @endphp
                                     @foreach ($totalDueByCurrency as $currency => $amount)
                                         @if ($amount > 0)
-                                            {{ number_format($amount, 2) }}
+                                            {{ number_format((float) $amount, 2) }} {{-- ✅ إصلاح: استخدام $amount مباشرة --}}
                                             {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
                                         @endif
                                     @endforeach
                                 </td>
                                 <td>
+                                    {{-- عرض المدفوعات مع فصل الخصومات --}}
                                     @if (isset($companyPaymentsByCurrency['SAR']))
-                                        {{ number_format($companyPaymentsByCurrency['SAR']) }} ريال<br>
+                                        <div class="mb-1">
+                                            <strong
+                                                class="text-success">{{ number_format((float) ($companyPaymentsByCurrency['SAR']['paid'] ?? 0), 2) }}</strong>
+                                            ريال
+                                            @if (($companyPaymentsByCurrency['SAR']['discounts'] ?? 0) > 0)
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-minus-circle me-1"></i>
+                                                    خصومات:
+                                                    {{ number_format((float) $companyPaymentsByCurrency['SAR']['discounts'], 2) }}
+                                                    ريال
+                                                </small>
+                                            @endif
+                                        </div>
                                     @endif
                                     @if (isset($companyPaymentsByCurrency['KWD']))
-                                        {{ number_format($companyPaymentsByCurrency['KWD']) }} دينار
+                                        <div>
+                                            <strong
+                                                class="text-success">{{ number_format((float) ($companyPaymentsByCurrency['KWD']['paid'] ?? 0), 2) }}</strong>
+                                            دينار
+                                            @if (($companyPaymentsByCurrency['KWD']['discounts'] ?? 0) > 0)
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-minus-circle me-1"></i>
+                                                    خصومات:
+                                                    {{ number_format((float) $companyPaymentsByCurrency['KWD']['discounts'], 2) }}
+                                                    دينار
+                                                </small>
+                                            @endif
+                                        </div>
                                     @endif
                                 </td>
                                 <td>
+
+                                    {{-- المتبقي للشركات - حساب مباشر من المستحق والمدفوع --}}
                                     @php
-                                        $totalRemainingByCurrency = [
+                                        $totalCompanyRemainingByCurrency = [
                                             'SAR' => 0,
                                             'KWD' => 0,
                                         ];
-                                        $companyRemainingByCurrency = $totalRemainingByCurrency; // إنشاء نسخة من المتغير
 
-                                        foreach ($companiesReport as $company) {
-                                            $remainingByCurrency = $company->remaining_by_currency ?? [
-                                                'SAR' => $company->remaining,
-                                            ];
-                                            foreach ($remainingByCurrency as $currency => $amount) {
-                                                $totalRemainingByCurrency[$currency] += $amount;
+                                        // حساب المتبقي الصحيح = إجمالي المستحق - إجمالي المدفوع
+                                        foreach (['SAR', 'KWD'] as $currency) {
+                                            // 1. إجمالي المستحق حسب العملة (من المتغير المحسوب مسبقاً)
+                                            $totalDue = $totalDueByCurrency[$currency] ?? 0;
+
+                                            // 2. إجمالي المدفوع حسب العملة (من المتغير المحسوب مسبقاً)
+                                            $totalPaid = $companyPaymentsByCurrency[$currency]['paid'] ?? 0;
+                                            $totalDiscounts = $companyPaymentsByCurrency[$currency]['discounts'] ?? 0;
+
+                                            // 3. حساب المتبقي = المستحق - (المدفوع - الخصومات)
+                                            // ملاحظة: الخصومات موجبة في المتغير لكنها تقلل من المدفوع
+                                            $netPaid = $totalPaid + $totalDiscounts; // الخصومات تضاف للمدفوع الفعلي
+                                            $remaining = $totalDue - $netPaid;
+
+                                            if ($remaining != 0) {
+                                                $totalCompanyRemainingByCurrency[$currency] = $remaining;
                                             }
                                         }
-                                        // حفظ قيم الشركات قبل استخدام المتغير مرة أخرى
-                                        $companyRemainingByCurrency = $totalRemainingByCurrency;
                                     @endphp
-                                    @foreach ($totalRemainingByCurrency as $currency => $amount)
-                                        @if ($amount > 0)
-                                            {{ number_format($amount, 2) }}
+
+                                    @foreach ($totalCompanyRemainingByCurrency as $currency => $amount)
+                                        @if ($amount != 0)
+                                            <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
+                                                {{ $amount > 0 ? '+' : '' }}{{ number_format((float) $amount, 2) }}
+                                            </span>
                                             {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                            @if ($amount < 0)
+                                                <small class="text-muted">(دفعوا زيادة)</small>
+                                            @endif
                                         @endif
                                     @endforeach
+
+                                    {{-- إذا كان المجموع صفر في كل العملات --}}
+                                    @if (empty(array_filter($totalCompanyRemainingByCurrency)))
+                                        <span class="text-success">0.00 ريال</span><br>
+                                        <small class="text-muted">(متوازن)</small>
+                                    @endif
                                 </td>
                                 <td></td>
                             </tr>
@@ -798,7 +893,7 @@
         </div>
 
         <!-- جدول جهات الحجز -->
-        <div class="  mb-4">
+        <div class="mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>حساب المستحق إلى جهات الحجز</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
@@ -810,7 +905,7 @@
                             <tr>
                                 <th>جهة الحجز</th>
                                 <th>عدد الحجوزات</th>
-                                <th>إجمالي المبالغ</th>
+                                <th>إجمالي المستحق</th>
                                 <th>المدفوع</th>
                                 <th>المتبقي</th>
                                 <th>العمليات</th>
@@ -836,39 +931,62 @@
                                     <td>
                                         @php
                                             $dueByCurrency = $agent->total_due_by_currency ?? [
-                                                'SAR' => $agent->total_due,
+                                                'SAR' => $agent->total_due ?? 0,
                                             ];
                                         @endphp
                                         @foreach ($dueByCurrency as $currency => $amount)
-                                            {{ number_format($amount, 2) }}
-                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                            @if ($amount > 0)
+                                                {{ number_format((float) $amount, 2) }}
+                                                {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                            @endif
                                         @endforeach
                                     </td>
-                                    <td
-                                        @if ($agent->total_paid > $agent->total_due) style="color: red !important; font-weight: bold;" title="المبلغ المدفوع أكثر من المستحق" @endif>
+                                    <td>
                                         @php
                                             $paymentsByCurrency = $agent->payments
                                                 ? $agent->payments->groupBy('currency')
                                                 : collect();
                                         @endphp
                                         @forelse ($paymentsByCurrency as $currency => $payments)
-                                            {{ number_format($payments->sum('amount'), 2) }}
-                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                            @php
+                                                $positivePaid = $payments->where('amount', '>=', 0)->sum('amount');
+                                                $discounts = $payments->where('amount', '<', 0)->sum('amount');
+                                                $discountsAbsolute = abs($discounts);
+                                            @endphp
+                                            <div class="mb-1">
+                                                <strong
+                                                    class="text-success">{{ number_format((float) $positivePaid, 2) }}</strong>
+                                                {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                                @if ($discountsAbsolute > 0)
+                                                    <br><small class="text-warning">
+                                                        <i class="fas fa-minus-circle me-1"></i>
+                                                        خصومات: {{ number_format((float) $discountsAbsolute, 2) }}
+                                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                                    </small>
+                                                @endif
+                                            </div>
                                         @empty
                                             0 ريال
                                         @endforelse
                                     </td>
                                     <td>
                                         @php
-                                            $remainingByCurrency = $agent->remaining_bookings_by_currency ?? [
-                                                'SAR' => $agent->remaining,
+                                            // حساب المتبقي حسب العملة (نفس طريقة الشركات)
+                                            $remainingAgentByCurrency = $agent->remaining_by_currency ?? [
+                                                'SAR' => $agent->remaining_amount ?? 0,
                                             ];
                                         @endphp
-                                        @foreach ($remainingByCurrency as $currency => $amount)
-                                            {{ number_format($amount, 2) }}
-                                            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                        @foreach ($remainingAgentByCurrency as $currency => $amount)
+                                            @if ($amount != 0)
+                                                <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
+                                                    {{ $amount > 0 ? '+' : '' }}{{ number_format((float) $amount, 2) }}
+                                                </span>
+                                                {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                                @if ($amount < 0)
+                                                    <small class="text-muted">(دفعنا زيادة)</small>
+                                                @endif
+                                            @endif
                                         @endforeach
-
                                     </td>
                                     <td>
                                         <div class="d-grid gap-2 d-md-flex justify-content-md-center">
@@ -877,6 +995,10 @@
                                             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
                                                 data-bs-target="#agentPaymentModal{{ $agent->id }}">
                                                 تسجيل دفعة
+                                            </button>
+                                            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#agentDiscountModal{{ $agent->id }}">
+                                                تطبيق خصم
                                             </button>
                                             <a href="{{ route('reports.agent.payments', $agent->id) }}"
                                                 class="btn btn-primary btn-sm">كشف حساب</a>
@@ -896,52 +1018,79 @@
                                 </td>
                                 <td>
                                     @php
-                                        $totalDueByCurrency = [
+                                        $totalAgentDueByCurrency = [
                                             'SAR' => 0,
                                             'KWD' => 0,
                                         ];
                                         foreach ($agentsReport as $agent) {
                                             $dueByCurrency = $agent->total_due_by_currency ?? [
-                                                'SAR' => $agent->total_due,
+                                                'SAR' => $agent->total_due ?? 0,
                                             ];
                                             foreach ($dueByCurrency as $currency => $amount) {
-                                                $totalDueByCurrency[$currency] += $amount;
+                                                $totalAgentDueByCurrency[$currency] += (float) $amount;
                                             }
                                         }
                                     @endphp
-                                    @foreach ($totalDueByCurrency as $currency => $amount)
+                                    @foreach ($totalAgentDueByCurrency as $currency => $amount)
                                         @if ($amount > 0)
-                                            {{ number_format($amount, 2) }}
+                                            {{ number_format((float) $amount, 2) }}
                                             {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
                                         @endif
                                     @endforeach
                                 </td>
                                 <td>
+                                    {{-- عرض المدفوعات مع فصل الخصومات (نفس طريقة الشركات) --}}
                                     @if (isset($agentPaymentsByCurrency['SAR']))
-                                        {{ number_format($agentPaymentsByCurrency['SAR']) }} ريال<br>
+                                        <div class="mb-1">
+                                            <strong
+                                                class="text-success">{{ number_format((float) ($agentPaymentsByCurrency['SAR']['paid'] ?? 0), 2) }}</strong>
+                                            ريال
+                                            @if (($agentPaymentsByCurrency['SAR']['discounts'] ?? 0) > 0)
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-minus-circle me-1"></i>
+                                                    خصومات:
+                                                    {{ number_format((float) $agentPaymentsByCurrency['SAR']['discounts'], 2) }}
+                                                    ريال
+                                                </small>
+                                            @endif
+                                        </div>
                                     @endif
                                     @if (isset($agentPaymentsByCurrency['KWD']))
-                                        {{ number_format($agentPaymentsByCurrency['KWD']) }} دينار
+                                        <div>
+                                            <strong
+                                                class="text-success">{{ number_format((float) ($agentPaymentsByCurrency['KWD']['paid'] ?? 0), 2) }}</strong>
+                                            دينار
+                                            @if (($agentPaymentsByCurrency['KWD']['discounts'] ?? 0) > 0)
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-minus-circle me-1"></i>
+                                                    خصومات:
+                                                    {{ number_format((float) $agentPaymentsByCurrency['KWD']['discounts'], 2) }}
+                                                    دينار
+                                                </small>
+                                            @endif
+                                        </div>
                                     @endif
                                 </td>
                                 <td>
                                     @php
-                                        $totalRemainingByCurrency = [
+                                        $totalAgentRemainingByCurrency = [
                                             'SAR' => 0,
                                             'KWD' => 0,
                                         ];
                                         foreach ($agentsReport as $agent) {
                                             $remainingByCurrency = $agent->remaining_by_currency ?? [
-                                                'SAR' => $agent->remaining,
+                                                'SAR' => $agent->remaining_amount ?? 0,
                                             ];
                                             foreach ($remainingByCurrency as $currency => $amount) {
-                                                $totalRemainingByCurrency[$currency] += $amount;
+                                                $totalAgentRemainingByCurrency[$currency] += (float) $amount;
                                             }
                                         }
                                     @endphp
-                                    @foreach ($totalRemainingByCurrency as $currency => $amount)
-                                        @if ($amount > 0)
-                                            {{ number_format($amount, 2) }}
+                                    @foreach ($totalAgentRemainingByCurrency as $currency => $amount)
+                                        @if ($amount != 0)
+                                            <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
+                                                {{ $amount > 0 ? '+' : '' }}{{ number_format((float) $amount, 2) }}
+                                            </span>
                                             {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
                                         @endif
                                     @endforeach
@@ -949,19 +1098,19 @@
                                 <td></td>
                             </tr>
                         </tfoot>
-
                     </table>
                 </div>
             </div>
         </div>
 
+
         <!-- نماذج تسجيل الدفعات لجهات الحجز -->
         @foreach ($agentsReport as $agent)
+            <!-- نموذج الدفعة العادية -->
             <div class="modal fade" id="agentPaymentModal{{ $agent->id }}" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <form action="{{ route('reports.agent.payment') }}" method="POST"
-                            enctype="multipart/form-data">
+                        <form action="{{ route('reports.agent.payment') }}" method="POST">
                             @csrf
                             <input type="hidden" name="agent_id" value="{{ $agent->id }}">
 
@@ -982,16 +1131,6 @@
                                         </select>
                                     </div>
                                 </div>
-                                {{-- ***   حقل رفع الملف في مشكلة مع الكومبوسر وجوجل درايف  *** --}}
-                                {{-- <div class="mb-3">
-                                    <label for="receipt_file_agent_{{ $agent->id }}" class="form-label">إرفاق إيصال
-                                        (اختياري)</label>
-                                    <input class="form-control" type="file" id="receipt_file_agent_{{ $agent->id }}"
-                                        name="receipt_file">
-                                    <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
-                                        5MB)</small>
-                                </div> --}}
-                                {{-- *** نهاية حقل رفع الملف *** --}}
                                 <div class="mb-3">
                                     <label class="form-label">ملاحظات</label>
                                     <textarea class="form-control" name="notes"></textarea>
@@ -1006,9 +1145,52 @@
                     </div>
                 </div>
             </div>
+
+            <!-- نموذج الخصم المنفصل -->
+            <div class="modal fade" id="agentDiscountModal{{ $agent->id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form action="{{ route('reports.agent.discount', $agent->id) }}" method="POST">
+                            @csrf
+
+                            <div class="modal-header">
+                                <h5 class="modal-title">تطبيق خصم - {{ $agent->name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">مبلغ الخصم والعملة</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" class="form-control" name="discount_amount"
+                                            required>
+                                        <select class="form-select" name="currency" style="max-width: 120px;">
+                                            <option value="SAR" selected>ريال سعودي</option>
+                                            <option value="KWD">دينار كويتي</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">سبب الخصم</label>
+                                    <textarea class="form-control" name="reason" placeholder="اختياري - سبب تطبيق الخصم"></textarea>
+                                </div>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    تأكد من مبلغ الخصم قبل المتابعة. هذا الإجراء سيؤثر على الحساب النهائي للوكيل.
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                <button type="submit" class="btn btn-warning">تطبيق الخصم</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         @endforeach
 
-        <!-- إضافة سكريبت النسخ -->
+        <!-- إضافة سكريبت  النسخ والخصم -->
         @push('scripts')
             <script>
                 function copyTable(tableId) {
@@ -1020,6 +1202,32 @@
                     document.execCommand('copy');
                     window.getSelection().removeAllRanges();
                     alert('تم نسخ الجدول');
+                }
+
+                function toggleAgentDiscountMode(agentId) {
+                    const isDiscountField = document.getElementById('is-discount-' + agentId);
+                    const submitBtn = document.getElementById('agentSubmitBtn-' + agentId);
+                    const toggleBtn = document.getElementById('toggleAgentDiscountBtn-' + agentId);
+                    const modalTitle = document.querySelector('#agentPaymentModalTitle' + agentId);
+                    const agentName = modalTitle.textContent.split('-')[1].trim();
+
+                    if (isDiscountField.value === "0") {
+                        // تحويل إلى وضع الخصم
+                        isDiscountField.value = "1";
+                        submitBtn.textContent = "تطبيق الخصم";
+                        submitBtn.classList.remove('btn-primary');
+                        submitBtn.classList.add('btn-warning');
+                        toggleBtn.textContent = "تسجيل دفعة";
+                        modalTitle.textContent = "تسجيل خصم - " + agentName;
+                    } else {
+                        // العودة إلى وضع الدفع
+                        isDiscountField.value = "0";
+                        submitBtn.textContent = "تسجيل الدفعة";
+                        submitBtn.classList.remove('btn-warning');
+                        submitBtn.classList.add('btn-primary');
+                        toggleBtn.textContent = "تسجيل خصم";
+                        modalTitle.textContent = "تسجيل دفعة - " + agentName;
+                    }
                 }
             </script>
         @endpush
@@ -1033,6 +1241,8 @@
                             enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="company_id" value="{{ $company->id }}">
+                            <input type="hidden" name="is_discount" id="is-discount-{{ $company->id }}"
+                                value="0">
 
                             <div class="modal-header">
                                 <h5 class="modal-title">تسجيل دفعة - {{ $company->name }}</h5>
@@ -1073,7 +1283,11 @@
 
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                                <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
+                                <button type="button" class="btn btn-warning"
+                                    id="toggleDiscountBtn-{{ $company->id }}"
+                                    onclick="toggleDiscountMode({{ $company->id }})">تسجيل خصم</button>
+                                <button type="submit" class="btn btn-primary" id="submitBtn-{{ $company->id }}">تسجيل
+                                    الدفعة</button>
                             </div>
                         </form>
                     </div>
@@ -1385,6 +1599,32 @@
             window.addEventListener('load', function() {
                 setTimeout(saveDailyScreenshotIfNeeded, 3000); // انتظر 3 ثواني بعد تحميل الصفحة
             });
+            // دالة التبديل وضع الخصم
+            function toggleDiscountMode(companyId) {
+                const isDiscountField = document.getElementById('is-discount-' + companyId);
+                const submitBtn = document.getElementById('submitBtn-' + companyId);
+                const toggleBtn = document.getElementById('toggleDiscountBtn-' + companyId);
+                const modalTitle = document.querySelector('#paymentModal' + companyId + ' .modal-title');
+                const companyName = modalTitle.textContent.split('-')[1].trim();
+
+                if (isDiscountField.value === "0") {
+                    // تحويل إلى وضع الخصم
+                    isDiscountField.value = "1";
+                    submitBtn.textContent = "تطبيق الخصم";
+                    submitBtn.classList.remove('btn-primary');
+                    submitBtn.classList.add('btn-warning');
+                    toggleBtn.textContent = "تسجيل دفعة";
+                    modalTitle.textContent = "تسجيل خصم - " + companyName;
+                } else {
+                    // العودة إلى وضع الدفع
+                    isDiscountField.value = "0";
+                    submitBtn.textContent = "تسجيل الدفعة";
+                    submitBtn.classList.remove('btn-warning');
+                    submitBtn.classList.add('btn-primary');
+                    toggleBtn.textContent = "تسجيل خصم";
+                    modalTitle.textContent = "تسجيل دفعة - " + companyName;
+                }
+            }
         </script>
     @endpush
 

@@ -60,8 +60,9 @@ class AdminController extends Controller
                     // فلتر حسب الكلمات المفتاحية للدفعات
                     $query->where(function ($q) {
                         $q->where('message', 'LIKE', '%دفعة%') // كلمة "دفعة"
-                            ->orWhere('message', 'LIKE', '%payment%'); // كلمة "payment"
+                            ->orWhere('message', 'LIKE', '%payment%') // كلمة "payment"
                         // ممكن تضيف "سداد", "تحصيل" ...إلخ
+                        ->orWhere('message', 'LIKE', '%خصم%');
                     });
                     break;
                 case 'availabilities':

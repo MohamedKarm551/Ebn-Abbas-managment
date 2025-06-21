@@ -49,8 +49,7 @@
                 <h1 class="h3 mb-0">
                     <i class="fas fa-building text-primary me-2"></i>
                     متابعة مدفوعات الشركات
-                </h1>
-                
+                </h1>                
                 <div class="d-flex gap-2">
                     <button class="btn btn-outline-success" onclick="exportToExcel()">
                         <i class="fas fa-file-excel me-1"></i>

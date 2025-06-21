@@ -228,4 +228,67 @@ class CompanyPaymentController extends Controller
         return redirect()->route('admin.company-payments.show', $company)
             ->with('success', 'تم حذف الدفعة بنجاح');
     }
+        /**
+     * تطبيق خصم كدفعة سالبة (الطريقة البسيطة)
+     */
+    public function applyDiscount(Request $request, Company $company)
+    {
+        // 1. التحقق من صحة البيانات المدخلة
+        $validated = $request->validate([
+            'discount_amount' => 'required|numeric|min:0.01',
+            'currency' => 'required|in:SAR,KWD',
+            'reason' => 'nullable|string|max:500'
+        ], [
+            'discount_amount.required' => 'مبلغ الخصم مطلوب',
+            'discount_amount.min' => 'مبلغ الخصم يجب أن يكون أكبر من صفر',
+            'currency.required' => 'العملة مطلوبة',
+            'currency.in' => 'العملة يجب أن تكون ريال سعودي أو دينار كويتي'
+        ]);
+
+        // 2. الحصول على المجاميع الحالية للشركة
+        $totals = $company->getTotalsByCurrency();
+        $currentTotals = $totals[$validated['currency']] ?? ['due' => 0, 'paid' => 0, 'remaining' => 0];
+        
+        // 3. التحقق من أن الخصم لا يتجاوز المبلغ المتبقي
+        if ($validated['discount_amount'] > $currentTotals['remaining']) {
+            return redirect()->back()
+                ->with('error', "مبلغ الخصم ({$validated['discount_amount']} {$validated['currency']}) أكبر من المبلغ المتبقي ({$currentTotals['remaining']} {$validated['currency']})");
+        }
+
+        // 4. الحصول على بيانات الموظف الحالي
+        $employee = Employee::where('user_id', Auth::id())->first();
+
+        // 5. بدء معاملة قاعدة البيانات لضمان الأمان
+        DB::beginTransaction();
+        try {
+            // 6. إنشاء دفعة بقيمة سالبة (هذا هو السر!)
+            $discountPayment = CompanyPayment::create([
+                'company_id' => $company->id,
+                'amount' => -$validated['discount_amount'], // 🔥 قيمة سالبة للخصم
+                'currency' => $validated['currency'],
+                'payment_date' => now()->format('Y-m-d'),
+                'notes' => 'خصم مطبق: ' . ($validated['reason'] ?: 'خصم'),
+                'employee_id' => $employee?->id,
+            ]);
+
+            // 7. إنشاء إشعار للمدراء
+            Notification::create([
+                'user_id' => Auth::id(),
+                'message' => "تم تطبيق خصم {$validated['discount_amount']} {$validated['currency']} على شركة {$company->name}",
+                'type' => 'خصم مطبق',
+            ]);
+
+            // 8. تأكيد المعاملة
+            DB::commit();
+            
+            return redirect()->route('admin.company-payments.show', $company)
+                ->with('success', "تم تطبيق خصم {$validated['discount_amount']} {$validated['currency']} بنجاح");
+                
+        } catch (\Exception $e) {
+            // 9. في حالة حدوث خطأ، إلغاء المعاملة
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء تطبيق الخصم: ' . $e->getMessage());
+        }
+    }
 }
