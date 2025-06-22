@@ -103,17 +103,84 @@
                                     <td>{{ $company->bookings_count }}</td>
                                     <td>
                                         @php
-                                            // ✅ استخدام القيم المحسوبة الجديدة
-                                            $dueByCurrency =
-                                                $company->computed_total_due_by_currency ??
-                                                ($company->total_due_by_currency ?? ['SAR' => $company->total_due]);
+                                            // 1. مستحقات الفنادق حسب العملة
+                                            $hotelDueByCurrency = $company->total_due_bookings_by_currency ?? [
+                                                'SAR' => 0,
+                                                'KWD' => 0,
+                                            ];
+                                            // 2. مستحقات الرحلات البرية حسب العملة
+                                            $tripDueByCurrency = $company->landTripBookings
+                                                ->groupBy('currency')
+                                                ->map->sum('amount_due_from_company')
+                                                ->toArray();
+                                            // 3. مدفوعات الرحلات البرية حسب العملة
+                                            $tripPayments = $company
+                                                ->companyPayments()
+                                                ->select(
+                                                    'currency',
+                                                    DB::raw(
+                                                        'SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as paid',
+                                                    ),
+                                                    DB::raw(
+                                                        'SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts',
+                                                    ),
+                                                )
+                                                ->groupBy('currency')
+                                                ->get()
+                                                ->keyBy('currency');
+                                            // 4. المتبقي من الرحلات البرية
+                                            $tripRemainingByCurrency = [];
+                                            foreach (['SAR', 'KWD'] as $cur) {
+                                                $due = $tripDueByCurrency[$cur] ?? 0;
+                                                $paid = (float) ($tripPayments[$cur]->paid ?? 0);
+                                                $discounts = (float) ($tripPayments[$cur]->discounts ?? 0);
+                                                $tripRemainingByCurrency[$cur] = $due - $paid - $discounts;
+                                            }
+                                            // 5. إجمالي المستحق لكل عملة
+                                            $totalDueByCurrency = [];
+                                            foreach (['SAR', 'KWD'] as $cur) {
+                                                $totalDueByCurrency[$cur] =
+                                                    ($hotelDueByCurrency[$cur] ?? 0) + ($tripDueByCurrency[$cur] ?? 0);
+                                            }
                                         @endphp
-                                        @foreach ($dueByCurrency as $currency => $amount)
-                                            @if ($amount > 0)
-                                                {{ number_format($amount, 2) }}
-                                                {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                            @endif
-                                        @endforeach
+
+                                        <div class="d-grid gap-2"
+                                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+                                            {{-- إجمالي المستحق --}}
+                                            @foreach ($totalDueByCurrency as $cur => $amt)
+                                                @if ($amt > 0)
+                                                    <div>
+                                                        <strong>{{ number_format($amt, 2) }}</strong>
+                                                        {{ $cur === 'SAR' ? 'ريال' : 'دينار' }}
+                                                    </div>
+                                                @endif
+                                            @endforeach
+
+                                            {{-- تفاصيل الفنادق --}}
+                                            @foreach ($hotelDueByCurrency as $cur => $amt)
+                                                @if ($amt > 0)
+                                                    <div>
+                                                        <span class="badge bg-success text-white">
+                                                            <i class="fas fa-hotel me-1"></i>
+                                                            {{ number_format($amt, 2) }} {{ $cur === 'SAR' ? 'ريال' : 'دينار' }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            @endforeach
+
+                                            {{-- المتبقي من الرحلات البرية --}}
+                                            @foreach ($tripRemainingByCurrency as $cur => $rem)
+                                                @if ($rem != 0)
+                                                    <div>
+                                                        <span class="badge bg-info text-dark">
+                                                            <i class="fas fa-bus me-1"></i>
+                                                            {{ $rem > 0 ? number_format($rem, 2) : '-' . number_format(abs($rem), 2) }}
+                                                            {{ $cur === 'SAR' ? 'ريال' : 'دينار' }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </div>
                                     </td>
                                     <td
                                         @if (($company->computed_total_paid ?? 0) > ($company->computed_total_due ?? $company->total_due)) style="color: red !important; font-weight: bold;" 
@@ -179,13 +246,12 @@
                                         @endif
                                     </td>
                                     <td>
+                                        {{-- المتبقي --}}
                                         @php
-                                            // ✅ استخدام القيم المحسوبة للمتبقي
-                                            $remainingByCurrency =
-                                                $company->computed_remaining_by_currency ??
-                                                ($company->remaining_bookings_by_currency ?? [
-                                                    'SAR' => $company->remaining ?? 0,
-                                                ]);
+                                            // استخدام المتبقي للحجوزات العادية فقط (بدون رحلات برية)
+                                            $remainingByCurrency = $company->remaining_bookings_by_currency ?? [
+                                                'SAR' => 0,
+                                            ];
                                         @endphp
 
                                         @foreach ($remainingByCurrency as $currency => $amount)
