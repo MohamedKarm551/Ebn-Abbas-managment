@@ -39,6 +39,99 @@ class Company extends Model
     }
 
     // ========== الحسابات الإجمالية ==========
+    /**
+ * حساب الإجماليات من البيانات المحملة مسبقاً (Eager Loading)
+ * تحل مشكلة N+1 بدون تعديل في الكود الموجود
+ */
+public function calculateTotals()
+{
+    // التأكد من تحميل العلاقات مسبقاً
+    if (!$this->relationLoaded('bookings') || !$this->relationLoaded('payments')) {
+        // إذا لم يتم تحميلها، نحملها الآن (فقط في هذه الحالة)
+        $this->load(['bookings', 'payments', 'landTripBookings']);
+    }
+
+    // 1. حساب المستحق حسب العملة من البيانات المحملة
+    $dueByCurrency = [];
+    
+    // من الحجوزات العادية
+    if ($this->bookings) {
+        foreach ($this->bookings as $booking) {
+            $currency = $booking->currency ?? 'SAR';
+            $amount = $booking->amount_due_from_company ?? ($booking->sale_price * $booking->rooms * $booking->days);
+            $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
+        }
+    }
+    
+    // من حجوزات الرحلات البرية
+    if ($this->landTripBookings) {
+        foreach ($this->landTripBookings as $landTrip) {
+            $currency = $landTrip->currency ?? 'SAR';
+            $amount = $landTrip->amount_due_from_company ?? 0;
+            $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
+        }
+    }
+
+    // 2. حساب المدفوع حسب العملة من البيانات المحملة
+    $paidByCurrency = [];
+    $discountsByCurrency = [];
+    
+    if ($this->payments) {
+        foreach ($this->payments as $payment) {
+            $currency = $payment->currency ?? 'SAR';
+            
+            if ($payment->amount >= 0) {
+                $paidByCurrency[$currency] = ($paidByCurrency[$currency] ?? 0) + $payment->amount;
+            } else {
+                $discountsByCurrency[$currency] = ($discountsByCurrency[$currency] ?? 0) + abs($payment->amount);
+            }
+        }
+    }
+
+    // 3. حساب المتبقي حسب العملة
+    $remainingByCurrency = [];
+    $allCurrencies = array_unique(array_merge(array_keys($dueByCurrency), array_keys($paidByCurrency), array_keys($discountsByCurrency)));
+    
+    foreach ($allCurrencies as $currency) {
+        $due = $dueByCurrency[$currency] ?? 0;
+        $paid = $paidByCurrency[$currency] ?? 0;
+        $discounts = $discountsByCurrency[$currency] ?? 0;
+        
+        $remainingByCurrency[$currency] = $due - $paid - $discounts;
+    }
+
+    // 4. حفظ النتائج في attributes للوصول إليها لاحقاً
+    $this->setRawAttributes(array_merge($this->attributes, [
+        'computed_total_due_by_currency' => $dueByCurrency,
+        'computed_total_paid_by_currency' => $paidByCurrency,
+        'computed_total_discounts_by_currency' => $discountsByCurrency,
+        'computed_remaining_by_currency' => $remainingByCurrency,
+        'computed_total_due' => array_sum($dueByCurrency),
+        'computed_total_paid' => array_sum($paidByCurrency),
+        'computed_remaining' => array_sum($remainingByCurrency),
+    ]), true);
+
+    return $this;
+}
+public function getComputedTotalDueByCurrencyAttribute()
+{
+    return $this->attributes['computed_total_due_by_currency'] ?? $this->total_due_by_currency;
+}
+
+public function getComputedRemainingByCurrencyAttribute()
+{
+    return $this->attributes['computed_remaining_by_currency'] ?? $this->remaining_by_currency;
+}
+
+public function getComputedTotalDueAttribute()
+{
+    return $this->attributes['computed_total_due'] ?? $this->total_due;
+}
+
+public function getComputedRemainingAttribute()
+{
+    return $this->attributes['computed_remaining'] ?? $this->remaining;
+}
     // 1. إجمالي المستحق من الحجوزات (معادلة النظام القديم: sale_price * rooms * days)
     public function getTotalDueAttribute()
     {

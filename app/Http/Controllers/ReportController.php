@@ -27,30 +27,65 @@ use Illuminate\Support\Facades\Log; // لتسجيل الأخطاء في السج
 class ReportController extends Controller
 {
 
-    // تقرير يومي لكل الحجوزات والإحصائيات
+    /**
+     * تقرير يومي لكل الحجوزات والإحصائيات
+     * دالة محسنة ومنظمة لعرض التقرير اليومي الشامل
+     */
     public function daily()
     {
-        // تاريخ النهاردة
+        // ===================================
+        // 🗓️ المتغيرات الأساسية والتواريخ
+        // ===================================
+
+        // تاريخ اليوم الحالي
         $today = Carbon::today();
 
-        // كل الحجوزات اللي بتبدأ النهاردة
+        // كل الحجوزات التي تبدأ اليوم
         $todayBookings = Booking::whereDate('check_in', $today)->get();
 
-        // تقرير الشركات: كل شركة وعدد حجوزاتها (قائمة الشركات مع عدد الحجوزات لكل شركة)
-        //  كل الشركات وعدد الحجوزاتها 
-        $companiesReport = Company::withCount('bookings')->get()
-            ->sortByDesc(function ($company) {
-                return $company->total_due; // <-- الترتيب الصحيح هنا
-            })->values();
-        // إجمالي المتبقي من الشركات ...   
-        $totalDueFromCompanies = $companiesReport->sum('remaining');
+        // ===================================
+        // 🏢 تقرير الشركات مع العلاقات المحسنة
+        // ===================================
 
-        //  تقرير الوكلاء: كل وكيل وعدد حجوزاته وترتيبهم من الأعلى واحد مطلوب منه فلوس للأقل
+        // جلب الشركات مع العلاقات المطلوبة فقط (تحسين الأداء)
+        $companiesReport = Company::with([
+            'bookings' => function ($query) {
+                $query->select('id', 'company_id', 'sale_price', 'rooms', 'days', 'currency', 'amount_due_from_company');
+            },
+            'payments' => function ($query) {
+                $query->select('id', 'company_id', 'amount', 'currency', 'payment_date');
+            },
+            'landTripBookings' => function ($query) {
+                $query->select('id', 'company_id', 'amount_due_from_company', 'currency');
+            }
+        ])
+            ->withCount(['bookings as bookings_count', 'landTripBookings as land_trip_bookings_count'])
+            ->get()
+            ->map(function ($company) {
+                // حساب إجمالي عدد الحجوزات (عادية + رحلات برية)
+                $company->total_bookings_count = $company->bookings_count + $company->land_trip_bookings_count;
+
+                // ✅ استدعاء دالة حساب الإجماليات المحسنة
+                $company->calculateTotals();
+
+                return $company;
+            })
+            ->sortByDesc('computed_total_due')  // ترتيب حسب المستحق المحسوب
+            ->values();
+
+        // ===================================
+        // 🤝 تقرير الوكلاء/جهات الحجز
+        // ===================================
+
+        // جلب الوكلاء مع علاقاتهم وحساب الإجماليات
         $agentsReport = Agent::with(['bookings', 'payments'])
             ->withCount('bookings')
             ->get()
             ->map(function ($agent) {
-                // إضافة الحسابات المطلوبة لكل وكيل بنفس طريقة الشركات
+                // ✅ استدعاء دالة حساب الإجماليات للوكلاء
+                $agent->calculateTotals();
+
+                // إضافة الخصائص المطلوبة للوكيل (للتوافق مع الكود القديم)
                 $agent->total_due = $agent->total_due;
                 $agent->total_paid = $agent->total_paid;
                 $agent->remaining_amount = $agent->remaining_amount;
@@ -60,176 +95,53 @@ class ReportController extends Controller
 
                 return $agent;
             })
-            ->sortByDesc('remaining_amount')
+            ->sortByDesc('computed_total_due')  // ترتيب حسب المستحق المحسوب
             ->values();
 
+        // ===================================
+        // 🏨 تقرير الفنادق
+        // ===================================
 
-
-        // إجمالي اللي اتدفع للفنادق (كل اللي اتدفع فعلاً للفنادق عن كل الحجوزات)
-        $totalPaidToHotels = Booking::all()->sum(function ($booking) {
-            return $booking->cost_price * $booking->rooms * $booking->days;
-        });
-
-        // تقرير الفنادق: كل فندق وعدد حجوزاته (قائمة الفنادق مع عدد الحجوزات لكل فندق)
+        // جلب الفنادق مع عدد الحجوزات وترتيبهم
         $hotelsReport = Hotel::withCount('bookings')->get()
             ->sortByDesc(function ($hotel) {
                 return $hotel->total_due;
             })->values();
 
+        // ===================================
+        // 💰 الحسابات المالية الأساسية
+        // ===================================
 
-        // إجمالي المتبقي من الشركات (كل اللي لسه الشركات ما دفعتهوش فعلاً = المستحق - المدفوع لكل شركة)
+        // إجمالي المتبقي من الشركات
+        $totalDueFromCompanies = $companiesReport->sum('remaining');
+
+        // إجمالي المدفوع للفنادق (جميع التكاليف الفعلية)
+        $totalPaidToHotels = Booking::all()->sum(function ($booking) {
+            return $booking->cost_price * $booking->rooms * $booking->days;
+        });
+
+        // إجمالي المتبقي من الشركات (نسخة مكررة - يمكن حذفها)
         $totalRemainingFromCompanies = $companiesReport->sum('remaining');
 
-        // إجمالي المتبقي للفنادق (كل اللي لسه عليك تدفعه للفنادق = المستحق للفنادق - اللي اتدفع فعلاً)
+        // إجمالي المتبقي للفنادق/الوكلاء
         $totalRemainingToHotels = Booking::sum('amount_due_to_hotel') - AgentPayment::sum('amount');
-        // إجمالي اللي علينا لجهات الحجز أو الفنادقdd(Booking::sum('amount_due_to_hotel')); 
 
-        // صافي الربح (الفرق بين اللي لسه الشركات هتدفعه لك واللي لسه عليك تدفعه للفنادق)
-        // $netProfit = $totalRemainingFromCompanies - $totalRemainingToHotels; // السطر القديم (ممكن تمسحه أو تخليه تعليق)
-        $totalDueToAgents = $agentsReport->sum('total_due'); // أو total_due حسب اسم العمود عندك لجهات الحجز
-        $netProfit = $totalDueFromCompanies - $totalDueToAgents; // السطر الجديد
-        // --- *** بداية: جلب بيانات الحجوزات اليومية لآخر 30 يومًا *** ---
-        $days = 30; // عدد الأيام
-        $endDate = Carbon::now()->endOfDay();
-        $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
+        // حساب صافي الربح (المحسن)
+        $totalDueToAgents = $agentsReport->sum('total_due');
+        $netProfit = $totalDueFromCompanies - $totalDueToAgents;
 
-        // اختر الحقل الذي تريد تتبع تاريخه: 'created_at' أو 'check_in'
-        $dateField = 'created_at'; // أو 'check_in'
+        // ===================================
+        // 📊 استدعاء دالة الرسم البياني المنفصلة
+        // ===================================
 
-        // جلب عدد الحجوزات مجمعة حسب اليوم
-        $bookingsData = Booking::select(
-            DB::raw("DATE($dateField) as date"),
-            DB::raw('COUNT(*) as count')
-        )
-            ->whereBetween($dateField, [$startDate, $endDate])
-            ->groupBy('date')
-            ->orderBy('date', 'ASC')
-            ->pluck('count', 'date'); // [date => count]
+        // جلب جميع بيانات الرسوم البيانية من الدالة المحسنة
+        $chartData = $this->getDailyChartData();
 
-        // إنشاء فترة زمنية كاملة لآخر 30 يومًا
-        $period = CarbonPeriod::create($startDate, $endDate);
-        $chartDates = [];
-        $bookingCounts = [];
+        // ===================================
+        // 🔔 الإشعارات والتعديلات الأخيرة
+        // ===================================
 
-        // ملء البيانات مع التأكد من وجود صفر للأيام بدون حجوزات
-        foreach ($period as $date) {
-            $formattedDate = $date->format('Y-m-d');
-            $chartDates[] = $date->format('d/m'); // تنسيق العرض في الرسم البياني (يوم/شهر)
-            $bookingCounts[] = $bookingsData[$formattedDate] ?? 0; // نضع صفر إذا لم يكن اليوم موجودًا
-        }
-        // 2. جلب الحجوزات مع تفاصيلها اللازمة للرسم والتلميح
-        $bookingsForChart = Booking::with(['company', 'agent', 'hotel']) // نجيب العلاقات عشان الأسماء
-            ->select(
-                'check_in', // تاريخ بدء الاستحقاق
-                'client_name', // اسم العميل للتفاصيل
-                'company_id', // لربط الشركة
-                'agent_id',   // لربط الجهة
-                'hotel_id',   // لربط الفندق (اختياري في التفاصيل)
-                DB::raw('sale_price * rooms * days as company_due'), // المستحق من الشركة
-                DB::raw('cost_price * rooms * days as agent_due') // المستحق للجهة
-            )
-            ->whereBetween('check_in', [$startDate, $endDate]) // نستخدم check_in كتاريخ للحدث
-            ->orderBy('check_in', 'asc')
-            ->get();
-
-        // 3. جلب دفعات الشركات مع تفاصيلها
-        $companyPaymentsForChart = Payment::with('company') // نجيب الشركة عشان اسمها
-            ->select('payment_date', 'amount', 'company_id', 'notes')
-            ->whereBetween('payment_date', [$startDate, $endDate])
-            ->orderBy('payment_date', 'asc')
-            ->get();
-
-        // 4. جلب دفعات الوكلاء مع تفاصيلها
-        $agentPaymentsForChart = AgentPayment::with('agent') // نجيب الجهة عشان اسمها
-            ->select('payment_date', 'amount', 'agent_id', 'notes')
-            ->whereBetween('payment_date', [$startDate, $endDate])
-            ->orderBy('payment_date', 'asc')
-            ->get();
-
-
-        // --- *** نهاية: جلب بيانات الحجوزات اليومية *** ---
-        // 5. تجميع كل الأحداث (حجوزات ودفعات) في مصفوفة واحدة مع تفاصيلها وتأثيرها
-        $allEventsWithDetails = [];
-        foreach ($bookingsForChart as $booking) {
-            $eventDate = Carbon::parse($booking->check_in)->format('Y-m-d');
-            $allEventsWithDetails[$eventDate][] = [
-                'type' => 'booking',
-                'company_change' => $booking->company_due, // التغيير في رصيد الشركات (موجب)
-                'agent_change' => $booking->agent_due,   // التغيير في رصيد الجهات (موجب)
-                // نص التفاصيل اللي هيظهر في الـ tooltip
-                'details' => "حجز: " . Str::limit($booking->client_name ?? 'N/A', 15) // اسم العميل مختصر
-                    . " (+" . number_format($booking->company_due) . " ش)" // تأثيره على رصيد الشركة
-                    . " (+" . number_format($booking->agent_due) . " ج)" // تأثيره على رصيد الجهة
-            ];
-        }
-        foreach ($companyPaymentsForChart as $payment) {
-            $eventDate = Carbon::parse($payment->payment_date)->format('Y-m-d');
-            $allEventsWithDetails[$eventDate][] = [
-                'type' => 'company_payment',
-                'company_change' => -$payment->amount, // دفعة الشركة تقلل المستحق منها (سالب)
-                'agent_change' => 0,
-                // نص التفاصيل
-                'details' => "دفعة من: " . Str::limit($payment->company->name ?? 'N/A', 10) // اسم الشركة مختصر
-                    . " (-" . number_format($payment->amount) . " ش)" // تأثيره على رصيد الشركة
-                    . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
-            ];
-        }
-        foreach ($agentPaymentsForChart as $payment) {
-            $eventDate = Carbon::parse($payment->payment_date)->format('Y-m-d');
-            $allEventsWithDetails[$eventDate][] = [
-                'type' => 'agent_payment',
-                'company_change' => 0,
-                'agent_change' => -$payment->amount, // دفعة للجهة تقلل المستحق لها (سالب)
-                // نص التفاصيل
-                'details' => "دفعة إلى: " . Str::limit($payment->agent->name ?? 'N/A', 10) // اسم الجهة مختصر
-                    . " (-" . number_format($payment->amount) . " ج)" // تأثيره على رصيد الجهة
-                    . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "") // ملاحظات مختصرة
-            ];
-        }
-
-        // 6. حساب الأرصدة التراكمية يوم بيوم وتجميع تفاصيل الأحداث لكل يوم
-        $runningReceivables = 0; // الرصيد التراكمي المستحق من الشركات
-        $runningPayables = 0;    // الرصيد التراكمي المستحق للجهات
-        $receivableBalances = []; // مصفوفة لتخزين رصيد الشركات لكل يوم
-        $payableBalances = [];    // مصفوفة لتخزين رصيد الجهات لكل يوم
-        $dailyEventDetails = []; // *** مصفوفة جديدة لتخزين تفاصيل الأحداث لكل يوم ***
-        // نستخدم نفس الفترة الزمنية $period المحسوبة لرسم الحجوزات اليومية (السطر 96)
-        foreach ($period as $date) {
-            $formattedDate = $date->format('Y-m-d'); // تاريخ اليوم YYYY-MM-DD
-            $chartLabelDate = $date->format('d/m'); // التاريخ اللي بيظهر تحت في الرسم d/m
-            $eventsTodayDetails = []; // لتجميع تفاصيل أحداث اليوم الحالي
-
-            // لو فيه أحداث حصلت في اليوم ده
-            if (isset($allEventsWithDetails[$formattedDate])) {
-                // (اختياري) ممكن نرتب الأحداث جوه اليوم لو حابب (مثلاً الحجوزات قبل الدفعات)
-                // usort($allEventsWithDetails[$formattedDate], function($a, $b) { ... });
-
-                // نمشي على أحداث اليوم ده
-                foreach ($allEventsWithDetails[$formattedDate] as $event) {
-                    // نحدث الأرصدة التراكمية
-                    $runningReceivables += $event['company_change'];
-                    $runningPayables += $event['agent_change'];
-                    // نضيف تفاصيل الحدث ده لقائمة أحداث اليوم
-                    $eventsTodayDetails[] = $event['details'];
-                }
-            }
-
-            // نخزن الرصيد في نهاية اليوم (حتى لو مفيش أحداث، الرصيد هو نفسه بتاع اليوم اللي قبله)
-            $receivableBalances[] = round(max(0, $runningReceivables), 2); // نتأكد إن الرصيد مش سالب
-            $payableBalances[] = round(max(0, $runningPayables), 2);    // نتأكد إن الرصيد مش سالب
-            // *** نخزن قايمة تفاصيل أحداث اليوم ده في المصفوفة الجديدة ***
-            // هنستخدم التاريخ اللي بيظهر في الرسم (d/m) كمفتاح عشان نلاقيها بسهولة في الجافاسكريبت
-            $dailyEventDetails[$chartLabelDate] = $eventsTodayDetails;
-        }
-        // --- *** نهاية: تعديل حساب بيانات الرسم البياني وتفاصيل الأحداث *** ---
-
-
-
-
-
-
-        // إشعار خفيف على آخر شيء تم عليه تعديل 
-        // في نهاية دالة daily
+        // إشعارات التعديلات على الشركات (آخر يومين)
         $recentCompanyEdits = \App\Models\Notification::whereIn('type', [
             'تعديل',
             'تعديل دفعة',
@@ -239,106 +151,31 @@ class ReportController extends Controller
             ->where('created_at', '>=', now()->subDays(2))
             ->get()
             ->groupBy('message');
+
+        // إشعارات التعديلات على الوكلاء (آخر يومين)
         $resentAgentEdits = \App\Models\Notification::whereIn('type', [
             'تعديل',
             'تعديل دفعة',
             'دفعة جديدة',
-            'حذف دفعة' ,
+            'حذف دفعة',
             'خصم مطبق'
         ])
             ->where('created_at', '>=', now()->subDays(2))
             ->get()
             ->groupBy('message');
 
-        // --- *** بداية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
-        // 1. جلب دفعات الشركات بالعملات المختلفة
-        $companyPaymentsSAR = Payment::select('payment_date as date', 'amount')
-            ->where('currency', 'SAR')
-            ->orderBy('date', 'asc')
-            ->get();
+        // ===================================
+        // 💱 حسابات العملات المختلفة
+        // ===================================
 
-        $companyPaymentsKWD = Payment::select('payment_date as date', 'amount')
-            ->where('currency', 'KWD')
-            ->orderBy('date', 'asc')
-            ->get();
-
-        // 2. جلب دفعات الوكلاء بالعملات المختلفة
-        $agentPaymentsSAR = AgentPayment::select('payment_date as date', DB::raw('-amount as amount'))
-            ->where('currency', 'SAR')
-            ->orderBy('date', 'asc')
-            ->get();
-
-        $agentPaymentsKWD = AgentPayment::select('payment_date as date', DB::raw('-amount as amount'))
-            ->where('currency', 'KWD')
-            ->orderBy('date', 'asc')
-            ->get();
-
-        // 3. حساب المتغيرات لكل عملة
-        // --- الريال السعودي (نحافظ على الكود الأصلي للتوافق) ---
-        $allTransactions = $companyPaymentsSAR->concat($agentPaymentsSAR);
-        $sortedTransactions = $allTransactions->sortBy('date');
-
-        $runningBalance = 0;
-        $netBalanceData = []; // مصفوفة للريال السعودي
-
-        foreach ($sortedTransactions as $transaction) {
-            $dateString = Carbon::parse($transaction->date)->format('Y-m-d');
-            $runningBalance += $transaction->amount;
-            $netBalanceData[$dateString] = $runningBalance;
-        }
-
-        // --- الدينار الكويتي (إضافة كود جديد) ---
-        $allTransactionsKWD = $companyPaymentsKWD->concat($agentPaymentsKWD);
-        $sortedTransactionsKWD = $allTransactionsKWD->sortBy('date');
-
-        $runningBalanceKWD = 0;
-        $netBalanceDataKWD = []; // مصفوفة جديدة للدينار الكويتي
-
-        foreach ($sortedTransactionsKWD as $transaction) {
-            $dateString = Carbon::parse($transaction->date)->format('Y-m-d');
-            $runningBalanceKWD += $transaction->amount;
-            $netBalanceDataKWD[$dateString] = $runningBalanceKWD;
-        }
-
-        // 4. تجهيز المصفوفات النهائية
-        $netBalanceDates = []; // مصفوفة التواريخ المشتركة
-        $netBalances = [];     // للريال (متوافق مع الكود القديم)
-        $netBalancesKWD = [];  // للدينار (جديدة)
-
-        // دمج وترتيب كل التواريخ الفريدة من كلتا العملتين
-        $allDates = array_unique(array_merge(array_keys($netBalanceData), array_keys($netBalanceDataKWD)));
-        sort($allDates);
-
-        // ملء البيانات بشكل متزامن
-        $lastBalanceSAR = 0;
-        $lastBalanceKWD = 0;
-
-        foreach ($allDates as $date) {
-            $netBalanceDates[] = Carbon::parse($date)->format('d/m');
-
-            // للريال السعودي
-            if (isset($netBalanceData[$date])) {
-                $lastBalanceSAR = $netBalanceData[$date];
-            }
-            $netBalances[] = round($lastBalanceSAR, 2);
-
-            // للدينار الكويتي
-            if (isset($netBalanceDataKWD[$date])) {
-                $lastBalanceKWD = $netBalanceDataKWD[$date];
-            }
-            $netBalancesKWD[] = round($lastBalanceKWD, 2);
-        }
-
-        // --- *** نهاية: حساب بيانات الرسم البياني لصافي الرصيد *** ---
-
+        // حساب المدفوعات حسب العملة للشركات
         $companyPaymentsByCurrency = [];
-
         $companyPaymentsData = Payment::select(
             'currency',
             DB::raw('SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid'),
             DB::raw('SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_discounts')
         )
-            ->whereNotNull('company_id')  // ✅ فقط المدفوعات المرتبطة بالشركات
+            ->whereNotNull('company_id')  // فقط المدفوعات المرتبطة بالشركات
             ->groupBy('currency')
             ->get();
 
@@ -349,13 +186,18 @@ class ReportController extends Controller
             ];
         }
 
-        // حساب المدفوعات حسب العملة للوكلاء
-        $agentPaymentsByCurrency = AgentPayment::select('currency', DB::raw('SUM(amount) as total'))
-            ->groupBy('currency')
-            ->get()
-            ->pluck('total', 'currency')
-            ->toArray();
-        // تصنيف الحجوزات حسب العملة للشركات
+        // // حساب المدفوعات حسب العملة للوكلاء (بسيط)
+        // $agentPaymentsByCurrency = AgentPayment::select('currency', DB::raw('SUM(amount) as total'))
+        //     ->groupBy('currency')
+        //     ->get()
+        //     ->pluck('total', 'currency')
+        //     ->toArray();
+
+        // ===================================
+        // 📈 تصنيف الحجوزات حسب العملة
+        // ===================================
+
+        // تصنيف حجوزات الشركات حسب العملة
         $bookingsByCompanyCurrency = Booking::select(
             'company_id',
             'currency',
@@ -365,7 +207,7 @@ class ReportController extends Controller
             ->groupBy('company_id', 'currency')
             ->get();
 
-        // تصنيف الحجوزات حسب العملة للجهات
+        // تصنيف حجوزات الوكلاء حسب العملة
         $bookingsByAgentCurrency = Booking::select(
             'agent_id',
             'currency',
@@ -375,35 +217,31 @@ class ReportController extends Controller
             ->groupBy('agent_id', 'currency')
             ->get();
 
-        // تخزين إجمالي المستحقات حسب العملة
-        $totalDueFromCompaniesByCurrency = [
-            'SAR' => 0,
-            'KWD' => 0
-        ];
+        // ===================================
+        // 💰 إجماليات المستحقات حسب العملة
+        // ===================================
 
-        $totalDueToAgentsByCurrency = [
-            'SAR' => 0,
-            'KWD' => 0
-        ];
-        $totalRemainingToAgentsByCurrency = [
-            'SAR' => 0,
-            'KWD' => 0
-        ];
+        // تهيئة مصفوفات الإجماليات
+        $totalDueFromCompaniesByCurrency = ['SAR' => 0, 'KWD' => 0];
+        $totalDueToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
+        $totalRemainingToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
 
-        // تجميع إجماليات الحجوزات حسب العملة
+        // تجميع إجماليات حجوزات الشركات
         foreach ($bookingsByCompanyCurrency as $booking) {
             $totalDueFromCompaniesByCurrency[$booking->currency] += $booking->total_due;
         }
 
+        // تجميع إجماليات حجوزات الوكلاء
         foreach ($bookingsByAgentCurrency as $booking) {
             $totalDueToAgentsByCurrency[$booking->currency] += $booking->total_due;
         }
 
+        // ===================================
+        // 🧮 حساب المتبقي حسب العملة
+        // ===================================
+
         // حساب المتبقي من الشركات حسب العملة
-        $totalRemainingByCurrency = [
-            'SAR' => 0,
-            'KWD' => 0,
-        ];
+        $totalRemainingByCurrency = ['SAR' => 0, 'KWD' => 0];
         foreach ($companiesReport as $company) {
             $remainingByCurrency = $company->remaining_by_currency ?? [
                 'SAR' => $company->remaining,
@@ -413,11 +251,8 @@ class ReportController extends Controller
             }
         }
 
-        // حساب المتبقي للجهات حسب العملة
-        $agentRemainingByCurrency = [
-            'SAR' => 0,
-            'KWD' => 0,
-        ];
+        // حساب المتبقي للوكلاء حسب العملة
+        $agentRemainingByCurrency = ['SAR' => 0, 'KWD' => 0];
         foreach ($agentsReport as $agent) {
             $agentTotals = $agent->getTotalsByCurrency();
             foreach ($agentTotals as $currency => $data) {
@@ -427,9 +262,13 @@ class ReportController extends Controller
                 }
             }
         }
-        // حساب المدفوعات حسب العملة للوكلاء (للعرض في الجدول)
-        $agentPaymentsByCurrency = [];
 
+        // ===================================
+        // 📊 مدفوعات الوكلاء التفصيلية
+        // ===================================
+
+        // حساب المدفوعات حسب العملة للوكلاء (للعرض في الجداول)
+        $agentPaymentsByCurrency = [];
         $agentPaymentsData = AgentPayment::select(
             'currency',
             DB::raw('SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid'),
@@ -440,60 +279,324 @@ class ReportController extends Controller
 
         foreach ($agentPaymentsData as $payment) {
             $agentPaymentsByCurrency[$payment->currency] = [
-                'paid' => $payment->total_paid,
-                'discounts' => $payment->total_discounts
+                'paid' => (float) $payment->total_paid,
+                'discounts' => (float) $payment->total_discounts
             ];
         }
-        // إضافة متغير منفصل للمدفوعات البسيطة (للعرض في الملخص)
+        // إضافة العملات الافتراضية لضمان وجود المفاتيح دائمًا
+foreach (['SAR', 'KWD'] as $currency) {
+    if (!isset($agentPaymentsByCurrency[$currency])) {
+        $agentPaymentsByCurrency[$currency] = [
+            'paid' => 0,
+            'discounts' => 0
+        ];
+    }
+}
+        // متغير منفصل للمدفوعات البسيطة (للملخص)
         $totalPaidToAgentsByCurrency = [];
         foreach ($agentPaymentsData as $payment) {
             $totalPaidToAgentsByCurrency[$payment->currency] = $payment->total_paid;
         }
 
+        // ===================================
+        // 💹 حساب صافي الربح حسب العملة
+        // ===================================
 
-
-
-        // حساب صافي الربح حسب العملة
         $netProfitByCurrency = [
             'SAR' => $totalRemainingByCurrency['SAR'] - $agentRemainingByCurrency['SAR'],
             'KWD' => $totalRemainingByCurrency['KWD'] - $agentRemainingByCurrency['KWD'],
         ];
 
-        // رجع كل البيانات للواجهة اليومية
-        return view('reports.daily', compact(
-            'todayBookings',
-            'companiesReport',
-            'agentsReport',
-            'hotelsReport',
-            'totalDueFromCompanies',
-            'totalPaidToHotels',
-            'totalRemainingFromCompanies',
-            'totalRemainingToAgentsByCurrency',
-            'totalRemainingToHotels',
-            'netProfit',
-            'recentCompanyEdits', // إشعار خفيف على آخر شركة تم عليها تعديل
-            'resentAgentEdits', // إشعار خفيف على آخر جهة حجز تم عليه تعديل
-            'chartDates',       // <-- *** تمرير مصفوفة التواريخ للرسم ***
-            'bookingCounts',    // <-- *** تمرير مصفوفة عدد الحجوزات للرسم ***
-            'receivableBalances', // <-- مصفوفة رصيد الشركات (الخط الأخضر)
-            'payableBalances',    // <-- مصفوفة رصيد الجهات (الخط الأحمر)
-            'dailyEventDetails',
-            'companyPaymentsByCurrency',  // المدفوعات حسب العملة للشركات
-            'agentPaymentsByCurrency',    // المدفوعات حسب العملة للوكلاء
-            'totalDueFromCompaniesByCurrency', // إجمالي المستحقات حسب العملة للشركات
-            'totalDueToAgentsByCurrency', // إجمالي المستحقات حسب العملة للجهات
-            'totalPaidToAgentsByCurrency',
-            'totalRemainingByCurrency',
-            'agentRemainingByCurrency',
-            'netProfitByCurrency',
-            'netBalanceDates',
-            'netBalances',      // للريال (الحفاظ عليه للتوافق)
-            'netBalancesKWD',   // للدينار (جديد)
-            'dailyEventDetails',
-            // 'netBalanceDates',
-        ));
+        // ===================================
+        // 📤 إرجاع البيانات للواجهة
+        // ===================================
+
+        return view('reports.daily', [
+            // البيانات الأساسية
+            'todayBookings' => $todayBookings,
+            'companiesReport' => $companiesReport,
+            'agentsReport' => $agentsReport,
+            'hotelsReport' => $hotelsReport,
+
+            // الإجماليات المالية
+            'totalDueFromCompanies' => $totalDueFromCompanies,
+            'totalPaidToHotels' => $totalPaidToHotels,
+            'totalRemainingFromCompanies' => $totalRemainingFromCompanies,
+            'totalRemainingToAgentsByCurrency' => $totalRemainingToAgentsByCurrency,
+            'totalRemainingToHotels' => $totalRemainingToHotels,
+            'netProfit' => $netProfit,
+
+            // الإشعارات
+            'recentCompanyEdits' => $recentCompanyEdits,
+            'resentAgentEdits' => $resentAgentEdits,
+
+            // بيانات الرسوم البيانية (من الدالة المنفصلة)
+            'chartDates' => $chartData['chartDates'],
+            'bookingCounts' => $chartData['bookingCounts'],
+            'receivableBalances' => $chartData['receivableBalances'],
+            'payableBalances' => $chartData['payableBalances'],
+            'dailyEventDetails' => $chartData['dailyEventDetails'],
+            'netBalanceDates' => $chartData['netBalanceDates'],
+            'netBalances' => $chartData['netBalances'],
+            'netBalancesKWD' => $chartData['netBalancesKWD'],
+
+            // بيانات العملات والمدفوعات
+            'companyPaymentsByCurrency' => $companyPaymentsByCurrency,
+            'agentPaymentsByCurrency' => $agentPaymentsByCurrency,
+            'totalDueFromCompaniesByCurrency' => $totalDueFromCompaniesByCurrency,
+            'totalDueToAgentsByCurrency' => $totalDueToAgentsByCurrency,
+            'totalPaidToAgentsByCurrency' => $totalPaidToAgentsByCurrency,
+            'totalRemainingByCurrency' => $totalRemainingByCurrency,
+            'agentRemainingByCurrency' => $agentRemainingByCurrency,
+            'netProfitByCurrency' => $netProfitByCurrency
+        ]);
     }
 
+    /**
+     * دالة منفصلة لحساب بيانات الرسم البياني
+     */
+    private function getDailyChartData()
+    {
+        // --- بيانات الحجوزات اليومية ---
+        $days = 30;
+        $endDate = Carbon::now()->endOfDay();
+        $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
+        $dateField = 'created_at';
+
+        // جلب عدد الحجوزات مجمعة حسب اليوم
+        $bookingsData = Booking::select(
+            DB::raw("DATE($dateField) as date"),
+            DB::raw('COUNT(*) as count')
+        )
+            ->whereBetween($dateField, [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date', 'ASC')
+            ->pluck('count', 'date');
+
+        // إنشاء فترة زمنية كاملة
+        $period = CarbonPeriod::create($startDate, $endDate);
+        $chartDates = [];
+        $bookingCounts = [];
+
+        foreach ($period as $date) {
+            $formattedDate = $date->format('Y-m-d');
+            $chartDates[] = $date->format('d/m');
+            $bookingCounts[] = $bookingsData[$formattedDate] ?? 0;
+        }
+
+        // --- بيانات مفصلة للأحداث ---
+        $eventsData = $this->getDetailedEventsData($startDate, $endDate, $period);
+
+        // --- بيانات صافي الرصيد ---
+        $netBalanceData = $this->getNetBalanceData();
+
+        return [
+            'chartDates' => $chartDates,
+            'bookingCounts' => $bookingCounts,
+            'receivableBalances' => $eventsData['receivableBalances'],
+            'payableBalances' => $eventsData['payableBalances'],
+            'dailyEventDetails' => $eventsData['dailyEventDetails'],
+            'netBalanceDates' => $netBalanceData['dates'],
+            'netBalances' => $netBalanceData['sar'],
+            'netBalancesKWD' => $netBalanceData['kwd'],
+        ];
+    }
+
+    /**
+     * دالة لحساب الأحداث المفصلة
+     */
+    private function getDetailedEventsData($startDate, $endDate, $period)
+    {
+        // جلب الحجوزات مع تفاصيلها
+        $bookingsForChart = Booking::with(['company', 'agent', 'hotel'])
+            ->select(
+                'check_in',
+                'client_name',
+                'company_id',
+                'agent_id',
+                'hotel_id',
+                DB::raw('sale_price * rooms * days as company_due'),
+                DB::raw('cost_price * rooms * days as agent_due')
+            )
+            ->whereBetween('check_in', [$startDate, $endDate])
+            ->orderBy('check_in', 'asc')
+            ->get();
+
+        // جلب دفعات الشركات
+        $companyPaymentsForChart = Payment::with('company')
+            ->select('payment_date', 'amount', 'company_id', 'notes')
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->orderBy('payment_date', 'asc')
+            ->get();
+
+        // جلب دفعات الوكلاء
+        $agentPaymentsForChart = AgentPayment::with('agent')
+            ->select('payment_date', 'amount', 'agent_id', 'notes')
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->orderBy('payment_date', 'asc')
+            ->get();
+
+        // تجميع الأحداث
+        $allEventsWithDetails = [];
+
+        // معالجة الحجوزات
+        foreach ($bookingsForChart as $booking) {
+            $eventDate = Carbon::parse($booking->check_in)->format('Y-m-d');
+            $allEventsWithDetails[$eventDate][] = [
+                'type' => 'booking',
+                'company_change' => $booking->company_due,
+                'agent_change' => $booking->agent_due,
+                'details' => "حجز: " . Str::limit($booking->client_name ?? 'N/A', 15)
+                    . " (+" . number_format($booking->company_due) . " ش)"
+                    . " (+" . number_format($booking->agent_due) . " ج)"
+            ];
+        }
+
+        // معالجة دفعات الشركات
+        foreach ($companyPaymentsForChart as $payment) {
+            $eventDate = Carbon::parse($payment->payment_date)->format('Y-m-d');
+            $allEventsWithDetails[$eventDate][] = [
+                'type' => 'company_payment',
+                'company_change' => -$payment->amount,
+                'agent_change' => 0,
+                'details' => "دفعة من: " . Str::limit($payment->company->name ?? 'N/A', 10)
+                    . " (-" . number_format($payment->amount) . " ش)"
+                    . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "")
+            ];
+        }
+
+        // معالجة دفعات الوكلاء
+        foreach ($agentPaymentsForChart as $payment) {
+            $eventDate = Carbon::parse($payment->payment_date)->format('Y-m-d');
+            $allEventsWithDetails[$eventDate][] = [
+                'type' => 'agent_payment',
+                'company_change' => 0,
+                'agent_change' => -$payment->amount,
+                'details' => "دفعة إلى: " . Str::limit($payment->agent->name ?? 'N/A', 10)
+                    . " (-" . number_format($payment->amount) . " ج)"
+                    . ($payment->notes ? " - " . Str::limit($payment->notes, 10) : "")
+            ];
+        }
+
+        // حساب الأرصدة التراكمية
+        $runningReceivables = 0;
+        $runningPayables = 0;
+        $receivableBalances = [];
+        $payableBalances = [];
+        $dailyEventDetails = [];
+
+        foreach ($period as $date) {
+            $formattedDate = $date->format('Y-m-d');
+            $chartLabelDate = $date->format('d/m');
+            $eventsTodayDetails = [];
+
+            if (isset($allEventsWithDetails[$formattedDate])) {
+                foreach ($allEventsWithDetails[$formattedDate] as $event) {
+                    $runningReceivables += $event['company_change'];
+                    $runningPayables += $event['agent_change'];
+                    $eventsTodayDetails[] = $event['details'];
+                }
+            }
+
+            $receivableBalances[] = round(max(0, $runningReceivables), 2);
+            $payableBalances[] = round(max(0, $runningPayables), 2);
+            $dailyEventDetails[$chartLabelDate] = $eventsTodayDetails;
+        }
+
+        return [
+            'receivableBalances' => $receivableBalances,
+            'payableBalances' => $payableBalances,
+            'dailyEventDetails' => $dailyEventDetails
+        ];
+    }
+
+    /**
+     * دالة لحساب بيانات صافي الرصيد
+     */
+    private function getNetBalanceData()
+    {
+        // جلب دفعات الشركات بالعملات المختلفة
+        $companyPaymentsSAR = Payment::select('payment_date as date', 'amount')
+            ->where('currency', 'SAR')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        $companyPaymentsKWD = Payment::select('payment_date as date', 'amount')
+            ->where('currency', 'KWD')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        // جلب دفعات الوكلاء
+        $agentPaymentsSAR = AgentPayment::select('payment_date as date', DB::raw('-amount as amount'))
+            ->where('currency', 'SAR')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        $agentPaymentsKWD = AgentPayment::select('payment_date as date', DB::raw('-amount as amount'))
+            ->where('currency', 'KWD')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        // حساب للريال السعودي
+        $allTransactionsSAR = $companyPaymentsSAR->concat($agentPaymentsSAR);
+        $sortedTransactionsSAR = $allTransactionsSAR->sortBy('date');
+
+        $runningBalanceSAR = 0;
+        $netBalanceDataSAR = [];
+
+        foreach ($sortedTransactionsSAR as $transaction) {
+            $dateString = Carbon::parse($transaction->date)->format('Y-m-d');
+            $runningBalanceSAR += $transaction->amount;
+            $netBalanceDataSAR[$dateString] = $runningBalanceSAR;
+        }
+
+        // حساب للدينار الكويتي
+        $allTransactionsKWD = $companyPaymentsKWD->concat($agentPaymentsKWD);
+        $sortedTransactionsKWD = $allTransactionsKWD->sortBy('date');
+
+        $runningBalanceKWD = 0;
+        $netBalanceDataKWD = [];
+
+        foreach ($sortedTransactionsKWD as $transaction) {
+            $dateString = Carbon::parse($transaction->date)->format('Y-m-d');
+            $runningBalanceKWD += $transaction->amount;
+            $netBalanceDataKWD[$dateString] = $runningBalanceKWD;
+        }
+
+        // دمج التواريخ وتجهيز البيانات النهائية
+        $allDates = array_unique(array_merge(
+            array_keys($netBalanceDataSAR),
+            array_keys($netBalanceDataKWD)
+        ));
+        sort($allDates);
+
+        $netBalanceDates = [];
+        $netBalancesSAR = [];
+        $netBalancesKWD = [];
+
+        $lastBalanceSAR = 0;
+        $lastBalanceKWD = 0;
+
+        foreach ($allDates as $date) {
+            $netBalanceDates[] = Carbon::parse($date)->format('d/m');
+
+            if (isset($netBalanceDataSAR[$date])) {
+                $lastBalanceSAR = $netBalanceDataSAR[$date];
+            }
+            $netBalancesSAR[] = round($lastBalanceSAR, 2);
+
+            if (isset($netBalanceDataKWD[$date])) {
+                $lastBalanceKWD = $netBalanceDataKWD[$date];
+            }
+            $netBalancesKWD[] = round($lastBalanceKWD, 2);
+        }
+
+        return [
+            'dates' => $netBalanceDates,
+            'sar' => $netBalancesSAR,
+            'kwd' => $netBalancesKWD
+        ];
+    }
     /**
      * عرض صفحة التقارير المتقدمة
      */

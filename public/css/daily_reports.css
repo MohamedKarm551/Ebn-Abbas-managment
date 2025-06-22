@@ -28,7 +28,8 @@
 }
 /* Chart Card الرئيسي */
 .chart-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
     border-radius: 24px;
     box-shadow: 
         0 20px 40px rgba(102, 126, 234, 0.3),
@@ -565,7 +566,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    /* background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%); */
+    background: linear-gradient(45deg, transparent 30%, rgb(0 0 0) 50%, transparent 70%);
     transform: translateX(-100%);
     animation: shimmer 3s ease-in-out infinite;
     pointer-events: none;
@@ -576,4 +578,351 @@
     100% { transform: translateX(100%); }
 }
 
- 
+ .collapse-card {
+    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.collapse-btn {
+    width: 100%;
+    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+    border: none;
+    color: white;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.collapse-btn:hover {
+    background: linear-gradient(120deg, #059669 60%, #1d4ed8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.collapse-btn-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.collapse-icon-wrapper {
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.collapse-title {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.collapse-subtitle {
+    font-size: 0.9em;
+    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.collapse-arrow {
+    transition: transform 0.3s ease;
+    color: white;
+}
+
+.collapse-btn[aria-expanded="true"] .collapse-arrow {
+    transform: rotate(180deg);
+}
+
+/* تصميم المحتوى */
+.collapse-content {
+    padding: 30px;
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+}
+
+.analysis-section, .profit-analysis-section, .risk-analysis-section {
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.section-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #10b981;
+    margin-bottom: 15px;
+    color: #1f2937;
+}
+
+.currency-analysis {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(37, 99, 235, 0.05));
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #10b981;
+    transition: all 0.3s ease;
+}
+
+.currency-analysis:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(37, 99, 235, 0.1));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.percentage-badge {
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9em;
+    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.percentage-badge.bg-success {
+    background: linear-gradient(120deg, #10b981 60%, #059669 100%) !important;
+}
+
+.percentage-badge.bg-warning {
+    background: linear-gradient(120deg, #f59e0b 60%, #d97706 100%) !important;
+}
+
+.percentage-badge.bg-danger {
+    background: linear-gradient(120deg, #ef4444 60%, #dc2626 100%) !important;
+}
+
+.progress-container {
+    position: relative;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.detail-label {
+    font-size: 0.9em;
+    color: #6b7280;
+}
+
+.detail-value {
+    font-weight: bold;
+    font-size: 0.95em;
+}
+
+.detail-value.text-success {
+    color: #10b981 !important;
+}
+
+.detail-value.text-info {
+    color: #2563eb !important;
+}
+
+.detail-value.text-warning {
+    color: #f59e0b !important;
+}
+
+.detail-value.text-danger {
+    color: #ef4444 !important;
+}
+
+/* كاردات الأرباح والمخاطر */
+.profit-card, .collection-card, .operations-card, .risk-card {
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);
+    height: 100%;
+    border: 1px solid rgba(16, 185, 129, 0.1);
+    transition: all 0.3s ease;
+}
+
+.profit-card:hover, .collection-card:hover, .operations-card:hover, .risk-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.2);
+}
+
+.profit-title, .collection-title, .operations-title, .risk-title {
+    font-size: 1em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.profit-item, .collection-item, .stat-item, .risk-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.profit-value, .collection-rate {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.profit-value.text-success, .collection-rate.text-success {
+    color: #10b981 !important;
+}
+
+.profit-value.text-danger, .collection-rate.text-danger {
+    color: #ef4444 !important;
+}
+
+.profit-value.text-warning, .collection-rate.text-warning {
+    color: #f59e0b !important;
+}
+
+.risk-item {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.8));
+    border-radius: 5px;
+    padding: 8px;
+    margin-bottom: 5px;
+    border-left: 3px solid #10b981;
+}
+
+/* تحديث شرائط التقدم */
+.progress-bar.bg-success {
+    background: linear-gradient(120deg, #10b981 60%, #059669 100%) !important;
+}
+
+.progress-bar.bg-warning {
+    background: linear-gradient(120deg, #f59e0b 60%, #d97706 100%) !important;
+}
+
+.progress-bar.bg-danger {
+    background: linear-gradient(120deg, #ef4444 60%, #dc2626 100%) !important;
+}
+
+/* تحديث الأيقونات والعناصر الملونة */
+.text-success {
+    color: #10b981 !important;
+}
+
+.text-primary {
+    color: #2563eb !important;
+}
+
+.text-warning {
+    color: #f59e0b !important;
+}
+
+.text-danger {
+    color: #ef4444 !important;
+}
+
+.bg-success {
+    background: linear-gradient(120deg, #10b981 60%, #059669 100%) !important;
+}
+
+.bg-primary {
+    background: linear-gradient(120deg, #2563eb 60%, #1d4ed8 100%) !important;
+}
+
+.bg-warning {
+    background: linear-gradient(120deg, #f59e0b 60%, #d97706 100%) !important;
+}
+
+.bg-danger {
+    background: linear-gradient(120deg, #ef4444 60%, #dc2626 100%) !important;
+}
+
+/* تحسينات الموبايل */
+@media (max-width: 768px) {
+    .collapse-content {
+        padding: 20px 15px;
+    }
+    
+    .collapse-title {
+        font-size: 1.1em;
+    }
+    
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .detail-value {
+        margin-top: 3px;
+    }
+    
+    .currency-analysis {
+        margin-bottom: 15px;
+    }
+    
+    .profit-card, .collection-card, .operations-card, .risk-card {
+        margin-bottom: 15px;
+    }
+}
+
+/* تأثيرات إضافية محسّنة */
+.collapse-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    transform: translateX(-100%);
+    pointer-events: none;
+    border-radius: 15px;
+}
+
+
+
+/* تحديث الأزرار والعناصر التفاعلية */
+.btn-success {
+    background: linear-gradient(120deg, #10b981 60%, #059669 100%) !important;
+    border-color: #10b981 !important;
+}
+
+.btn-primary {
+    background: linear-gradient(120deg, #2563eb 60%, #1d4ed8 100%) !important;
+    border-color: #2563eb !important;
+}
+
+.btn-warning {
+    background: linear-gradient(120deg, #f59e0b 60%, #d97706 100%) !important;
+    border-color: #f59e0b !important;
+}
+
+.btn-danger {
+    background: linear-gradient(120deg, #ef4444 60%, #dc2626 100%) !important;
+    border-color: #ef4444 !important;
+}
+
+/* تحديث الحدود والظلال */
+.border-success {
+    border-color: #10b981 !important;
+}
+
+.border-primary {
+    border-color: #2563eb !important;
+}
+
+.shadow-success {
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2) !important;
+}
+
+.shadow-primary {
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2) !important;
+}
