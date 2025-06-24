@@ -284,14 +284,14 @@ class ReportController extends Controller
             ];
         }
         // إضافة العملات الافتراضية لضمان وجود المفاتيح دائمًا
-foreach (['SAR', 'KWD'] as $currency) {
-    if (!isset($agentPaymentsByCurrency[$currency])) {
-        $agentPaymentsByCurrency[$currency] = [
-            'paid' => 0,
-            'discounts' => 0
-        ];
-    }
-}
+        foreach (['SAR', 'KWD'] as $currency) {
+            if (!isset($agentPaymentsByCurrency[$currency])) {
+                $agentPaymentsByCurrency[$currency] = [
+                    'paid' => 0,
+                    'discounts' => 0
+                ];
+            }
+        }
         // متغير منفصل للمدفوعات البسيطة (للملخص)
         $totalPaidToAgentsByCurrency = [];
         foreach ($agentPaymentsData as $payment) {
@@ -1785,4 +1785,38 @@ foreach (['SAR', 'KWD'] as $currency) {
             'links' => $links
         ]);
     }
+    
+/**
+ * عرض صفحة إنشاء سند القبض
+ */
+public function receiptVoucher()
+{
+    return view('reports.receipt-voucher');
+}
+
+/**
+ * إنشاء وتحميل سند القبض
+ */
+public function generateReceiptVoucher(Request $request)
+{
+    $validated = $request->validate([
+        'amount' => 'required|numeric|min:0.01',
+        'currency' => 'required|in:SAR,KWD',
+        'subject' => 'required|string|max:500',
+        'date_arabic' => 'required|string|max:100',
+        'date_english' => 'required|date',
+        'payer_name' => 'required|string|max:200',
+        'payment_method' => 'required|in:cash,check',
+        'check_number' => 'nullable|string|max:50',
+        'bank_name' => 'nullable|string|max:100',
+        'check_date' => 'nullable|date',
+        'receiver_signature' => 'required|string|max:100',
+        'accountant_signature' => 'required|string|max:100',
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'data' => $validated
+    ]);
+}
 }

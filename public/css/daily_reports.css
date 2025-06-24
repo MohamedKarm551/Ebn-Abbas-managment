@@ -2,14 +2,19 @@
 /* تنسيق الجدول على الشاشات الصغيرة */
 @media (max-width: 768px) {
 
-    /* نعدل حجم الخط داخل الجدول عشان يكون أصغر ومناسب */
-    .table-responsive table {
-        font-size: 14px;
-    }
+.chart-card,
+.collapse-card,
+.modern-header {
+  position: relative;
+  overflow: hidden;
+}
 
     /* لو محتاجين نحدد عرض أدنى للجدول علشان تظهر الأعمدة كلها */
     .table-responsive table {
-        min-width: 600px;
+           font-size: 14px;
+    /* remove the old min-width */
+    min-width: 0;
+    width: 100%;
     }
 
     /* تقليل الحشوة في خلايا الجدول */
@@ -28,6 +33,8 @@
 }
 /* Chart Card الرئيسي */
 .chart-card {
+    position: relative;
+    overflow: hidden;
     /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
     background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
     border-radius: 24px;
@@ -53,6 +60,7 @@
     left: 0;
     right: 0;
     bottom: 0;
+     pointer-events: none;
     background: linear-gradient(
         45deg,
         rgba(255, 255, 255, 0.1) 0%,
@@ -64,8 +72,8 @@
 }
 
 @keyframes gradientShift {
-    0%, 100% { transform: translateX(-100%) rotate(0deg); }
-    50% { transform: translateX(100%) rotate(180deg); }
+    0%   { transform: translateX(-100%) rotate(0deg); }
+    100% { transform: translateX(0)      rotate(180deg); }
 }
 
 /* Chart Header */
@@ -187,7 +195,7 @@
 
 .indicator-text {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: #1bb984;
     font-weight: 500;
 }
 
@@ -200,6 +208,8 @@
     position: relative;
     height: 400px;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box; /* مهم جداً */
     background: rgba(255, 255, 255, 0.95);
     border-radius: 16px;
     padding: 1rem;
@@ -208,9 +218,11 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.main-chart {
-    width: 100% !important;
+.main-chart,
+.secondary-chart {
+   width: 100% !important;
     height: 100% !important;
+    max-width: 100% !important; /* إضافة */
 }
 
 /* Loading Animation */
@@ -335,7 +347,7 @@
     line-height: 1.5;
 }
 
-/* Quick Stats */
+/* Quick Stats - تحديث الألوان */
 .quick-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -343,20 +355,22 @@
 }
 
 .stat-card {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 12px;
     padding: 1rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .stat-card:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 1);
     transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .stat-icon {
@@ -397,16 +411,168 @@
 
 .stat-label {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: #6b7280; /* رمادي متوسط للتسميات */
     font-weight: 500;
 }
 
 .stat-value {
     font-size: 1rem;
-    color: white;
+    color: #1f2937; /* أسود داكن للقيم */
     font-weight: 700;
 }
 
+/* تحديث ألوان Chart Indicators */
+.chart-indicators {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 15px;
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.indicator-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.indicator-item:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
+}
+
+.indicator-text {
+    font-size: 0.85rem;
+    color: #1bb984; /* أسود رمادي للنص */
+    font-weight: 500;
+}
+
+/* تحديث ألوان Chart Description */
+.chart-description {
+    background: rgba(248, 250, 252, 0.8) !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.chart-description i {
+    color: #10b981 !important;
+}
+
+.chart-description span {
+    color: #374151 !important; /* أسود رمادي للنص */
+    font-weight: 500;
+}
+
+/* تحديث ألوان Chart Controls */
+.chart-control-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.chart-control-btn:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+/* Responsive للموبايل */
+@media (max-width: 768px) {
+    .quick-stats {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .chart-indicators {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 12px;
+    }
+    
+    .indicator-item {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .stat-card {
+        padding: 12px;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .stat-card {
+        background: rgba(31, 41, 55, 0.9);
+        border-color: rgba(75, 85, 99, 0.3);
+    }
+    
+    .stat-card:hover {
+        background: rgba(31, 41, 55, 1);
+    }
+    
+    .stat-label {
+        color: #9ca3af;
+    }
+    
+    .stat-value {
+        color: #f9fafb;
+    }
+    
+    .indicator-item {
+        background: rgba(31, 41, 55, 0.8);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .indicator-item:hover {
+        background: rgba(31, 41, 55, 1);
+    }
+    
+    .indicator-text {
+        color: #1bb984;
+    }
+    
+    .chart-indicators {
+        background: rgba(17, 24, 39, 0.8);
+        border-color: rgba(75, 85, 99, 0.3);
+    }
+    
+    .chart-description {
+        background: rgba(17, 24, 39, 0.8) !important;
+        border-color: rgba(16, 185, 129, 0.3) !important;
+    }
+    
+    .chart-description span {
+        color: #d1d5db !important;
+    }
+    
+    .chart-control-btn {
+        background: rgba(31, 41, 55, 0.9);
+        border-color: rgba(75, 85, 99, 0.3);
+        color: #d1d5db;
+    }
+    
+    .chart-control-btn:hover {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+}
 /* Collapse Card للدينار */
 .collapse-card {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -486,7 +652,10 @@
 }
 
 .chart-container-secondary {
-    height: 300px;
+    height: 400px;
+    width: 100%; /* هذا يسبب المشكلة مع الـ padding من .row */
+    max-width: 100%; /* إضافة هذا */
+    box-sizing: border-box; /* مهم جداً */
     background: rgba(255, 255, 255, 0.95);
     border-radius: 12px;
     padding: 1rem;
@@ -575,7 +744,7 @@
 
 @keyframes shimmer {
     0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+    100% { transform: translateX(0); }
 }
 
  .collapse-card {

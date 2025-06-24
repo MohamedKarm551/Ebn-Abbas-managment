@@ -203,6 +203,10 @@ Route::middleware(['auth'])->group(function () {
         // إدارة أنواع الغرف والإتاحات
         Route::resource('room_types', RoomTypeController::class);
         Route::resource('availabilities', AvailabilityController::class);
+        // إضافة مسار سند القبض
+        Route::get('/receipt-voucher', [ReportController::class, 'receiptVoucher'])->name('receipt.voucher');
+        Route::post('/receipt-voucher/generate', [ReportController::class, 'generateReceiptVoucher'])->name('receipt.voucher.generate');
+        
     });
 
     /*

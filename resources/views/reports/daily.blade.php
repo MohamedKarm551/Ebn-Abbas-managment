@@ -65,7 +65,7 @@
         </div>
  --}}
         <!-- جدول الشركات -->
-        <div class="  mb-4">
+        <div class="card  mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>حساب المطلوب من الشركات</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTable')">نسخ الجدول</button>
@@ -402,7 +402,7 @@
         </div>
 
         <!-- جدول جهات الحجز -->
-        <div class="mb-4">
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>حساب المستحق إلى جهات الحجز</h3>
                 <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTable')">نسخ الجدول</button>
@@ -684,6 +684,7 @@
 
 
         <!-- نماذج تسجيل الدفعات لجهات الحجز -->
+        <div class="row">
         @foreach ($agentsReport as $agent)
             <!-- نموذج الدفعة العادية -->
             <div class="modal fade" id="agentPaymentModal{{ $agent->id }}" tabindex="-1">
@@ -768,7 +769,7 @@
                 </div>
             </div>
         @endforeach
-
+            </div>
         <!-- إضافة سكريبت  النسخ والخصم -->
         @push('scripts')
             <script>
@@ -831,6 +832,7 @@
                             <div class="modal-body">
                                 <div class="mb-3">
                                     <label class="form-label">المبلغ المدفوع والعملة</label>
+                                    <div> قم بعمل سند قبض لهذه العملية : <a href="{{ route('admin.receipt.voucher') }}" target="_blank">إنشاء سند قبض</a></div>
                                     <div class="input-group">
                                         <input type="number" step="0.01" class="form-control" name="amount"
                                             required>
