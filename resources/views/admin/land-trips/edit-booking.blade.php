@@ -18,35 +18,35 @@
             border-radius: 15px 15px 0 0;
             margin-bottom: 0;
             background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
-      
-        
-          
+
+
+
             position: relative;
             overflow: hidden;
         }
-        
- .booking-header::before {
-     content: '';
-     position: absolute;
-     top: -50%;
-     right: -50%;
-     width: 200%;
-     height: 200%;
-     background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-     animation: headerFloat 6s ease-in-out infinite;
- }
 
- @keyframes headerFloat {
+        .booking-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: headerFloat 6s ease-in-out infinite;
+        }
 
-     0%,
-     100% {
-         transform: translate(0, 0) rotate(0deg);
-     }
+        @keyframes headerFloat {
 
-     50% {
-         transform: translate(-20px, -20px) rotate(180deg);
-     }
- }
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            50% {
+                transform: translate(-20px, -20px) rotate(180deg);
+            }
+        }
 
         .booking-form {
             background: white;
@@ -214,6 +214,75 @@
                     <strong>العودة:</strong> {{ $landTrip->return_date->format('d/m/Y') }}
                 </div>
             </div>
+        </div>
+        {{-- قسم تغيير الرحلة --}}
+        <div class="trip-info mb-3" style="background: #fff3cd; border: 1px solid #ffeaa7;">
+            <h6 class="mb-3"><i class="fas fa-exchange-alt me-1"></i> تغيير الرحلة:</h6>
+
+            <form action="{{ route('admin.land-trips.change-booking-trip', $booking->id) }}" method="POST"
+                id="changeTripForm">
+                @csrf
+                @method('PUT')
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="new_land_trip_id" class="form-label">اختر رحلة جديدة</label>
+                        <select name="new_land_trip_id" id="new_land_trip_id" class="form-select">
+                            <option value="">-- اختر رحلة جديدة --</option>
+                            @foreach ($activeLandTrips as $trip)
+                                <option value="{{ $trip->id }}" {{ $trip->id == $landTrip->id ? 'selected' : '' }}>
+                                    {{ $trip->tripType->name }} - {{ $trip->hotel->name ?? 'غير محدد' }}
+                                    ({{ $trip->departure_date->format('d/m/Y') }} -
+                                    {{ $trip->return_date->format('d/m/Y') }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="new_room_type" class="form-label">نوع الغرفة</label>
+                        <select name="land_trip_room_price_id" id="new_room_type" class="form-select" disabled>
+                            <option value="">-- اختر نوع الغرفة --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="new_rooms" class="form-label">عدد الغرف</label>
+                        <input type="number" name="rooms" id="new_rooms" class="form-control"
+                            value="{{ $booking->rooms }}" min="1" disabled>
+                    </div>
+
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-warning me-2" id="changeTripBtn" disabled>
+                            <i class="fas fa-exchange-alt me-1"></i>
+                            تغيير الرحلة
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancelChangeBtn" style="display: none;">
+                            إلغاء
+                        </button>
+                    </div>
+                </div>
+
+                <div id="newTripCostDisplay" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <h6>تكلفة الرحلة الجديدة:</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>سعر التكلفة:</strong> <span id="newCostPrice">0.00</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>سعر البيع:</strong> <span id="newSalePrice">0.00</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>إجمالي التكلفة:</strong> <span id="newTotalCost">0.00</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>إجمالي البيع:</strong> <span id="newTotalSale">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
 
         {{-- نموذج التعديل --}}
@@ -474,6 +543,82 @@
                     return false;
                 }
             });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const newTripSelect = document.getElementById('new_land_trip_id');
+            const newRoomSelect = document.getElementById('new_room_type');
+            const newRoomsInput = document.getElementById('new_rooms');
+            const changeTripBtn = document.getElementById('changeTripBtn');
+            const newTripCostDisplay = document.getElementById('newTripCostDisplay');
+
+            // عند تغيير الرحلة الجديدة
+            newTripSelect.addEventListener('change', function() {
+                const tripId = this.value;
+
+                if (tripId && tripId != '{{ $landTrip->id }}') {
+                    // تصحيح المسار - استخدام route helper مع معامل landTrip
+                    fetch(`{{ route('admin.land-trips.room-types', ':tripId') }}`.replace(':tripId',
+                            tripId))
+                        .then(response => response.json())
+                        .then(data => {
+                            newRoomSelect.innerHTML = '<option value="">-- اختر نوع الغرفة --</option>';
+                            data.forEach(room => {
+                                const option = document.createElement('option');
+                                option.value = room.id;
+                                option.textContent =
+                                    `${room.room_type_name} - ${room.sale_price} ${room.currency}`;
+                                option.dataset.costPrice = room.cost_price;
+                                option.dataset.salePrice = room.sale_price;
+                                option.dataset.currency = room.currency;
+                                option.dataset.available = room.available || 'غير محدود';
+                                newRoomSelect.appendChild(option);
+                            });
+
+                            newRoomSelect.disabled = false;
+                            newRoomsInput.disabled = false;
+                        })
+                        .catch(error => {
+                            console.error('خطأ في جلب أنواع الغرف:', error);
+                            alert('حدث خطأ في جلب أنواع الغرف');
+                        });
+                } else {
+                    newRoomSelect.innerHTML = '<option value="">-- اختر نوع الغرفة --</option>';
+                    newRoomSelect.disabled = true;
+                    newRoomsInput.disabled = true;
+                    changeTripBtn.disabled = true;
+                    newTripCostDisplay.style.display = 'none';
+                }
+            });
+
+            // باقي الكود كما هو...
+            function updateNewTripCost() {
+                const selectedOption = newRoomSelect.options[newRoomSelect.selectedIndex];
+                const rooms = parseInt(newRoomsInput.value) || 0;
+
+                if (selectedOption.value && rooms > 0) {
+                    const costPrice = parseFloat(selectedOption.dataset.costPrice);
+                    const salePrice = parseFloat(selectedOption.dataset.salePrice);
+                    const currency = selectedOption.dataset.currency;
+
+                    document.getElementById('newCostPrice').textContent = `${costPrice.toFixed(2)} ${currency}`;
+                    document.getElementById('newSalePrice').textContent = `${salePrice.toFixed(2)} ${currency}`;
+                    document.getElementById('newTotalCost').textContent =
+                        `${(costPrice * rooms).toFixed(2)} ${currency}`;
+                    document.getElementById('newTotalSale').textContent =
+                        `${(salePrice * rooms).toFixed(2)} ${currency}`;
+
+                    newTripCostDisplay.style.display = 'block';
+                    changeTripBtn.disabled = false;
+                } else {
+                    newTripCostDisplay.style.display = 'none';
+                    changeTripBtn.disabled = true;
+                }
+            }
+
+            newRoomSelect.addEventListener('change', updateNewTripCost);
+            newRoomsInput.addEventListener('input', updateNewTripCost);
         });
     </script>
 @endpush

@@ -206,7 +206,6 @@ Route::middleware(['auth'])->group(function () {
         // إضافة مسار سند القبض
         Route::get('/receipt-voucher', [ReportController::class, 'receiptVoucher'])->name('receipt.voucher');
         Route::post('/receipt-voucher/generate', [ReportController::class, 'generateReceiptVoucher'])->name('receipt.voucher.generate');
-        
     });
 
     /*
@@ -321,6 +320,10 @@ Route::middleware(['auth'])->group(function () {
         //  مدفوعات الشركات والخصم
         Route::prefix('admin/company-payments')->name('admin.company-payments.')->group(function () {
             Route::get('/', [CompanyPaymentController::class, 'index'])->name('index');
+            // ✅ إضافة مسار التقارير المالية
+            Route::get('/reports', [CompanyPaymentController::class, 'reports'])->name('reports');
+            Route::get('/reports/data', [CompanyPaymentController::class, 'data'])->name('reports.data');
+
             Route::get('/{company}', [CompanyPaymentController::class, 'show'])->name('show');
             Route::get('/{company}/create', [CompanyPaymentController::class, 'create'])->name('create');
             Route::post('/{company}', [CompanyPaymentController::class, 'store'])->name('store');
@@ -386,7 +389,10 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
     Route::post('land-trips/{land_trip}/store-booking', [LandTripController::class, 'storeBooking'])->name('land-trips.store-booking');
     Route::get('land-trips/bookings/{booking}/edit', [LandTripController::class, 'editBooking'])->name('land-trips.bookings.edit');
     Route::put('land-trips/bookings/{booking}/update', [LandTripController::class, 'updateBooking'])->name('land-trips.update-booking');
+    Route::put('land-trips/bookings/{booking}/change-trip', [LandTripController::class, 'changeBookingTrip'])->name('land-trips.change-booking-trip');
+    Route::get('land-trips/{landTrip}/room-types', [LandTripController::class, 'getTripRoomTypes'])->name('land-trips.room-types');
     Route::get('land-trips/bookings/{booking}/voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.bookings.voucher');
+
 
     // تقارير العمليات
     Route::prefix('operation-reports')->name('operation-reports.')->group(function () {
