@@ -1,4 +1,4 @@
-<div class="d-flex flex-column flex-md-row align-items-center justify-content-between mb-4">
+<div class="card d-flex flex-column flex-md-row align-items-center justify-content-between mb-4">
     {{-- العنوان --}}
     <h1 class="mb-3 mb-md-0">التقرير اليومي</h1> {{-- شيلنا التاريخ من هنا --}}
     {{-- زر التقارير المتقدمة --}}
@@ -284,7 +284,7 @@
 
         {{-- ⚖️ صافي الرصيد الإجمالي --}}
         <hr class="my-4">
-        <div class="row">
+        <div class="row p-2">
             <div class="col-12">
                 <h5 class="text-center mb-3">
                     <i class="fas fa-balance-scale me-2"></i>

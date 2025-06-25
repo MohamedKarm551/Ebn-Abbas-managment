@@ -48,7 +48,7 @@
                                             <td class="text-center">
                                                 @foreach ($remainingByCurrency as $currency => $amount)
                                                     @if ($amount > 0)
-                                                        <span class="badge bg-danger me-1">
+                                                        <span class="badge bg-danger me-1 top-details">
                                                             {{ number_format($amount, 0) }}
                                                             {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
                                                         </span>

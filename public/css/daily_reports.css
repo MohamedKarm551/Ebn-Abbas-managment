@@ -1,20 +1,200 @@
- 
+* {
+    box-sizing: border-box;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+/* .container {
+    max-width: 100%;
+    overflow-x: hidden;
+    padding-left: 15px;
+    padding-right: 15px;
+} */
+
+/* إصلاح Bootstrap Flex Classes */
+.d-flex.flex-md-row {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* إصلاح Bootstrap Rows */
+.row {
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+}
+
+.row>* {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* إصلاح العناصر الكبيرة */
+.chart-card,
+.collapse-card,
+.card {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* إصلاح الجداول */
+.table-responsive {
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 0;
+}
+
+.table {
+    white-space: nowrap;
+    min-width: 600px;
+    margin-bottom: 0;
+}
+
+/* إصلاح Header Section */
+.modern-header {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.d-flex.align-items-center.justify-content-between {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+/* إصلاح Charts */
+.chart-container-enhanced,
+.chart-container-secondary {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden;
+}
+
+canvas {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+/* إصلاح Grid Layouts */
+.d-grid {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.amount-grid,
+.amount-item {
+    max-width: 100%;
+    word-wrap: break-word;
+}
+
+/* إصلاح Responsive Issues */
+@media (max-width: 1200px) {
+    .container {
+        max-width: 100% !important;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .row {
+        margin-left: -5px;
+        margin-right: -5px;
+    }
+
+    .row>* {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+}
+
+@media (max-width: 768px) {
+    .d-flex.flex-md-row {
+        flex-direction: column !important;
+    }
+
+    .table {
+        min-width: 500px;
+        font-size: 0.8rem;
+    }
+
+    .chart-card {
+        margin-left: -10px;
+        margin-right: -10px;
+        border-radius: 0;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .table {
+        min-width: 400px;
+        font-size: 0.75rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.3rem 0.2rem;
+    }
+}
+
+/* إصلاح مشاكل محددة */
+.badge {
+    word-break: break-word;
+    max-width: 100%;
+    /* لحل مشكلة تداخل النصوص */
+    font-size: 5px;
+    padding: 3px;
+    margin: -2px;
+}
+.badge.top-details,.badge.bg-danger ,.badge.bg-outline-danger,.badge.bg-warning ,.badge.bg-outline-warning ,.badge.bg-success ,.badge.bg-info  {
+    font-size: 10px;
+    padding: 5px;
+   
+
+}
+
+.btn-group,
+.d-grid.gap-2 {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* إصلاح المشكلة الرئيسية */
+.mb-4,
+.mt-5 {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* منع النصوص من الخروج */
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* تنسيق الجدول على الشاشات الصغيرة */
 @media (max-width: 768px) {
 
-.chart-card,
-.collapse-card,
-.modern-header {
-  position: relative;
-  overflow: hidden;
-}
+    .chart-card,
+    .collapse-card,
+    .modern-header {
+        position: relative;
+        overflow: hidden;
+    }
 
     /* لو محتاجين نحدد عرض أدنى للجدول علشان تظهر الأعمدة كلها */
     .table-responsive table {
-           font-size: 14px;
-    /* remove the old min-width */
-    min-width: 0;
-    width: 100%;
+        font-size: 14px;
+        /* remove the old min-width */
+        min-width: 0;
+        width: 100%;
     }
 
     /* تقليل الحشوة في خلايا الجدول */
@@ -31,6 +211,7 @@
         font-weight: bold;
     }
 }
+
 /* Chart Card الرئيسي */
 .chart-card {
     position: relative;
@@ -38,7 +219,7 @@
     /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
     background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
     border-radius: 24px;
-    box-shadow: 
+    box-shadow:
         0 20px 40px rgba(102, 126, 234, 0.3),
         0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     backdrop-filter: blur(20px);
@@ -48,7 +229,7 @@
 
 .chart-card:hover {
     transform: translateY(-8px);
-    box-shadow: 
+    box-shadow:
         0 30px 60px rgba(102, 126, 234, 0.4),
         0 0 0 1px rgba(255, 255, 255, 0.2) inset;
 }
@@ -60,20 +241,23 @@
     left: 0;
     right: 0;
     bottom: 0;
-     pointer-events: none;
-    background: linear-gradient(
-        45deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.05) 100%
-    );
+    pointer-events: none;
+    background: linear-gradient(45deg,
+            rgba(255, 255, 255, 0.1) 0%,
+            transparent 50%,
+            rgba(255, 255, 255, 0.05) 100%);
     animation: gradientShift 8s ease-in-out infinite;
     border-radius: 24px;
 }
 
 @keyframes gradientShift {
-    0%   { transform: translateX(-100%) rotate(0deg); }
-    100% { transform: translateX(0)      rotate(180deg); }
+    0% {
+        transform: translateX(-100%) rotate(0deg);
+    }
+
+    100% {
+        transform: translateX(0) rotate(180deg);
+    }
 }
 
 /* Chart Header */
@@ -102,8 +286,15 @@
 }
 
 @keyframes iconPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .chart-main-icon {
@@ -189,8 +380,17 @@
 }
 
 @keyframes dotPulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.2); opacity: 0.8; }
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
 }
 
 .indicator-text {
@@ -209,7 +409,8 @@
     height: 400px;
     width: 100%;
     max-width: 100%;
-    box-sizing: border-box; /* مهم جداً */
+    box-sizing: border-box;
+    /* مهم جداً */
     background: rgba(255, 255, 255, 0.95);
     border-radius: 16px;
     padding: 1rem;
@@ -220,9 +421,10 @@
 
 .main-chart,
 .secondary-chart {
-   width: 100% !important;
+    width: 100% !important;
     height: 100% !important;
-    max-width: 100% !important; /* إضافة */
+    max-width: 100% !important;
+    /* إضافة */
 }
 
 /* Loading Animation */
@@ -269,8 +471,13 @@
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .loading-text {
@@ -411,13 +618,15 @@
 
 .stat-label {
     font-size: 0.75rem;
-    color: #6b7280; /* رمادي متوسط للتسميات */
+    color: #6b7280;
+    /* رمادي متوسط للتسميات */
     font-weight: 500;
 }
 
 .stat-value {
     font-size: 1rem;
-    color: #1f2937; /* أسود داكن للقيم */
+    color: #1f2937;
+    /* أسود داكن للقيم */
     font-weight: 700;
 }
 
@@ -449,7 +658,8 @@
 
 .indicator-text {
     font-size: 0.85rem;
-    color: #1bb984; /* أسود رمادي للنص */
+    color: #1bb984;
+    /* أسود رمادي للنص */
     font-weight: 500;
 }
 
@@ -466,7 +676,8 @@
 }
 
 .chart-description span {
-    color: #374151 !important; /* أسود رمادي للنص */
+    color: #374151 !important;
+    /* أسود رمادي للنص */
     font-weight: 500;
 }
 
@@ -499,18 +710,18 @@
         grid-template-columns: 1fr;
         gap: 0.75rem;
     }
-    
+
     .chart-indicators {
         flex-direction: column;
         gap: 0.75rem;
         padding: 12px;
     }
-    
+
     .indicator-item {
         width: 100%;
         justify-content: center;
     }
-    
+
     .stat-card {
         padding: 12px;
     }
@@ -522,57 +733,58 @@
         background: rgba(31, 41, 55, 0.9);
         border-color: rgba(75, 85, 99, 0.3);
     }
-    
+
     .stat-card:hover {
         background: rgba(31, 41, 55, 1);
     }
-    
+
     .stat-label {
         color: #9ca3af;
     }
-    
+
     .stat-value {
         color: #f9fafb;
     }
-    
+
     .indicator-item {
         background: rgba(31, 41, 55, 0.8);
         border: 1px solid rgba(75, 85, 99, 0.3);
     }
-    
+
     .indicator-item:hover {
         background: rgba(31, 41, 55, 1);
     }
-    
+
     .indicator-text {
         color: #1bb984;
     }
-    
+
     .chart-indicators {
         background: rgba(17, 24, 39, 0.8);
         border-color: rgba(75, 85, 99, 0.3);
     }
-    
+
     .chart-description {
         background: rgba(17, 24, 39, 0.8) !important;
         border-color: rgba(16, 185, 129, 0.3) !important;
     }
-    
+
     .chart-description span {
         color: #d1d5db !important;
     }
-    
+
     .chart-control-btn {
         background: rgba(31, 41, 55, 0.9);
         border-color: rgba(75, 85, 99, 0.3);
         color: #d1d5db;
     }
-    
+
     .chart-control-btn:hover {
         background: rgba(16, 185, 129, 0.2);
         color: #10b981;
     }
 }
+
 /* Collapse Card للدينار */
 .collapse-card {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -653,9 +865,12 @@
 
 .chart-container-secondary {
     height: 400px;
-    width: 100%; /* هذا يسبب المشكلة مع الـ padding من .row */
-    max-width: 100%; /* إضافة هذا */
-    box-sizing: border-box; /* مهم جداً */
+    width: 100%;
+    /* هذا يسبب المشكلة مع الـ padding من .row */
+    max-width: 100%;
+    /* إضافة هذا */
+    box-sizing: border-box;
+    /* مهم جداً */
     background: rgba(255, 255, 255, 0.95);
     border-radius: 12px;
     padding: 1rem;
@@ -691,35 +906,35 @@
         border-radius: 16px;
         margin: 0 0.5rem;
     }
-    
+
     .chart-header {
         padding: 1.5rem 1rem 1rem;
     }
-    
+
     .chart-title-section {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.75rem;
     }
-    
+
     .chart-controls {
         margin-top: 1rem;
     }
-    
+
     .chart-indicators {
         flex-direction: column;
         gap: 0.75rem;
     }
-    
+
     .chart-container-enhanced {
         height: 300px;
     }
-    
+
     .quick-stats {
         grid-template-columns: 1fr;
         gap: 0.75rem;
     }
-    
+
     .chart-info-panel {
         position: static;
         margin-top: 1rem;
@@ -743,11 +958,16 @@
 }
 
 @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(0); }
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
 }
 
- .collapse-card {
+.collapse-card {
     background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
     border-radius: 15px;
     box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
@@ -778,7 +998,7 @@
 }
 
 .collapse-icon-wrapper {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     width: 50px;
     height: 50px;
@@ -817,7 +1037,9 @@
     background: linear-gradient(145deg, #ffffff, #f8fafc);
 }
 
-.analysis-section, .profit-analysis-section, .risk-analysis-section {
+.analysis-section,
+.profit-analysis-section,
+.risk-analysis-section {
     background: linear-gradient(145deg, #ffffff, #f8fafc);
     border-radius: 12px;
     padding: 20px;
@@ -909,7 +1131,10 @@
 }
 
 /* كاردات الأرباح والمخاطر */
-.profit-card, .collection-card, .operations-card, .risk-card {
+.profit-card,
+.collection-card,
+.operations-card,
+.risk-card {
     background: linear-gradient(135deg, #ffffff, #f8fafc);
     border-radius: 10px;
     padding: 15px;
@@ -919,12 +1144,18 @@
     transition: all 0.3s ease;
 }
 
-.profit-card:hover, .collection-card:hover, .operations-card:hover, .risk-card:hover {
+.profit-card:hover,
+.collection-card:hover,
+.operations-card:hover,
+.risk-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.2);
 }
 
-.profit-title, .collection-title, .operations-title, .risk-title {
+.profit-title,
+.collection-title,
+.operations-title,
+.risk-title {
     font-size: 1em;
     font-weight: bold;
     margin-bottom: 10px;
@@ -935,7 +1166,10 @@
     background-clip: text;
 }
 
-.profit-item, .collection-item, .stat-item, .risk-item {
+.profit-item,
+.collection-item,
+.stat-item,
+.risk-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -943,20 +1177,24 @@
     border-bottom: 1px solid rgba(16, 185, 129, 0.1);
 }
 
-.profit-value, .collection-rate {
+.profit-value,
+.collection-rate {
     font-weight: bold;
     font-size: 1.1em;
 }
 
-.profit-value.text-success, .collection-rate.text-success {
+.profit-value.text-success,
+.collection-rate.text-success {
     color: #10b981 !important;
 }
 
-.profit-value.text-danger, .collection-rate.text-danger {
+.profit-value.text-danger,
+.collection-rate.text-danger {
     color: #ef4444 !important;
 }
 
-.profit-value.text-warning, .collection-rate.text-warning {
+.profit-value.text-warning,
+.collection-rate.text-warning {
     color: #f59e0b !important;
 }
 
@@ -1019,25 +1257,28 @@
     .collapse-content {
         padding: 20px 15px;
     }
-    
+
     .collapse-title {
         font-size: 1.1em;
     }
-    
+
     .detail-row {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .detail-value {
         margin-top: 3px;
     }
-    
+
     .currency-analysis {
         margin-bottom: 15px;
     }
-    
-    .profit-card, .collection-card, .operations-card, .risk-card {
+
+    .profit-card,
+    .collection-card,
+    .operations-card,
+    .risk-card {
         margin-bottom: 15px;
     }
 }
