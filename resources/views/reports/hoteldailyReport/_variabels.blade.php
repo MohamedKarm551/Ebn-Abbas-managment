@@ -469,9 +469,9 @@
         };
 
         // ✅ رسالة تأكيد تحميل البيانات
-        console.log('📊 تم تحميل جميع بيانات التقارير اليومية بنجاح!');
-        console.log('💰 البيانات المالية:', window.chartData.currencyDetails);
-        console.log('📈 مؤشرات الأداء:', window.chartData.kpiMetrics);
+        // console.log('📊 تم تحميل جميع بيانات التقارير اليومية بنجاح!');
+        // console.log('💰 البيانات المالية:', window.chartData.currencyDetails);
+        // console.log('📈 مؤشرات الأداء:', window.chartData.kpiMetrics);
     </script>
 @endpush
 

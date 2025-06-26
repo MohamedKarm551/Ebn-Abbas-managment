@@ -76,37 +76,125 @@ class ReportController extends Controller
         // ===================================
         // 🤝 تقرير الوكلاء/جهات الحجز
         // ===================================
-
-        // جلب الوكلاء مع علاقاتهم وحساب الإجماليات
-        $agentsReport = Agent::with(['bookings', 'payments'])
+        // 1. جلب جميع الوكلاء للحسابات (بدون pagination)
+        $allAgentsForCalculations = Agent::with(['bookings', 'payments'])
             ->withCount('bookings')
             ->get()
             ->map(function ($agent) {
-                // ✅ استدعاء دالة حساب الإجماليات للوكلاء
+                // حساب الإجماليات للوكيل
                 $agent->calculateTotals();
-
-                // إضافة الخصائص المطلوبة للوكيل (للتوافق مع الكود القديم)
-                $agent->total_due = $agent->total_due;
-                $agent->total_paid = $agent->total_paid;
-                $agent->remaining_amount = $agent->remaining_amount;
-                $agent->total_due_by_currency = $agent->total_due_by_currency;
-                $agent->total_paid_by_currency = $agent->total_paid_by_currency;
-                $agent->remaining_by_currency = $agent->remaining_by_currency;
-
                 return $agent;
-            })
-            ->sortByDesc('computed_total_due')  // ترتيب حسب المستحق المحسوب
-            ->values();
+            });
+
+        // 2. حساب الإجماليات من جميع الوكلاء (للعرض في الملخص)
+        $agentsTotalCalculations = [
+            'total_due_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_paid_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_discounts_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_remaining_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_bookings_count' => 0
+        ];
+
+        foreach ($allAgentsForCalculations as $agent) {
+            // جمع عدد الحجوزات
+            $agentsTotalCalculations['total_bookings_count'] += $agent->bookings_count;
+
+            // جمع المستحق حسب العملة
+            $dueByCurrency = $agent->computed_total_due_by_currency ??
+                ($agent->total_due_by_currency ?? ['SAR' => $agent->total_due ?? 0]);
+            foreach ($dueByCurrency as $currency => $amount) {
+                $agentsTotalCalculations['total_due_by_currency'][$currency] += $amount;
+            }
+
+            // جمع المدفوع والخصومات حسب العملة
+            $paidByCurrency = $agent->computed_total_paid_by_currency ?? [];
+            $discountsByCurrency = $agent->computed_total_discounts_by_currency ?? [];
+
+            foreach (['SAR', 'KWD'] as $currency) {
+                $agentsTotalCalculations['total_paid_by_currency'][$currency] += $paidByCurrency[$currency] ?? 0;
+                $agentsTotalCalculations['total_discounts_by_currency'][$currency] += $discountsByCurrency[$currency] ?? 0;
+            }
+
+            // جمع المتبقي حسب العملة
+            $remainingByCurrency = $agent->computed_remaining_by_currency ??
+                ($agent->remaining_by_currency ?? ['SAR' => $agent->remaining_amount ?? 0]);
+            foreach ($remainingByCurrency as $currency => $amount) {
+                $agentsTotalCalculations['total_remaining_by_currency'][$currency] += $amount;
+            }
+        }
+
+        // 3. إنشاء pagination للعرض فقط
+        $perPage = 10;
+        $currentPage = request()->get('agents_page', 1);
+
+        $sortedAgents = $allAgentsForCalculations->sortByDesc('computed_total_due');
+        $totalItems = $sortedAgents->count();
+        $totalPages = ceil($totalItems / $perPage);
+
+        if ($currentPage > $totalPages && $totalPages > 0) {
+            $currentPage = $totalPages;
+        }
+
+        $agentsReportPaginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $sortedAgents->forPage($currentPage, $perPage),
+            $totalItems,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => 'agents_page'
+            ]
+        );
+
+        // 4. المتغير للعرض (pagination) والمتغير للحسابات (كل البيانات)
+        $agentsReport = $agentsReportPaginated;
+        $allAgentsData = $allAgentsForCalculations; // للاستخدام في الحسابات
 
         // ===================================
         // 🏨 تقرير الفنادق
         // ===================================
 
-        // جلب الفنادق مع عدد الحجوزات وترتيبهم
-        $hotelsReport = Hotel::withCount('bookings')->get()
-            ->sortByDesc(function ($hotel) {
-                return $hotel->total_due;
-            })->values();
+        // جلب الفنادق مع عدد الحجوزات وترتيبهم مع pagination
+        $hotelsQuery = Hotel::withCount('bookings')
+            ->with(['bookings' => function ($query) {
+                $query->select('hotel_id', 'cost_price', 'rooms', 'days', 'amount_due_to_hotel');
+            }]);
+
+        // الحصول على البيانات للترتيب
+        $hotelsQuery = Hotel::withCount('bookings')
+            ->with(['bookings' => function ($query) {
+                $query->select('hotel_id', 'cost_price', 'rooms', 'days', 'amount_due_to_hotel', 'currency'); // ✅ إضافة العملة
+            }]);
+
+        // الحصول على البيانات مع حساب المستحق حسب العملة
+        $hotelsData = $hotelsQuery->get()->map(function ($hotel) {
+            // ✅ حساب المستحق حسب كل عملة
+            $totalDueByCurrency = ['SAR' => 0, 'KWD' => 0];
+
+            foreach ($hotel->bookings as $booking) {
+                $bookingDue = $booking->amount_due_to_hotel ?? ($booking->cost_price * $booking->rooms * $booking->days);
+                $currency = $booking->currency ?? 'SAR'; // العملة الافتراضية ريال سعودي
+                $totalDueByCurrency[$currency] += $bookingDue;
+            }
+
+            // إضافة البيانات المحسوبة للفندق
+            $hotel->total_due_by_currency = $totalDueByCurrency;
+            $hotel->total_due = $totalDueByCurrency['SAR'] + ($totalDueByCurrency['KWD'] * 12); // تحويل تقريبي للترتيب
+
+            return $hotel;
+        })->sortByDesc('total_due');
+
+        // تحويل إلى pagination يدوياً
+        $perPage = 10; // عدد العناصر في الصفحة
+        $currentPage = request()->get('page', 1);
+        $hotelsReport = new \Illuminate\Pagination\LengthAwarePaginator(
+            $hotelsData->forPage($currentPage, $perPage),
+            $hotelsData->count(),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'pageName' => 'page']
+        );
+
 
         // ===================================
         // 💰 الحسابات المالية الأساسية
@@ -315,14 +403,21 @@ class ReportController extends Controller
             // البيانات الأساسية
             'todayBookings' => $todayBookings,
             'companiesReport' => $companiesReport,
-            'agentsReport' => $agentsReport,
+            'agentsReport' => $agentsReport, // pagination للعرض
+            'allAgentsData' => $allAgentsForCalculations, // ✅ البيانات الكاملة للحسابات
             'hotelsReport' => $hotelsReport,
 
-            // الإجماليات المالية
+            // ✅ الحسابات الخاصة بالوكلاء
+            'totalDueToAgentsByCurrency' => $agentsTotalCalculations['total_due_by_currency'] ?? [],
+            'totalPaidToAgentsByCurrency' => $agentsTotalCalculations['total_paid_by_currency'] ?? [],
+            'totalDiscountsToAgentsByCurrency' => $agentsTotalCalculations['total_discounts_by_currency'] ?? [],
+            'totalRemainingToAgentsByCurrency' => $agentsTotalCalculations['total_remaining_by_currency'] ?? [],
+            'agentsTotalCalculations' => $agentsTotalCalculations,
+
+            // باقي البيانات...
             'totalDueFromCompanies' => $totalDueFromCompanies,
             'totalPaidToHotels' => $totalPaidToHotels,
             'totalRemainingFromCompanies' => $totalRemainingFromCompanies,
-            'totalRemainingToAgentsByCurrency' => $totalRemainingToAgentsByCurrency,
             'totalRemainingToHotels' => $totalRemainingToHotels,
             'netProfit' => $netProfit,
 
@@ -330,7 +425,7 @@ class ReportController extends Controller
             'recentCompanyEdits' => $recentCompanyEdits,
             'resentAgentEdits' => $resentAgentEdits,
 
-            // بيانات الرسوم البيانية (من الدالة المنفصلة)
+            // بيانات الرسوم البيانية
             'chartDates' => $chartData['chartDates'],
             'bookingCounts' => $chartData['bookingCounts'],
             'receivableBalances' => $chartData['receivableBalances'],
@@ -344,14 +439,146 @@ class ReportController extends Controller
             'companyPaymentsByCurrency' => $companyPaymentsByCurrency,
             'agentPaymentsByCurrency' => $agentPaymentsByCurrency,
             'totalDueFromCompaniesByCurrency' => $totalDueFromCompaniesByCurrency,
-            'totalDueToAgentsByCurrency' => $totalDueToAgentsByCurrency,
-            'totalPaidToAgentsByCurrency' => $totalPaidToAgentsByCurrency,
-            'totalRemainingByCurrency' => $totalRemainingByCurrency,
-            'agentRemainingByCurrency' => $agentRemainingByCurrency,
             'netProfitByCurrency' => $netProfitByCurrency
         ]);
     }
 
+    /**
+     * دالة جلب جهات الحجز بـ AJAX مع Pagination
+     * نفس طريقة الفنادق تماماً ولكن للوكلاء
+     */
+    public function getAgentsAjax(Request $request)
+    {
+        $page = $request->get('agents_page', 1);
+        $perPage = 10;
+
+        // 1. جلب جميع الوكلاء للحسابات
+        $allAgents = Agent::with(['bookings', 'payments'])
+            ->withCount('bookings')
+            ->get()
+            ->map(function ($agent) {
+                $agent->calculateTotals();
+                return $agent;
+            })
+            ->sortByDesc('computed_total_due');
+
+        // 2. حساب الإجماليات من جميع الوكلاء
+        $agentsTotalCalculations = [
+            'total_due_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_paid_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_discounts_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_remaining_by_currency' => ['SAR' => 0, 'KWD' => 0],
+            'total_bookings_count' => 0
+        ];
+
+        foreach ($allAgents as $agent) {
+            // نفس الحسابات المذكورة في دالة daily()
+            $agentsTotalCalculations['total_bookings_count'] += $agent->bookings_count;
+
+            $dueByCurrency = $agent->computed_total_due_by_currency ??
+                ($agent->total_due_by_currency ?? ['SAR' => $agent->total_due ?? 0]);
+            foreach ($dueByCurrency as $currency => $amount) {
+                $agentsTotalCalculations['total_due_by_currency'][$currency] += $amount;
+            }
+
+            $paidByCurrency = $agent->computed_total_paid_by_currency ?? [];
+            $discountsByCurrency = $agent->computed_total_discounts_by_currency ?? [];
+
+            foreach (['SAR', 'KWD'] as $currency) {
+                $agentsTotalCalculations['total_paid_by_currency'][$currency] += $paidByCurrency[$currency] ?? 0;
+                $agentsTotalCalculations['total_discounts_by_currency'][$currency] += $discountsByCurrency[$currency] ?? 0;
+            }
+
+            $remainingByCurrency = $agent->computed_remaining_by_currency ??
+                ($agent->remaining_by_currency ?? ['SAR' => $agent->remaining_amount ?? 0]);
+            foreach ($remainingByCurrency as $currency => $amount) {
+                $agentsTotalCalculations['total_remaining_by_currency'][$currency] += $amount;
+            }
+        }
+
+        // 3. إنشاء pagination للعرض
+        $totalItems = $allAgents->count();
+        $totalPages = ceil($totalItems / $perPage);
+
+        if ($page > $totalPages && $totalPages > 0) {
+            $page = $totalPages;
+        } elseif ($page < 1) {
+            $page = 1;
+        }
+
+        $agentsReport = new \Illuminate\Pagination\LengthAwarePaginator(
+            $allAgents->forPage($page, $perPage),
+            $totalItems,
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'pageName' => 'agents_page',
+            ]
+        );
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('reports.hoteldailyReport.agents-table', [
+                    'agentsReport' => $agentsReport,
+                    'agentsTotalCalculations' => $agentsTotalCalculations // ✅ تمرير الحسابات الإجمالية
+                ])->render(),
+                'pagination' => (string) $agentsReport->appends(request()->query())->links('pagination::bootstrap-4')
+            ]);
+        }
+
+        return $agentsReport;
+    }
+
+    public function getHotelsAjax(Request $request)
+    {
+        $page = $request->get('hotels_page', 1);
+        $perPage = 10;
+
+        $hotelsData = Hotel::withCount('bookings')
+            ->with(['bookings' => function ($query) {
+                $query->select('hotel_id', 'cost_price', 'rooms', 'days', 'amount_due_to_hotel', 'currency'); // ✅ إضافة العملة
+            }])
+            ->get()
+            ->map(function ($hotel) {
+                // ✅ حساب المستحق حسب كل عملة
+                $totalDueByCurrency = ['SAR' => 0, 'KWD' => 0];
+
+                foreach ($hotel->bookings as $booking) {
+                    $bookingDue = $booking->amount_due_to_hotel ?? ($booking->cost_price * $booking->rooms * $booking->days);
+                    $currency = $booking->currency ?? 'SAR'; // العملة الافتراضية ريال سعودي
+                    $totalDueByCurrency[$currency] += $bookingDue;
+                }
+
+                // إضافة البيانات المحسوبة للفندق
+                $hotel->total_due_by_currency = $totalDueByCurrency;
+                $hotel->total_due = $totalDueByCurrency['SAR'] + $totalDueByCurrency['KWD']; // للترتيب فقط
+
+                return $hotel;
+            })
+            ->sortByDesc('total_due');
+
+        // إنشاء pagination
+        $hotelsPaginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $hotelsData->forPage($page, $perPage),
+            $hotelsData->count(),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'pageName' => 'hotels_page'
+            ]
+        );
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('reports.hoteldailyReport.hotels-table', ['hotelsReport' => $hotelsPaginated])->render(),
+                'pagination' => (string) $hotelsPaginated->appends(request()->query())->links('pagination::bootstrap-4')
+            ]);
+        }
+
+        return $hotelsPaginated;
+    }
     /**
      * دالة منفصلة لحساب بيانات الرسم البياني
      */
@@ -1404,7 +1631,7 @@ class ReportController extends Controller
     }
 
     // تعديل دفعة وكيل
-    public function editPayment($id)
+    public function editAgentPayment($id)
     {
         // هات الدفعة المطلوبة
         $payment = AgentPayment::findOrFail($id);
@@ -1414,7 +1641,7 @@ class ReportController extends Controller
     }
 
     // تحديث دفعة وكيل بعد التعديل
-    public function updatePayment(Request $request, $id)
+    public function updateAgentPayment(Request $request, $id)
     {
         // تحقق من البيانات اللي جاية من الفورم
         $validated = $request->validate([
@@ -1785,38 +2012,38 @@ class ReportController extends Controller
             'links' => $links
         ]);
     }
-    
-/**
- * عرض صفحة إنشاء سند القبض
- */
-public function receiptVoucher()
-{
-    return view('reports.receipt-voucher');
-}
 
-/**
- * إنشاء وتحميل سند القبض
- */
-public function generateReceiptVoucher(Request $request)
-{
-    $validated = $request->validate([
-        'amount' => 'required|numeric|min:0.01',
-        'currency' => 'required|in:SAR,KWD',
-        'subject' => 'required|string|max:500',
-        'date_arabic' => 'required|string|max:100',
-        'date_english' => 'required|date',
-        'payer_name' => 'required|string|max:200',
-        'payment_method' => 'required|in:cash,check',
-        'check_number' => 'nullable|string|max:50',
-        'bank_name' => 'nullable|string|max:100',
-        'check_date' => 'nullable|date',
-        'receiver_signature' => 'required|string|max:100',
-        'accountant_signature' => 'required|string|max:100',
-    ]);
+    /**
+     * عرض صفحة إنشاء سند القبض
+     */
+    public function receiptVoucher()
+    {
+        return view('reports.receipt-voucher');
+    }
 
-    return response()->json([
-        'success' => true,
-        'data' => $validated
-    ]);
-}
+    /**
+     * إنشاء وتحميل سند القبض
+     */
+    public function generateReceiptVoucher(Request $request)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'currency' => 'required|in:SAR,KWD',
+            'subject' => 'required|string|max:500',
+            'date_arabic' => 'required|string|max:100',
+            'date_english' => 'required|date',
+            'payer_name' => 'required|string|max:200',
+            'payment_method' => 'required|in:cash,check',
+            'check_number' => 'nullable|string|max:50',
+            'bank_name' => 'nullable|string|max:100',
+            'check_date' => 'nullable|date',
+            'receiver_signature' => 'required|string|max:100',
+            'accountant_signature' => 'required|string|max:100',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $validated
+        ]);
+    }
 }

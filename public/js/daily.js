@@ -238,7 +238,7 @@ document.addEventListener("DOMContentLoaded", function () {
         window.mainNetBalanceChart = netBalanceChart;
 
         // ✅ طباعة رسالة نجاح في وحدة التحكم
-        console.log("✅ تم إنشاء رسم صافي الرصيد بنجاح");
+        // console.log("✅ تم إنشاء رسم صافي الرصيد بنجاح");
         
     } else if (ctxNetBalance) {
         // 🚫 عرض رسالة عدم وجود بيانات إذا لم توجد بيانات كافية
@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (netBalancesKWD && netBalancesKWD.length > 0) {
     const ctxKWD = document.getElementById("netBalanceKWDChart");
     if (ctxKWD) {
-        console.log("🎨 إنشاء رسم الدينار الكويتي...");
+        // console.log("🎨 إنشاء رسم الدينار الكويتي...");
 
         const kwdChart = new Chart(ctxKWD, {
             type: "line",
@@ -373,7 +373,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // 💾 حفظ مرجع الرسم البياني للدينار
         window.kwdNetBalanceChart = kwdChart;
 
-        console.log("✅ تم إنشاء رسم الدينار الكويتي بنجاح");
+        // console.log("✅ تم إنشاء رسم الدينار الكويتي بنجاح");
     }
 } else {
     // 🚫 عرض رسالة عدم وجود بيانات
@@ -436,7 +436,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // ✅ طباعة رسالة نجاح التحميل النهائي
-    console.log("✅ تم تحميل Chart functions بنجاح");
+    // console.log("✅ تم تحميل Chart functions بنجاح");
 });
 
 // ========================================
@@ -667,7 +667,7 @@ function showNotification(message, type) {
     if (typeof type === 'undefined') type = "info";  // نوع الإشعار الافتراضي
     
     // 🖨️ طباعة الرسالة في وحدة التحكم
-    console.log(type.toUpperCase() + ": " + message);
+    // console.log(type.toUpperCase() + ": " + message);
 
     // 🎨 إنشاء عنصر الإشعار المرئي
     const toast = document.createElement("div");
@@ -733,4 +733,4 @@ function handleChartResize() {
 window.addEventListener("resize", handleChartResize);
 
 // ✅ رسالة اكتمال تحميل الملف
-console.log("📊 تم تحميل ملف daily.js المُحسن");
+// console.log("📊 تم تحميل ملف daily.js المُحسن");

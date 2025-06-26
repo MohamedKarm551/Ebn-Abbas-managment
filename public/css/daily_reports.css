@@ -1335,4 +1335,112 @@ canvas {
 
 .shadow-primary {
     box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2) !important;
+}/* تأثيرات الـ Loading */
+#hotelsTableLoader .spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+.table-responsive {
+    min-height: 200px;
+    position: relative;
+}
+
+#hotelsTableLoader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+/* تحسين Pagination مع تأثيرات ناعمة */
+.pagination {
+    margin-bottom: 0;
+}
+
+.pagination .page-link {
+    color: #007bff;
+    border-color: #dee2e6;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    transform: translateY(-1px);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff6e;
+    border-color: #000;
+    box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+    
+}
+
+.pagination .page-link.clicked {
+    background-color: #0056b3;
+    transform: scale(0.95);
+}
+
+/* تأثير Fade للجدول */
+#hotelsTableWrapper {
+    transition: opacity 0.3s ease;
+}
+
+/* تحسين عام للجداول */
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0,123,255,0.05);
+}
+
+/* تحسين الأزرار */
+.btn-sm {
+    transition: all 0.2s ease;
+}
+
+.btn-sm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Smooth scroll للصفحة */
+html {
+    scroll-behavior: smooth;
+}
+/* تأثيرات الـ Pagination للوكلاء */
+.pagination .page-link.clicked {
+    background-color: #0056b3 !important;
+    transform: scale(0.95);
+    transition: all 0.2s ease;
+}
+
+/* منع الـ refresh عند الضغط على الروابط */
+.pagination .page-link {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    transform: translateY(-1px);
+}
+
+/* تأثيرات الـ Loading */
+#agentsTableLoader {
+    z-index: 10;
 }

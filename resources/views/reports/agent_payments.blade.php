@@ -6,8 +6,188 @@
 @section('content')
     <div class="container">
         <h1>سجل المدفوعات - {{ $agent->name }}</h1>
-        {{-- *** بداية إضافة زرار ومكان الرسم البياني *** --}}
-        {{-- السطر ده (تقريباً 8) هو بداية الكود الجديد --}}
+                {{-- ✅ إضافة قسم ملخص الحسابات الحالية --}}
+        <div class="card mb-4" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div class="card-header" style="background: linear-gradient(120deg, #10b981 60%, #059669 100%); color: white; border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 d-flex align-items-center">
+                    <i class="fas fa-calculator me-2"></i>
+                    ملخص الحسابات الحالية
+                </h5>
+            </div>
+            <div class="card-body">
+                @php
+                    // ✅ استخدام الحسابات المحسوبة مسبقاً في الوكيل
+                    $agent->calculateTotals();
+                    
+                    // عدد الحجوزات
+                    $totalBookings = $agent->bookings_count ?? $agent->bookings()->count();
+                    
+                    // المستحق حسب العملة
+                    $dueByCurrency = $agent->computed_total_due_by_currency ?? 
+                                    ($agent->total_due_by_currency ?? ['SAR' => $agent->total_due ?? 0]);
+                    
+                    // المدفوع والخصومات حسب العملة
+                    $paidByCurrency = $agent->computed_total_paid_by_currency ?? [];
+                    $discountsByCurrency = $agent->computed_total_discounts_by_currency ?? [];
+                    
+                    // إذا لم تكن محسوبة، احسبها من المدفوعات
+                    if (empty($paidByCurrency) && $agent->payments) {
+                        $agentPaymentsGrouped = $agent->payments->groupBy('currency');
+                        
+                        foreach ($agentPaymentsGrouped as $currency => $paymentsForCurrency) {
+                            $paidByCurrency[$currency] = $paymentsForCurrency->where('amount', '>=', 0)->sum('amount');
+                            $discountsByCurrency[$currency] = abs($paymentsForCurrency->where('amount', '<', 0)->sum('amount'));
+                        }
+                    }
+                    
+                    // المتبقي حسب العملة
+                    $remainingByCurrency = $agent->computed_remaining_by_currency ?? 
+                                          ($agent->remaining_by_currency ?? ['SAR' => $agent->remaining_amount ?? 0]);
+                @endphp
+
+                <div class="row g-3">
+                    {{-- عدد الحجوزات --}}
+                    <div class="col-md-3">
+                        <div class="text-center p-3" style="background: linear-gradient(135deg, #3b82f6, #60a5fa); border-radius: 10px; color: white;">
+                            <div class="mb-2">
+                                <i class="fas fa-calendar-check" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-1">{{ $totalBookings }}</h4>
+                            <small class="opacity-90">عدد الحجوزات</small>
+                        </div>
+                    </div>
+
+                    {{-- إجمالي المستحق --}}
+                    <div class="col-md-3">
+                        <div class="text-center p-3" style="background: linear-gradient(135deg, #f59e0b, #fbbf24); border-radius: 10px; color: white;">
+                            <div class="mb-2">
+                                <i class="fas fa-file-invoice-dollar" style="font-size: 2rem;"></i>
+                            </div>
+                            <div>
+                                @foreach ($dueByCurrency as $currency => $amount)
+                                    @if ($amount > 0)
+                                        <div class="mb-1">
+                                            <h5 class="mb-0">{{ number_format($amount, 2) }}</h5>
+                                            <small class="opacity-90">{{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</small>
+                                        </div>
+                                    @endif
+                                @endforeach
+                                @if (empty(array_filter($dueByCurrency)))
+                                    <h5 class="mb-0">0.00</h5>
+                                    <small class="opacity-90">ريال</small>
+                                @endif
+                            </div>
+                            <small class="opacity-90 d-block">إجمالي المستحق</small>
+                        </div>
+                    </div>
+
+                    {{-- المدفوع --}}
+                    <div class="col-md-3">
+                        <div class="text-center p-3" style="background: linear-gradient(135deg, #10b981, #34d399); border-radius: 10px; color: white;">
+                            <div class="mb-2">
+                                <i class="fas fa-hand-holding-usd" style="font-size: 2rem;"></i>
+                            </div>
+                            <div>
+                                @php $hasPaidAmount = false; @endphp
+                                @foreach (['SAR', 'KWD'] as $currency)
+                                    @if (($paidByCurrency[$currency] ?? 0) > 0 || ($discountsByCurrency[$currency] ?? 0) > 0)
+                                        @php $hasPaidAmount = true; @endphp
+                                        <div class="mb-1">
+                                            <h6 class="mb-0">{{ number_format($paidByCurrency[$currency] ?? 0, 2) }}</h6>
+                                            <small class="opacity-90">{{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</small>
+                                            @if (($discountsByCurrency[$currency] ?? 0) > 0)
+                                                <div style="font-size: 0.7rem; opacity: 0.8;">
+                                                    خصومات: {{ number_format($discountsByCurrency[$currency], 2) }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endif
+                                @endforeach
+                                @if (!$hasPaidAmount)
+                                    <h5 class="mb-0">0.00</h5>
+                                    <small class="opacity-90">ريال</small>
+                                @endif
+                            </div>
+                            <small class="opacity-90 d-block">المدفوع</small>
+                        </div>
+                    </div>
+
+                    {{-- المتبقي --}}
+                    <div class="col-md-3">
+                        @php
+                            $hasRemaining = !empty(array_filter($remainingByCurrency));
+                            $isOverpaid = false;
+                            if ($hasRemaining) {
+                                $isOverpaid = collect($remainingByCurrency)->some(function($amount) {
+                                    return $amount < 0;
+                                });
+                            }
+                        @endphp
+                        <div class="text-center p-3" style="background: linear-gradient(135deg, {{ $isOverpaid ? '#ef4444, #f87171' : ($hasRemaining ? '#ef4444, #f87171' : '#6b7280, #9ca3af') }}); border-radius: 10px; color: white;">
+                            <div class="mb-2">
+                                <i class="fas {{ $isOverpaid ? 'fa-arrow-down' : ($hasRemaining ? 'fa-exclamation-triangle' : 'fa-check-circle') }}" style="font-size: 2rem;"></i>
+                            </div>
+                            <div>
+                                @if ($hasRemaining)
+                                    @foreach ($remainingByCurrency as $currency => $amount)
+                                        @if ($amount != 0)
+                                            <div class="mb-1">
+                                                <h5 class="mb-0">{{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}</h5>
+                                                <small class="opacity-90">{{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</small>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                @else
+                                    <h5 class="mb-0">0.00</h5>
+                                    <small class="opacity-90">ريال</small>
+                                @endif
+                            </div>
+                            <small class="opacity-90 d-block">
+                                @if ($isOverpaid)
+                                    دفعنا زيادة
+                                @elseif ($hasRemaining)
+                                    المتبقي
+                                @else
+                                    مدفوع بالكامل
+                                @endif
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- مؤشر الحالة --}}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        @php
+                            $totalRemaining = collect($remainingByCurrency)->sum();
+                            if ($totalRemaining == 0) {
+                                $statusClass = 'success';
+                                $statusIcon = 'fa-check-circle';
+                                $statusText = 'الحساب مكتمل ومتوازن';
+                            } elseif ($totalRemaining < 0) {
+                                $statusClass = 'info';
+                                $statusIcon = 'fa-info-circle';
+                                $statusText = 'تم دفع مبلغ زائد للوكيل';
+                            } else {
+                                $statusClass = 'warning';
+                                $statusIcon = 'fa-clock';
+                                $statusText = 'يوجد مبلغ مستحق للوكيل';
+                            }
+                        @endphp
+                        <div class="alert alert-{{ $statusClass }} mb-0 d-flex align-items-center">
+                            <i class="fas {{ $statusIcon }} me-2"></i>
+                            <strong>{{ $statusText }}</strong>
+                            @if ($payments->count() > 0)
+                                <span class="ms-auto">
+                                    <small>آخر دفعة: {{ $payments->first()->payment_date->format('d/m/Y') }}</small>
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="mb-3">
             <button id="showChartBtn" class="btn btn-outline-primary btn-sm">
                 <i class="fas fa-chart-line me-1"></i> عرض الرسم البياني للدفعات
@@ -262,5 +442,4 @@
             });
         </script>
     @endpush
-    {{-- ... الكود اللي تحت زي ما هو @endsection ... --}}
 @endsection

@@ -125,18 +125,59 @@
                                 {{-- القسم الثاني: تحليل الجهات --}}
                                 <div class="col-md-6 mb-4">
                                     @php
-                                        // ✅ إجمالي المستحق لكل عملة (من agentsReport)
-                                        $totalDueToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
-                                        foreach ($agentsReport as $agent) {
-                                            foreach (
-                                                $agent->total_due_by_currency ?? ['SAR' => $agent->total_due]
-                                                as $cur => $amt
-                                            ) {
-                                                $totalDueToAgentsByCurrency[$cur] =
-                                                    ($totalDueToAgentsByCurrency[$cur] ?? 0) + $amt;
+                                        // ✅ 1. استخدام البيانات الكاملة بدلاً من pagination
+                                        // الأولوية الأولى: البيانات المحسوبة من الكنترولر
+                                        if (isset($agentsTotalCalculations['total_due_by_currency'])) {
+                                            $totalDueToAgentsByCurrency =
+                                                $agentsTotalCalculations['total_due_by_currency'];
+                                        }
+                                        // الأولوية الثانية: البيانات الكاملة للوكلاء
+                                        elseif (isset($allAgentsData)) {
+                                            $totalDueToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
+                                            foreach ($allAgentsData as $agent) {
+                                                $dueByCurrency =
+                                                    $agent->computed_total_due_by_currency ??
+                                                    ($agent->total_due_by_currency ?? [
+                                                        'SAR' => $agent->total_due ?? 0,
+                                                    ]);
+                                                foreach ($dueByCurrency as $cur => $amt) {
+                                                    if (!isset($totalDueToAgentsByCurrency[$cur])) {
+                                                        $totalDueToAgentsByCurrency[$cur] = 0;
+                                                    }
+                                                    $totalDueToAgentsByCurrency[$cur] += $amt;
+                                                }
                                             }
                                         }
-                                        // ✅ إجمالي المدفوع والخصومات من agentPaymentsByCurrency
+                                        // الأولوية الثالثة: fallback - استعلام مباشر من قاعدة البيانات
+                                        else {
+                                            $totalDueToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
+
+                                            // جلب جميع الوكلاء (بدون pagination) للحسابات
+                                            $allAgentsForCalculation = \App\Models\Agent::with(['bookings', 'payments'])
+                                                ->withCount('bookings')
+                                                ->get()
+                                                ->map(function ($agent) {
+                                                    $agent->calculateTotals();
+                                                    return $agent;
+                                                });
+
+                                            foreach ($allAgentsForCalculation as $agent) {
+                                                $dueByCurrency =
+                                                    $agent->computed_total_due_by_currency ??
+                                                    ($agent->total_due_by_currency ?? [
+                                                        'SAR' => $agent->total_due ?? 0,
+                                                    ]);
+                                                foreach ($dueByCurrency as $cur => $amt) {
+                                                    if (!isset($totalDueToAgentsByCurrency[$cur])) {
+                                                        $totalDueToAgentsByCurrency[$cur] = 0;
+                                                    }
+                                                    $totalDueToAgentsByCurrency[$cur] += $amt;
+                                                }
+                                            }
+                                        }
+
+                                        // ✅ إجمالي المدفوع والخصومات من agentPaymentsByCurrency (صحيح ومُمرر من الكنترولر)
+
                                     @endphp
 
                                     <div class="analysis-section">
@@ -145,10 +186,10 @@
                                         </h6>
                                         @foreach (['SAR', 'KWD'] as $currency)
                                             @php
-                                                // ✅ استخدام المتغيرات الصحيحة من الكنترولر
-                                                $due = isset($totalDueToAgentsByCurrency)
-                                                    ? $totalDueToAgentsByCurrency[$currency] ?? 0
-                                                    : 0;
+                                                // ✅ 2. استخدام البيانات الصحيحة المحسوبة من جميع الوكلاء
+                                                $due = $totalDueToAgentsByCurrency[$currency] ?? 0;
+
+                                                // ✅ 3. المدفوع والخصومات من البيانات المُمررة من الكنترولر (صحيحة)
                                                 $paidAmount = isset($agentPaymentsByCurrency)
                                                     ? ($agentPaymentsByCurrency[$currency] ?? [])['paid'] ?? 0
                                                     : 0;
@@ -231,8 +272,13 @@
                                             @endif
                                         @endforeach
 
-
                                         {{-- في حالة عدم وجود بيانات --}}
+                                        @if (empty(array_filter($totalDueToAgentsByCurrency ?? [])))
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                لا توجد بيانات مالية للوكلاء حالياً
+                                            </div>
+                                        @endif
 
                                     </div>
                                 </div>
@@ -265,15 +311,47 @@
                                                         }
                                                     }
                                                     // حساب إجمالي المتبقي للجهات
+                                                    // ✅ حساب إجمالي المتبقي للجهات من البيانات الكاملة
                                                     $totalRemainingToAgentsByCurrency = ['SAR' => 0, 'KWD' => 0];
-                                                    foreach ($agentsReport as $agent) {
-                                                        foreach (
-                                                            $agent->remaining_by_currency ?? [
-                                                                'SAR' => $agent->remaining,
-                                                            ]
-                                                            as $cur => $amt
-                                                        ) {
-                                                            $totalRemainingToAgentsByCurrency[$cur] += $amt;
+
+                                                    // الأولوية الأولى: البيانات المحسوبة من الكنترولر
+                                                    if (
+                                                        isset($agentsTotalCalculations['total_remaining_by_currency'])
+                                                    ) {
+                                                        $totalRemainingToAgentsByCurrency =
+                                                            $agentsTotalCalculations['total_remaining_by_currency'];
+                                                    }
+                                                    // الأولوية الثانية: البيانات الكاملة للوكلاء
+                                                    elseif (isset($allAgentsData)) {
+                                                        foreach ($allAgentsData as $agent) {
+                                                            foreach (
+                                                                $agent->computed_remaining_by_currency ??
+                                                                    ($agent->remaining_by_currency ?? [
+                                                                        'SAR' => $agent->remaining_amount ?? 0,
+                                                                    ])
+                                                                as $cur => $amt
+                                                            ) {
+                                                                $totalRemainingToAgentsByCurrency[$cur] += $amt;
+                                                            }
+                                                        }
+                                                    }
+                                                    // الأولوية الثالثة: fallback - حساب من البيانات المتاحة
+                                                    else {
+                                                        // حساب المتبقي = المستحق - (المدفوع + الخصومات)
+                                                        foreach (['SAR', 'KWD'] as $currency) {
+                                                            $totalDue = $totalDueToAgentsByCurrency[$currency] ?? 0;
+                                                            $totalPaid =
+                                                                $agentPaymentsByCurrency[$currency]['paid'] ?? 0;
+                                                            $totalDiscounts =
+                                                                $agentPaymentsByCurrency[$currency]['discounts'] ?? 0;
+                                                            $netPaid = $totalPaid + $totalDiscounts;
+                                                            $remaining = $totalDue - $netPaid;
+
+                                                            if ($remaining != 0) {
+                                                                $totalRemainingToAgentsByCurrency[
+                                                                    $currency
+                                                                ] = $remaining;
+                                                            }
                                                         }
                                                     }
                                                 @endphp
@@ -288,12 +366,30 @@
 
                                                     @foreach (['SAR', 'KWD'] as $currency)
                                                         @php
+                                                            // ✅ 1. حساب متبقي الشركات (ما نستحقه)
+                                                            $companyDue =
+                                                                $totalDueFromCompaniesByCurrency[$currency] ?? 0;
+                                                            $companyPaid =
+                                                                $companyPaymentsByCurrency[$currency]['paid'] ?? 0;
+                                                            $companyDiscounts =
+                                                                $companyPaymentsByCurrency[$currency]['discounts'] ?? 0;
                                                             $companyRemaining =
-                                                                $totalRemainingByCurrency[$currency] ?? 0;
+                                                                $companyDue - ($companyPaid + $companyDiscounts);
+
+                                                            // ✅ 2. حساب متبقي الجهات (ما ندين به)
+                                                            $agentDue = $totalDueToAgentsByCurrency[$currency] ?? 0;
+                                                            $agentPaid =
+                                                                $agentPaymentsByCurrency[$currency]['paid'] ?? 0;
+                                                            $agentDiscounts =
+                                                                $agentPaymentsByCurrency[$currency]['discounts'] ?? 0;
                                                             $agentRemaining =
-                                                                $totalRemainingToAgentsByCurrency[$currency] ?? 0;
+                                                                $agentDue - ($agentPaid + $agentDiscounts);
+
+                                                            // ✅ 3. صافي الربح = ما نستحقه - ما ندين به
                                                             $netProfit = $companyRemaining - $agentRemaining;
                                                             $symbol = $currency === 'SAR' ? 'ر.س' : 'د.ك';
+
+                                                           
                                                         @endphp
 
                                                         @if ($netProfit !== 0)
@@ -305,7 +401,6 @@
                                                                     style="font-weight:bold;font-size:1.1em;color:{{ $netProfit > 0 ? '#10b981' : '#ef4444' }};">
                                                                     {{ $netProfit > 0 ? '+' : '' }}{{ number_format($netProfit, 2) }}
                                                                     {{ $symbol }}
-
                                                                 </span>
                                                             </div>
                                                         @endif

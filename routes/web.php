@@ -275,6 +275,10 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('reports/agent/payment/{id}', [ReportController::class, 'destroyAgentPayment'])->name('reports.agent.payment.destroy');
         Route::post('/reports/agent/{agent}/discount', [ReportController::class, 'applyAgentDiscount'])
             ->name('reports.agent.discount');
+        // جدول الفنادق 
+        Route::get('/reports/hotels-ajax', [ReportController::class, 'getHotelsAjax'])->name('reports.hotels.ajax');
+        // جدول جهات الحجز
+        Route::get('/reports/agents-ajax', [ReportController::class, 'getAgentsAjax'])->name('reports.agents.ajax');
 
         // مخطط العلاقات
         Route::get('/network-graph', [ReportController::class, 'networkGraph'])->name('network.graph');

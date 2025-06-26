@@ -62,12 +62,16 @@ public function calculateTotals()
             $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
         }
     }
-    
+    // عاوز أحتفظ بالمستحق بالعملة في أراي ثنائية  : 
+    $dueByCurrencyForBookingsHotels = $dueByCurrency;
+
     // من حجوزات الرحلات البرية
+    $dueByCurrencyForLandTrips = [];
     if ($this->landTripBookings) {
         foreach ($this->landTripBookings as $landTrip) {
             $currency = $landTrip->currency ?? 'SAR';
             $amount = $landTrip->amount_due_from_company ?? 0;
+            $dueByCurrencyForLandTrips[$currency] = ($dueByCurrencyForLandTrips[$currency] ?? 0) + $amount;
             $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
         }
     }
@@ -109,6 +113,8 @@ public function calculateTotals()
         'computed_total_due' => array_sum($dueByCurrency),
         'computed_total_paid' => array_sum($paidByCurrency),
         'computed_remaining' => array_sum($remainingByCurrency),
+        'computed_total_due_bookings_by_currency' => $dueByCurrencyForBookingsHotels,
+        'computed_total_due_land_trips_by_currency' => $dueByCurrencyForLandTrips,
     ]), true);
 
     return $this;

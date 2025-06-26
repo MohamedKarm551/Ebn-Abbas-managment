@@ -550,7 +550,7 @@
    بداية السكريبت الرئيسي للرسوم البيانية والتقارير
    ===================================================== */
 
-console.log('🚀 بدء تحميل سكريبت التقرير الشهري...');
+// console.log('🚀 بدء تحميل سكريبت التقرير الشهري...');
 
 try {
     /* =====================================================
@@ -565,12 +565,12 @@ try {
     const trends = @json($trends ?? []);                 // بيانات الاتجاهات
 
     // طباعة معلومات تشخيصية للتحقق من البيانات
-    console.log('📊 تم تحميل البيانات بنجاح:', {
-        dailyDataCount: dailyData ? dailyData.length : 0,
-        currencyDataCount: currencyData ? Object.keys(currencyData).length : 0,
-        categoryDataCount: categoryData ? Object.keys(categoryData).length : 0,
-        weeklyDataCount: weeklyData ? weeklyData.length : 0
-    });
+    // console.log('📊 تم تحميل البيانات بنجاح:', {
+    //     dailyDataCount: dailyData ? dailyData.length : 0,
+    //     currencyDataCount: currencyData ? Object.keys(currencyData).length : 0,
+    //     categoryDataCount: categoryData ? Object.keys(categoryData).length : 0,
+    //     weeklyDataCount: weeklyData ? weeklyData.length : 0
+    // });
 
     /* =====================================================
        متغيرات الرسوم البيانية العامة
@@ -586,7 +586,7 @@ try {
     // انتظار تحميل DOM بالكامل قبل تهيئة الرسوم البيانية
     $(document).ready(function() {
         try {
-            console.log('📱 DOM جاهز، بدء تهيئة الرسوم البيانية...');
+            // console.log('📱 DOM جاهز، بدء تهيئة الرسوم البيانية...');
             initializeCharts();
         } catch (error) {
             console.error('❌ خطأ في تحميل الصفحة:', error);
@@ -599,12 +599,12 @@ try {
     
     function initializeCharts() {
         try {
-            console.log('🔧 بدء تهيئة جميع الرسوم البيانية...');
+            // console.log('🔧 بدء تهيئة جميع الرسوم البيانية...');
 
             // تهيئة رسم الرصيد اليومي مع معالجة الأخطاء
             try {
                 initializeBalanceChart();
-                console.log('✅ تم تهيئة رسم الرصيد اليومي بنجاح');
+                // console.log('✅ تم تهيئة رسم الرصيد اليومي بنجاح');
             } catch (error) {
                 console.error('❌ خطأ في تهيئة رسم الرصيد:', error);
             }
@@ -612,7 +612,7 @@ try {
             // تهيئة رسم العملات مع معالجة الأخطاء
             try {
                 initializeCurrencyChart();
-                console.log('✅ تم تهيئة رسم العملات بنجاح');
+                // console.log('✅ تم تهيئة رسم العملات بنجاح');
             } catch (error) {
                 console.error('❌ خطأ في تهيئة رسم العملات:', error);
             }
@@ -620,7 +620,7 @@ try {
             // تهيئة رسم التصنيفات مع معالجة الأخطاء
             try {
                 initializeCategoryChart();
-                console.log('✅ تم تهيئة رسم التصنيفات بنجاح');
+                // console.log('✅ تم تهيئة رسم التصنيفات بنجاح');
             } catch (error) {
                 console.error('❌ خطأ في تهيئة رسم التصنيفات:', error);
             }
@@ -628,7 +628,7 @@ try {
             // تهيئة الرسم الأسبوعي مع معالجة الأخطاء
             try {
                 initializeWeeklyChart();
-                console.log('✅ تم تهيئة الرسم الأسبوعي بنجاح');
+                // console.log('✅ تم تهيئة الرسم الأسبوعي بنجاح');
             } catch (error) {
                 console.error('❌ خطأ في تهيئة الرسم الأسبوعي:', error);
             }
@@ -644,7 +644,7 @@ try {
     
     function initializeBalanceChart() {
         try {
-            console.log('📈 بدء تهيئة رسم الرصيد اليومي...');
+            // console.log('📈 بدء تهيئة رسم الرصيد اليومي...');
 
             // العثور على عنصر Canvas في DOM
             const balanceCtx = document.getElementById('balanceChart');
@@ -665,7 +665,7 @@ try {
             }
 
             // طباعة عينة من البيانات للتشخيص
-            console.log('📊 عينة من البيانات اليومية:', dailyData.slice(0, 3));
+            // console.log('📊 عينة من البيانات اليومية:', dailyData.slice(0, 3));
 
             // استخراج وتحضير البيانات للرسم البياني
             const dates = dailyData.map(d => d.date);                                    // التواريخ
@@ -674,12 +674,12 @@ try {
             const withdrawals = dailyData.map(d => parseFloat(d.withdrawals) || 0);     // السحوبات اليومية
 
             // طباعة إحصائيات البيانات المحضرة
-            console.log('📋 إحصائيات البيانات المحضرة:', {
-                datesCount: dates.length,
-                balancesSum: balances.reduce((a, b) => a + b, 0),
-                depositsSum: deposits.reduce((a, b) => a + b, 0),
-                withdrawalsSum: withdrawals.reduce((a, b) => a + b, 0)
-            });
+            // console.log('📋 إحصائيات البيانات المحضرة:', {
+            //     datesCount: dates.length,
+            //     balancesSum: balances.reduce((a, b) => a + b, 0),
+            //     depositsSum: deposits.reduce((a, b) => a + b, 0),
+            //     withdrawalsSum: withdrawals.reduce((a, b) => a + b, 0)
+            // });
 
             // إنشاء الرسم البياني باستخدام Chart.js
             balanceChart = new Chart(balanceCtx, {
@@ -777,7 +777,7 @@ try {
                 }
             });
 
-            console.log('✅ تم إنشاء رسم الرصيد اليومي بنجاح');
+            // console.log('✅ تم إنشاء رسم الرصيد اليومي بنجاح');
 
         } catch (error) {
             console.error('❌ خطأ في إنشاء رسم الرصيد:', error);
@@ -790,7 +790,7 @@ try {
     
     function initializeCurrencyChart() {
         try {
-            console.log('🪙 بدء تهيئة رسم العملات...');
+            // console.log('🪙 بدء تهيئة رسم العملات...');
 
             // العثور على عنصر Canvas
             const currencyCtx = document.getElementById('currencyChart');
@@ -810,7 +810,7 @@ try {
                 return;
             }
 
-            console.log('💱 بيانات العملات:', currencyData);
+            // console.log('💱 بيانات العملات:', currencyData);
 
             // تحضير البيانات للرسم البياني
             const currencies = Object.values(currencyData);                    // تحويل الكائن إلى مصفوفة
@@ -826,7 +826,7 @@ try {
                 'rgba(108, 117, 125, 0.8)'   // رمادي
             ];
 
-            console.log('📊 بيانات رسم العملات المحضرة:', { labels, netData });
+            // console.log('📊 بيانات رسم العملات المحضرة:', { labels, netData });
 
             // إنشاء الرسم البياني الدائري
             currencyChart = new Chart(currencyCtx, {
@@ -868,7 +868,7 @@ try {
                 }
             });
 
-            console.log('✅ تم إنشاء رسم العملات بنجاح');
+            // console.log('✅ تم إنشاء رسم العملات بنجاح');
 
         } catch (error) {
             console.error('❌ خطأ في إنشاء رسم العملات:', error);
@@ -881,7 +881,7 @@ try {
     
     function initializeCategoryChart() {
         try {
-            console.log('🏷️ بدء تهيئة رسم التصنيفات...');
+            // console.log('🏷️ بدء تهيئة رسم التصنيفات...');
 
             // العثور على عنصر Canvas
             const categoryCtx = document.getElementById('categoryChart');
@@ -901,7 +901,7 @@ try {
                 return;
             }
 
-            console.log('📑 بيانات التصنيفات:', categoryData);
+            // console.log('📑 بيانات التصنيفات:', categoryData);
 
             // تحضير البيانات للرسم البياني
             const categories = Object.values(categoryData);                // تحويل الكائن إلى مصفوفة
@@ -918,7 +918,7 @@ try {
                 'rgba(255, 159, 64, 0.8)'    // برتقالي
             ];
 
-            console.log('📊 بيانات رسم التصنيفات المحضرة:', { labels, data });
+            // console.log('📊 بيانات رسم التصنيفات المحضرة:', { labels, data });
 
             // إنشاء الرسم البياني الدائري
             categoryChart = new Chart(categoryCtx, {
@@ -956,7 +956,7 @@ try {
                 }
             });
 
-            console.log('✅ تم إنشاء رسم التصنيفات بنجاح');
+            // console.log('✅ تم إنشاء رسم التصنيفات بنجاح');
 
         } catch (error) {
             console.error('❌ خطأ في إنشاء رسم التصنيفات:', error);
@@ -969,7 +969,7 @@ try {
     
     function initializeWeeklyChart() {
         try {
-            console.log('📅 بدء تهيئة الرسم الأسبوعي...');
+            // console.log('📅 بدء تهيئة الرسم الأسبوعي...');
 
             // العثور على عنصر Canvas
             const weeklyCtx = document.getElementById('weeklyChart');
@@ -989,7 +989,7 @@ try {
                 return;
             }
 
-            console.log('📊 البيانات الأسبوعية:', weeklyData);
+            // console.log('📊 البيانات الأسبوعية:', weeklyData);
 
             // تحضير البيانات للرسم البياني
             const labels = weeklyData.map((w, i) => `الأسبوع ${w.week_number || (i + 1)}`);  // تسميات الأسابيع
@@ -997,7 +997,7 @@ try {
             const withdrawals = weeklyData.map(w => parseFloat(w.withdrawals) || 0);         // سحوبات كل أسبوع
             const transfers = weeklyData.map(w => parseFloat(w.transfers) || 0);             // تحويلات كل أسبوع
 
-            console.log('📋 بيانات الرسم الأسبوعي المحضرة:', { labels, deposits, withdrawals, transfers });
+            // console.log('📋 بيانات الرسم الأسبوعي المحضرة:', { labels, deposits, withdrawals, transfers });
 
             // إنشاء رسم بياني عمودي
             weeklyChart = new Chart(weeklyCtx, {
@@ -1082,7 +1082,7 @@ try {
                 }
             });
 
-            console.log('✅ تم إنشاء الرسم الأسبوعي بنجاح');
+            // console.log('✅ تم إنشاء الرسم الأسبوعي بنجاح');
 
         } catch (error) {
             console.error('❌ خطأ في إنشاء الرسم الأسبوعي:', error);
@@ -1099,7 +1099,7 @@ try {
      */
     window.showChart = function(type) {
         try {
-            console.log(`🔄 تبديل عرض الرسم إلى: ${type}`);
+            // console.log(`🔄 تبديل عرض الرسم إلى: ${type}`);
 
             // التحقق من تهيئة الرسم البياني
             if (!balanceChart) {
@@ -1143,7 +1143,7 @@ try {
 
             // تحديث الرسم البياني
             balanceChart.update();
-            console.log(`✅ تم تحديث عرض الرسم إلى: ${type}`);
+            // console.log(`✅ تم تحديث عرض الرسم إلى: ${type}`);
 
         } catch (error) {
             console.error('❌ خطأ في تبديل عرض الرسم:', error);
@@ -1155,7 +1155,7 @@ try {
      */
     window.toggleDayDetails = function() {
         try {
-            console.log('👁️ تبديل عرض التفاصيل اليومية...');
+            // console.log('👁️ تبديل عرض التفاصيل اليومية...');
 
             // العثور على عنصر التفاصيل
             const details = document.getElementById('dailyAnalysis');
@@ -1175,14 +1175,14 @@ try {
                 if (button) {
                     button.innerHTML = '<i class="fas fa-eye-slash me-1"></i> إخفاء التفاصيل';
                 }
-                console.log('✅ تم إظهار التفاصيل اليومية');
+                // console.log('✅ تم إظهار التفاصيل اليومية');
             } else {
                 // إخفاء التفاصيل
                 details.style.display = 'none';
                 if (button) {
                     button.innerHTML = '<i class="fas fa-eye me-1"></i> إظهار التفاصيل';
                 }
-                console.log('✅ تم إخفاء التفاصيل اليومية');
+                // console.log('✅ تم إخفاء التفاصيل اليومية');
             }
 
         } catch (error) {
@@ -1195,9 +1195,9 @@ try {
      */
     window.exportReport = function() {
         try {
-            console.log('🖨️ بدء تصدير التقرير...');
+            // console.log('🖨️ بدء تصدير التقرير...');
             window.print();
-            console.log('✅ تم تشغيل أمر الطباعة');
+            // console.log('✅ تم تشغيل أمر الطباعة');
         } catch (error) {
             console.error('❌ خطأ في تصدير التقرير:', error);
         }
@@ -1208,7 +1208,7 @@ try {
      */
     window.showPreviousMonth = function() {
         try {
-            console.log('⬅️ الانتقال للشهر السابق...');
+            // console.log('⬅️ الانتقال للشهر السابق...');
             const currentMonth = new Date('{{ $month }}-01');
             currentMonth.setMonth(currentMonth.getMonth() - 1);
             const newMonth = currentMonth.toISOString().slice(0, 7);
@@ -1223,7 +1223,7 @@ try {
      */
     window.showNextMonth = function() {
         try {
-            console.log('➡️ الانتقال للشهر التالي...');
+            // console.log('➡️ الانتقال للشهر التالي...');
             const currentMonth = new Date('{{ $month }}-01');
             currentMonth.setMonth(currentMonth.getMonth() + 1);
             const newMonth = currentMonth.toISOString().slice(0, 7);
@@ -1240,24 +1240,24 @@ try {
     // تحديث أحجام الرسوم البيانية عند تغيير حجم النافذة
     window.addEventListener('resize', function() {
         try {
-            console.log('📏 تحديث أحجام الرسوم البيانية...');
+            // console.log('📏 تحديث أحجام الرسوم البيانية...');
             
             // تحديث كل رسم بياني إذا كان موجوداً
             if (balanceChart) {
                 balanceChart.resize();
-                console.log('✅ تم تحديث حجم رسم الرصيد');
+                // console.log('✅ تم تحديث حجم رسم الرصيد');
             }
             if (currencyChart) {
                 currencyChart.resize();
-                console.log('✅ تم تحديث حجم رسم العملات');
+                // console.log('✅ تم تحديث حجم رسم العملات');
             }
             if (categoryChart) {
                 categoryChart.resize();
-                console.log('✅ تم تحديث حجم رسم التصنيفات');
+                // console.log('✅ تم تحديث حجم رسم التصنيفات');
             }
             if (weeklyChart) {
                 weeklyChart.resize();
-                console.log('✅ تم تحديث حجم الرسم الأسبوعي');
+                // console.log('✅ تم تحديث حجم الرسم الأسبوعي');
             }
             
         } catch (error) {
@@ -1265,7 +1265,7 @@ try {
         }
     });
 
-    console.log('🎉 تم تعريف جميع الدوال بنجاح');
+    // console.log('🎉 تم تعريف جميع الدوال بنجاح');
 
 } catch (error) {
     /* =====================================================
@@ -1285,6 +1285,6 @@ try {
    انتهاء السكريبت الرئيسي
    ===================================================== */
 
-console.log('🏁 انتهى تحميل سكريبت التقرير الشهري');
+// console.log('🏁 انتهى تحميل سكريبت التقرير الشهري');
 </script>
 @endpush

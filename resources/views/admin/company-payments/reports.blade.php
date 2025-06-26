@@ -459,7 +459,7 @@
 
         // 🚀 تشغيل التطبيق عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('📊 بدء تحميل التقارير المالية...');
+            // console.log('📊 بدء تحميل التقارير المالية...');
 
             initializeEventListeners();
             loadReportsData();
@@ -525,7 +525,7 @@
             fetch(`{{ route('admin.company-payments.reports.data') }}?${params}`)
                 .then(response => response.json())
                 .then(data => {
-                    console.log('📊 تم تحميل بيانات التقارير:', data);
+                    // console.log('📊 تم تحميل بيانات التقارير:', data);
                     renderAllReports(data);
                 })
                 .catch(error => {
@@ -1053,6 +1053,6 @@
             });
         });
 
-        console.log('✅ تم تحميل نظام التقارير المالية بنجاح');
+        // console.log('✅ تم تحميل نظام التقارير المالية بنجاح');
     </script>
 @endpush
