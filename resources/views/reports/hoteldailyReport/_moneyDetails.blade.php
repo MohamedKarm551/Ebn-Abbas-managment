@@ -700,7 +700,7 @@
                                                                             'd/m/Y',
                                                                         );
                                                                     } else {
-                                                                        $daysSince = $agent->created_at->diffInDays(
+                                                                        $daysSince = $company->created_at->diffInDays(
                                                                             now(),
                                                                         );
                                                                         $lastDate = 'لم يتم التعامل مطلقاً';
