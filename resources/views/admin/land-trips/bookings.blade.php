@@ -1,7 +1,11 @@
 @extends('layouts.app')
 
 @section('title', 'حجوزات الرحلة البرية')
+@push('styles')
+<style>
 
+</style>
+@endpush
 @section('content')
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -19,7 +23,9 @@
             </div>
         </div>
 
-        <div class="card shadow mb-4">
+        <div class="card shadow mb-4" style="
+    opacity: 0.8;
+">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">معلومات الرحلة</h5>
             </div>
@@ -191,4 +197,21 @@
             </div>
         </div>
     </div>
+    <!-- استدعاء الخلفية التفاعلية -->
+<script type="module">
+    import { initParticlesBg } from '/js/particles-bg.js';
+initParticlesBg({
+    points: 60,           // عدد النقاط (افتراضي: 60)
+    dist: 140,            // المسافة القصوى بين النقاط لرسم الخط (افتراضي: 140)
+    mouseDist: 180,       // المسافة القصوى بين النقطة والماوس لرسم الخط (افتراضي: 180)
+    colors: [             // ألوان النقاط (افتراضي: مجموعة ألوان عصرية)
+        '#06b6d4', '#f59e42', '#6366f1', '#f43f5e', '#22d3ee'
+    ],
+    zIndex: 0,            // ترتيب الطبقة (z-index) للكانفاس (افتراضي: 0)
+    opacity: 1,           // شفافية الكانفاس (افتراضي: 1)
+    dotRadius: 3.2,       // نصف قطر النقطة (افتراضي: 3.2)
+    lineColor: '#b6b6b6', // لون الخطوط بين النقاط (افتراضي: #b6b6b6)
+    mouseLineColor: '#06b6d4', // لون الخط مع الماوس (افتراضي: #06b6d4)
+    shadowBlur: 8         // شدة الظل حول النقاط (افتراضي: 8)
+});</script>
 @endsection

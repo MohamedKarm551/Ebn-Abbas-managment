@@ -380,5 +380,10 @@
             });
             </script> 
             <script src="{{ asset('js/preventClick.js') }}"></script>
-    </body>
+            <!-- Animated Dots Background Canvas -->
+<!-- استدعاء الخلفية التفاعلية -->
+<script type="module">
+    import { initParticlesBg } from '/js/particles-bg.js';
+    initParticlesBg(); // يمكنك تمرير خيارات مثل {points:80, colors:[...]} إذا أردت
+</script>    </body>
 </html>

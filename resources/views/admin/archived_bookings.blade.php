@@ -496,3 +496,8 @@
 
     }); // نهاية الـ DOMContentLoaded
 </script>
+<!-- استدعاء الخلفية التفاعلية -->
+<script type="module">
+    import { initParticlesBg } from '/js/particles-bg.js';
+    initParticlesBg(); // يمكنك تمرير خيارات مثل {points:80, colors:[...]} إذا أردت
+</script>

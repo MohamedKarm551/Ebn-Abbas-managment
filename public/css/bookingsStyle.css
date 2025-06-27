@@ -35,6 +35,18 @@
   html[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
     background-color: var(--bs-info-dark);
   }
+::selection {
+    background: #000;
+    color: #fff;
+    text-shadow: 0 2px 8px #000, 0 0px 2px #fff;
+}
+
+/* تخصيص السيلكشن للوضع الليلي */
+html[data-theme="dark"] ::selection {
+    background: #fff;
+    color: #222;
+    text-shadow: 0 2px 8px #fff, 0 0px 2px #000;
+}
     .notes-popover {
         max-width: 350px;
         /* Adjust max width */
