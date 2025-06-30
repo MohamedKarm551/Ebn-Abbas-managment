@@ -8,7 +8,7 @@
         @else
             <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
             <div class="filter-box p-4 mb-4">
-                <h3 class="mb-3">عملية البحث والفلترة</h3>
+                <h3 class="mb-3 text-muted">عملية البحث والفلترة</h3>
                 <form id="archiveFilterForm" method="GET" action="{{ route('admin.archived_bookings') }}">
                     <div class="row align-items-center text-center">
                         <div class="col-md-4 mb-2">

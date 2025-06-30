@@ -62,7 +62,7 @@
                 <label for="check_in" class="form-label">تاريخ الدخول</label>
                 <input type="text" class="form-control" id="check_in" name="check_in"
                     value="{{ $booking->check_in->format('d/m/Y') }}" required {{-- *** بداية الإضافة: تعطيل الحقل لغير الأدمن *** --}}
-                    @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin') disabled
+                    @if (!auth()->user() || strtolower(auth()->user()->role) !== 'admin') readonly {{-- إذا كان المستخدم ليس أدمن، نجعل الحقل للقراءة فقط --}}
                 style="background-color: #e9ecef; cursor: not-allowed;" {{-- تغيير شكل الحقل ليوضح إنه معطل --}} @endif
                     {{-- *** نهاية الإضافة *** --}}>
                 @error('check_in')

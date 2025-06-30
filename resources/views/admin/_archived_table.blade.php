@@ -76,7 +76,7 @@
                 </td>
                 <td>{{ $booking->updated_at ? $booking->updated_at->format('Y-m-d H:i') : '-' }}</td>
 
-                <td class="text-center align-middle">
+                <td class="text-center align-middle d-flex justify-content-center flex-wrap gap-2 p-2">
                     <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-sm btn-warning me-1"
                         title="تعديل">
                         <i class="fas fa-edit"></i>

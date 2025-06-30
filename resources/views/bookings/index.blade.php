@@ -69,15 +69,16 @@
         @endauth
 
         <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
-        <div class="filter-box p-4 mb-4">
+        <div class="filter-box p-4 mb-4" style="background:linear-gradient(120deg, #10b981 60%, #2563eb 100%)">
+
             <h3 class="mb-3">عملية البحث والفلترة</h3>
             <form id="filterForm" method="GET" action="{{ route('bookings.index') }}">
                 <div class="row align-items-center text-center">
                     <div class="col-md-4 mb-2">
-                        <label for="search" class="form-label">بحث عن العميل، الموظف، الشركة، جهة حجز،
+                        <label for="search" class="form-label">بحث عن عميل، موظف، شركة، جهة حجز،
                             فندق</label>
                         <input type="text" name="search" id="search" class="form-control"
-                            placeholder="بحث عن العميل، الموظف، الشركة، جهة حجز، فندق" pattern="[^<>\(\){}\[\];]*"
+                            placeholder="اسم العميل، الموظف، الشركة، جهة حجز، فندق" pattern="[^<>\(\){}\[\];]*"
                             title="لا يسمح بإدخال رموز خاصة مثل: <> () {} []" value="{{ request('search') }}" />
                     </div>
                     <div class="col-md-4 mb-2">
@@ -900,26 +901,44 @@
         }
 
         .filter-box {
+            background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+            border-radius: 22px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18), 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(8px) saturate(140%);
+            -webkit-backdrop-filter: blur(8px) saturate(140%);
+            padding: 2.5rem 1.5rem 2rem 1.5rem;
+            margin-bottom: 2rem;
             position: relative;
-            background-color: var(--filter-bg) !important;
-            border-radius: 16px;
-            padding: 1.5rem 1rem;
-            margin-bottom: 1.5rem;
             overflow: hidden;
-            z-index: 1;
-            box-shadow: inset 0px 0px 0px 1.5px rgba(26, 26, 0, 0.16), 0 2px 8px 0 rgba(0, 0, 0, 0.04);
-            border: none;
+            color: #fff;
+            transition: box-shadow 0.3s;
         }
 
         .filter-box::before {
             content: '';
             position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.13) 0%, transparent 70%);
+            animation: filterFloat 8s ease-in-out infinite;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .filter-box::after {
+            content: '';
+            position: absolute;
             inset: 0;
             border-radius: inherit;
             border: 2px solid transparent;
-            background: linear-gradient(90deg, #f53003, #ff4433, #1b1b18, #f53003);
+            /* background: linear-gradient(120deg, #10b981 60%, #2563eb 100%); */
+            background: linear-gradient(120deg, #0000008a 60%, #fff 100%);
+            ;
             background-size: 300% 300%;
-            animation: border-spin 7s linear infinite;
+            animation: border-spin 20s linear infinite;
             z-index: 2;
             pointer-events: none;
             mask:
@@ -935,26 +954,67 @@
         }
 
         @keyframes border-spin {
-            0% {
-                background-position: 0% 50%;
+
+            0%,
+            100% {
+                background-position: -200% 0;
             }
 
             50% {
-                background-position: 100% 50%;
+                background-position: 200% 0;
+            }
+        }
+
+        .border-shine {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+            /* اجعلها فوق الوميض الآخر */
+        }
+
+
+
+        /* محتوى البوكس يفضل فوق كل حاجة */
+        .filter-box>* {
+            position: relative;
+            z-index: 3;
+        }
+
+        /* حركة الوميض */
+        @keyframes borderShine {
+            0% {
+                background-position: -200% 0;
             }
 
             100% {
-                background-position: 0% 50%;
+                background-position: 200% 0;
             }
         }
 
-        html[data-theme="dark"] .filter-box {
-            box-shadow: inset 0px 0px 0px 1.5px #fffaed2d, 0 2px 8px 0 rgba(0, 0, 0, 0.16);
+
+        @keyframes filterFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            50% {
+                transform: translate(-30px, -30px) rotate(180deg);
+            }
         }
 
-        html[data-theme="dark"] .filter-box::before {
-            background: linear-gradient(90deg, #fffaed2d, #f53003, #ff4433, #1b1b18, #f53003);
-        }
+        /* html[data-theme="dark"] .filter-box {
+                                                    box-shadow: inset 0px 0px 0px 1.5px #fffaed2d, 0 2px 8px 0 rgba(0, 0, 0, 0.16);
+                                                } */
+
+        /* html[data-theme="dark"] .filter-box::before {
+                                                    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+                                                } */
 
         /* --- Admin Circle Menu Styles --- */
         .admin-menu-container {
@@ -971,7 +1031,8 @@
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: linear-gradient(90deg, #E81C2E, #a11422, #202C45);
+            /* background: linear-gradient(90deg, #E81C2E, #a11422, #202C45); */
+            background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
             /* Gradient */
             display: flex;
             justify-content: center;
@@ -1027,8 +1088,8 @@
 
         /* Remove the rotation from the main hover effect if pulse is applied */
         /* .admin-menu-container:hover .admin-circle {
-                                                                        transform: rotate(360deg) scale(1.1);
-                                                                    } */
+                                                                                                                            transform: rotate(360deg) scale(1.1);
+                                                                                                                        } */
 
 
 

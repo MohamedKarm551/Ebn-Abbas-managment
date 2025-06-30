@@ -58,7 +58,7 @@
                         <td>
                             @auth
                                 @if (auth()->user()->role === 'Admin')
-                                    <div class="btn-group">
+                                    <div class="btn-group text-center align-middle d-flex justify-content-center flex-wrap gap-2 p-2">
                                         @if (!$employee->user_id)
                                             <!-- زر إنشاء حساب جديد -->
                                             <button type="button" class="btn btn-success btn-sm create-user-btn"
@@ -327,6 +327,10 @@
     });
 
     </script>
+    <script type="module">
+    import { initParticlesBg } from '/js/particles-bg.js';
+    initParticlesBg({points: 40, colors: ['#000', 'green']}); // يمكنك تمرير خيارات مثل {points:80, colors:[...]} إذا أردت
+</script>
     @push('scripts')
         <script src="{{ asset('js/preventClick.js') }}"></script>
     @endpush

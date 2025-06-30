@@ -10,7 +10,7 @@
         </div>
 
         <!-- بطاقات الإحصائيات -->
-        <div class="row mb-4">
+        <div class="row mb-4" style="opacity: 0.9;">
             <div class="col-md-3 col-sm-6 mb-3">
                 <div class="card border-0 bg-primary bg-gradient text-white h-100 shadow-sm">
                     <div class="card-body">
@@ -59,43 +59,35 @@
                 </div>
             </div>
 
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-0 bg-warning bg-gradient text-white h-100 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-#6c757d-50">إجمالي المدفوعات</h6>
-                                @if (count($stats['paymentsByCurrency']) > 1)
-                                    @foreach ($stats['paymentsByCurrency'] as $currency => $amount)
-                                        <div class="mb-1">
-                                            <span class="fs-5 fw-bold">{{ number_format($amount) }}</span>
-                                            <span
-                                                class="fs-6">{{ $stats['currencySymbols'][$currency] ?? $currency }}</span>
-                                        </div>
-                                    @endforeach
-                                @else
-                                    @php
-                                        $currency = key($stats['paymentsByCurrency']) ?? '';
-                                        $amount = $stats['paymentsByCurrency'][$currency] ?? $stats['totalSpent'];
-                                    @endphp
-                                    <h2 class="mb-0">{{ number_format($amount) }} <span
-                                            class="fs-6">{{ $stats['currencySymbols'][$currency] ?? $currency }}</span>
-                                    </h2>
-                                @endif
+            <div class="col-md-3 col-sm-6 mb-3 ">
+                <div class="card border-0 bg-warning bg-gradient text-white h-100 shadow-sm Regular shadow">
+                    <div class="card-body Regular shadow">
+                        <h6 class="mb-3 ">ملخص مالي</h6>
+                        @foreach ($dueByCurrency as $currency => $due)
+                            @php
+                                $paid = isset($paidByCurrency[$currency]) ? $paidByCurrency[$currency]->total_paid : 0;
+                                $remaining = $due->total_due - $paid;
+                            @endphp
+                            <div class="mb-2">
+                                <span class="fw-bold">العملة: {{ $currency == 'KWD' ? 'دينار كويتي' : $currency }}</span><br>
+                                <span class="fw-bold">المستحقات:</span>
+                                <span>{{ number_format($due->total_due, 2) }} {{ $currency }}</span><br>
+                                <span class="fw-bold">الدفوعات:</span>
+                                <span>{{ number_format($paid, 2) }} {{ $currency }}</span><br>
+                                <span class="fw-bold">المتبقي:</span>
+                                <span>{{ number_format($remaining, 2) }} {{ $currency }}</span>
                             </div>
-                            <div class="rounded-circle bg-white bg-opacity-25 p-3">
-                                <i class="fas fa-money-bill-wave fa-2x text-white"></i>
-                            </div>
-                        </div>
+                        @endforeach
                     </div>
+
                 </div>
             </div>
         </div>
 
         <!-- بطاقة البحث والفلترة -->
-        <div class="card mb-4 border-0 shadow-sm">
+        <div class="card mb-4 border-0 shadow-sm" style="opacity: 0.9;">
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0"><i class="fas fa-filter me-2 text-primary"></i> فلترة وبحث</h5>
+                <h5 class="mb-0 text-muted"><i class="fas fa-filter me-2 text-primary"></i> فلترة وبحث</h5>
             </div>
             <div class="card-body">
                 <form action="{{ route('company.land-trips.my-bookings') }}" method="GET" class="row g-3">
@@ -173,9 +165,9 @@
         @endif
 
         <!-- جدول الحجوزات -->
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm" style="opacity: 0.9;">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list-alt me-2 text-primary"></i> قائمة الحجوزات</h5>
+                <h5 class="mb-0 text-muted"><i class="fas fa-list-alt me-2 text-primary"></i> قائمة الحجوزات</h5>
                 <span class="badge bg-primary">{{ $bookings->total() }} حجز</span>
             </div>
             <div class="card-body p-0">
@@ -404,6 +396,12 @@
             });
         }
     });
+</script>
+<script type="module">
+    import {
+        initParticlesBg
+    } from '/js/particles-bg.js';
+    initParticlesBg();
 </script>
 @push('styles')
     <style>

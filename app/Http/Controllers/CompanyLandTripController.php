@@ -385,8 +385,7 @@ class CompanyLandTripController extends Controller
             }
         }
 
-
-        // جلب تفاصيل المدفوعات حسب العملة
+        // جلب تفاصيل المستحقات حسب العملة
         $paymentsByСurrency = LandTripBooking::where('company_id', Auth::user()->company_id)
             ->select('currency', DB::raw('SUM(amount_due_from_company) as total'))
             ->groupBy('currency')
@@ -402,6 +401,20 @@ class CompanyLandTripController extends Controller
             'EUR' => '€',
         ];
 
+        // حساب المستحقات حسب العملة
+        $dueByCurrency = LandTripBooking::where('company_id', Auth::user()->company_id)
+            ->select('currency', DB::raw('SUM(amount_due_from_company) as total_due'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
+
+        // حساب المدفوعات حسب العملة
+        $paidByCurrency = DB::table('company_payments')
+            ->where('company_id', Auth::user()->company_id)
+            ->select('currency', DB::raw('SUM(amount) as total_paid'))
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
         // حساب إحصائيات 
         $stats = [
             'totalBookings' => LandTripBooking::where('company_id', Auth::user()->company_id)->count(),
@@ -413,14 +426,13 @@ class CompanyLandTripController extends Controller
                 ->whereYear('created_at', Carbon::now()->year)
                 ->whereMonth('created_at', Carbon::now()->month)
                 ->count(),
-            'totalSpent' => LandTripBooking::where('company_id', Auth::user()->company_id)
-                ->sum('amount_due_from_company'),
+
             'paymentsByCurrency' => $paymentsByСurrency,
             'currencySymbols' => $currencySymbols
         ];
 
         $bookings = $query->paginate(10)->withQueryString();
         $tripTypes = TripType::orderBy('name')->get();
-        return view('company.land-trips.my-bookings', compact('bookings', 'tripTypes', 'stats'));
+        return view('company.land-trips.my-bookings', compact('bookings', 'tripTypes', 'stats', 'dueByCurrency', 'paidByCurrency'));
     }
 }

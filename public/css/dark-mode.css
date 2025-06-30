@@ -44,7 +44,7 @@ body {
 .card,
 .card-body,
 .filter-box {
-  background-color: var(--card-bg) !important;
+  /* background-color: var(--card-bg) !important; */
   color:            var(--text) !important;
   border:           1px solid var(--border) !important;
 }
