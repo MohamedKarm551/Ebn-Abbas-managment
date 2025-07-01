@@ -128,6 +128,13 @@ class AdminTransactionController extends Controller
             $filename = time() . '_' . $file->getClientOriginalName();
             $path = $file->storeAs('admin_transactions', $filename, 'public');
             $data['link_or_image'] = $path;
+
+            // --- نسخ الملف يدويًا إلى public/storage/admin_transactions ---
+            $publicPath = public_path('storage/admin_transactions/' . $filename);
+            if (!file_exists(dirname($publicPath))) {
+                mkdir(dirname($publicPath), 0775, true);
+            }
+            copy($file->getRealPath(), $publicPath);
         }
 
         AdminTransaction::create($data);
