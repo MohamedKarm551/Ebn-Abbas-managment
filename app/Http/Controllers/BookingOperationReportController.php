@@ -419,11 +419,22 @@ class BookingOperationReportController extends Controller
                         $path = $file->storeAs('hotel-vouchers', $fileName, 'public');
                         $hotelEntry['voucher_file_path'] = $path;
 
-                        Log::info("تم رفع فاوتشر الفندق {$index}", [
+                        // --- نسخ الملف يدويًا إلى public/storage/hotel-vouchers ---
+                        $publicPath = public_path('storage/hotel-vouchers/' . $fileName);
+                        if (!file_exists(dirname($publicPath))) {
+                            mkdir(dirname($publicPath), 0775, true);
+                        }
+                        copy($file->getRealPath(), $publicPath);
+
+                        Log::info("تم رفع فاوتشر الفندق {$index} في التحديث", [
                             'original_name' => $file->getClientOriginalName(),
                             'stored_path' => $path,
                             'file_size' => $file->getSize()
                         ]);
+                    }
+                    // إذا لم يتم رفع ملف جديد، الاحتفاظ بالملف القديم إذا وجد
+                    elseif (isset($hotelData['existing_voucher_file'])) {
+                        $hotelEntry['voucher_file_path'] = $hotelData['existing_voucher_file'];
                     }
 
                     BookingReportHotel::create($hotelEntry);
@@ -681,6 +692,13 @@ class BookingOperationReportController extends Controller
                         $path = $file->storeAs('hotel-vouchers', $fileName, 'public');
                         $hotelEntry['voucher_file_path'] = $path;
 
+                        // --- نسخ الملف يدويًا إلى public/storage/hotel-vouchers ---
+                        $publicPath = public_path('storage/hotel-vouchers/' . $fileName);
+                        if (!file_exists(dirname($publicPath))) {
+                            mkdir(dirname($publicPath), 0775, true);
+                        }
+                        copy($file->getRealPath(), $publicPath);
+
                         Log::info("تم رفع فاوتشر الفندق {$index} في التحديث", [
                             'original_name' => $file->getClientOriginalName(),
                             'stored_path' => $path,
@@ -691,6 +709,7 @@ class BookingOperationReportController extends Controller
                     elseif (isset($hotelData['existing_voucher_file'])) {
                         $hotelEntry['voucher_file_path'] = $hotelData['existing_voucher_file'];
                     }
+
 
                     BookingReportHotel::create($hotelEntry);
                 }
