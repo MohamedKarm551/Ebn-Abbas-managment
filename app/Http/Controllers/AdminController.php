@@ -61,8 +61,8 @@ class AdminController extends Controller
                     $query->where(function ($q) {
                         $q->where('message', 'LIKE', '%دفعة%') // كلمة "دفعة"
                             ->orWhere('message', 'LIKE', '%payment%') // كلمة "payment"
-                        // ممكن تضيف "سداد", "تحصيل" ...إلخ
-                        ->orWhere('message', 'LIKE', '%خصم%');
+                            // ممكن تضيف "سداد", "تحصيل" ...إلخ
+                            ->orWhere('message', 'LIKE', '%خصم%');
                     });
                     break;
                 case 'availabilities':
@@ -104,7 +104,7 @@ class AdminController extends Controller
             $query->where('user_id', $user->id);
         }
         // لو المستخدم أدمن، مش هنضيف أي شرط إضافي (هيجيب كله)
-        
+
         $notifications = $query->paginate(20)->appends($request->query());
         // *** نهاية التعديل: هنا بنجيب الإشعارات حسب الفلتر والصفحة ***
         return view('admin.notifications', compact('notifications', 'currentFilter'));
@@ -328,7 +328,7 @@ class AdminController extends Controller
     }
     public function companies()
     {
-        $companies = Company::withCount('bookings')
+        $companies = Company::with(['users'])->withCount('bookings')
             ->orderBy('name', 'asc') // ترتيب الشركات حسب الاسم
             ->get(); // جلب كل الشركات
         return view('admin.companies', compact('companies'));
@@ -342,15 +342,31 @@ class AdminController extends Controller
                 'string',
                 'max:255',
                 'unique:companies,name',
-                // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
                 'regex:/^[\pL\pN\s\-()]+$/u'
             ],
+            'company_email' => ['nullable', 'email', 'unique:users,email'],
+            'company_password' => ['nullable', 'string', 'min:8'],
         ]);
 
         // *** تطبيق التنقية هنا قبل الحفظ ***
         $sanitizedName = strip_tags($request->input('name'));
 
         $company = Company::create(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+        // إذا أدخل الأدمن بريد وكلمة مرور، أنشئ مستخدم مرتبط بهذه الشركة
+        if (
+            $request->filled('company_email') &&
+            $request->filled('company_password') &&
+            Auth::user()->role === 'Admin'
+        ) {
+            User::create([
+                'name' => $sanitizedName,
+                'email' => $request->input('company_email'),
+                'password' => Hash::make($request->input('company_password')),
+                'role' => 'Company',
+                'company_id' => $company->id,
+            ]);
+        }
+
 
         Notification::create([
             'user_id' => Auth::user()->id,
@@ -380,12 +396,28 @@ class AdminController extends Controller
                 // regex: يسمح بالحروف (Unicode)، الأرقام، المسافات، الشرطة، القوسين
                 'regex:/^[\pL\pN\s\-()]+$/u'
             ],
+            'new_company_email' => ['nullable', 'email', 'unique:users,email'],
+        'new_company_password' => ['nullable', 'string', 'min:8'],
         ]);
 
         // *** تطبيق التنقية هنا قبل التحديث ***
         $sanitizedName = strip_tags($request->input('name'));
 
         $company->update(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+            // إذا أدخل الأدمن بريد وباسورد جديدين، أنشئ مستخدم جديد مرتبط بنفس الشركة
+    if (
+        $request->filled('new_company_email') &&
+        $request->filled('new_company_password') &&
+        Auth::user()->role === 'Admin'
+    ) {
+        User::create([
+            'name' => $sanitizedName,
+            'email' => $request->input('new_company_email'),
+            'password' => Hash::make($request->input('new_company_password')),
+            'role' => 'Company',
+            'company_id' => $company->id,
+        ]);
+    }
 
         Notification::create([
             'user_id' => Auth::user()->id,

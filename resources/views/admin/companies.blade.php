@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'إدارة الشركات')
 @push('styles')
     <style>
         :root {
@@ -597,6 +598,17 @@
                             </div>
 
                             <h3 class="company-name">{{ $company->name }}</h3>
+                            @if (auth()->user()->role === 'Admin')
+                                <div class="company-email">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    @forelse($company->users as $user)
+                                        <span class="badge bg-light text-dark mb-1">{{ $user->email }}</span>
+                                    @empty
+                                        <span class="text-muted">لا يوجد إيميلات مسجلة</span>
+                                    @endforelse
+                                </div>
+                            @endif
+
 
                             <div class="company-stats">
                                 <div class="stat-item">
@@ -664,6 +676,28 @@
                             <input type="text" class="form-control" name="name" required
                                 placeholder="أدخل اسم الشركة">
                         </div>
+                        @if (auth()->user()->role === 'Admin')
+                            <div class="form-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-envelope"></i>
+                                    بريد الشركة (اختياري)
+                                </label>
+                                <input type="email" class="form-control" name="company_email"
+                                    placeholder="company@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-lock"></i>
+                                    كلمة المرور (اختياري)
+                                </label>
+                                <input type="password" class="form-control" name="company_password"
+                                    placeholder="••••••••">
+                            </div>
+                        @else
+                            <input type="hidden" name="company_email">
+                            <input type="hidden" name="company_password">
+                        @endif
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -701,6 +735,25 @@
                             </label>
                             <input type="text" class="form-control" name="name" id="editCompanyName" required>
                         </div>
+                        @if (auth()->user()->role === 'Admin')
+                            <div class="form-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-envelope"></i>
+                                    بريد جديد للشركة (اختياري)
+                                </label>
+                                <input type="email" class="form-control" name="new_company_email"
+                                    placeholder="company@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-lock"></i>
+                                    كلمة مرور جديدة (اختياري)
+                                </label>
+                                <input type="password" class="form-control" name="new_company_password"
+                                    placeholder="••••••••">
+                            </div>
+                        @endif
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -915,12 +968,13 @@
                 }
             });
         </script>
-    <script src="{{ asset('js/preventClick.js') }}"></script>
-    <!-- استدعاء الخلفية التفاعلية -->
-<script type="module">
-    import { initParticlesBg } from '/js/particles-bg.js';
-    initParticlesBg(); // يمكنك تمرير خيارات مثل {points:80, colors:[...]} إذا أردت
-</script>
-
+        <script src="{{ asset('js/preventClick.js') }}"></script>
+        <!-- استدعاء الخلفية التفاعلية -->
+        <script type="module">
+            import {
+                initParticlesBg
+            } from '/js/particles-bg.js';
+            initParticlesBg(); // يمكنك تمرير خيارات مثل {points:80, colors:[...]} إذا أردت
+        </script>
     @endpush
 @endsection
