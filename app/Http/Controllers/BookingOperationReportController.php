@@ -620,20 +620,20 @@ class BookingOperationReportController extends Controller
                     ];
 
                     // معالجة ملف التذكرة الجديد
-                    if ($request->hasFile("hotels.{$index}.voucher_file")) {
-                        $file = $request->file("hotels.{$index}.voucher_file");
-                        $fileName = time() . '_hotel_' . $index . '_' . $file->getClientOriginalName();
-                        $path = $file->storeAs('hotel-vouchers', $fileName, 'public');
-                        $hotelEntry['voucher_file_path'] = $path;
+                    if ($request->hasFile("transports.{$index}.ticket_file")) {
+                        $file = $request->file("transports.{$index}.ticket_file");
+                        $fileName = time() . '_transport_' . $index . '_' . $file->getClientOriginalName();
+                        $path = $file->storeAs('transport-tickets', $fileName, 'public');
+                        $transportEntry['ticket_file_path'] = $path;
 
-                        // --- نسخ الملف يدويًا إلى public/storage/hotel-vouchers ---
-                        $publicPath = public_path('storage/hotel-vouchers/' . $fileName);
+                        // --- نسخ الملف يدويًا إلى public/storage/transport-tickets ---
+                        $publicPath = public_path('storage/transport-tickets/' . $fileName);
                         if (!file_exists(dirname($publicPath))) {
                             mkdir(dirname($publicPath), 0775, true);
                         }
                         copy($file->getRealPath(), $publicPath);
 
-                        Log::info("تم رفع فاوتشر الفندق {$index}", [
+                        Log::info("تم رفع تذكرة النقل {$index}", [
                             'original_name' => $file->getClientOriginalName(),
                             'stored_path' => $path,
                             'file_size' => $file->getSize()
@@ -643,7 +643,6 @@ class BookingOperationReportController extends Controller
                     elseif (isset($transportData['existing_ticket_file'])) {
                         $transportEntry['ticket_file_path'] = $transportData['existing_ticket_file'];
                     }
-
                     BookingReportTransport::create($transportEntry);
                 }
             }
