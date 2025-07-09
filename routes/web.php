@@ -330,6 +330,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reports/data', [CompanyPaymentController::class, 'data'])->name('reports.data');
 
             Route::get('/{company}', [CompanyPaymentController::class, 'show'])->name('show');
+            Route::get('/{company}/bookings', [CompanyPaymentController::class, 'bookings'])->name('bookings'); // ✅ جديد
+
             Route::get('/{company}/create', [CompanyPaymentController::class, 'create'])->name('create');
             Route::post('/{company}', [CompanyPaymentController::class, 'store'])->name('store');
             Route::get('/{company}/{payment}/edit', [CompanyPaymentController::class, 'edit'])->name('edit');

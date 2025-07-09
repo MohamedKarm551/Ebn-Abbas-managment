@@ -1095,17 +1095,26 @@
                     </div>
 
                     <!-- آخر الحجوزات -->
+                    <!-- جميع الحجوزات مع عرض محدود -->
                     <div class="sidebar-card">
                         <div class="sidebar-header">
-                            <i class="fas fa-clock"></i>
-                            <span>آخر الحجوزات</span>
+                            <i class="fas fa-calendar-check"></i>
+                            <span>حجوزات الشركة</span>
+                            <a href="{{ route('admin.company-payments.bookings', $company) }}"
+                                class="btn btn-sm btn-light ms-auto" title="عرض جميع الحجوزات">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
                         </div>
                         <div class="sidebar-content">
-                            @forelse($recentBookings->take(5) as $booking)
+                            {{-- عرض سريع لآخر 3 حجوزات --}}
+                            @forelse($recentBookings->take(3) as $booking)
                                 <div class="booking-item">
                                     <div class="booking-info">
                                         <h6 class="booking-client">{{ $booking->client_name }}</h6>
                                         <p class="booking-date">{{ $booking->created_at->format('d/m/Y') }}</p>
+                                        <small class="text-muted">
+                                            {{ $booking->landTrip->destination ?? 'غير محدد' }}
+                                        </small>
                                     </div>
                                     <span class="booking-amount {{ $booking->currency === 'SAR' ? 'sar' : 'kwd' }}">
                                         {{ number_format($booking->amount_due_from_company, 0) }} {{ $booking->currency }}
@@ -1114,11 +1123,23 @@
                             @empty
                                 <div class="text-center py-4">
                                     <i class="fas fa-calendar-times text-muted mb-3" style="font-size: 2rem;"></i>
-                                    <p class="text-muted mb-0">لا توجد حجوزات حديثة</p>
+                                    <p class="text-muted mb-0">لا توجد حجوزات</p>
                                 </div>
                             @endforelse
+
+                            {{-- رابط لعرض جميع الحجوزات --}}
+                            @if ($company->landTripBookings()->count() > 3)
+                                <div class="text-center pt-3 border-top">
+                                    <a href="{{ route('admin.company-payments.bookings', $company) }}"
+                                        class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-list me-1"></i>
+                                        عرض جميع الحجوزات ({{ $company->landTripBookings()->count() }})
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>

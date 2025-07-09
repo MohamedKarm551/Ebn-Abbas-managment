@@ -59,6 +59,34 @@ class CompanyPaymentController extends Controller
         return view('admin.company-payments.index', compact('companies', 'totalStats'));
     }
 
+    // public function show(Company $company)
+    // {
+    //     $company->load(['companyPayments.employee', 'landTripBookings']);
+
+    //     $totals = $company->getTotalsByCurrency();
+    //     foreach (['SAR', 'KWD'] as $currency) {
+    //         if (!isset($totals[$currency])) {
+    //             $totals[$currency] = ['due' => 0, 'paid' => 0, 'remaining' => 0];
+    //         }
+    //     }
+
+    //     $payments = $company->companyPayments()
+    //         ->with('employee')
+    //         ->orderBy('payment_date', 'desc')
+    //         ->paginate(20);
+
+    //     $recentBookings = $company->landTripBookings()
+    //         ->with(['landTrip.agent', 'landTrip.hotel'])
+    //         ->latest()
+    //         ->take(10)
+    //         ->get();
+
+    //     return view('admin.company-payments.show', compact('company', 'totals', 'payments', 'recentBookings'));
+    // }
+
+    /**
+     * عرض صفحة تفاصيل الشركة مع حجوزات محدودة
+     */
     public function show(Company $company)
     {
         $company->load(['companyPayments.employee', 'landTripBookings']);
@@ -75,15 +103,72 @@ class CompanyPaymentController extends Controller
             ->orderBy('payment_date', 'desc')
             ->paginate(20);
 
+        // ✅ تحديث: عرض جميع الحجوزات مع الباجينيشن (مع الحد من البيانات)
+        $allBookings = $company->landTripBookings()
+            ->with(['landTrip.agent', 'landTrip.hotel'])
+            ->latest()
+            ->paginate(10, ['*'], 'bookings_page'); // اسم مختلف للباجينيشن
+
+        // آخر 5 حجوزات للعرض السريع
         $recentBookings = $company->landTripBookings()
             ->with(['landTrip.agent', 'landTrip.hotel'])
             ->latest()
-            ->take(10)
+            ->take(5)
             ->get();
 
-        return view('admin.company-payments.show', compact('company', 'totals', 'payments', 'recentBookings'));
+        return view('admin.company-payments.show', compact(
+            'company',
+            'totals',
+            'payments',
+            'allBookings',
+            'recentBookings'
+        ));
     }
+    /**
+     * ✅ صفحة جديدة: عرض جميع حجوزات الشركة بالتفصيل
+     */
+    public function bookings(Request $request, Company $company)
+    {
+        $query = $company->landTripBookings()
+            ->with(['landTrip.agent', 'landTrip.hotel', 'roomPrice.roomType']);
 
+        // فلترة حسب التاريخ
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        // فلترة حسب العملة
+        if ($request->filled('currency')) {
+            $query->where('currency', $request->currency);
+        }
+
+        // فلترة حسب الحالة
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // بحث في اسم العميل
+        if ($request->filled('search')) {
+            $query->where('client_name', 'like', '%' . $request->search . '%');
+        }
+
+        $bookings = $query->latest()->paginate(20);
+
+        // حساب الإحصائيات
+        $stats = [
+            'total_bookings' => $bookings->total(),
+            'total_amount_sar' => $company->landTripBookings()->where('currency', 'SAR')->sum('amount_due_from_company'),
+            'total_amount_kwd' => $company->landTripBookings()->where('currency', 'KWD')->sum('amount_due_from_company'),
+            'paid_amount_sar' => $company->companyPayments()->where('currency', 'SAR')->where('amount', '>', 0)->sum('amount'),
+            'paid_amount_kwd' => $company->companyPayments()->where('currency', 'KWD')->where('amount', '>', 0)->sum('amount'),
+        ];
+
+        return view('admin.company-payments.bookings', compact('company', 'bookings', 'stats'));
+    }
     public function create(Company $company)
     {
         $totals = $company->getTotalsByCurrency();
@@ -305,67 +390,66 @@ class CompanyPaymentController extends Controller
      * 📊 إرجاع بيانات التقارير كـ JSON
      */
     public function data(Request $request)
-{
-    try {
-        Log::info('📊 بدء تحميل بيانات التقارير', $request->all());
+    {
+        try {
+            Log::info('📊 بدء تحميل بيانات التقارير', $request->all());
 
-        $period = $request->get('period', 'daily');
-        $currency = $request->get('currency', 'all');
-        $startDate = $request->get('start_date');
-        $endDate = $request->get('end_date');
+            $period = $request->get('period', 'daily');
+            $currency = $request->get('currency', 'all');
+            $startDate = $request->get('start_date');
+            $endDate = $request->get('end_date');
 
-        // 📅 تحديد نطاق التواريخ
-        $dateRange = $this->getDateRange($period, $startDate, $endDate);
-        Log::info('📅 نطاق التواريخ:', $dateRange);
+            // 📅 تحديد نطاق التواريخ
+            $dateRange = $this->getDateRange($period, $startDate, $endDate);
+            Log::info('📅 نطاق التواريخ:', $dateRange);
 
-        // 🔍 بناء الاستعلام الأساسي
-        $query = CompanyPayment::with(['company', 'employee'])
-            ->whereBetween('payment_date', [$dateRange['start'], $dateRange['end']]);
+            // 🔍 بناء الاستعلام الأساسي
+            $query = CompanyPayment::with(['company', 'employee'])
+                ->whereBetween('payment_date', [$dateRange['start'], $dateRange['end']]);
 
-        if ($currency !== 'all') {
-            $query->where('currency', $currency);
+            if ($currency !== 'all') {
+                $query->where('currency', $currency);
+            }
+
+            $payments = $query->get();
+            Log::info('💰 عدد المدفوعات المسترجعة: ' . $payments->count());
+
+            // 📈 إعداد البيانات للاستجابة مع إضافة بيانات الربح
+            $response = [
+                'success' => true,
+                'period' => $period,
+                'currency' => $currency,
+                'date_range' => [
+                    'start' => $dateRange['start']->format('Y-m-d'),
+                    'end' => $dateRange['end']->format('Y-m-d'),
+                ],
+                'total_payments' => $this->calculateTotalPayments($payments),
+                'profit_data' => $this->calculateProfitData($currency), // ✅ إضافة بيانات الربح
+                'chart_data' => $this->getChartData($payments, $period),
+                'currency_distribution' => $this->getCurrencyDistribution($payments),
+                'top_companies' => $this->getTopCompanies($payments),
+                'comparison' => $this->getComparison($period, $dateRange, $currency),
+                'collection_targets' => $this->getCollectionTargets(),
+                'risk_analysis' => $this->getRiskAnalysis($payments)
+            ];
+
+            Log::info('✅ تم إعداد البيانات بنجاح');
+            return response()->json($response);
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في تحميل تقارير مدفوعات الشركات: ' . $e->getMessage());
+            Log::error('🔍 تفاصيل الخطأ: ' . $e->getTraceAsString());
+
+            return response()->json([
+                'success' => false,
+                'error' => 'حدث خطأ في تحميل البيانات',
+                'message' => config('app.debug') ? $e->getMessage() : 'خطأ داخلي في الخادم',
+                'debug_info' => config('app.debug') ? [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ] : null
+            ], 500);
         }
-
-        $payments = $query->get();
-        Log::info('💰 عدد المدفوعات المسترجعة: ' . $payments->count());
-
-        // 📈 إعداد البيانات للاستجابة مع إضافة بيانات الربح
-        $response = [
-            'success' => true,
-            'period' => $period,
-            'currency' => $currency,
-            'date_range' => [
-                'start' => $dateRange['start']->format('Y-m-d'),
-                'end' => $dateRange['end']->format('Y-m-d'),
-            ],
-            'total_payments' => $this->calculateTotalPayments($payments),
-            'profit_data' => $this->calculateProfitData($currency), // ✅ إضافة بيانات الربح
-            'chart_data' => $this->getChartData($payments, $period),
-            'currency_distribution' => $this->getCurrencyDistribution($payments),
-            'top_companies' => $this->getTopCompanies($payments),
-            'comparison' => $this->getComparison($period, $dateRange, $currency),
-            'collection_targets' => $this->getCollectionTargets(),
-            'risk_analysis' => $this->getRiskAnalysis($payments)
-        ];
-
-        Log::info('✅ تم إعداد البيانات بنجاح');
-        return response()->json($response);
-
-    } catch (\Exception $e) {
-        Log::error('❌ خطأ في تحميل تقارير مدفوعات الشركات: ' . $e->getMessage());
-        Log::error('🔍 تفاصيل الخطأ: ' . $e->getTraceAsString());
-        
-        return response()->json([
-            'success' => false,
-            'error' => 'حدث خطأ في تحميل البيانات',
-            'message' => config('app.debug') ? $e->getMessage() : 'خطأ داخلي في الخادم',
-            'debug_info' => config('app.debug') ? [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ] : null
-        ], 500);
     }
-}
 
     /**
      * 📅 تحديد نطاق التواريخ حسب الفترة
@@ -400,123 +484,123 @@ class CompanyPaymentController extends Controller
         }
     }
 
-  /**
- * 💰 حساب إجمالي المدفوعات والأرباح حسب العملة
- */
-private function calculateTotalPayments($payments)
-{
-    $totals = [];
-    
-    foreach ($payments as $payment) {
-        $currency = $payment->currency ?? 'KWD';
-        
-        if (!isset($totals[$currency])) {
-            $totals[$currency] = [
-                'total' => 0,
-                'count' => 0
+    /**
+     * 💰 حساب إجمالي المدفوعات والأرباح حسب العملة
+     */
+    private function calculateTotalPayments($payments)
+    {
+        $totals = [];
+
+        foreach ($payments as $payment) {
+            $currency = $payment->currency ?? 'KWD';
+
+            if (!isset($totals[$currency])) {
+                $totals[$currency] = [
+                    'total' => 0,
+                    'count' => 0
+                ];
+            }
+
+            $totals[$currency]['total'] += floatval($payment->amount);
+            $totals[$currency]['count']++;
+        }
+
+        // إضافة عملات فارغة إذا لم توجد بيانات
+        if (empty($totals)) {
+            $totals = [
+                'KWD' => ['total' => 0, 'count' => 0],
+                'SAR' => ['total' => 0, 'count' => 0]
             ];
         }
-        
-        $totals[$currency]['total'] += floatval($payment->amount);
-        $totals[$currency]['count']++;
+
+        return $totals;
     }
 
-    // إضافة عملات فارغة إذا لم توجد بيانات
-    if (empty($totals)) {
-        $totals = [
-            'KWD' => ['total' => 0, 'count' => 0],
-            'SAR' => ['total' => 0, 'count' => 0]
-        ];
+    /**
+     * 💹 حساب الأرباح الفعلية والمتوقعة
+     */
+    private function calculateProfitData($currency = 'all')
+    {
+        // جلب جميع الحجوزات النشطة للشركات
+        $bookingsQuery = \App\Models\LandTripBooking::with(['company', 'landTrip']);
+
+        if ($currency !== 'all') {
+            $bookingsQuery->where('currency', $currency);
+        }
+
+        $bookings = $bookingsQuery->get();
+
+        $profitData = [];
+
+        foreach ($bookings as $booking) {
+            $bookingCurrency = $booking->currency ?? 'KWD';
+
+            if (!isset($profitData[$bookingCurrency])) {
+                $profitData[$bookingCurrency] = [
+                    'total_due_from_companies' => 0,  // إجمالي المستحق من الشركات
+                    'total_due_to_agents' => 0,       // إجمالي المستحق للوكلاء
+                    'total_paid_by_companies' => 0,   // إجمالي المدفوع من الشركات
+                    'actual_profit' => 0,             // الربح الفعلي الحالي
+                    'potential_profit' => 0,          // الربح المتوقع لو تم التحصيل بالكامل
+                    'profit_percentage' => 0,         // نسبة الربح
+                    'collection_rate' => 0            // معدل التحصيل
+                ];
+            }
+
+            // حساب المستحق من الشركات والمستحق للوكلاء
+            $profitData[$bookingCurrency]['total_due_from_companies'] += floatval($booking->amount_due_from_company);
+            $profitData[$bookingCurrency]['total_due_to_agents'] += floatval($booking->amount_due_to_agent);
+        }
+
+        // حساب المدفوعات الفعلية
+        $paymentsQuery = \App\Models\CompanyPayment::selectRaw('currency, SUM(amount) as total_paid')
+            ->groupBy('currency');
+
+        if ($currency !== 'all') {
+            $paymentsQuery->where('currency', $currency);
+        }
+
+        $payments = $paymentsQuery->get();
+
+        foreach ($payments as $payment) {
+            $paymentCurrency = $payment->currency ?? 'KWD';
+
+            if (!isset($profitData[$paymentCurrency])) {
+                $profitData[$paymentCurrency] = [
+                    'total_due_from_companies' => 0,
+                    'total_due_to_agents' => 0,
+                    'total_paid_by_companies' => 0,
+                    'actual_profit' => 0,
+                    'potential_profit' => 0,
+                    'profit_percentage' => 0,
+                    'collection_rate' => 0
+                ];
+            }
+
+            $profitData[$paymentCurrency]['total_paid_by_companies'] = floatval($payment->total_paid);
+        }
+
+        // حساب الأرباح والنسب
+        foreach ($profitData as $curr => &$data) {
+            // الربح المتوقع = إجمالي المستحق من الشركات - إجمالي المستحق للوكلاء
+            $data['potential_profit'] = $data['total_due_from_companies'] - $data['total_due_to_agents'];
+
+            // الربح الفعلي = المدفوع من الشركات - المستحق للوكلاء (بنسبة التحصيل)
+            if ($data['total_due_from_companies'] > 0) {
+                $collectionRate = $data['total_paid_by_companies'] / $data['total_due_from_companies'];
+                $data['collection_rate'] = $collectionRate * 100;
+                $data['actual_profit'] = $data['total_paid_by_companies'] - ($data['total_due_to_agents'] * $collectionRate);
+            }
+
+            // نسبة الربح
+            if ($data['total_due_from_companies'] > 0) {
+                $data['profit_percentage'] = ($data['potential_profit'] / $data['total_due_from_companies']) * 100;
+            }
+        }
+
+        return $profitData;
     }
 
-    return $totals;
-}
-
-/**
- * 💹 حساب الأرباح الفعلية والمتوقعة
- */
-private function calculateProfitData($currency = 'all')
-{
-    // جلب جميع الحجوزات النشطة للشركات
-    $bookingsQuery = \App\Models\LandTripBooking::with(['company', 'landTrip']);
-    
-    if ($currency !== 'all') {
-        $bookingsQuery->where('currency', $currency);
-    }
-    
-    $bookings = $bookingsQuery->get();
-    
-    $profitData = [];
-    
-    foreach ($bookings as $booking) {
-        $bookingCurrency = $booking->currency ?? 'KWD';
-        
-        if (!isset($profitData[$bookingCurrency])) {
-            $profitData[$bookingCurrency] = [
-                'total_due_from_companies' => 0,  // إجمالي المستحق من الشركات
-                'total_due_to_agents' => 0,       // إجمالي المستحق للوكلاء
-                'total_paid_by_companies' => 0,   // إجمالي المدفوع من الشركات
-                'actual_profit' => 0,             // الربح الفعلي الحالي
-                'potential_profit' => 0,          // الربح المتوقع لو تم التحصيل بالكامل
-                'profit_percentage' => 0,         // نسبة الربح
-                'collection_rate' => 0            // معدل التحصيل
-            ];
-        }
-        
-        // حساب المستحق من الشركات والمستحق للوكلاء
-        $profitData[$bookingCurrency]['total_due_from_companies'] += floatval($booking->amount_due_from_company);
-        $profitData[$bookingCurrency]['total_due_to_agents'] += floatval($booking->amount_due_to_agent);
-    }
-    
-    // حساب المدفوعات الفعلية
-    $paymentsQuery = \App\Models\CompanyPayment::selectRaw('currency, SUM(amount) as total_paid')
-        ->groupBy('currency');
-    
-    if ($currency !== 'all') {
-        $paymentsQuery->where('currency', $currency);
-    }
-    
-    $payments = $paymentsQuery->get();
-    
-    foreach ($payments as $payment) {
-        $paymentCurrency = $payment->currency ?? 'KWD';
-        
-        if (!isset($profitData[$paymentCurrency])) {
-            $profitData[$paymentCurrency] = [
-                'total_due_from_companies' => 0,
-                'total_due_to_agents' => 0,
-                'total_paid_by_companies' => 0,
-                'actual_profit' => 0,
-                'potential_profit' => 0,
-                'profit_percentage' => 0,
-                'collection_rate' => 0
-            ];
-        }
-        
-        $profitData[$paymentCurrency]['total_paid_by_companies'] = floatval($payment->total_paid);
-    }
-    
-    // حساب الأرباح والنسب
-    foreach ($profitData as $curr => &$data) {
-        // الربح المتوقع = إجمالي المستحق من الشركات - إجمالي المستحق للوكلاء
-        $data['potential_profit'] = $data['total_due_from_companies'] - $data['total_due_to_agents'];
-        
-        // الربح الفعلي = المدفوع من الشركات - المستحق للوكلاء (بنسبة التحصيل)
-        if ($data['total_due_from_companies'] > 0) {
-            $collectionRate = $data['total_paid_by_companies'] / $data['total_due_from_companies'];
-            $data['collection_rate'] = $collectionRate * 100;
-            $data['actual_profit'] = $data['total_paid_by_companies'] - ($data['total_due_to_agents'] * $collectionRate);
-        }
-        
-        // نسبة الربح
-        if ($data['total_due_from_companies'] > 0) {
-            $data['profit_percentage'] = ($data['potential_profit'] / $data['total_due_from_companies']) * 100;
-        }
-    }
-    
-    return $profitData;
-}
-   
 
     /**
      * 📊 بيانات الرسم البياني
@@ -740,76 +824,76 @@ private function calculateProfitData($currency = 'all')
      * ⚠️ تحليل المخاطر والتنبيهات
      */
     private function getRiskAnalysis($payments)
-{
-    $risks = [];
+    {
+        $risks = [];
 
-    // 1. فحص انخفاض المدفوعات في الأسبوع الماضي
-    $lastWeek = Carbon::now()->subDays(7);
-    $recentPayments = $payments->filter(function($payment) use ($lastWeek) {
-        return Carbon::parse($payment->payment_date)->gte($lastWeek);
-    });
+        // 1. فحص انخفاض المدفوعات في الأسبوع الماضي
+        $lastWeek = Carbon::now()->subDays(7);
+        $recentPayments = $payments->filter(function ($payment) use ($lastWeek) {
+            return Carbon::parse($payment->payment_date)->gte($lastWeek);
+        });
 
-    if ($recentPayments->count() < 2) {
-        $risks[] = [
-            'type' => 'low_payments',
-            'level' => 'warning',
-            'title' => 'انخفاض في المدفوعات الأخيرة',
-            'description' => "عدد المدفوعات في آخر 7 أيام: {$recentPayments->count()} فقط"
-        ];
-    }
+        if ($recentPayments->count() < 2) {
+            $risks[] = [
+                'type' => 'low_payments',
+                'level' => 'warning',
+                'title' => 'انخفاض في المدفوعات الأخيرة',
+                'description' => "عدد المدفوعات في آخر 7 أيام: {$recentPayments->count()} فقط"
+            ];
+        }
 
-    // 2. فحص المدفوعات السالبة (الخصومات)
-    $negativePayments = $payments->filter(function($payment) {
-        return floatval($payment->amount) < 0;
-    });
+        // 2. فحص المدفوعات السالبة (الخصومات)
+        $negativePayments = $payments->filter(function ($payment) {
+            return floatval($payment->amount) < 0;
+        });
 
-    if ($negativePayments->count() > 0) {
-        $totalDiscounts = abs($negativePayments->sum('amount'));
-        $risks[] = [
-            'type' => 'discounts_applied',
-            'level' => 'info',
-            'title' => 'خصومات مطبقة',
-            'description' => "تم تطبيق {$negativePayments->count()} خصم بإجمالي {$totalDiscounts}"
-        ];
-    }
+        if ($negativePayments->count() > 0) {
+            $totalDiscounts = abs($negativePayments->sum('amount'));
+            $risks[] = [
+                'type' => 'discounts_applied',
+                'level' => 'info',
+                'title' => 'خصومات مطبقة',
+                'description' => "تم تطبيق {$negativePayments->count()} خصم بإجمالي {$totalDiscounts}"
+            ];
+        }
 
-    // 3. فحص تركز المدفوعات في شركة واحدة
-    if ($payments->count() > 1) {
-        $topCompanies = $this->getTopCompanies($payments, 1);
-        if ($topCompanies->count() > 0) {
-            $topCompany = $topCompanies->first();
-            $totalPayments = abs($payments->sum('amount'));
-            
-            if ($totalPayments > 0) {
-                $concentration = ($topCompany['total_paid'] / $totalPayments) * 100;
-                
-                if ($concentration > 50) {
-                    $risks[] = [
-                        'type' => 'payment_concentration',
-                        'level' => $concentration > 70 ? 'warning' : 'info',
-                        'title' => 'تركز في المدفوعات',
-                        'description' => sprintf(
-                            "%.1f%% من المدفوعات تأتي من %s", 
-                            $concentration, 
-                            $topCompany['name']
-                        )
-                    ];
+        // 3. فحص تركز المدفوعات في شركة واحدة
+        if ($payments->count() > 1) {
+            $topCompanies = $this->getTopCompanies($payments, 1);
+            if ($topCompanies->count() > 0) {
+                $topCompany = $topCompanies->first();
+                $totalPayments = abs($payments->sum('amount'));
+
+                if ($totalPayments > 0) {
+                    $concentration = ($topCompany['total_paid'] / $totalPayments) * 100;
+
+                    if ($concentration > 50) {
+                        $risks[] = [
+                            'type' => 'payment_concentration',
+                            'level' => $concentration > 70 ? 'warning' : 'info',
+                            'title' => 'تركز في المدفوعات',
+                            'description' => sprintf(
+                                "%.1f%% من المدفوعات تأتي من %s",
+                                $concentration,
+                                $topCompany['name']
+                            )
+                        ];
+                    }
                 }
             }
         }
-    }
 
-    // 4. تحليل الشركات النشطة
-    $activeCompanies = $payments->groupBy('company_id')->count();
-    if ($activeCompanies < 3) {
-        $risks[] = [
-            'type' => 'few_active_companies',
-            'level' => 'info',
-            'title' => 'عدد قليل من الشركات النشطة',
-            'description' => "فقط {$activeCompanies} شركة قامت بدفعات في هذه الفترة"
-        ];
-    }
+        // 4. تحليل الشركات النشطة
+        $activeCompanies = $payments->groupBy('company_id')->count();
+        if ($activeCompanies < 3) {
+            $risks[] = [
+                'type' => 'few_active_companies',
+                'level' => 'info',
+                'title' => 'عدد قليل من الشركات النشطة',
+                'description' => "فقط {$activeCompanies} شركة قامت بدفعات في هذه الفترة"
+            ];
+        }
 
-    return $risks;
-}
+        return $risks;
+    }
 }
