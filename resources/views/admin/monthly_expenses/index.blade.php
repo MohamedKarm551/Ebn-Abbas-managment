@@ -1105,8 +1105,18 @@
                                 const currencyCount = Object.keys(profitsByCurrency).length;
 
                                 if (currencyCount === 1) {
-                                    // إذا كانت عملة واحدة فقط، اعرض الإجمالي
+                                    // إذا كانت عملة واحدة فقط، تحقق من دقة الإجمالي
                                     const [currency, amount] = Object.entries(profitsByCurrency)[0];
+
+                                    // ✅ إعادة حساب الإجمالي من تفاصيل التقارير للتأكد
+                                    let manualTotal = 0;
+                                    if (data.reports_details && data.reports_details.length > 0) {
+                                        data.reports_details.forEach(report => {
+                                            manualTotal += parseFloat(report.grand_total_profit
+                                                .replace(/,/g, ''));
+                                        });
+                                    }
+
                                     const currencyLabel = currency === 'SAR' ? 'ريال سعودي' :
                                         currency === 'KWD' ? 'دينار كويتي' :
                                         currency === 'USD' ? 'دولار أمريكي' :
@@ -1121,11 +1131,18 @@
                         الإجمالي:
                     </span>
                     <span class="badge bg-dark fs-6 px-3 py-2">
-                        ${parseFloat(amount).toFixed(2)} ${currencyLabel}
+                        ${manualTotal.toFixed(2)} ${currencyLabel}
                     </span>
                 </div>
             </div>
         `;
+
+                                    // ✅ طباعة تشخيص للكونسول
+                                    console.log('تشخيص الإجمالي:', {
+                                        'إجمالي API': parseFloat(amount),
+                                        'إجمالي محسوب يدوياً': manualTotal,
+                                        'فرق': manualTotal - parseFloat(amount)
+                                    });
                                 } else {
                                     // إذا كانت عملات متعددة، اعرض تحذير
                                     displayHTML += `
@@ -1137,15 +1154,7 @@
             </div>
         `;
                                 }
-                            } else {
-                                displayHTML = `
-        <div class="profit-item text-center py-3">
-            <i class="fas fa-info-circle text-muted fa-2x mb-2"></i>
-            <div class="text-muted">لا توجد أرباح في هذه الفترة</div>
-        </div>
-    `;
                             }
-
                             profitDisplay.innerHTML = displayHTML;
                         }
 

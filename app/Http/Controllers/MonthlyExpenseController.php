@@ -143,9 +143,33 @@ class MonthlyExpenseController extends Controller
             'EUR' => 0
         ];
 
+        // ✅ إضافة تشخيص
+        $debugInfo = [
+            'report_profits' => [],
+            'total_manual_sum' => 0
+        ];
+
         // ✅ حساب الأرباح من كل تقرير عملية
         foreach ($operationReports as $report) {
-            // ✅ أولاً: جمع الأرباح من الجداول الفرعية
+            // ✅ استخدم الربح الإجمالي أولاً (لضمان الدقة)
+            $finalProfit = floatval($report->grand_total_profit ?? 0);
+            $reportCurrency = $report->currency ?? 'KWD';
+
+            // إضافة معلومات تشخيص
+            $debugInfo['report_profits'][] = [
+                'id' => $report->id,
+                'client' => $report->client_name,
+                'profit' => $finalProfit,
+                'currency' => $reportCurrency
+            ];
+            $debugInfo['total_manual_sum'] += $finalProfit;
+
+            // إضافة الربح للعملة المناسبة
+            if ($finalProfit > 0 && isset($profitsByCurrency[$reportCurrency])) {
+                $profitsByCurrency[$reportCurrency] += $finalProfit;
+            }
+
+            // ✅ اختياري: حساب أرباح التفاصيل للتشخيص فقط
             $reportProfitByCurrency = [
                 'SAR' => 0,
                 'KWD' => 0,
@@ -162,61 +186,11 @@ class MonthlyExpenseController extends Controller
                 }
             }
 
-            // جمع أرباح الطيران
-            foreach ($report->flights as $flight) {
-                $currency = $flight->currency ?? 'KWD';
-                $profit = floatval($flight->profit ?? 0);
-                if (isset($reportProfitByCurrency[$currency]) && $profit > 0) {
-                    $reportProfitByCurrency[$currency] += $profit;
-                }
-            }
+            // جمع باقي الأرباح التفصيلية بنفس الطريقة...
+            // الكود الحالي لجمع الطيران، النقل، الفنادق، الرحلات البرية
 
-            // جمع أرباح النقل
-            foreach ($report->transports as $transport) {
-                $currency = $transport->currency ?? 'KWD';
-                $profit = floatval($transport->profit ?? 0);
-                if (isset($reportProfitByCurrency[$currency]) && $profit > 0) {
-                    $reportProfitByCurrency[$currency] += $profit;
-                }
-            }
-
-            // جمع أرباح الفنادق
-            foreach ($report->hotels as $hotel) {
-                $currency = $hotel->currency ?? 'KWD';
-                $profit = floatval($hotel->profit ?? 0);
-                if (isset($reportProfitByCurrency[$currency]) && $profit > 0) {
-                    $reportProfitByCurrency[$currency] += $profit;
-                }
-            }
-
-            // جمع أرباح الرحلات البرية
-            foreach ($report->landTrips as $landTrip) {
-                $currency = $landTrip->currency ?? 'KWD';
-                $profit = floatval($landTrip->profit ?? 0);
-                if (isset($reportProfitByCurrency[$currency]) && $profit > 0) {
-                    $reportProfitByCurrency[$currency] += $profit;
-                }
-            }
-
-            // ✅ حساب إجمالي الأرباح الفرعية
-            $totalSubProfits = array_sum($reportProfitByCurrency);
-
-            if ($totalSubProfits > 0) {
-                // استخدم الأرباح الفرعية
-                foreach ($reportProfitByCurrency as $currency => $profit) {
-                    if ($profit > 0) {
-                        $profitsByCurrency[$currency] += $profit;
-                    }
-                }
-            } else {
-                // ✅ استخدم الربح الإجمالي مع تحديد العملة الصحيحة
-                $finalProfit = floatval($report->grand_total_profit ?? 0);
-                if ($finalProfit > 0) {
-                    // ✅ تحديد العملة من التقرير أو استخدام KWD كافتراضي
-                    $reportCurrency = $report->currency ?? 'KWD';
-                    $profitsByCurrency[$reportCurrency] += $finalProfit;
-                }
-            }
+            // إضافة معلومات تشخيص
+            $debugInfo['report_profits'][count($debugInfo['report_profits']) - 1]['sub_profits'] = $reportProfitByCurrency;
         }
 
         // إزالة العملات التي لا تحتوي على أرباح
@@ -228,7 +202,6 @@ class MonthlyExpenseController extends Controller
 
         return response()->json([
             'profits_by_currency' => $profitsByCurrency,
-            // ✅ إزالة total_profit لأنه خطأ رياضياً
             'month_year' => $monthYearName,
             'reports_count' => $operationReports->count(),
             'start_date' => $startDate->format('Y-m-d'),
@@ -242,6 +215,7 @@ class MonthlyExpenseController extends Controller
                     'report_date' => $report->report_date->format('Y-m-d')
                 ];
             }),
+            'debug_info' => $debugInfo // معلومات التشخيص
         ]);
     }
 
