@@ -22,13 +22,13 @@ class BookingReportVisa extends Model
         return $this->belongsTo(BookingOperationReport::class, 'booking_operation_report_id');
     }
 
-    // حساب الربح تلقائياً
+    // حساب الربح تلقائياً مع مراعاة الكمية
     public static function boot()
     {
         parent::boot();
 
         static::saving(function ($model) {
-            $model->profit = ($model->selling_price ?? 0) - ($model->cost ?? 0);
+            $model->profit = (($model->selling_price ?? 0) - ($model->cost ?? 0)) * ($model->quantity ?? 1);
         });
     }
 }

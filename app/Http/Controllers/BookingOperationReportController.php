@@ -234,7 +234,7 @@ class BookingOperationReportController extends Controller
      */
     public function store(Request $request)
     {
-        // التحقق من صحة البيانات
+        // التحقق من صحة البيانات المدخلة
         $validated = $request->validate([
             'report_date' => 'required|date',
             'client_name' => 'required|string|max:255',
@@ -251,12 +251,13 @@ class BookingOperationReportController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        // بدء معاملة قاعدة البيانات لضمان تماسك البيانات
         DB::beginTransaction();
 
         try {
-            // البحث عن العميل أو إنشاء عميل جديد
+            // البحث عن العميل في قاعدة البيانات أو إنشاء عميل جديد
             $client = Client::firstOrCreate(
-                ['name' => $validated['client_name']],
+                ['name' => $validated['client_name']], // شرط البحث
                 [
                     'phone' => $validated['client_phone'] ?? null,
                     'email' => $request->client_email ?? null,
@@ -264,7 +265,7 @@ class BookingOperationReportController extends Controller
                 ]
             );
 
-            // البحث عن الشركة أو إنشاء شركة جديدة إذا وجدت
+            // البحث عن الشركة أو إنشاء شركة جديدة (اختياري)
             $company = null;
             if ($request->filled('company_name')) {
                 $company = Company::firstOrCreate(
@@ -273,9 +274,9 @@ class BookingOperationReportController extends Controller
                 );
             }
 
-            // إنشاء تقرير العملية
+            // إنشاء تقرير العملية الرئيسي
             $report = BookingOperationReport::create([
-                'employee_id' => Auth::id(),
+                'employee_id' => Auth::id(), // معرف الموظف الحالي
                 'report_date' => $validated['report_date'],
                 'client_id' => $client->id,
                 'client_name' => $client->name,
@@ -290,59 +291,91 @@ class BookingOperationReportController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            // معالجة بيانات التأشيرات
+            // =============== معالجة بيانات التأشيرات ===============
             $totalVisaProfit = 0;
             if ($request->has('visas')) {
                 foreach ($request->visas as $visaData) {
-                    $profit = floatval($visaData['profit'] ?? 0);
-                    $totalVisaProfit += $profit;
+                    // ✅ تصحيح: حساب الربح مع مراعاة الكمية
+                    $quantity = intval($visaData['quantity'] ?? 1); // عدد التأشيرات
+                    $cost = floatval($visaData['cost'] ?? 0); // تكلفة التأشيرة الواحدة
+                    $sellingPrice = floatval($visaData['selling_price'] ?? 0); // سعر بيع التأشيرة الواحدة
 
+                    // حساب الربح لكل تأشيرة
+                    $profitPerItem = $sellingPrice - $cost;
+
+                    // حساب إجمالي الربح (الربح × العدد)
+                    $totalProfit = $profitPerItem * $quantity;
+
+                    // إضافة الربح إلى المجموع الكلي للتأشيرات
+                    $totalVisaProfit += $totalProfit;
+
+                    // إنشاء سجل التأشيرة في قاعدة البيانات
                     BookingReportVisa::create([
                         'booking_operation_report_id' => $report->id,
                         'visa_type' => $visaData['visa_type'] ?? 'سياحية',
-                        'quantity' => $visaData['quantity'] ?? 1,
-                        'cost' => $visaData['cost'] ?? 0,
-                        'selling_price' => $visaData['selling_price'] ?? 0,
+                        'quantity' => $quantity,
+                        'cost' => $cost,
+                        'selling_price' => $sellingPrice,
                         'currency' => $visaData['currency'] ?? 'KWD',
-                        'profit' => $profit,
+                        'profit' => $totalProfit, // ✅ حفظ إجمالي الربح (مضروب في الكمية)
                         'notes' => $visaData['notes'] ?? null,
                     ]);
                 }
             }
+            // حفظ إجمالي أرباح التأشيرات في التقرير الرئيسي
             $report->total_visa_profit = $totalVisaProfit;
 
-            // معالجة بيانات الطيران
+            // =============== معالجة بيانات الطيران ===============
             $totalFlightProfit = 0;
             if ($request->has('flights')) {
                 foreach ($request->flights as $flightData) {
-                    $profit = floatval($flightData['profit'] ?? 0);
-                    $totalFlightProfit += $profit;
+                    // ✅ تصحيح: حساب الربح مع مراعاة عدد المسافرين
+                    $passengers = intval($flightData['passengers'] ?? 1); // عدد المسافرين
+                    $cost = floatval($flightData['cost'] ?? 0); // تكلفة الرحلة لكل مسافر
+                    $sellingPrice = floatval($flightData['selling_price'] ?? 0); // سعر بيع الرحلة لكل مسافر
 
+                    // حساب الربح لكل مسافر
+                    $profitPerPassenger = $sellingPrice - $cost;
+
+                    // حساب إجمالي الربح (الربح × عدد المسافرين)
+                    $totalProfit = $profitPerPassenger * $passengers;
+
+                    // إضافة الربح إلى المجموع الكلي للطيران
+                    $totalFlightProfit += $totalProfit;
+
+                    // إنشاء سجل الطيران في قاعدة البيانات
                     BookingReportFlight::create([
                         'booking_operation_report_id' => $report->id,
                         'flight_date' => $flightData['flight_date'] ?? null,
                         'flight_number' => $flightData['flight_number'] ?? null,
                         'airline' => $flightData['airline'] ?? null,
                         'route' => $flightData['route'] ?? null,
-                        'passengers' => $flightData['passengers'] ?? 1,
+                        'passengers' => $passengers,
                         'trip_type' => $flightData['trip_type'] ?? 'ذهاب وعودة',
-                        'cost' => $flightData['cost'] ?? 0,
-                        'selling_price' => $flightData['selling_price'] ?? 0,
+                        'cost' => $cost,
+                        'selling_price' => $sellingPrice,
                         'currency' => $flightData['currency'] ?? 'KWD',
-                        'profit' => $profit,
+                        'profit' => $totalProfit, // ✅ حفظ إجمالي الربح (مضروب في عدد المسافرين)
                         'notes' => $flightData['notes'] ?? null,
                     ]);
                 }
             }
+            // حفظ إجمالي أرباح الطيران في التقرير الرئيسي
             $report->total_flight_profit = $totalFlightProfit;
 
-            // معالجة بيانات النقل
+            // =============== معالجة بيانات النقل ===============
             $totalTransportProfit = 0;
             if ($request->has('transports')) {
                 foreach ($request->transports as $index => $transportData) {
-                    $profit = floatval($transportData['profit'] ?? 0);
+                    // حساب الربح للنقل (عادة وحدة واحدة)
+                    $cost = floatval($transportData['cost'] ?? 0);
+                    $sellingPrice = floatval($transportData['selling_price'] ?? 0);
+                    $profit = $sellingPrice - $cost;
+
+                    // إضافة الربح إلى المجموع الكلي للنقل
                     $totalTransportProfit += $profit;
 
+                    // إعداد بيانات النقل
                     $transportEntry = [
                         'booking_operation_report_id' => $report->id,
                         'transport_type' => $transportData['transport_type'] ?? null,
@@ -352,27 +385,28 @@ class BookingOperationReportController extends Controller
                         'departure_time' => $transportData['departure_time'] ?? null,
                         'arrival_time' => $transportData['arrival_time'] ?? null,
                         'schedule_notes' => $transportData['schedule_notes'] ?? null,
-                        'cost' => $transportData['cost'] ?? 0,
-                        'selling_price' => $transportData['selling_price'] ?? 0,
+                        'cost' => $cost,
+                        'selling_price' => $sellingPrice,
                         'currency' => $transportData['currency'] ?? 'KWD',
-                        'profit' => $profit,
+                        'profit' => $profit, // ✅ حفظ الربح المحسوب
                         'notes' => $transportData['notes'] ?? null,
                     ];
 
-                    // معالجة ملف التذكرة
+                    // معالجة ملف التذكرة إذا تم رفعه
                     if ($request->hasFile("transports.{$index}.ticket_file")) {
                         $file = $request->file("transports.{$index}.ticket_file");
                         $fileName = time() . '_transport_' . $index . '_' . $file->getClientOriginalName();
                         $path = $file->storeAs('transport-tickets', $fileName, 'public');
                         $transportEntry['ticket_file_path'] = $path;
 
-                        // --- نسخ الملف يدويًا إلى public/storage/transport-tickets ---
+                        // نسخ الملف يدوياً إلى المجلد العام للوصول إليه
                         $publicPath = public_path('storage/transport-tickets/' . $fileName);
                         if (!file_exists(dirname($publicPath))) {
                             mkdir(dirname($publicPath), 0775, true);
                         }
                         copy($file->getRealPath(), $publicPath);
 
+                        // تسجيل العملية في اللوج
                         Log::info("تم رفع تذكرة النقل {$index}", [
                             'original_name' => $file->getClientOriginalName(),
                             'stored_path' => $path,
@@ -380,98 +414,125 @@ class BookingOperationReportController extends Controller
                         ]);
                     }
 
-
+                    // إنشاء سجل النقل في قاعدة البيانات
                     BookingReportTransport::create($transportEntry);
                 }
             }
+            // حفظ إجمالي أرباح النقل في التقرير الرئيسي
             $report->total_transport_profit = $totalTransportProfit;
 
-            // معالجة بيانات الفنادق
+            // =============== معالجة بيانات الفنادق ===============
             $totalHotelProfit = 0;
             if ($request->has('hotels')) {
                 foreach ($request->hotels as $index => $hotelData) {
-                    $profit = floatval($hotelData['profit'] ?? 0);
+                    // ✅ تصحيح: حساب الربح مع مراعاة عدد الليالي والغرف
+                    $nights = intval($hotelData['nights'] ?? 1); // عدد الليالي
+                    $rooms = intval($hotelData['rooms'] ?? 1); // عدد الغرف
+                    $nightCost = floatval($hotelData['night_cost'] ?? 0); // تكلفة الليلة الواحدة
+                    $nightSellingPrice = floatval($hotelData['night_selling_price'] ?? 0); // سعر بيع الليلة الواحدة
+
+                    // حساب التكلفة الإجمالية والسعر الإجمالي
+                    $totalCost = $nightCost * $nights * $rooms;
+                    $totalSellingPrice = $nightSellingPrice * $nights * $rooms;
+
+                    // حساب الربح الإجمالي
+                    $profit = $totalSellingPrice - $totalCost;
+
+                    // إضافة الربح إلى المجموع الكلي للفنادق
                     $totalHotelProfit += $profit;
 
+                    // إعداد بيانات الفندق
                     $hotelEntry = [
                         'booking_operation_report_id' => $report->id,
                         'hotel_name' => $hotelData['hotel_name'] ?? null,
                         'city' => $hotelData['city'] ?? null,
                         'room_type' => $hotelData['room_type'] ?? null,
-                        'nights' => $hotelData['nights'] ?? 1,
-                        'rooms' => $hotelData['rooms'] ?? 1,
+                        'nights' => $nights,
+                        'rooms' => $rooms,
                         'check_in' => $hotelData['check_in'] ?? null,
                         'check_out' => $hotelData['check_out'] ?? null,
                         'guests' => $hotelData['guests'] ?? 1,
-                        'night_cost' => $hotelData['night_cost'] ?? 0,
-                        'night_selling_price' => $hotelData['night_selling_price'] ?? 0,
-                        'total_cost' => $hotelData['total_cost'] ?? 0,
-                        'total_selling_price' => $hotelData['total_selling_price'] ?? 0,
-                        'profit' => $profit,
+                        'night_cost' => $nightCost,
+                        'night_selling_price' => $nightSellingPrice,
+                        'total_cost' => $totalCost, // ✅ حفظ التكلفة الإجمالية المحسوبة
+                        'total_selling_price' => $totalSellingPrice, // ✅ حفظ السعر الإجمالي المحسوب
+                        'profit' => $profit, // ✅ حفظ الربح الإجمالي المحسوب
                         'currency' => $hotelData['currency'] ?? 'KWD',
                         'notes' => $hotelData['notes'] ?? null,
                     ];
 
-                    // معالجة ملف الفاوتشر
+                    // معالجة ملف الفاوتشر إذا تم رفعه
                     if ($request->hasFile("hotels.{$index}.voucher_file")) {
                         $file = $request->file("hotels.{$index}.voucher_file");
                         $fileName = time() . '_hotel_' . $index . '_' . $file->getClientOriginalName();
                         $path = $file->storeAs('hotel-vouchers', $fileName, 'public');
                         $hotelEntry['voucher_file_path'] = $path;
 
-                        // --- نسخ الملف يدويًا إلى public/storage/hotel-vouchers ---
+                        // نسخ الملف يدوياً إلى المجلد العام
                         $publicPath = public_path('storage/hotel-vouchers/' . $fileName);
                         if (!file_exists(dirname($publicPath))) {
                             mkdir(dirname($publicPath), 0775, true);
                         }
                         copy($file->getRealPath(), $publicPath);
 
-                        Log::info("تم رفع فاوتشر الفندق {$index} في التحديث", [
+                        // تسجيل العملية في اللوج
+                        Log::info("تم رفع فاوتشر الفندق {$index}", [
                             'original_name' => $file->getClientOriginalName(),
                             'stored_path' => $path,
                             'file_size' => $file->getSize()
                         ]);
                     }
-                    // إذا لم يتم رفع ملف جديد، الاحتفاظ بالملف القديم إذا وجد
-                    elseif (isset($hotelData['existing_voucher_file'])) {
-                        $hotelEntry['voucher_file_path'] = $hotelData['existing_voucher_file'];
-                    }
 
+                    // إنشاء سجل الفندق في قاعدة البيانات
                     BookingReportHotel::create($hotelEntry);
                 }
             }
+            // حفظ إجمالي أرباح الفنادق في التقرير الرئيسي
             $report->total_hotel_profit = $totalHotelProfit;
 
-            // معالجة بيانات الرحلات البرية
+            // =============== معالجة بيانات الرحلات البرية ===============
             $totalLandTripProfit = 0;
             if ($request->has('land_trips')) {
                 foreach ($request->land_trips as $index => $tripData) {
-                    $profit = floatval($tripData['profit'] ?? 0);
+                    // حساب الربح من مجموع التكاليف
+                    $transportCost = floatval($tripData['transport_cost'] ?? 0);
+                    $meccaHotelCost = floatval($tripData['mecca_hotel_cost'] ?? 0);
+                    $medinaHotelCost = floatval($tripData['medina_hotel_cost'] ?? 0);
+                    $extraCosts = floatval($tripData['extra_costs'] ?? 0);
+                    $sellingPrice = floatval($tripData['selling_price'] ?? 0);
+
+                    // حساب إجمالي التكلفة
+                    $totalCost = $transportCost + $meccaHotelCost + $medinaHotelCost + $extraCosts;
+
+                    // حساب الربح
+                    $profit = $sellingPrice - $totalCost;
+
+                    // إضافة الربح إلى المجموع الكلي للرحلات البرية
                     $totalLandTripProfit += $profit;
 
-                    $tripEntry = [
+                    // إنشاء سجل الرحلة البرية في قاعدة البيانات
+                    BookingReportLandTrip::create([
                         'booking_operation_report_id' => $report->id,
                         'trip_type' => $tripData['trip_type'] ?? null,
                         'departure_date' => $tripData['departure_date'] ?? null,
                         'return_date' => $tripData['return_date'] ?? null,
                         'days' => $tripData['days'] ?? 1,
-                        'transport_cost' => $tripData['transport_cost'] ?? 0,
-                        'mecca_hotel_cost' => $tripData['mecca_hotel_cost'] ?? 0,
-                        'medina_hotel_cost' => $tripData['medina_hotel_cost'] ?? 0,
-                        'extra_costs' => $tripData['extra_costs'] ?? 0,
-                        'total_cost' => $tripData['total_cost'] ?? 0,
-                        'selling_price' => $tripData['selling_price'] ?? 0,
+                        'transport_cost' => $transportCost,
+                        'mecca_hotel_cost' => $meccaHotelCost,
+                        'medina_hotel_cost' => $medinaHotelCost,
+                        'extra_costs' => $extraCosts,
+                        'total_cost' => $totalCost, // ✅ حفظ التكلفة الإجمالية المحسوبة
+                        'selling_price' => $sellingPrice,
                         'currency' => $tripData['currency'] ?? 'KWD',
-                        'profit' => $profit,
+                        'profit' => $profit, // ✅ حفظ الربح المحسوب
                         'notes' => $tripData['notes'] ?? null,
-                    ];
-
-                    BookingReportLandTrip::create($tripEntry);
+                    ]);
                 }
             }
+            // حفظ إجمالي أرباح الرحلات البرية في التقرير الرئيسي
             $report->total_land_trip_profit = $totalLandTripProfit;
 
-            // حساب المجموع الكلي للأرباح
+            // =============== حساب المجموع الكلي للأرباح ===============
             $report->grand_total_profit =
                 $totalVisaProfit +
                 $totalFlightProfit +
@@ -479,26 +540,33 @@ class BookingOperationReportController extends Controller
                 $totalHotelProfit +
                 $totalLandTripProfit;
 
+            // حفظ التقرير مع الأرباح المحسوبة
             $report->save();
 
+            // تأكيد المعاملة
             DB::commit();
 
+            // إعادة التوجيه إلى صفحة عرض التقرير مع رسالة نجاح
             return redirect()->route('admin.operation-reports.show', $report)
                 ->with('success', 'تم إنشاء تقرير العمليات بنجاح');
         } catch (\Exception $e) {
+            // إلغاء المعاملة في حالة حدوث خطأ
             DB::rollback();
+
+            // تسجيل الخطأ في اللوج
             Log::error('خطأ في إنشاء تقرير العمليات: ' . $e->getMessage(), [
                 'exception' => $e->getTraceAsString(),
                 'request_data' => $request->all()
             ]);
 
+            // إعادة التوجيه مع رسالة خطأ
             return back()->withInput()
                 ->with('error', 'حدث خطأ أثناء إنشاء التقرير: ' . $e->getMessage());
         }
     }
     public function update(Request $request, BookingOperationReport $operationReport)
     {
-        // التحقق من صحة البيانات
+        // التحقق من صحة البيانات المدخلة
         $validated = $request->validate([
             'report_date' => 'required|date',
             'client_name' => 'required|string|max:255',
@@ -515,10 +583,11 @@ class BookingOperationReportController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        // بدء معاملة قاعدة البيانات لضمان تماسك البيانات
         DB::beginTransaction();
 
         try {
-            // البحث عن العميل أو إنشاء عميل جديد
+            // البحث عن العميل في قاعدة البيانات أو إنشاء عميل جديد
             $client = Client::firstOrCreate(
                 ['name' => $validated['client_name']],
                 [
@@ -528,7 +597,7 @@ class BookingOperationReportController extends Controller
                 ]
             );
 
-            // البحث عن الشركة أو إنشاء شركة جديدة إذا وجدت
+            // البحث عن الشركة أو إنشاء شركة جديدة (اختياري)
             $company = null;
             if ($request->filled('company_name')) {
                 $company = Company::firstOrCreate(
@@ -537,7 +606,7 @@ class BookingOperationReportController extends Controller
                 );
             }
 
-            // تحديث تقرير العملية
+            // تحديث بيانات التقرير الرئيسي
             $operationReport->update([
                 'employee_id' => Auth::id(),
                 'report_date' => $validated['report_date'],
@@ -554,66 +623,98 @@ class BookingOperationReportController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            // حذف البيانات القديمة أولاً
+            // حذف جميع البيانات الفرعية القديمة لإعادة إنشائها
             $operationReport->visas()->delete();
             $operationReport->flights()->delete();
             $operationReport->transports()->delete();
             $operationReport->hotels()->delete();
             $operationReport->landTrips()->delete();
 
-            // معالجة بيانات التأشيرات الجديدة
+            // =============== معالجة بيانات التأشيرات الجديدة ===============
             $totalVisaProfit = 0;
             if ($request->has('visas')) {
                 foreach ($request->visas as $visaData) {
-                    $profit = floatval($visaData['profit'] ?? 0);
-                    $totalVisaProfit += $profit;
+                    // ✅ إصلاح: حساب الربح مع مراعاة الكمية
+                    $quantity = intval($visaData['quantity'] ?? 1); // عدد التأشيرات
+                    $cost = floatval($visaData['cost'] ?? 0); // تكلفة التأشيرة الواحدة
+                    $sellingPrice = floatval($visaData['selling_price'] ?? 0); // سعر بيع التأشيرة الواحدة
 
+                    // حساب الربح لكل تأشيرة
+                    $profitPerItem = $sellingPrice - $cost;
+
+                    // حساب إجمالي الربح (الربح × العدد)
+                    $totalProfit = $profitPerItem * $quantity;
+
+                    // إضافة الربح إلى المجموع الكلي للتأشيرات
+                    $totalVisaProfit += $totalProfit;
+
+                    // إنشاء سجل التأشيرة الجديد
                     BookingReportVisa::create([
                         'booking_operation_report_id' => $operationReport->id,
                         'visa_type' => $visaData['visa_type'] ?? 'سياحية',
-                        'quantity' => $visaData['quantity'] ?? 1,
-                        'cost' => $visaData['cost'] ?? 0,
-                        'selling_price' => $visaData['selling_price'] ?? 0,
-                        'currency' => $visaData['currency'] ?? 'KWD', // ✅ إضافة العملة
-                        'profit' => $profit,
+                        'quantity' => $quantity,
+                        'cost' => $cost,
+                        'selling_price' => $sellingPrice,
+                        'currency' => $visaData['currency'] ?? 'KWD',
+                        'profit' => $totalProfit, // ✅ حفظ إجمالي الربح (مضروب في الكمية)
                         'notes' => $visaData['notes'] ?? null,
                     ]);
                 }
             }
+            // تحديث إجمالي أرباح التأشيرات في التقرير الرئيسي
             $operationReport->total_visa_profit = $totalVisaProfit;
 
-            // معالجة بيانات الطيران الجديدة
+            // =============== معالجة بيانات الطيران الجديدة ===============
             $totalFlightProfit = 0;
             if ($request->has('flights')) {
                 foreach ($request->flights as $flightData) {
-                    $profit = floatval($flightData['profit'] ?? 0);
-                    $totalFlightProfit += $profit;
+                    // ✅ إصلاح: حساب الربح مع مراعاة عدد المسافرين
+                    $passengers = intval($flightData['passengers'] ?? 1); // عدد المسافرين
+                    $cost = floatval($flightData['cost'] ?? 0); // تكلفة الرحلة لكل مسافر
+                    $sellingPrice = floatval($flightData['selling_price'] ?? 0); // سعر بيع الرحلة لكل مسافر
 
+                    // حساب الربح لكل مسافر
+                    $profitPerPassenger = $sellingPrice - $cost;
+
+                    // حساب إجمالي الربح (الربح × عدد المسافرين)
+                    $totalProfit = $profitPerPassenger * $passengers;
+
+                    // إضافة الربح إلى المجموع الكلي للطيران
+                    $totalFlightProfit += $totalProfit;
+
+                    // إنشاء سجل الطيران الجديد
                     BookingReportFlight::create([
                         'booking_operation_report_id' => $operationReport->id,
                         'flight_date' => $flightData['flight_date'] ?? null,
                         'flight_number' => $flightData['flight_number'] ?? null,
                         'airline' => $flightData['airline'] ?? null,
                         'route' => $flightData['route'] ?? null,
-                        'passengers' => $flightData['passengers'] ?? 1,
+                        'passengers' => $passengers,
                         'trip_type' => $flightData['trip_type'] ?? 'ذهاب وعودة',
-                        'cost' => $flightData['cost'] ?? 0,
-                        'selling_price' => $flightData['selling_price'] ?? 0,
-                        'currency' => $flightData['currency'] ?? 'KWD', // ✅ إضافة العملة
-                        'profit' => $profit,
+                        'cost' => $cost,
+                        'selling_price' => $sellingPrice,
+                        'currency' => $flightData['currency'] ?? 'KWD',
+                        'profit' => $totalProfit, // ✅ حفظ إجمالي الربح (مضروب في عدد المسافرين)
                         'notes' => $flightData['notes'] ?? null,
                     ]);
                 }
             }
+            // تحديث إجمالي أرباح الطيران في التقرير الرئيسي
             $operationReport->total_flight_profit = $totalFlightProfit;
 
-            // معالجة بيانات النقل الجديدة
+            // =============== معالجة بيانات النقل الجديدة ===============
             $totalTransportProfit = 0;
             if ($request->has('transports')) {
                 foreach ($request->transports as $index => $transportData) {
-                    $profit = floatval($transportData['profit'] ?? 0);
+                    // حساب الربح للنقل (عادة وحدة واحدة)
+                    $cost = floatval($transportData['cost'] ?? 0);
+                    $sellingPrice = floatval($transportData['selling_price'] ?? 0);
+                    $profit = $sellingPrice - $cost;
+
+                    // إضافة الربح إلى المجموع الكلي للنقل
                     $totalTransportProfit += $profit;
 
+                    // إعداد بيانات النقل
                     $transportEntry = [
                         'booking_operation_report_id' => $operationReport->id,
                         'transport_type' => $transportData['transport_type'] ?? null,
@@ -623,10 +724,10 @@ class BookingOperationReportController extends Controller
                         'departure_time' => $transportData['departure_time'] ?? null,
                         'arrival_time' => $transportData['arrival_time'] ?? null,
                         'schedule_notes' => $transportData['schedule_notes'] ?? null,
-                        'cost' => $transportData['cost'] ?? 0,
-                        'selling_price' => $transportData['selling_price'] ?? 0,
-                        'currency' => $transportData['currency'] ?? 'KWD', // ✅ إضافة العملة
-                        'profit' => $profit,
+                        'cost' => $cost,
+                        'selling_price' => $sellingPrice,
+                        'currency' => $transportData['currency'] ?? 'KWD',
+                        'profit' => $profit, // ✅ حفظ الربح المحسوب
                         'notes' => $transportData['notes'] ?? null,
                     ];
 
@@ -637,14 +738,15 @@ class BookingOperationReportController extends Controller
                         $path = $file->storeAs('transport-tickets', $fileName, 'public');
                         $transportEntry['ticket_file_path'] = $path;
 
-                        // --- نسخ الملف يدويًا إلى public/storage/transport-tickets ---
+                        // نسخ الملف يدوياً إلى المجلد العام
                         $publicPath = public_path('storage/transport-tickets/' . $fileName);
                         if (!file_exists(dirname($publicPath))) {
                             mkdir(dirname($publicPath), 0775, true);
                         }
                         copy($file->getRealPath(), $publicPath);
 
-                        Log::info("تم رفع تذكرة النقل {$index}", [
+                        // تسجيل العملية في اللوج
+                        Log::info("تم رفع تذكرة النقل {$index} في التحديث", [
                             'original_name' => $file->getClientOriginalName(),
                             'stored_path' => $path,
                             'file_size' => $file->getSize()
@@ -654,34 +756,51 @@ class BookingOperationReportController extends Controller
                     elseif (isset($transportData['existing_ticket_file'])) {
                         $transportEntry['ticket_file_path'] = $transportData['existing_ticket_file'];
                     }
+
+                    // إنشاء سجل النقل الجديد
                     BookingReportTransport::create($transportEntry);
                 }
             }
+            // تحديث إجمالي أرباح النقل في التقرير الرئيسي
             $operationReport->total_transport_profit = $totalTransportProfit;
 
-            // معالجة بيانات الفنادق الجديدة
+            // =============== معالجة بيانات الفنادق الجديدة ===============
             $totalHotelProfit = 0;
             if ($request->has('hotels')) {
                 foreach ($request->hotels as $index => $hotelData) {
-                    $profit = floatval($hotelData['profit'] ?? 0);
+                    // ✅ إصلاح: حساب الربح مع مراعاة عدد الليالي والغرف
+                    $nights = intval($hotelData['nights'] ?? 1); // عدد الليالي
+                    $rooms = intval($hotelData['rooms'] ?? 1); // عدد الغرف
+                    $nightCost = floatval($hotelData['night_cost'] ?? 0); // تكلفة الليلة الواحدة
+                    $nightSellingPrice = floatval($hotelData['night_selling_price'] ?? 0); // سعر بيع الليلة الواحدة
+
+                    // حساب التكلفة الإجمالية والسعر الإجمالي
+                    $totalCost = $nightCost * $nights * $rooms;
+                    $totalSellingPrice = $nightSellingPrice * $nights * $rooms;
+
+                    // حساب الربح الإجمالي
+                    $profit = $totalSellingPrice - $totalCost;
+
+                    // إضافة الربح إلى المجموع الكلي للفنادق
                     $totalHotelProfit += $profit;
 
+                    // إعداد بيانات الفندق
                     $hotelEntry = [
                         'booking_operation_report_id' => $operationReport->id,
                         'hotel_name' => $hotelData['hotel_name'] ?? null,
                         'city' => $hotelData['city'] ?? null,
                         'room_type' => $hotelData['room_type'] ?? null,
-                        'nights' => $hotelData['nights'] ?? 1,
-                        'rooms' => $hotelData['rooms'] ?? 1,
+                        'nights' => $nights,
+                        'rooms' => $rooms,
                         'check_in' => $hotelData['check_in'] ?? null,
                         'check_out' => $hotelData['check_out'] ?? null,
                         'guests' => $hotelData['guests'] ?? 1,
-                        'night_cost' => $hotelData['night_cost'] ?? 0,
-                        'night_selling_price' => $hotelData['night_selling_price'] ?? 0,
-                        'total_cost' => $hotelData['total_cost'] ?? 0,
-                        'total_selling_price' => $hotelData['total_selling_price'] ?? 0,
-                        'profit' => $profit,
-                        'currency' => $hotelData['currency'] ?? 'KWD', // ✅ إضافة العملة
+                        'night_cost' => $nightCost,
+                        'night_selling_price' => $nightSellingPrice,
+                        'total_cost' => $totalCost, // ✅ حفظ التكلفة الإجمالية المحسوبة
+                        'total_selling_price' => $totalSellingPrice, // ✅ حفظ السعر الإجمالي المحسوب
+                        'profit' => $profit, // ✅ حفظ الربح الإجمالي المحسوب
+                        'currency' => $hotelData['currency'] ?? 'KWD',
                         'notes' => $hotelData['notes'] ?? null,
                     ];
 
@@ -692,13 +811,14 @@ class BookingOperationReportController extends Controller
                         $path = $file->storeAs('hotel-vouchers', $fileName, 'public');
                         $hotelEntry['voucher_file_path'] = $path;
 
-                        // --- نسخ الملف يدويًا إلى public/storage/hotel-vouchers ---
+                        // نسخ الملف يدوياً إلى المجلد العام
                         $publicPath = public_path('storage/hotel-vouchers/' . $fileName);
                         if (!file_exists(dirname($publicPath))) {
                             mkdir(dirname($publicPath), 0775, true);
                         }
                         copy($file->getRealPath(), $publicPath);
 
+                        // تسجيل العملية في اللوج
                         Log::info("تم رفع فاوتشر الفندق {$index} في التحديث", [
                             'original_name' => $file->getClientOriginalName(),
                             'stored_path' => $path,
@@ -710,42 +830,56 @@ class BookingOperationReportController extends Controller
                         $hotelEntry['voucher_file_path'] = $hotelData['existing_voucher_file'];
                     }
 
-
+                    // إنشاء سجل الفندق الجديد
                     BookingReportHotel::create($hotelEntry);
                 }
             }
+            // تحديث إجمالي أرباح الفنادق في التقرير الرئيسي
             $operationReport->total_hotel_profit = $totalHotelProfit;
 
-            // معالجة بيانات الرحلات البرية الجديدة
+            // =============== معالجة بيانات الرحلات البرية الجديدة ===============
             $totalLandTripProfit = 0;
             if ($request->has('land_trips')) {
                 foreach ($request->land_trips as $index => $tripData) {
-                    $profit = floatval($tripData['profit'] ?? 0);
+                    // حساب الربح من مجموع التكاليف
+                    $transportCost = floatval($tripData['transport_cost'] ?? 0);
+                    $meccaHotelCost = floatval($tripData['mecca_hotel_cost'] ?? 0);
+                    $medinaHotelCost = floatval($tripData['medina_hotel_cost'] ?? 0);
+                    $extraCosts = floatval($tripData['extra_costs'] ?? 0);
+                    $sellingPrice = floatval($tripData['selling_price'] ?? 0);
+
+                    // حساب إجمالي التكلفة
+                    $totalCost = $transportCost + $meccaHotelCost + $medinaHotelCost + $extraCosts;
+
+                    // حساب الربح
+                    $profit = $sellingPrice - $totalCost;
+
+                    // إضافة الربح إلى المجموع الكلي للرحلات البرية
                     $totalLandTripProfit += $profit;
 
-                    $tripEntry = [
+                    // إنشاء سجل الرحلة البرية الجديد
+                    BookingReportLandTrip::create([
                         'booking_operation_report_id' => $operationReport->id,
                         'trip_type' => $tripData['trip_type'] ?? null,
                         'departure_date' => $tripData['departure_date'] ?? null,
                         'return_date' => $tripData['return_date'] ?? null,
                         'days' => $tripData['days'] ?? 1,
-                        'transport_cost' => $tripData['transport_cost'] ?? 0,
-                        'mecca_hotel_cost' => $tripData['mecca_hotel_cost'] ?? 0,
-                        'medina_hotel_cost' => $tripData['medina_hotel_cost'] ?? 0,
-                        'extra_costs' => $tripData['extra_costs'] ?? 0,
-                        'total_cost' => $tripData['total_cost'] ?? 0,
-                        'selling_price' => $tripData['selling_price'] ?? 0,
-                        'currency' => $tripData['currency'] ?? 'KWD', // ✅ إضافة العملة
-                        'profit' => $profit,
+                        'transport_cost' => $transportCost,
+                        'mecca_hotel_cost' => $meccaHotelCost,
+                        'medina_hotel_cost' => $medinaHotelCost,
+                        'extra_costs' => $extraCosts,
+                        'total_cost' => $totalCost, // ✅ حفظ التكلفة الإجمالية المحسوبة
+                        'selling_price' => $sellingPrice,
+                        'currency' => $tripData['currency'] ?? 'KWD',
+                        'profit' => $profit, // ✅ حفظ الربح المحسوب
                         'notes' => $tripData['notes'] ?? null,
-                    ];
-
-                    BookingReportLandTrip::create($tripEntry);
+                    ]);
                 }
             }
+            // تحديث إجمالي أرباح الرحلات البرية في التقرير الرئيسي
             $operationReport->total_land_trip_profit = $totalLandTripProfit;
 
-            // تحديث إجمالي الأرباح
+            // =============== تحديث المجموع الكلي للأرباح ===============
             $operationReport->grand_total_profit =
                 $totalVisaProfit +
                 $totalFlightProfit +
@@ -753,20 +887,27 @@ class BookingOperationReportController extends Controller
                 $totalHotelProfit +
                 $totalLandTripProfit;
 
+            // حفظ التقرير مع الأرباح المحدثة
             $operationReport->save();
 
+            // تأكيد المعاملة
             DB::commit();
 
+            // إعادة التوجيه إلى صفحة عرض التقرير مع رسالة نجاح
             return redirect()->route('admin.operation-reports.show', $operationReport)
                 ->with('success', 'تم تحديث تقرير العمليات بنجاح');
         } catch (\Exception $e) {
+            // إلغاء المعاملة في حالة حدوث خطأ
             DB::rollback();
+
+            // تسجيل الخطأ في اللوج
             Log::error('خطأ في تحديث تقرير العمليات: ' . $e->getMessage(), [
                 'exception' => $e->getTraceAsString(),
                 'request_data' => $request->all(),
                 'report_id' => $operationReport->id
             ]);
 
+            // إعادة التوجيه مع رسالة خطأ
             return back()->withInput()
                 ->with('error', 'حدث خطأ أثناء تحديث التقرير: ' . $e->getMessage());
         }

@@ -1022,29 +1022,50 @@
 
         // وظائف حساب الأرباح
         function calculateVisaProfit(index) {
-            const cost = parseFloat(document.querySelector(`[name="visas[${index}][cost]"]`).value) || 0;
-            const sellingPrice = parseFloat(document.querySelector(`[name="visas[${index}][selling_price]"]`).value) || 0;
-            const quantity = parseFloat(document.querySelector(`[name="visas[${index}][quantity]"]`).value) || 1;
+            const quantity = parseInt(document.querySelector(`input[name="visas[${index}][quantity]"]`)?.value) || 1;
+            const cost = parseFloat(document.querySelector(`input[name="visas[${index}][cost]"]`)?.value) || 0;
+            const sellingPrice = parseFloat(document.querySelector(`input[name="visas[${index}][selling_price]"]`)
+                ?.value) || 0;
 
-            const profit = (sellingPrice - cost) * quantity;
+            // ✅ حساب الربح لكل تأشيرة
+            const profitPerVisa = sellingPrice - cost;
 
-            document.getElementById(`visa_profit_${index}`).textContent = profit.toFixed(2);
-            document.getElementById(`visa_profit_input_${index}`).value = profit.toFixed(2);
+            // ✅ حساب إجمالي الربح مع مراعاة العدد
+            const totalProfit = profitPerVisa * quantity;
 
-            calculateTotals();
+            // عرض الربح وتخزينه
+            const profitDisplay = document.getElementById(`visa_profit_${index}`);
+            const profitInput = document.getElementById(`visa_profit_input_${index}`);
+
+            if (profitDisplay) profitDisplay.textContent = totalProfit.toFixed(2);
+            if (profitInput) profitInput.value = totalProfit.toFixed(2);
+
+            // إعادة حساب الإجمالي
+            calculateTotals(); // أو updateTotalProfit() حسب اسم الدالة
         }
 
         function calculateFlightProfit(index) {
-            const cost = parseFloat(document.querySelector(`[name="flights[${index}][cost]"]`).value) || 0;
-            const sellingPrice = parseFloat(document.querySelector(`[name="flights[${index}][selling_price]"]`).value) || 0;
+            const passengers = parseInt(document.querySelector(`input[name="flights[${index}][passengers]"]`)?.value) || 1;
+            const cost = parseFloat(document.querySelector(`input[name="flights[${index}][cost]"]`)?.value) || 0;
+            const sellingPrice = parseFloat(document.querySelector(`input[name="flights[${index}][selling_price]"]`)
+                ?.value) || 0;
 
-            const profit = sellingPrice - cost;
+            // ✅ حساب الربح لكل مسافر
+            const profitPerPassenger = sellingPrice - cost;
 
-            document.getElementById(`flight_profit_${index}`).textContent = profit.toFixed(2);
-            document.getElementById(`flight_profit_input_${index}`).value = profit.toFixed(2);
+            // ✅ حساب إجمالي الربح مع مراعاة عدد المسافرين
+            const totalProfit = profitPerPassenger * passengers;
+
+            const profitDisplay = document.getElementById(`flight_profit_${index}`);
+            const profitInput = document.getElementById(`flight_profit_input_${index}`);
+
+            if (profitDisplay) profitDisplay.textContent = totalProfit.toFixed(2);
+            if (profitInput) profitInput.value = totalProfit.toFixed(2);
 
             calculateTotals();
         }
+
+
 
         function calculateTransportProfit(index) {
             const cost = parseFloat(document.querySelector(`[name="transports[${index}][cost]"]`).value) || 0;
