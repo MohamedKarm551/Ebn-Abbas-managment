@@ -278,26 +278,38 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                {{-- المتبقي --}}
-                                                @php
-                                                    // استخدام المتبقي للحجوزات العادية فقط (بدون رحلات برية)
-                                                    $remainingByCurrency = $company->remaining_bookings_by_currency ?? [
-                                                        'SAR' => 0,
-                                                    ];
-                                                @endphp
+    {{-- المتبقي --}}
+    @php
+        // حساب المتبقي بشكل صحيح (المستحق - المدفوع الصافي)
+        $remainingByCurrency = [];
+        foreach (['SAR', 'KWD'] as $curr) {
+            // 1. المستحق حسب العملة
+            $due = $company->total_due_bookings_by_currency[$curr] ?? 0;
+            
+            // 2. المدفوع الفعلي (المدفوعات الموجبة)
+            $paid = $company->computed_total_paid_by_currency[$curr] ?? 0;
+            
+            // 3. الخصومات (تعامل كجزء من المدفوع)
+            $discounts = $company->computed_total_discounts_by_currency[$curr] ?? 0;
+            
+            // 4. المتبقي = المستحق - (المدفوع - الخصم)
+            // حيث يعتبر الخصم جزءًا من المبلغ المدفوع
+            $remainingByCurrency[$curr] = $due - ($paid - $discounts);
+        }
+    @endphp
 
-                                                @foreach ($remainingByCurrency as $currency => $amount)
-                                                    @if ($amount != 0)
-                                                        <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
-                                                            {{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}
-                                                        </span>
-                                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                                                        @if ($amount < 0)
-                                                            <small class="text-muted">(دفعوا زيادة)</small>
-                                                        @endif
-                                                    @endif
-                                                @endforeach
-                                            </td>
+    @foreach ($remainingByCurrency as $currency => $amount)
+        @if ($amount != 0)
+            <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
+                {{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}
+            </span>
+            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+            @if ($amount < 0)
+                <small class="text-muted">(دفعوا زيادة)</small>
+            @endif
+        @endif
+    @endforeach
+</td>
                                             <td>
                                                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
                                                     <a href="{{ route('reports.company.bookings', $company->id) }}"
