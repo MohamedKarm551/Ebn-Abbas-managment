@@ -145,63 +145,72 @@ class MonthlyExpenseController extends Controller
 
         // ✅ حساب الأرباح من كل تقرير عملية
         foreach ($operationReports as $report) {
-            // ✅ جمع أرباح التأشيرات حسب العملة
+            // ✅ أولاً: محاولة الحصول على الأرباح من الجداول الفرعية
+            $subProfitsByReport = [
+                'SAR' => 0,
+                'KWD' => 0,
+                'USD' => 0,
+                'EUR' => 0
+            ];
+
+            // جمع أرباح التأشيرات
             foreach ($report->visas as $visa) {
                 $currency = $visa->currency ?? 'KWD';
                 $profit = $visa->profit ?? 0;
-                if (isset($profitsByCurrency[$currency])) {
-                    $profitsByCurrency[$currency] += $profit;
+                if (isset($subProfitsByReport[$currency])) {
+                    $subProfitsByReport[$currency] += $profit;
                 }
             }
 
-            // ✅ جمع أرباح الطيران حسب العملة
+            // جمع أرباح الطيران
             foreach ($report->flights as $flight) {
                 $currency = $flight->currency ?? 'KWD';
                 $profit = $flight->profit ?? 0;
-                if (isset($profitsByCurrency[$currency])) {
-                    $profitsByCurrency[$currency] += $profit;
+                if (isset($subProfitsByReport[$currency])) {
+                    $subProfitsByReport[$currency] += $profit;
                 }
             }
 
-            // ✅ جمع أرباح النقل حسب العملة
+            // جمع أرباح النقل
             foreach ($report->transports as $transport) {
                 $currency = $transport->currency ?? 'KWD';
                 $profit = $transport->profit ?? 0;
-                if (isset($profitsByCurrency[$currency])) {
-                    $profitsByCurrency[$currency] += $profit;
+                if (isset($subProfitsByReport[$currency])) {
+                    $subProfitsByReport[$currency] += $profit;
                 }
             }
 
-            // ✅ جمع أرباح الفنادق حسب العملة
+            // جمع أرباح الفنادق
             foreach ($report->hotels as $hotel) {
                 $currency = $hotel->currency ?? 'KWD';
                 $profit = $hotel->profit ?? 0;
-                if (isset($profitsByCurrency[$currency])) {
-                    $profitsByCurrency[$currency] += $profit;
+                if (isset($subProfitsByReport[$currency])) {
+                    $subProfitsByReport[$currency] += $profit;
                 }
             }
 
-            // ✅ جمع أرباح الرحلات البرية حسب العملة
+            // جمع أرباح الرحلات البرية
             foreach ($report->landTrips as $landTrip) {
                 $currency = $landTrip->currency ?? 'KWD';
                 $profit = $landTrip->profit ?? 0;
-                if (isset($profitsByCurrency[$currency])) {
-                    $profitsByCurrency[$currency] += $profit;
+                if (isset($subProfitsByReport[$currency])) {
+                    $subProfitsByReport[$currency] += $profit;
                 }
             }
 
-            // ✅ إضافة الربح الإجمالي المحفوظ في التقرير (كبديل)
-            if ($report->grand_total_profit > 0) {
-                // إذا لم تكن هناك أرباح فرعية، استخدم الربح الإجمالي
-                $hasSubProfits =
-                    $report->visas->sum('profit') +
-                    $report->flights->sum('profit') +
-                    $report->transports->sum('profit') +
-                    $report->hotels->sum('profit') +
-                    $report->landTrips->sum('profit');
+            // ✅ التحقق من وجود أرباح فرعية
+            $totalSubProfits = array_sum($subProfitsByReport);
 
-                if ($hasSubProfits == 0) {
-                    // استخدم الربح الإجمالي مع العملة الافتراضية
+            if ($totalSubProfits > 0) {
+                // استخدم الأرباح الفرعية
+                foreach ($subProfitsByReport as $currency => $profit) {
+                    if ($profit > 0) {
+                        $profitsByCurrency[$currency] += $profit;
+                    }
+                }
+            } else {
+                // ✅ استخدم الربح الإجمالي فقط إذا لم تكن هناك أرباح فرعية
+                if ($report->grand_total_profit > 0) {
                     $profitsByCurrency['KWD'] += $report->grand_total_profit;
                 }
             }
@@ -215,7 +224,6 @@ class MonthlyExpenseController extends Controller
         // تحديد العملة الأساسية
         $primaryCurrency = 'KWD';
         if (!empty($profitsByCurrency)) {
-            // اختيار العملة التي لديها أكبر مبلغ
             $primaryCurrency = array_key_first($profitsByCurrency);
             $maxProfit = 0;
             foreach ($profitsByCurrency as $currency => $profit) {
@@ -232,7 +240,7 @@ class MonthlyExpenseController extends Controller
             'profits_by_currency' => $profitsByCurrency,
             'total_profit' => array_sum($profitsByCurrency),
             'month_year' => $monthYearName,
-            'reports_count' => $operationReports->count(), // عدد التقارير وليس الحجوزات
+            'reports_count' => $operationReports->count(),
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
             'primary_currency' => $primaryCurrency,
@@ -244,7 +252,22 @@ class MonthlyExpenseController extends Controller
                     'grand_total_profit' => $report->grand_total_profit,
                     'report_date' => $report->report_date->format('Y-m-d')
                 ];
-            })
+            }),
+            // ✅ إضافة معلومات تشخيصية
+            'debug_info' => [
+                'calculation_method' => 'sub_profits_vs_grand_total',
+                'reports_with_sub_profits' => $operationReports->filter(function ($report) {
+                    return ($report->visas->sum('profit') + $report->flights->sum('profit') +
+                        $report->transports->sum('profit') + $report->hotels->sum('profit') +
+                        $report->landTrips->sum('profit')) > 0;
+                })->count(),
+                'reports_with_grand_total_only' => $operationReports->filter(function ($report) {
+                    $subTotal = $report->visas->sum('profit') + $report->flights->sum('profit') +
+                        $report->transports->sum('profit') + $report->hotels->sum('profit') +
+                        $report->landTrips->sum('profit');
+                    return $subTotal == 0 && $report->grand_total_profit > 0;
+                })->count()
+            ]
         ]);
     }
 
