@@ -14,50 +14,64 @@ use Illuminate\Support\Facades\Log;
 
 class CompanyPaymentController extends Controller
 {
-    /**
-     * عرض قائمة الشركات مع الإحصائيات المالية
-     */
-    public function index(Request $request)
-    {
-        $query = Company::with(['companyPayments', 'landTripBookings']);
+  /**
+ * عرض قائمة الشركات مع الإحصائيات المالية للرحلات البرية فقط
+ */
+public function index(Request $request)
+{
+    // ✅ جلب الشركات التي لديها حجوزات رحلات برية فقط
+    $query = Company::with(['companyPayments', 'landTripBookings'])
+        ->withCount('landTripBookings') // عد حجوزات الرحلات البرية فقط
+        ->having('land_trip_bookings_count', '>', 0) // فقط الشركات التي لديها حجوزات رحلات برية
+        ->orderByDesc('land_trip_bookings_count');
 
-        // فلترة حسب البحث
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+    // فلترة حسب البحث
+    if ($request->filled('search')) {
+        $query->where('name', 'like', '%' . $request->search . '%');
+    }
+
+    // فلترة حسب العملة (للرحلات البرية فقط)
+    if ($request->filled('currency')) {
+        $currency = $request->currency;
+        $query->whereHas('landTripBookings', function ($bookingQuery) use ($currency) {
+            $bookingQuery->where('currency', $currency);
+        });
+    }
+
+    $companies = $query->get()->map(function ($company) {
+        // ✅ استخدام دالة جديدة للرحلات البرية فقط
+        $totals = $company->getLandTripTotalsByCurrency();
+
+        // إعداد كل العملات (حتى لو صفر)
+        foreach (['SAR', 'KWD'] as $currency) {
+            if (!isset($totals[$currency])) {
+                $totals[$currency] = ['due' => 0, 'paid' => 0, 'remaining' => 0];
+            }
         }
 
-        $companies = $query->get()->map(function ($company) {
-            $totals = $company->getTotalsByCurrency();
-
-            // دايمًا جهز كل العملات (حتى لو صفر)
-            foreach (['SAR', 'KWD'] as $currency) {
-                if (!isset($totals[$currency])) {
-                    $totals[$currency] = ['due' => 0, 'paid' => 0, 'remaining' => 0];
-                }
-            }
-
-            return [
-                'id' => $company->id,
-                'name' => $company->name,
-                'email' => $company->email,
-                'phone' => $company->phone,
-                'bookings_count' => $company->landTripBookings()->count(),
-                'totals_by_currency' => $totals,
-                'last_payment' => $company->companyPayments()->latest()->first(),
-            ];
-        });
-
-        // حساب الإحصائيات العامة
-        $totalStats = [
-            'companies_count' => $companies->count(),
-            'total_due_sar' => $companies->sum(fn($c) => $c['totals_by_currency']['SAR']['due'] ?? 0),
-            'total_paid_sar' => $companies->sum(fn($c) => $c['totals_by_currency']['SAR']['paid'] ?? 0),
-            'total_due_kwd' => $companies->sum(fn($c) => $c['totals_by_currency']['KWD']['due'] ?? 0),
-            'total_paid_kwd' => $companies->sum(fn($c) => $c['totals_by_currency']['KWD']['paid'] ?? 0),
+        return [
+            'id' => $company->id,
+            'name' => $company->name,
+            'email' => $company->email,
+            'phone' => $company->phone,
+            'bookings_count' => $company->land_trip_bookings_count,
+            'totals_by_currency' => $totals,
+            'last_payment' => $company->companyPayments()->latest()->first(),
         ];
+    })->values();
 
-        return view('admin.company-payments.index', compact('companies', 'totalStats'));
-    }
+    // ✅ حساب الإحصائيات العامة للرحلات البرية فقط
+    $totalStats = [
+        'companies_count' => $companies->count(),
+        'total_due_sar' => $companies->sum(fn($c) => $c['totals_by_currency']['SAR']['due'] ?? 0),
+        'total_paid_sar' => $companies->sum(fn($c) => $c['totals_by_currency']['SAR']['paid'] ?? 0),
+        'total_due_kwd' => $companies->sum(fn($c) => $c['totals_by_currency']['KWD']['due'] ?? 0),
+        'total_paid_kwd' => $companies->sum(fn($c) => $c['totals_by_currency']['KWD']['paid'] ?? 0),
+        'total_bookings' => $companies->sum('bookings_count'), // إجمالي حجوزات الرحلات البرية
+    ];
+
+    return view('admin.company-payments.index', compact('companies', 'totalStats'));
+}
 
     // public function show(Company $company)
     // {
@@ -87,43 +101,44 @@ class CompanyPaymentController extends Controller
     /**
      * عرض صفحة تفاصيل الشركة مع حجوزات محدودة
      */
-    public function show(Company $company)
-    {
-        $company->load(['companyPayments.employee', 'landTripBookings']);
+  public function show(Company $company)
+{
+    $company->load(['companyPayments.employee', 'landTripBookings']);
 
-        $totals = $company->getTotalsByCurrency();
-        foreach (['SAR', 'KWD'] as $currency) {
-            if (!isset($totals[$currency])) {
-                $totals[$currency] = ['due' => 0, 'paid' => 0, 'remaining' => 0];
-            }
+    // ✅ استخدام الدالة الجديدة للرحلات البرية فقط
+    $totals = $company->getLandTripTotalsByCurrency();
+    
+    foreach (['SAR', 'KWD'] as $currency) {
+        if (!isset($totals[$currency])) {
+            $totals[$currency] = ['due' => 0, 'paid' => 0, 'remaining' => 0];
         }
-
-        $payments = $company->companyPayments()
-            ->with('employee')
-            ->orderBy('payment_date', 'desc')
-            ->paginate(20);
-
-        // ✅ تحديث: عرض جميع الحجوزات مع الباجينيشن (مع الحد من البيانات)
-        $allBookings = $company->landTripBookings()
-            ->with(['landTrip.agent', 'landTrip.hotel'])
-            ->latest()
-            ->paginate(10, ['*'], 'bookings_page'); // اسم مختلف للباجينيشن
-
-        // آخر 5 حجوزات للعرض السريع
-        $recentBookings = $company->landTripBookings()
-            ->with(['landTrip.agent', 'landTrip.hotel'])
-            ->latest()
-            ->take(5)
-            ->get();
-
-        return view('admin.company-payments.show', compact(
-            'company',
-            'totals',
-            'payments',
-            'allBookings',
-            'recentBookings'
-        ));
     }
+
+    $payments = $company->companyPayments()
+        ->with('employee')
+        ->orderBy('payment_date', 'desc')
+        ->paginate(20);
+
+    // ✅ عرض حجوزات الرحلات البرية فقط
+    $allBookings = $company->landTripBookings()
+        ->with(['landTrip.agent', 'landTrip.hotel'])
+        ->latest()
+        ->paginate(10, ['*'], 'bookings_page');
+
+    $recentBookings = $company->landTripBookings()
+        ->with(['landTrip.agent', 'landTrip.hotel'])
+        ->latest()
+        ->take(5)
+        ->get();
+
+    return view('admin.company-payments.show', compact(
+        'company',
+        'totals',
+        'payments',
+        'allBookings',
+        'recentBookings'
+    ));
+}
     /**
      * ✅ صفحة جديدة: عرض جميع حجوزات الشركة بالتفصيل
      */

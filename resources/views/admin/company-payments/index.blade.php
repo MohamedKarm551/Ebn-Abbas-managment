@@ -65,46 +65,63 @@
             </div>
         </div>
 
-        <!-- الإحصائيات العامة -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card stats-card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="fas fa-building fa-2x mb-2"></i>
-                        <h4 class="mb-1">{{ $totalStats['companies_count'] }}</h4>
-                        <small>إجمالي الشركات</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="fas fa-coins fa-2x mb-2"></i>
-                        <h6 class="mb-1">{{ number_format($totalStats['total_due_sar'], 2) }} ريال</h6>
-                        <small>إجمالي المستحق (ريال)</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-primary text-white border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="fas fa-coins fa-2x mb-2"></i>
-                        <h6 class="mb-1">{{ number_format($totalStats['total_due_kwd'], 2) }} دينار</h6>
-                        <small>إجمالي المستحق (دينار)</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="fas fa-hand-holding-usd fa-2x mb-2"></i>
-                        <h6 class="mb-1">
-                            {{ number_format($totalStats['total_paid_sar'] + $totalStats['total_paid_kwd'], 2) }}</h6>
-                        <small>إجمالي المدفوع</small>
-                    </div>
-                </div>
+      <!-- الإحصائيات العامة -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card stats-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-building fa-2x mb-2"></i>
+                <h4 class="mb-1">{{ $totalStats['companies_count'] }}</h4>
+                <small>الشركات النشطة</small>
             </div>
         </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-info text-white border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                <h5 class="mb-1">{{ number_format($totalStats['total_bookings']) }}</h5>
+                <small>إجمالي الحجوزات</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-success text-white border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-coins fa-2x mb-2"></i>
+                <h6 class="mb-1">{{ number_format($totalStats['total_due_sar'], 0) }}</h6>
+                <small>المستحق (ريال)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-primary text-white border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-coins fa-2x mb-2"></i>
+                <h6 class="mb-1">{{ number_format($totalStats['total_due_kwd'], 0) }}</h6>
+                <small>المستحق (دينار)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-warning text-white border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-hand-holding-usd fa-2x mb-2"></i>
+                <h6 class="mb-1">{{ number_format($totalStats['total_paid_sar'], 0) }}</h6>
+                <small>المدفوع (ريال)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-secondary text-white border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-hand-holding-usd fa-2x mb-2"></i>
+                <h6 class="mb-1">{{ number_format($totalStats['total_paid_kwd'], 0) }}</h6>
+                <small>المدفوع (دينار)</small>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- البحث والفلترة -->
         <div class="card shadow-sm mb-4">

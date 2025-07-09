@@ -38,6 +38,40 @@ class Company extends Model
            return $this->hasMany(User::class, 'company_id');
 
     }
+    /**
+ * حساب الإجماليات المالية للرحلات البرية فقط حسب العملة
+ */
+public function getLandTripTotalsByCurrency()
+{
+    $totals = [];
+    
+    // جلب حجوزات الرحلات البرية مجمعة حسب العملة
+    $bookingsByCurrency = $this->landTripBookings()
+        ->selectRaw('currency, SUM(amount_due_from_company) as total_due')
+        ->groupBy('currency')
+        ->get()
+        ->keyBy('currency');
+
+    // جلب المدفوعات مجمعة حسب العملة
+    $paymentsByCurrency = $this->companyPayments()
+        ->selectRaw('currency, SUM(amount) as total_paid')
+        ->groupBy('currency')
+        ->get()
+        ->keyBy('currency');
+
+    foreach (['SAR', 'KWD'] as $currency) {
+        $due = $bookingsByCurrency->get($currency)?->total_due ?? 0;
+        $paid = $paymentsByCurrency->get($currency)?->total_paid ?? 0;
+
+        $totals[$currency] = [
+            'due' => (float) $due,
+            'paid' => (float) $paid,
+            'remaining' => (float) ($due - $paid)
+        ];
+    }
+
+    return $totals;
+}
 
     // ========== الحسابات الإجمالية ==========
     /**

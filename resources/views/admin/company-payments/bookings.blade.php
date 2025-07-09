@@ -294,13 +294,109 @@
         </div>
 
         <!-- الباجينيشن -->
-        @if($bookings->hasPages())
-            <div class="px-3 py-4 border-top">
-                <div class="d-flex justify-content-center">
-                    {{ $bookings->appends(request()->query())->links() }}
-                </div>
+      @if($bookings->hasPages())
+    <div class="pagination-container mt-2 p-1">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <!-- معلومات الترقيم -->
+            <div class="pagination-info order-2 order-md-1 text-center text-md-start">
+                <p class="mb-0">
+                    عرض
+                    <strong>{{ $bookings->firstItem() }}</strong>
+                    إلى
+                    <strong>{{ $bookings->lastItem() }}</strong>
+                    من
+                    <strong>{{ $bookings->total() }}</strong>
+                    حجز
+                </p>
             </div>
-        @endif
+
+            <!-- الترقيم نفسه -->
+            <nav class="order-1 order-md-2" aria-label="pagination">
+                <ul class="pagination">
+                    {{-- الصفحة الأولى --}}
+                    @if ($bookings->onFirstPage())
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                <i class="fas fa-angle-double-right"></i>
+                            </span>
+                        </li>
+                    @else
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $bookings->appends(request()->query())->url(1) }}" title="الصفحة الأولى">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    @endif
+
+                    {{-- الصفحة السابقة --}}
+                    @if ($bookings->onFirstPage())
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                <i class="fas fa-angle-right"></i>
+                            </span>
+                        </li>
+                    @else
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $bookings->appends(request()->query())->previousPageUrl() }}" title="السابق">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                    @endif
+
+                    {{-- أرقام الصفحات --}}
+                    @foreach ($bookings->appends(request()->query())->getUrlRange(1, $bookings->lastPage()) as $page => $url)
+                        @if ($page == $bookings->currentPage())
+                            <li class="page-item active">
+                                <span class="page-link">{{ $page }}</span>
+                            </li>
+                        @else
+                            {{-- عرض صفحات محددة فقط للشاشات الصغيرة --}}
+                            @if ($page == 1 || $page == $bookings->lastPage() || ($page >= $bookings->currentPage() - 1 && $page <= $bookings->currentPage() + 1))
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                </li>
+                            @elseif ($page == $bookings->currentPage() - 2 || $page == $bookings->currentPage() + 2)
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            @endif
+                        @endif
+                    @endforeach
+
+                    {{-- الصفحة التالية --}}
+                    @if ($bookings->hasMorePages())
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $bookings->appends(request()->query())->nextPageUrl() }}" title="التالي">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    @else
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                <i class="fas fa-angle-left"></i>
+                            </span>
+                        </li>
+                    @endif
+
+                    {{-- الصفحة الأخيرة --}}
+                    @if ($bookings->hasMorePages())
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $bookings->appends(request()->query())->url($bookings->lastPage()) }}" title="الصفحة الأخيرة">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                    @else
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                <i class="fas fa-angle-double-left"></i>
+                            </span>
+                        </li>
+                    @endif
+                </ul>
+            </nav>
+        </div>
+    </div>
+@endif
     </div>
 </div>
 @endsection
