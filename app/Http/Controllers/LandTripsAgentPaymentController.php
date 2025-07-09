@@ -76,37 +76,44 @@ class LandTripsAgentPaymentController extends Controller
     /**
      * عرض تفاصيل مدفوعات وكيل معين للرحلات البرية
      */
-    public function show(Agent $agent)
-    {
-        $agent->load(['landTripsPayments.employee']);
+public function show(Agent $agent)
+{
+    $agent->load(['landTripsPayments.employee']);
 
-        $totals = $agent->getLandTripTotalsByCurrency();
-        
-        foreach (['SAR', 'KWD'] as $currency) {
-            if (!isset($totals[$currency])) {
-                $totals[$currency] = ['due' => 0, 'paid' => 0, 'remaining' => 0];
-            }
+    $totals = $agent->getLandTripTotalsByCurrency();
+    
+    foreach (['SAR', 'KWD'] as $currency) {
+        if (!isset($totals[$currency])) {
+            $totals[$currency] = ['due' => 0, 'paid' => 0, 'remaining' => 0];
         }
-
-        $payments = $agent->landTripsPayments()
-            ->with('employee')
-            ->orderBy('payment_date', 'desc')
-            ->paginate(20);
-
-        $recentBookings = $agent->landTripBookings()
-            ->with(['landTrip', 'company'])
-            ->latest()
-            ->take(5)
-            ->get();
-
-        return view('admin.land-trips-agent-payments.show', compact(
-            'agent',
-            'totals', 
-            'payments',
-            'recentBookings'
-        ));
     }
 
+    $payments = $agent->landTripsPayments()
+        ->with('employee')
+        ->orderBy('payment_date', 'desc')
+        ->paginate(20);
+
+    // ✅ جلب جميع الحجوزات مع التصفح (بدلاً من أحدث 5 فقط)
+    $allBookings = $agent->landTripBookings()
+        ->with(['landTrip', 'company'])
+        ->latest()
+        ->paginate(15, ['*'], 'bookings_page'); // استخدام اسم مختلف للصفحة
+
+    // ✅ إبقاء الحجوزات الأحدث للمرجع السريع إذا لزم الأمر
+    $recentBookings = $agent->landTripBookings()
+        ->with(['landTrip', 'company'])
+        ->latest()
+        ->take(5)
+        ->get();
+
+    return view('admin.land-trips-agent-payments.show', compact(
+        'agent',
+        'totals', 
+        'payments',
+        'allBookings',    // ✅ جميع الحجوزات مع التصفح
+        'recentBookings'  // الأحدث للمرجع
+    ));
+}
     /**
      * عرض نموذج إضافة دفعة جديدة
      */
