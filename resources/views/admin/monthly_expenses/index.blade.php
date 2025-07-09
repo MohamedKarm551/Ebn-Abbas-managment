@@ -976,418 +976,309 @@
             // نموذج حساب الربح - الكود المُصحح
             // ✅ نموذج حساب الربح - مُصحح
             document.getElementById('profit-calculator-form').addEventListener('submit', function(e) {
-                    e.preventDefault();
+                e.preventDefault();
 
-                    const startDate = document.getElementById('start_date').value;
-                    const endDate = document.getElementById('end_date').value;
+                const startDate = document.getElementById('start_date').value;
+                const endDate = document.getElementById('end_date').value;
 
-                    if (!startDate || !endDate) {
-                        alert('يرجى تحديد تاريخ البداية والنهاية');
-                        return;
-                    }
-
-                    // إضافة loading state
-                    const submitBtn = e.target.querySelector('button[type="submit"]');
-                    const originalText = submitBtn.innerHTML;
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحساب...';
-                    submitBtn.disabled = true;
-
-                    // إرسال طلب AJAX لحساب الربح
-                    fetch('{{ route('admin.calculate-profit') }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify({
-                                start_date: startDate,
-                                end_date: endDate
-                            })
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                                // console.log('Response data:', data);
-
-                                if (!data || typeof data !== 'object') {
-                                    throw new Error('Invalid response format');
-                                }
-
-                                // عرض النتيجة
-                                document.getElementById('profit-result').classList.remove('d-none');
-
-                                const monthYearDisplay = document.getElementById('month-year-display');
-                                const bookingsCount = document.getElementById('bookings-count');
-
-                                // ✅ تحسين 1: إضافة تحقق من وجود العناصر
-                                if (monthYearDisplay) monthYearDisplay.textContent = data.month_year ||
-                                    'غير محدد';
-                                if (bookingsCount) bookingsCount.textContent = data.reports_count || '0';
-
-                                // ✅ تحسين 2: تحسين عرض تفاصيل التقارير
-                                if (data.reports_details && data.reports_details.length > 0) {
-                                    // إزالة التفاصيل القديمة أولاً
-                                    const existingDetails = document.querySelector('.reports-details');
-                                    if (existingDetails) existingDetails.remove();
-
-                                    let reportsDetailsHTML = `
-        <div class="reports-details mt-3 p-3 bg-light rounded">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <small class="text-muted fw-bold">
-                    <i class="fas fa-list me-1"></i>
-                    التقارير المعثور عليها (${data.reports_details.length})
-                </small>
-                <button type="button" class="btn btn-sm btn-outline-secondary toggle-details" data-bs-toggle="collapse" data-bs-target="#reportsDetailsList">
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-            <div id="reportsDetailsList" class="collapse">
-                <ul class="list-unstyled small mb-0">
-    `;
-
-                                    // ✅ تحسين 3: تحسين عرض كل تقرير مع تنسيق أفضل
-                                    data.reports_details.forEach((report, index) => {
-                                        const profitFormatted = parseFloat(report.grand_total_profit)
-                                            .toFixed(2);
-                                        const reportDate = new Date(report.report_date)
-                                            .toLocaleDateString('ar-EG');
-
-                                        reportsDetailsHTML += `
-            <li class="border-bottom py-2 ${index === data.reports_details.length - 1 ? 'border-0' : ''}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong class="text-primary">${report.client_name}</strong>
-                        <small class="text-muted d-block">${report.company_name || 'غير محدد'}</small>
-                    </div>
-                    <div class="text-end">
-                        <span class="badge bg-success">${profitFormatted} د.ك</span>
-                        <small class="text-muted d-block">${reportDate}</small>
-                    </div>
-                </div>
-            </li>
-        `;
-                                    });
-
-                                    reportsDetailsHTML += `
-                </ul>
-            </div>
-        </div>
-    `;
-
-                                    // إضافة التفاصيل بعد profit-display
-                                    const profitDisplay = document.getElementById('profit-display');
-                                    if (profitDisplay) {
-                                        profitDisplay.insertAdjacentHTML('afterend', reportsDetailsHTML);
-                                    }
-                                }
-
-                                // ✅ تحسين 4: تحسين عرض الأرباح مع تنسيق أفضل
-                                const profitDisplay = document.getElementById('profit-display');
-                                if (profitDisplay) {
-                                    profitDisplay.innerHTML = '';
-
-                                    const profitsByCurrency = data.profits_by_currency || {};
-                                    let hasData = false;
-                                    let displayHTML = '';
-                                    let totalProfitSum = 0;
-
-                                    // ✅ تحسين 5: ترتيب العملات حسب الأولوية
-                                    const currencyOrder = ['KWD', 'SAR', 'USD', 'EUR'];
-                                    const sortedCurrencies = currencyOrder.filter(currency =>
-                                        profitsByCurrency[currency] && parseFloat(profitsByCurrency[
-                                            currency]) > 0
-                                    );
-
-                                    sortedCurrencies.forEach(currency => {
-                                        const profit = profitsByCurrency[currency];
-                                        const profitValue = parseFloat(profit) || 0;
-
-                                        if (profitValue > 0) {
-                                            hasData = true;
-                                            totalProfitSum += profitValue;
-
-                                            // ✅ تحسين 6: تحسين تسميات العملات والأيقونات
-                                            const currencyInfo = {
-                                                'SAR': {
-                                                    label: 'ريال سعودي',
-                                                    class: 'success',
-                                                    icon: 'fa-money-bill-wave'
-                                                },
-                                                'KWD': {
-                                                    label: 'دينار كويتي',
-                                                    class: 'primary',
-                                                    icon: 'fa-coins'
-                                                },
-                                                'USD': {
-                                                    label: 'دولار أمريكي',
-                                                    class: 'info',
-                                                    icon: 'fa-dollar-sign'
-                                                },
-                                                'EUR': {
-                                                    label: 'يورو',
-                                                    class: 'warning',
-                                                    icon: 'fa-euro-sign'
-                                                }
-                                            };
-
-                                            const info = currencyInfo[currency] || {
-                                                label: currency,
-                                                class: 'secondary',
-                                                icon: 'fa-money-bill'
-                                            };
-
-                                            displayHTML += `
-                <div class="profit-item mb-2 d-flex justify-content-between align-items-center">
-                    <span class="badge bg-${info.class} fs-6 px-3 py-2">
-                        <i class="fas ${info.icon} me-2"></i>
-                        ${profitValue.toFixed(2)} ${info.label}
-                    </span>
-                    <small class="text-muted">${((profitValue / Object.values(profitsByCurrency).reduce((a, b) => a + parseFloat(b), 0)) * 100).toFixed(1)}%</small>
-                </div>
-            `;
-                                        }
-                                    });
-
-                                    // ✅ تحسين 7: عرض الإجمالي
-                                    if (hasData) {
-                                        displayHTML += `
-            <hr class="my-2">
-            <div class="profit-total">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark">
-                        <i class="fas fa-calculator me-1"></i>
-                        الإجمالي:
-                    </span>
-                    <span class="badge bg-dark fs-6 px-3 py-2">
-                        ${data.total_profit ? parseFloat(data.total_profit).toFixed(2) : totalProfitSum.toFixed(2)}
-                    </span>
-                </div>
-            </div>
-        `;
-                                    } else {
-                                        displayHTML = `
-            <div class="profit-item text-center py-3">
-                <i class="fas fa-info-circle text-muted fa-2x mb-2"></i>
-                <div class="text-muted">لا توجد أرباح في هذه الفترة</div>
-                <small class="text-muted">جرب تواريخ أخرى</small>
-            </div>
-        `;
-                                    }
-
-                                    profitDisplay.innerHTML = displayHTML;
-                                }
-                                if (!hasData) {
-                                    displayHTML =
-                                        '<div class="profit-item"><span class="badge bg-secondary"><i class="fas fa-info-circle me-1"></i>0.00 ريال</span></div>';
-                                }
-
-                                profitDisplay.innerHTML = displayHTML;
-                            }
-
-                            // ✅ حفظ البيانات للاستخدام اللاحق
-                            window.calculatedProfitsByCurrency = data.profits_by_currency || {}; window
-                            .calculatedTotalProfit = data.total_profit || 0; window.startDateValue = data
-                            .start_date || startDate; window.endDateValue = data.end_date || endDate;
-
-                        })
-                .catch(error => {
-                    console.error('Error details:', error);
-                    document.getElementById('profit-result').classList.add('d-none');
-                    alert('حدث خطأ أثناء حساب الربح');
-                })
-                .finally(() => {
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                });
-            });
-
-        // ✅ استخدام نتيجة الحساب - مُصحح
-        document.getElementById('use-result-btn').addEventListener('click', function() {
-            try {
-                if (!window.calculatedProfitsByCurrency || !window.startDateValue || !window
-                    .endDateValue) {
-                    alert('لا توجد بيانات محسوبة للاستخدام. يرجى حساب الربح أولاً.');
+                if (!startDate || !endDate) {
+                    alert('يرجى تحديد تاريخ البداية والنهاية');
                     return;
                 }
 
-                // تحديث حقل الشهر
-                const monthYearInput = document.getElementById('month_year');
-                const monthYearDisplay = document.getElementById('month-year-display');
+                // إضافة loading state
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحساب...';
+                submitBtn.disabled = true;
 
-                if (monthYearInput && monthYearDisplay) {
-                    const monthText = monthYearDisplay.textContent || 'غير محدد';
-                    monthYearInput.value =
-                        `${monthText} (من ${window.startDateValue} إلى ${window.endDateValue})`;
+                // إرسال طلب AJAX لحساب الربح
+                fetch('{{ route('admin.calculate-profit') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            start_date: startDate,
+                            end_date: endDate
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // console.log('Response data:', data);
+
+                        if (!data || typeof data !== 'object') {
+                            throw new Error('Invalid response format');
+                        }
+
+                        // عرض النتيجة
+                        document.getElementById('profit-result').classList.remove('d-none');
+
+                        const monthYearDisplay = document.getElementById('month-year-display');
+                        const bookingsCount = document.getElementById('bookings-count');
+
+                        if (monthYearDisplay) monthYearDisplay.textContent = data.month_year ||
+                            'غير محدد';
+                        if (bookingsCount) bookingsCount.textContent = data.reports_count || '0';
+                        // يمكنك أيضاً عرض تفاصيل التقارير
+                        if (data.reports_details && data.reports_details.length > 0) {
+                            let reportsDetailsHTML =
+                                '<div class="mt-2"><small class="text-muted">التقارير المعثور عليها:</small><ul class="list-unstyled small">';
+                            data.reports_details.forEach(report => {
+                                reportsDetailsHTML +=
+                                    `<li>• ${report.client_name} (${report.report_date}) - ربح: ${report.grand_total_profit}</li>`;
+                            });
+                            reportsDetailsHTML += '</ul></div>';
+
+                            // إضافة هذا HTML إلى مكان مناسب في النتائج
+                            const profitDisplay = document.getElementById('profit-display');
+                            if (profitDisplay) {
+                                profitDisplay.insertAdjacentHTML('afterend', reportsDetailsHTML);
+                            }
+                        }
+
+                        // عرض الأرباح
+                        const profitDisplay = document.getElementById('profit-display');
+                        if (profitDisplay) {
+                            profitDisplay.innerHTML = '';
+
+                            const profitsByCurrency = data.profits_by_currency || {};
+                            let hasData = false;
+                            let displayHTML = '';
+
+                            Object.entries(profitsByCurrency).forEach(([currency, profit]) => {
+                                const profitValue = parseFloat(profit) || 0;
+                                if (profitValue > 0) {
+                                    hasData = true;
+                                    const currencyLabel = currency === 'SAR' ? 'ريال' : 'دينار';
+                                    const currencyClass = currency === 'SAR' ? 'success' :
+                                        'primary';
+                                    displayHTML += `
+                                        <div class="profit-item mb-2">
+                                            <span class="badge bg-${currencyClass} me-2">
+                                                <i class="fas fa-money-bill-wave me-1"></i>
+                                                ${profitValue.toFixed(2)} ${currencyLabel}
+                                            </span>
+                                        </div>
+                                    `;
+                                }
+                            });
+
+                            if (!hasData) {
+                                displayHTML =
+                                    '<div class="profit-item"><span class="badge bg-secondary"><i class="fas fa-info-circle me-1"></i>0.00 ريال</span></div>';
+                            }
+
+                            profitDisplay.innerHTML = displayHTML;
+                        }
+
+                        // ✅ حفظ البيانات للاستخدام اللاحق
+                        window.calculatedProfitsByCurrency = data.profits_by_currency || {};
+                        window.calculatedTotalProfit = data.total_profit || 0;
+                        window.startDateValue = data.start_date || startDate;
+                        window.endDateValue = data.end_date || endDate;
+
+                    })
+                    .catch(error => {
+                        console.error('Error details:', error);
+                        document.getElementById('profit-result').classList.add('d-none');
+                        alert('حدث خطأ أثناء حساب الربح');
+                    })
+                    .finally(() => {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    });
+            });
+
+            // ✅ استخدام نتيجة الحساب - مُصحح
+            document.getElementById('use-result-btn').addEventListener('click', function() {
+                try {
+                    if (!window.calculatedProfitsByCurrency || !window.startDateValue || !window
+                        .endDateValue) {
+                        alert('لا توجد بيانات محسوبة للاستخدام. يرجى حساب الربح أولاً.');
+                        return;
+                    }
+
+                    // تحديث حقل الشهر
+                    const monthYearInput = document.getElementById('month_year');
+                    const monthYearDisplay = document.getElementById('month-year-display');
+
+                    if (monthYearInput && monthYearDisplay) {
+                        const monthText = monthYearDisplay.textContent || 'غير محدد';
+                        monthYearInput.value =
+                            `${monthText} (من ${window.startDateValue} إلى ${window.endDateValue})`;
+                    }
+
+                    // تصفير جميع حقول الربح أولاً
+                    const profitFieldsSAR = document.getElementById('total_monthly_profit_SAR');
+                    const profitFieldsKWD = document.getElementById('total_monthly_profit_KWD');
+
+                    if (profitFieldsSAR) profitFieldsSAR.value = '0.00';
+                    if (profitFieldsKWD) profitFieldsKWD.value = '0.00';
+
+                    // ✅ ملء الحقول بناءً على البيانات الفعلية
+                    const profitsByCurrency = window.calculatedProfitsByCurrency;
+                    Object.entries(profitsByCurrency).forEach(([currency, amount]) => {
+                        const profitValue = parseFloat(amount) || 0;
+                        if (profitValue > 0) {
+                            const field = document.getElementById(
+                                `total_monthly_profit_${currency}`);
+                            if (field) {
+                                field.value = profitValue.toFixed(2);
+                            }
+                        }
+                    });
+
+                    // تحديث الحقول المخفية
+                    const startDateHidden = document.getElementById('start_date_hidden');
+                    const endDateHidden = document.getElementById('end_date_hidden');
+
+                    if (startDateHidden) startDateHidden.value = window.startDateValue;
+                    if (endDateHidden) endDateHidden.value = window.endDateValue;
+
+                    // إعادة حساب المصاريف وصافي الربح
+                    recalculateExpenses();
+
+                    alert('تم استخدام بيانات الربح المحسوبة بنجاح!');
+
+                } catch (error) {
+                    console.error('Error using calculated results:', error);
+                    alert('حدث خطأ أثناء استخدام النتائج المحسوبة.');
+                }
+            });
+
+            // دالة مساعدة لتحديث تفاصيل الأرباح
+            function updateProfitDetails(profitsByCurrency) {
+                let profitDetailsDiv = document.getElementById('profit-details');
+                if (!profitDetailsDiv) {
+                    profitDetailsDiv = document.createElement('div');
+                    profitDetailsDiv.id = 'profit-details';
+                    profitDetailsDiv.className = 'alert alert-info mt-2';
+
+                    // البحث عن المكان المناسب لإدراج التفاصيل
+                    const profitCardTitle = document.querySelector('.card-body h6.card-title');
+                    if (profitCardTitle && profitCardTitle.closest('.card-body')) {
+                        profitCardTitle.closest('.card-body').appendChild(profitDetailsDiv);
+                    }
                 }
 
-                // تصفير جميع حقول الربح أولاً
-                const profitFieldsSAR = document.getElementById('total_monthly_profit_SAR');
-                const profitFieldsKWD = document.getElementById('total_monthly_profit_KWD');
+                let detailsHTML =
+                    '<strong><i class="fas fa-chart-line me-2"></i>تفاصيل الأرباح حسب العملة:</strong><br><br>';
 
-                if (profitFieldsSAR) profitFieldsSAR.value = '0.00';
-                if (profitFieldsKWD) profitFieldsKWD.value = '0.00';
-
-                // ✅ ملء الحقول بناءً على البيانات الفعلية
-                const profitsByCurrency = window.calculatedProfitsByCurrency;
+                let hasAnyProfit = false;
                 Object.entries(profitsByCurrency).forEach(([currency, amount]) => {
                     const profitValue = parseFloat(amount) || 0;
                     if (profitValue > 0) {
-                        const field = document.getElementById(
-                            `total_monthly_profit_${currency}`);
-                        if (field) {
-                            field.value = profitValue.toFixed(2);
-                        }
-                    }
-                });
+                        hasAnyProfit = true;
+                        const currencyLabel = currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي';
+                        const badgeClass = currency === 'SAR' ? 'bg-success' : 'bg-primary';
+                        const icon = currency === 'SAR' ? 'fa-money-bill-wave' : 'fa-coins';
 
-                // تحديث الحقول المخفية
-                const startDateHidden = document.getElementById('start_date_hidden');
-                const endDateHidden = document.getElementById('end_date_hidden');
-
-                if (startDateHidden) startDateHidden.value = window.startDateValue;
-                if (endDateHidden) endDateHidden.value = window.endDateValue;
-
-                // إعادة حساب المصاريف وصافي الربح
-                recalculateExpenses();
-
-                alert('تم استخدام بيانات الربح المحسوبة بنجاح!');
-
-            } catch (error) {
-                console.error('Error using calculated results:', error);
-                alert('حدث خطأ أثناء استخدام النتائج المحسوبة.');
-            }
-        });
-
-        // دالة مساعدة لتحديث تفاصيل الأرباح
-        function updateProfitDetails(profitsByCurrency) {
-            let profitDetailsDiv = document.getElementById('profit-details');
-            if (!profitDetailsDiv) {
-                profitDetailsDiv = document.createElement('div');
-                profitDetailsDiv.id = 'profit-details';
-                profitDetailsDiv.className = 'alert alert-info mt-2';
-
-                // البحث عن المكان المناسب لإدراج التفاصيل
-                const profitCardTitle = document.querySelector('.card-body h6.card-title');
-                if (profitCardTitle && profitCardTitle.closest('.card-body')) {
-                    profitCardTitle.closest('.card-body').appendChild(profitDetailsDiv);
-                }
-            }
-
-            let detailsHTML =
-                '<strong><i class="fas fa-chart-line me-2"></i>تفاصيل الأرباح حسب العملة:</strong><br><br>';
-
-            let hasAnyProfit = false;
-            Object.entries(profitsByCurrency).forEach(([currency, amount]) => {
-                const profitValue = parseFloat(amount) || 0;
-                if (profitValue > 0) {
-                    hasAnyProfit = true;
-                    const currencyLabel = currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي';
-                    const badgeClass = currency === 'SAR' ? 'bg-success' : 'bg-primary';
-                    const icon = currency === 'SAR' ? 'fa-money-bill-wave' : 'fa-coins';
-
-                    detailsHTML += `
+                        detailsHTML += `
                 <span class="badge ${badgeClass} me-2 mb-1" style="font-size: 0.9em;">
                     <i class="fas ${icon} me-1"></i>
                     ${profitValue.toFixed(2)} ${currencyLabel}
                 </span>
             `;
-                }
-            });
+                    }
+                });
 
-            if (!hasAnyProfit) {
-                detailsHTML +=
-                    '<span class="badge bg-secondary"><i class="fas fa-info-circle me-1"></i>لا توجد أرباح في هذه الفترة</span>';
+                if (!hasAnyProfit) {
+                    detailsHTML +=
+                        '<span class="badge bg-secondary"><i class="fas fa-info-circle me-1"></i>لا توجد أرباح في هذه الفترة</span>';
+                }
+
+                profitDetailsDiv.innerHTML = detailsHTML;
             }
 
-            profitDetailsDiv.innerHTML = detailsHTML;
-        }
-
-        // دالة مساعدة لعرض رسائل النجاح
-        function showSuccessMessage(message) {
-            // إنشاء عنصر التنبيه
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show mt-2';
-            alertDiv.innerHTML = `
+            // دالة مساعدة لعرض رسائل النجاح
+            function showSuccessMessage(message) {
+                // إنشاء عنصر التنبيه
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show mt-2';
+                alertDiv.innerHTML = `
         <i class="fas fa-check-circle me-2"></i>
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
 
-            // إدراج التنبيه في أعلى الصفحة
-            const container = document.querySelector('.container-fluid');
-            if (container) {
-                container.insertBefore(alertDiv, container.firstChild);
+                // إدراج التنبيه في أعلى الصفحة
+                const container = document.querySelector('.container-fluid');
+                if (container) {
+                    container.insertBefore(alertDiv, container.firstChild);
 
-                // إزالة التنبيه تلقائياً بعد 5 ثواني
-                setTimeout(() => {
-                    if (alertDiv.parentNode) {
-                        alertDiv.remove();
-                    }
-                }, 5000);
+                    // إزالة التنبيه تلقائياً بعد 5 ثواني
+                    setTimeout(() => {
+                        if (alertDiv.parentNode) {
+                            alertDiv.remove();
+                        }
+                    }, 5000);
+                }
             }
-        }
-        // تأكيد حذف السجل
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
-        let expenseIdToDelete = null;
+            // تأكيد حذف السجل
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
+            let expenseIdToDelete = null;
 
-        document.querySelectorAll('.delete-expense-btn').forEach(function(button) {
-            button.addEventListener('click', function() {
-                expenseIdToDelete = this.dataset.expenseId;
-                document.getElementById('delete-month-name').textContent = this.dataset
-                    .month;
-                deleteModal.show();
+            document.querySelectorAll('.delete-expense-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    expenseIdToDelete = this.dataset.expenseId;
+                    document.getElementById('delete-month-name').textContent = this.dataset
+                        .month;
+                    deleteModal.show();
+                });
             });
-        });
 
-        document.getElementById('confirm-delete-btn').addEventListener('click', function() {
-            if (expenseIdToDelete) {
-                document.getElementById(`delete-form-${expenseIdToDelete}`).submit();
-            }
-            deleteModal.hide();
-        });
+            document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+                if (expenseIdToDelete) {
+                    document.getElementById(`delete-form-${expenseIdToDelete}`).submit();
+                }
+                deleteModal.hide();
+            });
 
-        // تحويل العملات - الكود المحدث
-        document.getElementById('convert_currency_btn').addEventListener('click', function() {
-            const unifiedCurrency = document.querySelector('input[name="unified_currency"]:checked')
-                .value;
-            const exchangeRate = parseFloat(document.getElementById('exchange_rate').value) ||
-                12.27;
+            // تحويل العملات - الكود المحدث
+            document.getElementById('convert_currency_btn').addEventListener('click', function() {
+                const unifiedCurrency = document.querySelector('input[name="unified_currency"]:checked')
+                    .value;
+                const exchangeRate = parseFloat(document.getElementById('exchange_rate').value) ||
+                    12.27;
 
-            // حفظ القيم الأصلية
-            const originalValues = {
-                profit_SAR: parseFloat(document.getElementById('total_monthly_profit_SAR')
-                        .value) ||
-                    0,
-                profit_KWD: parseFloat(document.getElementById('total_monthly_profit_KWD')
-                        .value) ||
-                    0,
-                expenses_SAR: window.totalExpensesSAR || 0,
-                expenses_KWD: window.totalExpensesKWD || 0
-            };
+                // حفظ القيم الأصلية
+                const originalValues = {
+                    profit_SAR: parseFloat(document.getElementById('total_monthly_profit_SAR')
+                            .value) ||
+                        0,
+                    profit_KWD: parseFloat(document.getElementById('total_monthly_profit_KWD')
+                            .value) ||
+                        0,
+                    expenses_SAR: window.totalExpensesSAR || 0,
+                    expenses_KWD: window.totalExpensesKWD || 0
+                };
 
-            // تخزين القيم الأصلية للرجوع لها عند الحاجة
-            if (!window.originalValues) {
-                window.originalValues = originalValues;
-            }
+                // تخزين القيم الأصلية للرجوع لها عند الحاجة
+                if (!window.originalValues) {
+                    window.originalValues = originalValues;
+                }
 
-            // المتغيرات للقيم المحولة
-            let unifiedProfit = 0;
-            let unifiedExpenses = 0;
-            let conversionDetails = '';
+                // المتغيرات للقيم المحولة
+                let unifiedProfit = 0;
+                let unifiedExpenses = 0;
+                let conversionDetails = '';
 
-            if (unifiedCurrency === 'SAR') {
-                // تحويل الدينار إلى ريال
-                const convertedProfit = originalValues.profit_KWD * exchangeRate;
-                const convertedExpenses = originalValues.expenses_KWD * exchangeRate;
+                if (unifiedCurrency === 'SAR') {
+                    // تحويل الدينار إلى ريال
+                    const convertedProfit = originalValues.profit_KWD * exchangeRate;
+                    const convertedExpenses = originalValues.expenses_KWD * exchangeRate;
 
-                unifiedProfit = originalValues.profit_SAR + convertedProfit;
-                unifiedExpenses = originalValues.expenses_SAR + convertedExpenses;
+                    unifiedProfit = originalValues.profit_SAR + convertedProfit;
+                    unifiedExpenses = originalValues.expenses_SAR + convertedExpenses;
 
-                conversionDetails = `
+                    conversionDetails = `
                 <div class="alert alert-info mb-3">
                     <div class="fw-bold mb-2">تم توحيد جميع الحسابات بعملة الريال السعودي</div>
                     <div class="mb-2"><strong>الأرباح:</strong></div>
@@ -1406,32 +1297,32 @@
                 </div>
             `;
 
-                // تعليم الحقل النشط وتعطيل الحقل الآخر
-                markActiveField('SAR', unifiedProfit, originalValues.profit_KWD);
+                    // تعليم الحقل النشط وتعطيل الحقل الآخر
+                    markActiveField('SAR', unifiedProfit, originalValues.profit_KWD);
 
-                // تحديث قيم حقول المصاريف
-                document.getElementById('total_expenses_display_SAR').value = unifiedExpenses
-                    .toFixed(
-                        2);
-                document.getElementById('total_expenses_display_SAR').classList.add('fw-bold',
-                    'bg-success', 'bg-opacity-10');
-                document.getElementById('total_expenses_display_KWD').classList.add('text-muted');
+                    // تحديث قيم حقول المصاريف
+                    document.getElementById('total_expenses_display_SAR').value = unifiedExpenses
+                        .toFixed(
+                            2);
+                    document.getElementById('total_expenses_display_SAR').classList.add('fw-bold',
+                        'bg-success', 'bg-opacity-10');
+                    document.getElementById('total_expenses_display_KWD').classList.add('text-muted');
 
-                // تحديث المتغيرات العامة
-                window.totalExpensesSAR = unifiedExpenses;
-                window.totalExpensesKWD = 0; // صفر لحساب صافي الربح بشكل صحيح
+                    // تحديث المتغيرات العامة
+                    window.totalExpensesSAR = unifiedExpenses;
+                    window.totalExpensesKWD = 0; // صفر لحساب صافي الربح بشكل صحيح
 
-                // للتوافق مع الكود القديم
-                document.getElementById('total_expenses').value = unifiedExpenses.toFixed(2);
-            } else {
-                // تحويل الريال إلى دينار
-                const convertedProfit = originalValues.profit_SAR / exchangeRate;
-                const convertedExpenses = originalValues.expenses_SAR / exchangeRate;
+                    // للتوافق مع الكود القديم
+                    document.getElementById('total_expenses').value = unifiedExpenses.toFixed(2);
+                } else {
+                    // تحويل الريال إلى دينار
+                    const convertedProfit = originalValues.profit_SAR / exchangeRate;
+                    const convertedExpenses = originalValues.expenses_SAR / exchangeRate;
 
-                unifiedProfit = originalValues.profit_KWD + convertedProfit;
-                unifiedExpenses = originalValues.expenses_KWD + convertedExpenses;
+                    unifiedProfit = originalValues.profit_KWD + convertedProfit;
+                    unifiedExpenses = originalValues.expenses_KWD + convertedExpenses;
 
-                conversionDetails = `
+                    conversionDetails = `
                 <div class="alert alert-info mb-3">
                     <div class="fw-bold mb-2">تم توحيد جميع الحسابات بعملة الدينار الكويتي</div>
                     <div class="mb-2"><strong>الأرباح:</strong></div>
@@ -1450,27 +1341,27 @@
                 </div>
             `;
 
-                // تعليم الحقل النشط وتعطيل الحقل الآخر
-                markActiveField('KWD', originalValues.profit_SAR, unifiedProfit);
+                    // تعليم الحقل النشط وتعطيل الحقل الآخر
+                    markActiveField('KWD', originalValues.profit_SAR, unifiedProfit);
 
-                // تحديث قيم حقول المصاريف
-                document.getElementById('total_expenses_display_KWD').value = unifiedExpenses
-                    .toFixed(
-                        2);
-                document.getElementById('total_expenses_display_KWD').classList.add('fw-bold',
-                    'bg-primary', 'bg-opacity-10');
-                document.getElementById('total_expenses_display_SAR').classList.add('text-muted');
+                    // تحديث قيم حقول المصاريف
+                    document.getElementById('total_expenses_display_KWD').value = unifiedExpenses
+                        .toFixed(
+                            2);
+                    document.getElementById('total_expenses_display_KWD').classList.add('fw-bold',
+                        'bg-primary', 'bg-opacity-10');
+                    document.getElementById('total_expenses_display_SAR').classList.add('text-muted');
 
-                // تحديث المتغيرات العامة
-                window.totalExpensesKWD = unifiedExpenses;
-                window.totalExpensesSAR = 0; // صفر لحساب صافي الربح بشكل صحيح
+                    // تحديث المتغيرات العامة
+                    window.totalExpensesKWD = unifiedExpenses;
+                    window.totalExpensesSAR = 0; // صفر لحساب صافي الربح بشكل صحيح
 
-                // // للتوافق مع الكود القديم
-                // document.getElementById('total_expenses').value = "0.00";
-            }
+                    // // للتوافق مع الكود القديم
+                    // document.getElementById('total_expenses').value = "0.00";
+                }
 
-            // إضافة زر للرجوع للقيم الأصلية
-            conversionDetails += `
+                // إضافة زر للرجوع للقيم الأصلية
+                conversionDetails += `
             <div class="text-center mt-2">
                 <button type="button" class="btn btn-outline-secondary" id="restore_original_values">
                     <i class="fas fa-undo me-1"></i> العودة للقيم الأصلية
@@ -1478,93 +1369,93 @@
             </div>
         `;
 
-            // عرض نتيجة التحويل
-            document.getElementById('conversion_result').classList.remove('d-none');
-            document.getElementById('conversion_details').innerHTML = conversionDetails;
+                // عرض نتيجة التحويل
+                document.getElementById('conversion_result').classList.remove('d-none');
+                document.getElementById('conversion_details').innerHTML = conversionDetails;
 
-            // إضافة مستمع حدث لزر استعادة القيم الأصلية
-            document.getElementById('restore_original_values').addEventListener('click',
-                function() {
-                    restoreOriginalValues();
-                });
+                // إضافة مستمع حدث لزر استعادة القيم الأصلية
+                document.getElementById('restore_original_values').addEventListener('click',
+                    function() {
+                        restoreOriginalValues();
+                    });
 
-            // إعادة حساب صافي الربح بعد التحويل
-            calculateNetProfit();
-        });
-
-        // دالة لتمييز حقول العملة النشطة وغير النشطة
-        function markActiveField(activeCurrency, sarValue, kwdValue) {
-            // إعادة تعيين التنسيقات أولاً
-            const fields = [
-                'total_monthly_profit_SAR', 'total_monthly_profit_KWD',
-                'total_expenses_display_SAR', 'total_expenses_display_KWD'
-            ];
-
-            fields.forEach(field => {
-                const element = document.getElementById(field);
-                element.classList.remove('fw-bold', 'bg-success', 'bg-primary', 'bg-opacity-10',
-                    'text-muted');
+                // إعادة حساب صافي الربح بعد التحويل
+                calculateNetProfit();
             });
 
-            // تعيين قيم الحقول وتمييزها
-            if (activeCurrency === 'SAR') {
-                document.getElementById('total_monthly_profit_SAR').value = sarValue.toFixed(2);
-                document.getElementById('total_monthly_profit_SAR').classList.add('fw-bold', 'bg-success',
-                    'bg-opacity-10');
-                document.getElementById('total_monthly_profit_KWD').value = kwdValue.toFixed(2);
-                document.getElementById('total_monthly_profit_KWD').classList.add('text-muted');
-            } else {
-                document.getElementById('total_monthly_profit_KWD').value = kwdValue.toFixed(2);
-                document.getElementById('total_monthly_profit_KWD').classList.add('fw-bold', 'bg-primary',
-                    'bg-opacity-10');
-                document.getElementById('total_monthly_profit_SAR').value = sarValue.toFixed(2);
-                document.getElementById('total_monthly_profit_SAR').classList.add('text-muted');
-            }
-        }
-
-        // استعادة القيم الأصلية
-        function restoreOriginalValues() {
-            if (window.originalValues) {
-                // استعادة قيم الربح
-                document.getElementById('total_monthly_profit_SAR').value = window.originalValues.profit_SAR
-                    .toFixed(2);
-                document.getElementById('total_monthly_profit_KWD').value = window.originalValues.profit_KWD
-                    .toFixed(2);
-
-                // ✅ تصحيح: استعادة قيم المصاريف
-                document.getElementById('total_expenses_display_SAR').value = window.originalValues.expenses_SAR
-                    .toFixed(2);
-                document.getElementById('total_expenses_display_KWD').value = window.originalValues.expenses_KWD
-                    .toFixed(2);
-
-                // استعادة المتغيرات العامة
-                window.totalExpensesSAR = window.originalValues.expenses_SAR;
-                window.totalExpensesKWD = window.originalValues.expenses_KWD;
-
-                // إزالة التنسيقات
-                const elements = [
+            // دالة لتمييز حقول العملة النشطة وغير النشطة
+            function markActiveField(activeCurrency, sarValue, kwdValue) {
+                // إعادة تعيين التنسيقات أولاً
+                const fields = [
                     'total_monthly_profit_SAR', 'total_monthly_profit_KWD',
                     'total_expenses_display_SAR', 'total_expenses_display_KWD'
                 ];
 
-                elements.forEach(id => {
-                    const element = document.getElementById(id);
+                fields.forEach(field => {
+                    const element = document.getElementById(field);
                     element.classList.remove('fw-bold', 'bg-success', 'bg-primary', 'bg-opacity-10',
                         'text-muted');
                 });
 
-                // إخفاء نتيجة التحويل
-                document.getElementById('conversion_result').classList.add('d-none');
-
-                // إعادة حساب صافي الربح
-                calculateNetProfit();
+                // تعيين قيم الحقول وتمييزها
+                if (activeCurrency === 'SAR') {
+                    document.getElementById('total_monthly_profit_SAR').value = sarValue.toFixed(2);
+                    document.getElementById('total_monthly_profit_SAR').classList.add('fw-bold', 'bg-success',
+                        'bg-opacity-10');
+                    document.getElementById('total_monthly_profit_KWD').value = kwdValue.toFixed(2);
+                    document.getElementById('total_monthly_profit_KWD').classList.add('text-muted');
+                } else {
+                    document.getElementById('total_monthly_profit_KWD').value = kwdValue.toFixed(2);
+                    document.getElementById('total_monthly_profit_KWD').classList.add('fw-bold', 'bg-primary',
+                        'bg-opacity-10');
+                    document.getElementById('total_monthly_profit_SAR').value = sarValue.toFixed(2);
+                    document.getElementById('total_monthly_profit_SAR').classList.add('text-muted');
+                }
             }
-        }
 
-        // تحديث حساب المصاريف عند تغيير العملة
-        document.querySelectorAll('.currency-select').forEach(function(select) {
-            select.addEventListener('change', recalculateExpenses);
-        });
+            // استعادة القيم الأصلية
+            function restoreOriginalValues() {
+                if (window.originalValues) {
+                    // استعادة قيم الربح
+                    document.getElementById('total_monthly_profit_SAR').value = window.originalValues.profit_SAR
+                        .toFixed(2);
+                    document.getElementById('total_monthly_profit_KWD').value = window.originalValues.profit_KWD
+                        .toFixed(2);
+
+                    // ✅ تصحيح: استعادة قيم المصاريف
+                    document.getElementById('total_expenses_display_SAR').value = window.originalValues.expenses_SAR
+                        .toFixed(2);
+                    document.getElementById('total_expenses_display_KWD').value = window.originalValues.expenses_KWD
+                        .toFixed(2);
+
+                    // استعادة المتغيرات العامة
+                    window.totalExpensesSAR = window.originalValues.expenses_SAR;
+                    window.totalExpensesKWD = window.originalValues.expenses_KWD;
+
+                    // إزالة التنسيقات
+                    const elements = [
+                        'total_monthly_profit_SAR', 'total_monthly_profit_KWD',
+                        'total_expenses_display_SAR', 'total_expenses_display_KWD'
+                    ];
+
+                    elements.forEach(id => {
+                        const element = document.getElementById(id);
+                        element.classList.remove('fw-bold', 'bg-success', 'bg-primary', 'bg-opacity-10',
+                            'text-muted');
+                    });
+
+                    // إخفاء نتيجة التحويل
+                    document.getElementById('conversion_result').classList.add('d-none');
+
+                    // إعادة حساب صافي الربح
+                    calculateNetProfit();
+                }
+            }
+
+            // تحديث حساب المصاريف عند تغيير العملة
+            document.querySelectorAll('.currency-select').forEach(function(select) {
+                select.addEventListener('change', recalculateExpenses);
+            });
         });
     </script>
     {{-- <script src="{{ asset('js/preventClick.js') }}"></script> --}}
