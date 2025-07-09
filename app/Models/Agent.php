@@ -33,6 +33,69 @@ class Agent extends Model
         return $this->hasMany(User::class);
     }
 
+
+    /**
+     * العلاقة مع مدفوعات الرحلات البرية
+     */
+    public function landTripsPayments()
+    {
+        return $this->hasMany(LandTripsAgentPayment::class);
+    }
+
+    /**
+     * العلاقة مع حجوزات الرحلات البرية عبر LandTrip
+     */
+    public function landTripBookings()
+    {
+        return $this->hasManyThrough(
+            LandTripBooking::class,
+            LandTrip::class,
+            'agent_id', // Foreign key on land_trips table
+            'land_trip_id', // Foreign key on land_trip_bookings table
+            'id', // Local key on agents table
+            'id' // Local key on land_trips table
+        );
+    }
+
+    /**
+     * حساب الإجماليات المالية للرحلات البرية فقط حسب العملة
+     */
+    public function getLandTripTotalsByCurrency()
+{
+    $totals = [];
+
+    // ✅ إصلاح: استخدام join مباشر بدلاً من hasManyThrough
+    $bookingsDue = DB::table('land_trip_bookings')
+        ->join('land_trips', 'land_trips.id', '=', 'land_trip_bookings.land_trip_id')
+        ->where('land_trips.agent_id', $this->id)
+        ->whereNull('land_trip_bookings.deleted_at')
+        ->selectRaw('land_trip_bookings.currency, SUM(land_trip_bookings.amount_due_to_agent) as total_due')
+        ->groupBy('land_trip_bookings.currency')
+        ->get()
+        ->keyBy('currency');
+
+    // المدفوع للوكيل من مدفوعات الرحلات البرية
+    $paymentsPaid = $this->landTripsPayments()
+        ->selectRaw('currency, SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid, SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts')
+        ->groupBy('currency')
+        ->get()
+        ->keyBy('currency');
+
+    foreach (['SAR', 'KWD'] as $currency) {
+        $due = $bookingsDue->get($currency)?->total_due ?? 0;
+        $paid = $paymentsPaid->get($currency)?->total_paid ?? 0;
+        $discounts = $paymentsPaid->get($currency)?->discounts ?? 0;
+
+        $totals[$currency] = [
+            'due' => (float) $due,
+            'paid' => (float) $paid,
+            'discounts' => (float) $discounts,
+            'remaining' => (float) ($due - $paid - $discounts)
+        ];
+    }
+
+    return $totals;
+}
     // ========== الحسابات الإجمالية ==========
     public function calculateTotals()
     {
@@ -69,20 +132,20 @@ class Agent extends Model
             $remainingByCurrency[$currency] = $due - $paid - $discounts;
         }
         // لضمان أن كل العملات متاحة ولو بقيم صفرية
-foreach (['SAR', 'KWD'] as $currency) {
-    if (!isset($dueByCurrency[$currency])) {
-        $dueByCurrency[$currency] = 0;
-    }
-    if (!isset($paidByCurrency[$currency])) {
-        $paidByCurrency[$currency] = 0;
-    }
-    if (!isset($discountsByCurrency[$currency])) {
-        $discountsByCurrency[$currency] = 0;
-    }
-    if (!isset($remainingByCurrency[$currency])) {
-        $remainingByCurrency[$currency] = 0;
-    }
-}
+        foreach (['SAR', 'KWD'] as $currency) {
+            if (!isset($dueByCurrency[$currency])) {
+                $dueByCurrency[$currency] = 0;
+            }
+            if (!isset($paidByCurrency[$currency])) {
+                $paidByCurrency[$currency] = 0;
+            }
+            if (!isset($discountsByCurrency[$currency])) {
+                $discountsByCurrency[$currency] = 0;
+            }
+            if (!isset($remainingByCurrency[$currency])) {
+                $remainingByCurrency[$currency] = 0;
+            }
+        }
 
 
         // حفظ القيم المحسوبة في attributes للوصول إليها لاحقاً

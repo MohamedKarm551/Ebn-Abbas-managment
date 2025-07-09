@@ -18,6 +18,7 @@ use App\Http\Controllers\TripTypeController;
 use App\Http\Controllers\HotelRoomController;
 use App\Http\Controllers\BookingOperationReportController;
 use App\Http\Controllers\AdminTransactionController;
+use App\Http\Controllers\LandTripsAgentPaymentController;
 use App\Models\User;
 use Jenssegers\Agent\Agent;
 use App\Models\Notification;
@@ -339,6 +340,18 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{company}/{payment}', [CompanyPaymentController::class, 'destroy'])->name('destroy');
             Route::post('/{company}/apply-discount', [CompanyPaymentController::class, 'applyDiscount'])->name('apply-discount');
         });
+            // مدفوعات الوكلاء للرحلات البرية
+    Route::prefix('admin/land-trips-agent-payments')->name('admin.land-trips-agent-payments.')->group(function () {
+        Route::get('/', [LandTripsAgentPaymentController::class, 'index'])->name('index');
+        Route::get('/{agent}', [LandTripsAgentPaymentController::class, 'show'])->name('show');
+        Route::get('/{agent}/create', [LandTripsAgentPaymentController::class, 'create'])->name('create');
+        Route::post('/{agent}', [LandTripsAgentPaymentController::class, 'store'])->name('store');
+        Route::get('/{agent}/{payment}/edit', [LandTripsAgentPaymentController::class, 'edit'])->name('edit');
+        Route::put('/{agent}/{payment}', [LandTripsAgentPaymentController::class, 'update'])->name('update');
+        Route::delete('/{agent}/{payment}', [LandTripsAgentPaymentController::class, 'destroy'])->name('destroy');
+        Route::post('/{agent}/apply-discount', [LandTripsAgentPaymentController::class, 'applyDiscount'])->name('apply-discount');
+    });
+
     });
 
     /*
