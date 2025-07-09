@@ -20,7 +20,106 @@ class MonthlyExpenseController extends Controller
         return view('admin.monthly_expenses.index', compact('expenses'));
     }
 
-    // حساب الربح في فترة محددة
+    // // حساب الربح من الحجوزات  في فترة محددة
+    // public function calculateProfit(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'start_date' => 'required|date',
+    //         'end_date' => 'required|date|after_or_equal:start_date',
+    //     ]);
+
+    //     $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+    //     $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+
+    //     // حساب الأرباح من الحجوزات التي تتقاطع مع الفترة المحددة
+    //     $bookings = Booking::where(function ($query) use ($startDate, $endDate) {
+    //         $query->where(function ($q) use ($startDate, $endDate) {
+    //             // الحجوزات التي تبدأ داخل الفترة
+    //             $q->whereBetween('check_in', [$startDate, $endDate]);
+    //         })->orWhere(function ($q) use ($startDate, $endDate) {
+    //             // الحجوزات التي تنتهي داخل الفترة
+    //             $q->whereBetween('check_out', [$startDate, $endDate]);
+    //         })->orWhere(function ($q) use ($startDate, $endDate) {
+    //             // الحجوزات التي تحتوي الفترة بالكامل
+    //             $q->where('check_in', '<=', $startDate)
+    //                 ->where('check_out', '>=', $endDate);
+    //         });
+    //     })
+    //         ->get();
+
+
+    //     // مصفوفة لحفظ الأرباح حسب العملة
+    //     $profitsByCurrency = [
+    //         'SAR' => 0, // الريال السعودي
+    //         'KWD' => 0  // الدينار الكويتي
+    //     ];
+
+    //     // عدد الحجوزات لكل عملة
+    //     $bookingsCount = [
+    //         'SAR' => 0,
+    //         'KWD' => 0
+    //     ];
+
+
+    //     foreach ($bookings as $booking) {
+    //         // الحصول على عملة الحجز
+    //         $currency = $booking->currency ?? 'SAR'; // استخدام SAR كقيمة افتراضية
+
+    //         // حساب عدد الليالي المتداخلة مع الفترة المحددة
+    //         $bookingStart = Carbon::parse($booking->check_in);
+    //         $bookingEnd = Carbon::parse($booking->check_out);
+
+    //         // تعديل تواريخ البداية والنهاية إذا كانت خارج الفترة المطلوبة
+    //         // $effectiveStart = $bookingStart->lt($startDate) ? $startDate : $bookingStart;
+    //         // $effectiveEnd = $bookingEnd->gt($endDate) ? $endDate : $bookingEnd;
+
+    //         // // عدد الليالي = الفرق بين التواريخ
+
+    //         // $nights = $effectiveStart->diffInDays($effectiveEnd);
+    //         // لو انا عاوز احسب عدد الليالي من تاريخ الحجز لحد الفترة المحددة
+
+    //         $nights = $bookingStart->diffInDays($bookingEnd);
+
+    //         // الربح لهذا الحجز = عدد الليالي * عدد الغرف * (سعر البيع - سعر التكلفة)
+    //         $profitPerRoom = $booking->sale_price - $booking->cost_price;
+    //         $bookingProfit = $nights * $booking->rooms * $profitPerRoom;
+
+
+    //         // إضافة الربح إلى العملة المناسبة
+    //         if (isset($profitsByCurrency[$currency])) {
+    //             $profitsByCurrency[$currency] += $bookingProfit;
+    //             $bookingsCount[$currency]++;
+    //         } else {
+    //             // إضافة عملة جديدة إذا لم تكن موجودة
+    //             $profitsByCurrency[$currency] = $bookingProfit;
+    //             $bookingsCount[$currency] = 1;
+    //         }
+    //     }
+
+    //     // تنسيق تاريخ الفترة كاسم شهر
+    //     $monthYearName = $startDate->format('F Y');
+
+    //     // تحديد العملة الأساسية بناءً على أكبر مبلغ أرباح
+    //     $primaryCurrency = 'SAR'; // القيمة الافتراضية
+    //     if (isset($profitsByCurrency['KWD']) && isset($profitsByCurrency['SAR'])) {
+    //         $primaryCurrency = $profitsByCurrency['KWD'] >= $profitsByCurrency['SAR'] ? 'KWD' : 'SAR';
+    //     } elseif (isset($profitsByCurrency['KWD']) && $profitsByCurrency['KWD'] > 0) {
+    //         $primaryCurrency = 'KWD';
+    //     }
+
+    //     return response()->json([
+    //         'profits_by_currency' => $profitsByCurrency,
+    //         'total_profit' => array_sum($profitsByCurrency), // المجموع الكلي (للتوافقية مع الكود القديم)
+    //         'month_year' => $monthYearName,
+    //         'bookings_count' => $bookings->count(),
+    //         'bookings_count_by_currency' => $bookingsCount,
+    //         'start_date' => $startDate->format('Y-m-d'),
+    //         'end_date' => $endDate->format('Y-m-d'),
+    //         'primary_currency' => $primaryCurrency, // ✅ إضافة العملة الأساسية
+
+    //     ]);
+    // }
+
     public function calculateProfit(Request $request)
     {
         $validated = $request->validate([
@@ -31,92 +130,121 @@ class MonthlyExpenseController extends Controller
         $startDate = Carbon::parse($validated['start_date'])->startOfDay();
         $endDate = Carbon::parse($validated['end_date'])->endOfDay();
 
-        // حساب الأرباح من الحجوزات التي تتقاطع مع الفترة المحددة
-        $bookings = Booking::where(function ($query) use ($startDate, $endDate) {
-            $query->where(function ($q) use ($startDate, $endDate) {
-                // الحجوزات التي تبدأ داخل الفترة
-                $q->whereBetween('check_in', [$startDate, $endDate]);
-            })->orWhere(function ($q) use ($startDate, $endDate) {
-                // الحجوزات التي تنتهي داخل الفترة
-                $q->whereBetween('check_out', [$startDate, $endDate]);
-            })->orWhere(function ($q) use ($startDate, $endDate) {
-                // الحجوزات التي تحتوي الفترة بالكامل
-                $q->where('check_in', '<=', $startDate)
-                    ->where('check_out', '>=', $endDate);
-            });
-        })
+        // ✅ البحث في تقارير العمليات المسجلة خلال الفترة المحددة
+        $operationReports = \App\Models\BookingOperationReport::whereBetween('report_date', [$startDate, $endDate])
+            ->with(['visas', 'flights', 'transports', 'hotels', 'landTrips'])
             ->get();
-
 
         // مصفوفة لحفظ الأرباح حسب العملة
         $profitsByCurrency = [
-            'SAR' => 0, // الريال السعودي
-            'KWD' => 0  // الدينار الكويتي
-        ];
-
-        // عدد الحجوزات لكل عملة
-        $bookingsCount = [
             'SAR' => 0,
-            'KWD' => 0
+            'KWD' => 0,
+            'USD' => 0,
+            'EUR' => 0
         ];
 
+        // ✅ حساب الأرباح من كل تقرير عملية
+        foreach ($operationReports as $report) {
+            // ✅ جمع أرباح التأشيرات حسب العملة
+            foreach ($report->visas as $visa) {
+                $currency = $visa->currency ?? 'KWD';
+                $profit = $visa->profit ?? 0;
+                if (isset($profitsByCurrency[$currency])) {
+                    $profitsByCurrency[$currency] += $profit;
+                }
+            }
 
-        foreach ($bookings as $booking) {
-            // الحصول على عملة الحجز
-            $currency = $booking->currency ?? 'SAR'; // استخدام SAR كقيمة افتراضية
+            // ✅ جمع أرباح الطيران حسب العملة
+            foreach ($report->flights as $flight) {
+                $currency = $flight->currency ?? 'KWD';
+                $profit = $flight->profit ?? 0;
+                if (isset($profitsByCurrency[$currency])) {
+                    $profitsByCurrency[$currency] += $profit;
+                }
+            }
 
-            // حساب عدد الليالي المتداخلة مع الفترة المحددة
-            $bookingStart = Carbon::parse($booking->check_in);
-            $bookingEnd = Carbon::parse($booking->check_out);
+            // ✅ جمع أرباح النقل حسب العملة
+            foreach ($report->transports as $transport) {
+                $currency = $transport->currency ?? 'KWD';
+                $profit = $transport->profit ?? 0;
+                if (isset($profitsByCurrency[$currency])) {
+                    $profitsByCurrency[$currency] += $profit;
+                }
+            }
 
-            // تعديل تواريخ البداية والنهاية إذا كانت خارج الفترة المطلوبة
-            // $effectiveStart = $bookingStart->lt($startDate) ? $startDate : $bookingStart;
-            // $effectiveEnd = $bookingEnd->gt($endDate) ? $endDate : $bookingEnd;
+            // ✅ جمع أرباح الفنادق حسب العملة
+            foreach ($report->hotels as $hotel) {
+                $currency = $hotel->currency ?? 'KWD';
+                $profit = $hotel->profit ?? 0;
+                if (isset($profitsByCurrency[$currency])) {
+                    $profitsByCurrency[$currency] += $profit;
+                }
+            }
 
-            // // عدد الليالي = الفرق بين التواريخ
+            // ✅ جمع أرباح الرحلات البرية حسب العملة
+            foreach ($report->landTrips as $landTrip) {
+                $currency = $landTrip->currency ?? 'KWD';
+                $profit = $landTrip->profit ?? 0;
+                if (isset($profitsByCurrency[$currency])) {
+                    $profitsByCurrency[$currency] += $profit;
+                }
+            }
 
-            // $nights = $effectiveStart->diffInDays($effectiveEnd);
-            // لو انا عاوز احسب عدد الليالي من تاريخ الحجز لحد الفترة المحددة
+            // ✅ إضافة الربح الإجمالي المحفوظ في التقرير (كبديل)
+            if ($report->grand_total_profit > 0) {
+                // إذا لم تكن هناك أرباح فرعية، استخدم الربح الإجمالي
+                $hasSubProfits =
+                    $report->visas->sum('profit') +
+                    $report->flights->sum('profit') +
+                    $report->transports->sum('profit') +
+                    $report->hotels->sum('profit') +
+                    $report->landTrips->sum('profit');
 
-            $nights = $bookingStart->diffInDays($bookingEnd);
-
-            // الربح لهذا الحجز = عدد الليالي * عدد الغرف * (سعر البيع - سعر التكلفة)
-            $profitPerRoom = $booking->sale_price - $booking->cost_price;
-            $bookingProfit = $nights * $booking->rooms * $profitPerRoom;
-
-
-            // إضافة الربح إلى العملة المناسبة
-            if (isset($profitsByCurrency[$currency])) {
-                $profitsByCurrency[$currency] += $bookingProfit;
-                $bookingsCount[$currency]++;
-            } else {
-                // إضافة عملة جديدة إذا لم تكن موجودة
-                $profitsByCurrency[$currency] = $bookingProfit;
-                $bookingsCount[$currency] = 1;
+                if ($hasSubProfits == 0) {
+                    // استخدم الربح الإجمالي مع العملة الافتراضية
+                    $profitsByCurrency['KWD'] += $report->grand_total_profit;
+                }
             }
         }
 
-        // تنسيق تاريخ الفترة كاسم شهر
-        $monthYearName = $startDate->format('F Y');
+        // إزالة العملات التي لا تحتوي على أرباح
+        $profitsByCurrency = array_filter($profitsByCurrency, function ($profit) {
+            return $profit > 0;
+        });
 
-        // تحديد العملة الأساسية بناءً على أكبر مبلغ أرباح
-        $primaryCurrency = 'SAR'; // القيمة الافتراضية
-        if (isset($profitsByCurrency['KWD']) && isset($profitsByCurrency['SAR'])) {
-            $primaryCurrency = $profitsByCurrency['KWD'] >= $profitsByCurrency['SAR'] ? 'KWD' : 'SAR';
-        } elseif (isset($profitsByCurrency['KWD']) && $profitsByCurrency['KWD'] > 0) {
-            $primaryCurrency = 'KWD';
+        // تحديد العملة الأساسية
+        $primaryCurrency = 'KWD';
+        if (!empty($profitsByCurrency)) {
+            // اختيار العملة التي لديها أكبر مبلغ
+            $primaryCurrency = array_key_first($profitsByCurrency);
+            $maxProfit = 0;
+            foreach ($profitsByCurrency as $currency => $profit) {
+                if ($profit > $maxProfit) {
+                    $maxProfit = $profit;
+                    $primaryCurrency = $currency;
+                }
+            }
         }
+
+        $monthYearName = $startDate->format('F Y');
 
         return response()->json([
             'profits_by_currency' => $profitsByCurrency,
-            'total_profit' => array_sum($profitsByCurrency), // المجموع الكلي (للتوافقية مع الكود القديم)
+            'total_profit' => array_sum($profitsByCurrency),
             'month_year' => $monthYearName,
-            'bookings_count' => $bookings->count(),
-            'bookings_count_by_currency' => $bookingsCount,
+            'reports_count' => $operationReports->count(), // عدد التقارير وليس الحجوزات
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
-            'primary_currency' => $primaryCurrency, // ✅ إضافة العملة الأساسية
-
+            'primary_currency' => $primaryCurrency,
+            'reports_details' => $operationReports->map(function ($report) {
+                return [
+                    'id' => $report->id,
+                    'client_name' => $report->client_name,
+                    'company_name' => $report->company_name,
+                    'grand_total_profit' => $report->grand_total_profit,
+                    'report_date' => $report->report_date->format('Y-m-d')
+                ];
+            })
         ]);
     }
 
@@ -597,5 +725,4 @@ class MonthlyExpenseController extends Controller
             }
         }
     }
-   
 }

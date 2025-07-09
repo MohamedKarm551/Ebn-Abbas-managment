@@ -1025,7 +1025,23 @@
 
                         if (monthYearDisplay) monthYearDisplay.textContent = data.month_year ||
                             'غير محدد';
-                        if (bookingsCount) bookingsCount.textContent = data.bookings_count || '0';
+                        if (bookingsCount) bookingsCount.textContent = data.reports_count || '0';
+                        // يمكنك أيضاً عرض تفاصيل التقارير
+                        if (data.reports_details && data.reports_details.length > 0) {
+                            let reportsDetailsHTML =
+                                '<div class="mt-2"><small class="text-muted">التقارير المعثور عليها:</small><ul class="list-unstyled small">';
+                            data.reports_details.forEach(report => {
+                                reportsDetailsHTML +=
+                                    `<li>• ${report.client_name} (${report.report_date}) - ربح: ${report.grand_total_profit}</li>`;
+                            });
+                            reportsDetailsHTML += '</ul></div>';
+
+                            // إضافة هذا HTML إلى مكان مناسب في النتائج
+                            const profitDisplay = document.getElementById('profit-display');
+                            if (profitDisplay) {
+                                profitDisplay.insertAdjacentHTML('afterend', reportsDetailsHTML);
+                            }
+                        }
 
                         // عرض الأرباح
                         const profitDisplay = document.getElementById('profit-display');

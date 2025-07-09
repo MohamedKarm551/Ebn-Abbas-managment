@@ -286,6 +286,7 @@ Route::middleware(['auth'])->group(function () {
 
         // المصاريف الشهرية
         Route::get('/admin/monthly-expenses', [App\Http\Controllers\MonthlyExpenseController::class, 'index'])->name('admin.monthly-expenses.index');
+        // Route::get('/admin/monthly-expenses/create', [App\Http\Controllers\MonthlyExpenseController::class, 'create'])->name('admin.monthly-expenses.create'); // لإضافة أول سجل مصاريف
         Route::post('/admin/monthly-expenses', [App\Http\Controllers\MonthlyExpenseController::class, 'store'])->name('admin.monthly-expenses.store');
         Route::post('/admin/calculate-profit', [App\Http\Controllers\MonthlyExpenseController::class, 'calculateProfit'])->name('admin.calculate-profit');
         Route::get('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'show'])->name('admin.monthly-expenses.show');
