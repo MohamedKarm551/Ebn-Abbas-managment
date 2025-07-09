@@ -100,7 +100,8 @@
 
                                 @if ($hasTrips)
                                     <div class="mb-1">
-                                        <span class="badge bg-info text-dark" style="font-size: 0.9em;border: 1px solid #000;">
+                                        <span class="badge bg-info text-dark"
+                                            style="font-size: 0.9em;border: 1px solid #000;">
                                             <i class="fas fa-bus me-1"></i>
                                             <a href="{{ route('admin.company-payments.show', $company->id) }}"
                                                 class="text-dark text-decoration-none">
@@ -129,7 +130,8 @@
                                     <small class="opacity-90">ريال</small>
                                 @endif
                             </div>
-                            <small class="opacity-90 d-block">إجمالي المستحق - راجع مدفوعات الشركة للرحلات البرية لتعرف هل تم دفع المستحق </small>
+                            <small class="opacity-90 d-block">إجمالي المستحق - راجع مدفوعات الشركة للرحلات البرية لتعرف هل
+                                تم دفع المستحق </small>
                         </div>
                     </div>
 
@@ -180,30 +182,28 @@
                             <div>
                                 <div class="mb-1">
                                     <h6 class="mb-0">
-                                        {{ ($company->computed_total_due_bookings_by_currency['SAR'] ?? 0) -
-                                            ($company->computed_total_paid_by_currency['SAR'] ?? 0) -
-                                            ($company->computed_total_discounts_by_currency['SAR'] ?? 0) }}
-
+                                        @php
+                                            // ✅ المتبقي = المستحق - (المدفوع - الخصم)
+                                            $totalDueSAR =
+                                                $company->computed_total_due_bookings_by_currency['SAR'] ?? 0;
+                                            $totalPaidSAR = $company->computed_total_paid_by_currency['SAR'] ?? 0;
+                                            $totalDiscountsSAR =
+                                                $company->computed_total_discounts_by_currency['SAR'] ?? 0;
+                                            $remainingSAR = $totalDueSAR - ($totalPaidSAR - $totalDiscountsSAR);
+                                        @endphp
+                                        {{ number_format($remainingSAR, 2) }}
                                     </h6>
                                     <small class="opacity-90">ريال</small>
                                 </div>
                                 <div class="mb-1">
                                     <h6 class="mb-0">
                                         @php
-                                            if (
-                                                isset($company->computed_total_due_bookings_by_currency['KWD']) &&
-                                                isset($company->computed_total_paid_by_currency['KWD']) &&
-                                                isset($company->computed_total_discounts_by_currency['KWD'])
-                                            ) {
-                                                $remainingKWD =
-                                                    $company->computed_total_due_bookings_by_currency['KWD'] -
-                                                    $company->computed_total_paid_by_currency['KWD'] -
-                                                    $company->computed_total_discounts_by_currency['KWD'];
-                                            } else {
-                                                $remainingKWD = 0;
-                                            }
+                                            $totalDueKWD =
+                                                $company->computed_total_due_bookings_by_currency['KWD'] ?? 0;
+                                            $totalPaidKWD = $company->computed_total_paid_by_currency['KWD'] ?? 0;
+                                            $remainingKWD = $totalDueKWD - $totalPaidKWD;
                                         @endphp
-                                        {{ $remainingKWD }}
+                                        {{ number_format($remainingKWD, 2) }}
                                     </h6>
                                     <small class="opacity-90">دينار</small>
                                 </div>

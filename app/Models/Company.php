@@ -82,7 +82,6 @@ public function calculateTotals()
 {
     // التأكد من تحميل العلاقات مسبقاً
     if (!$this->relationLoaded('bookings') || !$this->relationLoaded('payments')) {
-        // إذا لم يتم تحميلها، نحملها الآن (فقط في هذه الحالة)
         $this->load(['bookings', 'payments', 'landTripBookings']);
     }
 
@@ -97,7 +96,6 @@ public function calculateTotals()
             $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
         }
     }
-    // عاوز أحتفظ بالمستحق بالعملة في أراي ثنائية  : 
     $dueByCurrencyForBookingsHotels = $dueByCurrency;
 
     // من حجوزات الرحلات البرية
@@ -111,7 +109,7 @@ public function calculateTotals()
         }
     }
 
-    // 2. حساب المدفوع حسب العملة من البيانات المحملة
+    // 2. ✅ حساب المدفوع والخصومات بشكل منفصل (بدون تداخل)
     $paidByCurrency = [];
     $discountsByCurrency = [];
     
@@ -120,23 +118,30 @@ public function calculateTotals()
             $currency = $payment->currency ?? 'SAR';
             
             if ($payment->amount >= 0) {
+                // المدفوعات الموجبة فقط
                 $paidByCurrency[$currency] = ($paidByCurrency[$currency] ?? 0) + $payment->amount;
             } else {
+                // الخصومات السالبة - نحتفظ بها منفصلة
                 $discountsByCurrency[$currency] = ($discountsByCurrency[$currency] ?? 0) + abs($payment->amount);
+                // ❌ لا نضيف الخصومات للمدفوع هنا!
             }
         }
     }
 
-    // 3. حساب المتبقي حسب العملة
+    // 3. ✅ حساب المتبقي = المستحق - المدفوع - الخصومات
     $remainingByCurrency = [];
-    $allCurrencies = array_unique(array_merge(array_keys($dueByCurrency), array_keys($paidByCurrency), array_keys($discountsByCurrency)));
+    $allCurrencies = array_unique(array_merge(
+        array_keys($dueByCurrency), 
+        array_keys($paidByCurrency), 
+        array_keys($discountsByCurrency)
+    ));
     
     foreach ($allCurrencies as $currency) {
         $due = $dueByCurrency[$currency] ?? 0;
         $paid = $paidByCurrency[$currency] ?? 0;
         $discounts = $discountsByCurrency[$currency] ?? 0;
         
-        $remainingByCurrency[$currency] = $due - $paid - $discounts;
+        $remainingByCurrency[$currency] = $due - ($paid - $discounts); // ✅ الحساب الصحيح
     }
 
     // 4. حفظ النتائج في attributes للوصول إليها لاحقاً
@@ -369,7 +374,7 @@ public function getComputedRemainingAttribute()
                 'due' => $totalDue,
                 'paid' => $totalPaid,
                 'discounts' => $totalDiscounts,
-                'remaining' => $totalDue - $totalPaid - $totalDiscounts // هنا نطرح الخصومات أيضًا
+                'remaining' => $totalDue - ($totalPaid - $totalDiscounts) // هنا نطرح الخصومات أيضًا
             ];
         }
 
