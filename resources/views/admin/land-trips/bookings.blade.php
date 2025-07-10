@@ -68,7 +68,7 @@
                                     <th>#</th>
                                     <th>الشركة</th>
                                     <th>اسم العميل</th>
-                                    <th>رقم الهاتف</th>
+                                    {{-- <th>رقم الهاتف</th> --}}
                                     <th>نوع الغرفة</th>
                                     <th>عدد الغرف</th>
                                     <th>سعر الغرفة</th>
@@ -87,7 +87,7 @@
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $booking->company->name ?? 'غير معروف' }}</td>
                                         <td>{{ $booking->client_name }}</td>
-                                        <td>{{ $booking->phone ?? 'غير متوفر' }}</td>
+                                        {{-- <td>{{ $booking->phone ?? 'غير متوفر' }}</td> --}}
                                         <td>{{ $booking->roomPrice->roomType->room_type_name ?? 'غير معروف' }}</td>
                                         <td>{{ $booking->rooms }}</td>
                                         <td>{{ number_format($booking->sale_price ?? 0, 2) }} {{ $currencySymbol }}</td>

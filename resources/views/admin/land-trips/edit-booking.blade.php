@@ -394,6 +394,29 @@
                         </div>
                     </div>
                 </div>
+                <!-- إضافة قسم تخصيص السعر الجديد -->
+<div class="row mt-3">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="custom_sale_price" class="form-label">
+                <i class="fas fa-tags me-1"></i>
+                تخصيص سعر البيع
+                <small class="text-muted">(اترك فارغاً لاستخدام السعر الافتراضي)</small>
+            </label>
+            <div class="input-group">
+                <input type="number" step="0.01" name="custom_sale_price" id="custom_sale_price"
+                    class="form-control @error('custom_sale_price') is-invalid @enderror"
+                    value="{{ old('custom_sale_price', $booking->sale_price != $booking->roomPrice->sale_price ? $booking->sale_price : '') }}"
+                    placeholder="أدخل سعر البيع المخصص">
+                <span class="input-group-text" id="currency-addon">{{ $booking->currency }}</span>
+            </div>
+            <small class="form-text text-muted">السعر الافتراضي: <span id="default-sale-price">{{ $booking->roomPrice->sale_price }}</span> {{ $booking->currency }}</small>
+            @error('custom_sale_price')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    </div>
+</div>
 
                 {{-- حساب التكاليف --}}
                 <div class="cost-display" id="cost-display" style="display: none;">
@@ -621,4 +644,85 @@
             newRoomsInput.addEventListener('input', updateNewTripCost);
         });
     </script>
+    {{-- تحديث معلومات في الحجز السعر --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roomSelect = document.getElementById('land_trip_room_price_id');
+        const roomsInput = document.getElementById('rooms');
+        const customSalePriceInput = document.getElementById('custom_sale_price');
+        const costDisplay = document.getElementById('cost-display');
+        const availabilityInfo = document.getElementById('availability-info');
+        const currencyAddon = document.getElementById('currency-addon');
+        const defaultSalePriceSpan = document.getElementById('default-sale-price');
+
+        // تحديث المعلومات عند تغيير نوع الغرفة أو العدد أو السعر المخصص
+        function updateCostAndAvailability() {
+            const selectedOption = roomSelect.options[roomSelect.selectedIndex];
+            const rooms = parseInt(roomsInput.value) || 0;
+
+            if (selectedOption.value && rooms > 0) {
+                const costPrice = parseFloat(selectedOption.dataset.costPrice);
+                let salePrice = parseFloat(selectedOption.dataset.salePrice);
+                const currency = selectedOption.dataset.currency;
+                const available = selectedOption.dataset.available;
+                
+                // تحديث العملة في واجهة المستخدم
+                currencyAddon.textContent = currency;
+                defaultSalePriceSpan.textContent = salePrice.toFixed(2);
+                
+                // التحقق من وجود سعر بيع مخصص
+                const customPrice = customSalePriceInput.value.trim();
+                if (customPrice !== '') {
+                    salePrice = parseFloat(customPrice);
+                }
+
+                // عرض تفاصيل التكلفة
+                document.getElementById('cost-price-display').textContent = `${costPrice.toFixed(2)} ${currency}`;
+                document.getElementById('sale-price-display').textContent = `${salePrice.toFixed(2)} ${currency}`;
+                document.getElementById('rooms-display').textContent = rooms;
+                document.getElementById('total-cost-display').textContent = `${(costPrice * rooms).toFixed(2)} ${currency}`;
+                document.getElementById('total-sale-display').textContent = `${(salePrice * rooms).toFixed(2)} ${currency}`;
+
+                // تحديد ما إذا كان هناك سعر مخصص
+                const usingCustomPrice = customPrice !== '' && parseFloat(customPrice) !== parseFloat(selectedOption.dataset.salePrice);
+                if (usingCustomPrice) {
+                    document.getElementById('sale-price-display').classList.add('text-warning');
+                    document.getElementById('total-sale-display').classList.add('text-warning');
+                } else {
+                    document.getElementById('sale-price-display').classList.remove('text-warning');
+                    document.getElementById('total-sale-display').classList.remove('text-warning');
+                }
+
+                costDisplay.style.display = 'block';
+                
+                // بقية الكود للتحقق من التوفر...
+            } else {
+                costDisplay.style.display = 'none';
+                availabilityInfo.style.display = 'none';
+            }
+        }
+
+        // تحديث عند تغيير القيم
+        roomSelect.addEventListener('change', function() {
+            // عند تغيير الغرفة، نحدث السعر الافتراضي
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                defaultSalePriceSpan.textContent = parseFloat(selectedOption.dataset.salePrice).toFixed(2);
+                currencyAddon.textContent = selectedOption.dataset.currency;
+                
+                // إفراغ حقل السعر المخصص عند تغيير الغرفة (اختياري)
+                // customSalePriceInput.value = '';
+            }
+            updateCostAndAvailability();
+        });
+        
+        roomsInput.addEventListener('input', updateCostAndAvailability);
+        customSalePriceInput.addEventListener('input', updateCostAndAvailability);
+
+        // تحديث أولي عند تحميل الصفحة
+        updateCostAndAvailability();
+
+        // التحقق من النموذج قبل الإرسال...
+    });
+</script>
 @endpush

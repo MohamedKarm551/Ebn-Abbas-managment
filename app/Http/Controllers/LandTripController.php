@@ -1051,6 +1051,8 @@ class LandTripController extends Controller
             'client_name' => 'required|string|max:255',
             'land_trip_room_price_id' => 'required|exists:land_trip_room_prices,id',
             'rooms' => 'required|integer|min:1',
+            'custom_sale_price' => 'nullable|numeric|min:0', // إضافة قاعدة التحقق للسعر المخصص
+
             'notes' => 'nullable|string|max:1000',
         ], [
             'company_id.required' => 'يرجى تحديد الشركة',
@@ -1063,6 +1065,8 @@ class LandTripController extends Controller
             'rooms.integer' => 'عدد الغرف يجب أن يكون رقماً صحيحاً',
             'rooms.min' => 'عدد الغرف يجب أن يكون على الأقل 1',
             'notes.max' => 'الملاحظات لا يجب أن تزيد عن 1000 حرف',
+             'custom_sale_price.numeric' => 'سعر البيع المخصص يجب أن يكون رقماً',
+        'custom_sale_price.min' => 'سعر البيع المخصص يجب ألا يقل عن 0',
         ]);
 
         // جلب سعر الغرفة المختارة
@@ -1092,7 +1096,11 @@ class LandTripController extends Controller
 
         // حساب التكاليف الجديدة
         $costPrice = $roomPrice->cost_price;
-        $salePrice = $roomPrice->sale_price;
+        // $salePrice = $roomPrice->sale_price;
+           // تحديد سعر البيع (استخدام المخصص إذا تم تقديمه، وإلا استخدام السعر الافتراضي)
+    $salePrice = !empty($request->custom_sale_price) 
+        ? (float)$request->custom_sale_price 
+        : $roomPrice->sale_price;
         $totalDueToAgent = $validatedData['rooms'] * $costPrice;
         $totalDueFromCompany = $validatedData['rooms'] * $salePrice;
 
