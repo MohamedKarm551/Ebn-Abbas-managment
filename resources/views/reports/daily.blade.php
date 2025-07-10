@@ -294,7 +294,7 @@
             
             // 4. المتبقي = المستحق - (المدفوع - الخصم)
             // حيث يعتبر الخصم جزءًا من المبلغ المدفوع
-            $remainingByCurrency[$curr] = $due - ($paid - $discounts);
+            $remainingByCurrency[$curr] = $due - ($paid + $discounts);
         }
     @endphp
 
@@ -414,6 +414,7 @@
                                                     // ملاحظة: الخصومات موجبة في المتغير لكنها تقلل من المدفوع
                                                     $netPaid = $totalPaid + $totalDiscounts; // الخصومات تضاف للمدفوع الفعلي
                                                     $remaining = $totalDue - $netPaid;
+                                                    // $remaining = $totalDue - ($totalPaid - $totalDiscounts);
 
                                                     if ($remaining != 0) {
                                                         $totalCompanyRemainingByCurrency[$currency] = $remaining;
