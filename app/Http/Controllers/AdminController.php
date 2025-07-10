@@ -81,6 +81,7 @@ class AdminController extends Controller
                         'حجز رحلة',
                         'تحديث_تلقائي',
                         'تحديث حجز رحلة',
+                        'حذف حجز رحلة'
                     ];
                     $query->whereIn('type', $landTripTypes);
                     break;

@@ -412,6 +412,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
     Route::put('land-trips/bookings/{booking}/change-trip', [LandTripController::class, 'changeBookingTrip'])->name('land-trips.change-booking-trip');
     Route::get('land-trips/{landTrip}/room-types', [LandTripController::class, 'getTripRoomTypes'])->name('land-trips.room-types');
     Route::get('land-trips/bookings/{booking}/voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.bookings.voucher');
+    Route::delete('land-trips/bookings/{booking}', [LandTripController::class, 'destroyBooking'])->name('land-trips.bookings.destroy');
 
 
     // تقارير العمليات

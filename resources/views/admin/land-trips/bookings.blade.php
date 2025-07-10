@@ -2,9 +2,9 @@
 
 @section('title', 'حجوزات الرحلة البرية')
 @push('styles')
-<style>
+    <style>
 
-</style>
+    </style>
 @endpush
 @section('content')
     <div class="container mt-4">
@@ -51,7 +51,9 @@
             </div>
         </div>
 
-        <div class="card shadow">
+        <div class="card shadow" style="
+    opacity: 0.9;
+">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">الحجوزات</h5>
             </div>
@@ -105,6 +107,10 @@
                                                     class="btn btn-warning" title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
+                                                <button type="button" class="btn btn-outline-danger" title="حذف الحجز"
+                                                    onclick="confirmDeleteBooking({{ $booking->id }}, '{{ $booking->client_name }}')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -198,20 +204,74 @@
         </div>
     </div>
     <!-- استدعاء الخلفية التفاعلية -->
-<script type="module">
-    import { initParticlesBg } from '/js/particles-bg.js';
-initParticlesBg({
-    points: 60,           // عدد النقاط (افتراضي: 60)
-    dist: 140,            // المسافة القصوى بين النقاط لرسم الخط (افتراضي: 140)
-    mouseDist: 180,       // المسافة القصوى بين النقطة والماوس لرسم الخط (افتراضي: 180)
-    colors: [             // ألوان النقاط (افتراضي: مجموعة ألوان عصرية)
-        '#06b6d4', '#f59e42', '#6366f1', '#f43f5e', '#22d3ee'
-    ],
-    zIndex: 0,            // ترتيب الطبقة (z-index) للكانفاس (افتراضي: 0)
-    opacity: 1,           // شفافية الكانفاس (افتراضي: 1)
-    dotRadius: 3.2,       // نصف قطر النقطة (افتراضي: 3.2)
-    lineColor: '#b6b6b6', // لون الخطوط بين النقاط (افتراضي: #b6b6b6)
-    mouseLineColor: '#06b6d4', // لون الخط مع الماوس (افتراضي: #06b6d4)
-    shadowBlur: 8         // شدة الظل حول النقاط (افتراضي: 8)
-});</script>
+    <script type="module">
+        import {
+            initParticlesBg
+        } from '/js/particles-bg.js';
+        initParticlesBg({
+            points: 60, // عدد النقاط (افتراضي: 60)
+            dist: 140, // المسافة القصوى بين النقاط لرسم الخط (افتراضي: 140)
+            mouseDist: 180, // المسافة القصوى بين النقطة والماوس لرسم الخط (افتراضي: 180)
+            colors: [ // ألوان النقاط (افتراضي: مجموعة ألوان عصرية)
+                '#06b6d4', '#f59e42', '#6366f1', '#f43f5e', '#22d3ee'
+            ],
+            zIndex: 0, // ترتيب الطبقة (z-index) للكانفاس (افتراضي: 0)
+            opacity: 1, // شفافية الكانفاس (افتراضي: 1)
+            dotRadius: 3.2, // نصف قطر النقطة (افتراضي: 3.2)
+            lineColor: '#b6b6b6', // لون الخطوط بين النقاط (افتراضي: #b6b6b6)
+            mouseLineColor: '#06b6d4', // لون الخط مع الماوس (افتراضي: #06b6d4)
+            shadowBlur: 8 // شدة الظل حول النقاط (افتراضي: 8)
+        });
+    </script>
+    <!-- مودال تأكيد حذف الحجز -->
+<div class="modal fade" id="deleteBookingModal" tabindex="-1" aria-labelledby="deleteBookingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteBookingModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>تأكيد حذف الحجز
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
+                    <h5>هل أنت متأكد من حذف هذا الحجز؟</h5>
+                    <p class="text-muted">
+                        العميل: <strong id="clientNameToDelete"></strong><br>
+                        <span class="text-danger">هذا الإجراء لا يمكن التراجع عنه!</span>
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>إلغاء
+                </button>
+                <form id="deleteBookingForm" method="POST" style="display: inline;">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>نعم، احذف الحجز
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+@push('scripts')
+<script>
+    function confirmDeleteBooking(bookingId, clientName) {
+        // تحديث بيانات المودال
+        document.getElementById('clientNameToDelete').textContent = clientName;
+        
+        // تحديد action للفورم
+        const form = document.getElementById('deleteBookingForm');
+        form.action = `{{ route('admin.land-trips.bookings.destroy', ':booking') }}`.replace(':booking', bookingId);
+        
+        // إظهار المودال
+        const modal = new bootstrap.Modal(document.getElementById('deleteBookingModal'));
+        modal.show();
+    }
+</script>
+@endpush
