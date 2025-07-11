@@ -19,18 +19,23 @@
         <div class="row align-items-center mb-3">
             <div class="col-12 col-lg-7 mb-2 mb-lg-0">
                 <h1 class="h4 mb-0 text-center text-lg-start">تفاصيل الحجز للعميل: {{ $booking->client_name }}
-                    <br>
+                    <br> <br>
                     <a href="{{ route('bookings.voucher', $booking->id) }}" class="btn btn-warning btn-sm" target="_blank">
                         عرض الفاوتشر
                     </a>
+                    @if(Auth::user()->role ==='Admin')
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#registerPaymentModal">
+                        💸 تسجيل دفعة
+                    </button>
+                    @endif
                 </h1>
             </div>
             <div class="col-12 col-lg-5 d-flex justify-content-center justify-content-lg-end gap-2">
                 <a href="{{ route('bookings.index') }}" class="btn btn-secondary">رجوع ➡</a>
                 <button id="copyBookingDetails" class="btn btn-primary">📄 نسخ بيانات الحجز 📋</button>
                 <button id="calculate-total" class="btn btn-info">📝 الاجمالي 📜</button>
-
-            </div>
+             </div>
+            
         </div>
         <table class="table  table-hover table-bordered text-center">
             <thead>
@@ -126,7 +131,7 @@
                 </tr>
                 <tr>
                     <td>15</td>
-                    <td>المبلغ المستحق من الشركة <i class="fas fa-hand-holding-usd text-success"></i> </td>
+                    <td>المبلغ الكلي المستحق من الشركة <i class="fas fa-hand-holding-usd text-success"></i> </td>
                     <td>{{ number_format($booking->amount_due_from_company, 2) }}
                         {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
                     </td>
@@ -139,7 +144,7 @@
                 </tr>
                 <tr>
                     <td>17</td>
-                    <td>الباقي من الشركة <i class="fas fa-balance-scale text-danger"></i> </td>
+                    <td>الباقي على الشركة <i class="fas fa-balance-scale text-danger"></i> </td>
                     <td>{{ number_format($booking->amount_due_from_company - $booking->amount_paid_by_company, 2) }}
                         {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }} </td>
                 </tr>
@@ -513,7 +518,8 @@
                 totalDueToHotel = nightsStayed * {{ $booking->rooms }} * {{ $booking->cost_price }};
 
                 // تحديث صف "المستحق للفندق" بالقيمة المحسوبة
-                document.getElementById('hotel-due-value').innerText = totalDueToHotel + ' {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}';
+                document.getElementById('hotel-due-value').innerText = totalDueToHotel +
+                    ' {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}';
 
                 // حساب المكسب
                 profitPerNight = ({{ $booking->sale_price }} - {{ $booking->cost_price }}) *
@@ -566,4 +572,323 @@
             }
         });
     </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // المتغيرات الثابتة
+        let originalAmountDue = {{ $booking->amount_due_from_company }};
+        let originalAmountPaid = {{ $booking->amount_paid_by_company }};
+        let originalRemaining = originalAmountDue - originalAmountPaid;
+        const currency = "{{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}";
+
+        // نموذج الدفعة
+        const paymentForm = document.getElementById('paymentForm');
+        if (paymentForm) {
+            paymentForm.addEventListener('submit', function(e) {
+                // قراءة المبلغ المدخل
+                const paymentAmount = parseFloat(document.getElementById('payment-amount').value);
+                if (isNaN(paymentAmount) || paymentAmount <= 0) {
+                    showAlert('يرجى إدخال مبلغ صحيح', 'danger');
+                    e.preventDefault();
+                    return;
+                }
+
+                // التأكد من أن العملة متطابقة
+                const paymentCurrency = document.getElementById('payment-currency').value;
+                if (paymentCurrency !== "{{ $booking->currency }}") {
+                    showAlert('يجب أن تكون عملة الدفع متطابقة مع عملة الحجز: {{ $booking->currency }}', 'warning');
+                    e.preventDefault();
+                    return;
+                }
+
+                // حساب القيم الجديدة (للعرض فقط - البيانات الفعلية ستأتي من السيرفر)
+                const newAmountPaid = originalAmountPaid + paymentAmount;
+                const newRemaining = originalAmountDue - newAmountPaid;
+
+                // تحديث المعلومات المعروضة مسبقاً (قبل الاستجابة من السيرفر)
+                updateDisplayedValues(newAmountPaid, newRemaining);
+
+                // إخفاء المودال
+                const modal = bootstrap.Modal.getInstance(document.getElementById('registerPaymentModal'));
+                if (modal) {
+                    modal.hide();
+                }
+
+                // عرض رسالة للمستخدم أننا نعالج الطلب
+                showAlert('جاري معالجة الدفعة...', 'info');
+
+                // تحديث المتغيرات المحلية للاستخدام في العمليات التالية
+                originalAmountPaid = newAmountPaid;
+                originalRemaining = newRemaining;
+            });
+        }
+
+        // دالة تحديث القيم المعروضة
+        function updateDisplayedValues(newPaid, newRemaining) {
+            // تحديث المبلغ المدفوع من الشركة (الصف 16)
+            const paidCell = document.querySelector('tr:nth-child(16) td:last-child');
+            if (paidCell) {
+                paidCell.innerHTML = `
+                    <span class="new-value">${number_format(newPaid, 2)} ${currency}</span>
+                    <span class="original-value">(${number_format(originalAmountPaid, 2)})</span>
+                `;
+            }
+
+            // تحديث المبلغ المتبقي من الشركة (الصف 17)
+            const remainingCell = document.querySelector('tr:nth-child(17) td:last-child');
+            if (remainingCell) {
+                const remainingClass = newRemaining <= 0 ? 'text-success fw-bold' : 'text-warning';
+                remainingCell.innerHTML = `
+                    <span class="new-value ${remainingClass}">${number_format(newRemaining, 2)} ${currency}</span>
+                    <span class="original-value">(${number_format(originalRemaining, 2)})</span>
+                `;
+            }
+
+            // تحديث المبلغ المستحق من الشركة (الصف 15) - إظهار القيمة الأصلية مشطوبة مع الجديدة
+            const dueCell = document.querySelector('tr:nth-child(15) td:last-child');
+            if (dueCell) {
+                const currentDue = newPaid + newRemaining; // المبلغ المستحق الجديد بناءً على الدفعات
+                dueCell.innerHTML = `
+                    <span class="new-value text-primary fw-bold">${number_format(originalAmountDue, 2)} ${currency}</span>
+                    <small class="text-muted d-block">المدفوع: ${number_format(newPaid, 2)} + المتبقي: ${number_format(newRemaining, 2)}</small>
+                `;
+            }
+
+            // إضافة أو تحديث CSS للتنسيق
+            if (!document.getElementById('payment-styles')) {
+                const style = document.createElement('style');
+                style.id = 'payment-styles';
+                style.textContent = `
+                    .original-value {
+                        text-decoration: line-through;
+                        color: #777;
+                        font-size: 0.85em;
+                        margin-right: 8px;
+                        opacity: 0.7;
+                    }
+                    .new-value {
+                        font-weight: bold;
+                        color: #0d6efd;
+                    }
+                    .new-value.text-success {
+                        color: #198754 !important;
+                    }
+                    .new-value.text-warning {
+                        color: #ffc107 !important;
+                    }
+                    .payment-updated {
+                        background-color: #f8f9fa;
+                        border-left: 4px solid #0d6efd;
+                        animation: highlightPayment 2s ease-in-out;
+                    }
+                    @keyframes highlightPayment {
+                        0% { background-color: #e3f2fd; }
+                        50% { background-color: #bbdefb; }
+                        100% { background-color: #f8f9fa; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // إضافة تأثير بصري للصفوف المحدثة
+            setTimeout(() => {
+                if (paidCell) paidCell.closest('tr').classList.add('payment-updated');
+                if (remainingCell) remainingCell.closest('tr').classList.add('payment-updated');
+                if (dueCell) dueCell.closest('tr').classList.add('payment-updated');
+            }, 500);
+        }
+
+        // دالة تنسيق الأرقام
+        function number_format(number, decimals = 2) {
+            return parseFloat(number).toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // دالة عرض الإشعارات
+        function showAlert(message, type) {
+            // إزالة أي تنبيهات موجودة
+            const existingAlerts = document.querySelectorAll('.custom-alert');
+            existingAlerts.forEach(alert => alert.remove());
+
+            const alertBox = document.createElement('div');
+            alertBox.className = `alert alert-${type} custom-alert`;
+            alertBox.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            alertBox.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 9999;
+                width: 90%;
+                max-width: 500px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border: none;
+                border-radius: 8px;
+            `;
+
+            document.body.appendChild(alertBox);
+
+            setTimeout(() => {
+                alertBox.remove();
+            }, 5000);
+        }
+
+        // التعامل مع رسائل النجاح أو الخطأ من الخادم بعد التحميل
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('payment_success')) {
+            showAlert('تم تسجيل الدفعة بنجاح! تم تحديث المبالغ.', 'success');
+            
+            // تحديث الصفحة بعد 2 ثانية لإظهار البيانات المحدثة من قاعدة البيانات
+            setTimeout(() => {
+                window.location.href = window.location.pathname;
+            }, 2000);
+        } else if (urlParams.has('payment_error')) {
+            showAlert('حدث خطأ أثناء تسجيل الدفعة. يرجى المحاولة مرة أخرى.', 'danger');
+        }
+
+        // إضافة مستمع لإعادة تعيين النموذج عند إغلاق المودال
+        const paymentModal = document.getElementById('registerPaymentModal');
+        if (paymentModal) {
+            paymentModal.addEventListener('hidden.bs.modal', function() {
+                // إعادة تعيين النموذج
+                const form = document.getElementById('paymentForm');
+                if (form) {
+                    form.reset();
+                }
+            });
+        }
+    });
+</script>
+ <div class="modal fade" id="registerPaymentModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <form id="paymentForm" action="{{ route('bookings.record-payment', $booking->id) }}" method="POST">
+                @csrf
+                <input type="hidden" name="booking_id" value="{{ $booking->id }}">
+                <input type="hidden" name="company_id" value="{{ $booking->company->id ?? 0 }}">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-credit-card me-2"></i>
+                        تسجيل دفعة - {{ $booking->company->name ?? 'غير محدد' }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- حقل إدخال المبلغ والعملة -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-money-bill-wave text-success me-2"></i>
+                            المبلغ المدفوع والعملة
+                        </label>
+                        <div class="input-group input-group-lg">
+                            <input type="number" 
+                                   step="0.01" 
+                                   class="form-control form-control-lg text-center fw-bold" 
+                                   id="payment-amount" 
+                                   name="amount" 
+                                   placeholder="أدخل المبلغ" 
+                                   required>
+                            <select class="form-select form-select-lg fw-bold text-center" 
+                                    name="currency" 
+                                    id="payment-currency" 
+                                    style="max-width: 140px;">
+                                <option value="SAR" {{ $booking->currency === 'SAR' ? 'selected' : '' }}>
+                                    ريال سعودي
+                                </option>
+                                <option value="KWD" {{ $booking->currency === 'KWD' ? 'selected' : '' }}>
+                                    دينار كويتي
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- حقل الملاحظات -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-sticky-note text-warning me-2"></i>
+                            ملاحظات (اختياري)
+                        </label>
+                        <textarea class="form-control" 
+                                  id="payment-notes" 
+                                  name="notes" 
+                                  rows="3" 
+                                  placeholder="أضف أي ملاحظات خاصة بالدفعة..."></textarea>
+                    </div>
+
+                 
+
+                    <!-- ملخص المبالغ -->
+                    <div class="card border-primary shadow-sm">
+                        <div class="card-header bg-primary text-white py-2">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-line me-2"></i>
+                                ملخص المبالغ الحالية
+                            </h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center py-1">
+                                        <span class="text-muted">
+                                            <i class="fas fa-dollar-sign text-primary me-1"></i>
+                                            المبلغ الأصلي:
+                                        </span>
+                                        <span class="fw-bold text-primary">
+                                            {{ number_format($booking->amount_due_from_company, 2) }} 
+                                            {{ $booking->currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                        </span>
+                                    </div>
+                                    <hr class="my-1">
+                                </div>
+                                
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center py-1">
+                                        <span class="text-muted">
+                                            <i class="fas fa-check-circle text-success me-1"></i>
+                                            المدفوع سابقاً:(قد يعدّله الادمن)
+                                        </span>
+                                        <span class="fw-bold text-success">
+                                            {{ number_format($booking->amount_paid_by_company, 2) }} 
+                                            {{ $booking->currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                        </span>
+                                    </div>
+                                    <hr class="my-1">
+                                </div>
+                                
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center py-1">
+                                        <span class="text-muted">
+                                            <i class="fas fa-clock text-warning me-1"></i>
+                                            المتبقي:
+                                        </span>
+                                        <span class="fw-bold text-warning">
+                                            {{ number_format($booking->amount_due_from_company - $booking->amount_paid_by_company, 2) }} 
+                                            {{ $booking->currency === 'SAR' ? 'ريال' : 'دينار' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        إغلاق
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4" id="submit-payment">
+                        <i class="fas fa-save me-1"></i>
+                        تسجيل الدفعة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

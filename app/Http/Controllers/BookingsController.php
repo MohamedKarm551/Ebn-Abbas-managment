@@ -18,6 +18,7 @@ use App\Models\ArchivedBooking; // <--- 1. نتأكد من إضافة ArchivedBo
 use App\Models\AvailabilityRoomType; // Import AvailabilityRoomType model
 use Illuminate\Validation\ValidationException; // *** تأكد من وجود هذا السطر ***
 use App\Models\RoomType;
+use App\Models\Payment; 
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;  // <--- 2. نضيف DB للـ Transactions
 use Illuminate\Support\Facades\Log; // تأكد من استيراد Log
@@ -1538,7 +1539,64 @@ class BookingsController extends Controller
         $edits = EditLog::where('booking_id', $id)->get(); // افترض أن لديك جدول لتسجيل التعديلات
         return response()->json($edits);
     }
+    // دالة لتسجيل دفعة لحجز معين
+    /**
+     * Record a payment for a booking.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $bookingId
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function recordPayment(Request $request, $bookingId)
+    {
+        // Validate the request
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'currency' => 'required|in:SAR,KWD',
+            'notes' => 'nullable|string',
+        ]);
 
+        // Get the booking
+        $booking = Booking::findOrFail($bookingId);
+
+        // Verify the currency matches
+        if ($booking->currency !== $validated['currency']) {
+            return redirect()->back()->with('error', 'عملة الدفع يجب أن تتطابق مع عملة الحجز');
+        }
+
+        // Create a new payment record
+        $payment = new Payment();
+        $payment->company_id = $booking->company_id;
+        $payment->amount = $validated['amount'];
+        $payment->currency = $validated['currency'];
+        $payment->payment_date = now();
+        $payment->notes = $validated['notes'] ?? 'تم إضافة الدفعة من صفحة تفاصيل الحجز #' . $bookingId;
+        $payment->save();
+
+        // Update the amount_paid_by_company field
+        $booking->increment('amount_paid_by_company', $validated['amount']);
+
+        // Log the payment activity
+        if (Auth::check()) {
+            $user = Auth::user();
+            // activity()
+            //     ->performedOn($booking)
+            //     ->causedBy($user)
+            //     ->withProperties([
+            //         'amount' => $validated['amount'],
+            //         'currency' => $validated['currency'],
+            //         'company' => $booking->company->name ?? 'غير محدد',
+            //     ])
+            //     ->log('تسجيل دفعة للحجز');
+        }
+
+        // Redirect back with success message
+        return redirect()->route('bookings.show', $booking->id)->with(
+            'success',
+            'تم تسجيل دفعة بمبلغ ' . $validated['amount'] . ' ' .
+                ($validated['currency'] === 'SAR' ? 'ريال سعودي' : 'دينار كويتي')
+        );
+    }
 
     /**
      * دالة عشان تجيب اقتراحات البحث للإكمال التلقائي

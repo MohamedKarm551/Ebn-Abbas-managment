@@ -160,6 +160,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/bookings/{id}/voucher', [BookingsController::class, 'voucher'])->name('bookings.voucher');
     Route::delete('/bookings/{id}', [BookingsController::class, 'destroy'])->name('bookings.destroy');
     Route::get('/bookings/{id}', [BookingsController::class, 'show'])->name('bookings.show');
+    Route::post('/bookings/{booking}/record-payment', [BookingsController::class, 'recordPayment'])->name('bookings.record-payment');
 
     /*
     |--------------------------------------------------------------------------
