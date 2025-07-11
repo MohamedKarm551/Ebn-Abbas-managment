@@ -118,31 +118,58 @@
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush border-top-0">
                         @foreach ($unassignedBookings as $booking)
-                            <div class="list-group-item list-group-item-action">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="mb-1">{{ $booking->client_name }}</h6>
+                            @if ($booking->cost_price == 0 || $booking->sale_price == 0)
+                                {{-- الحجوزات المؤرشفة - عرض مختلف --}}
+                                <div class="list-group-item list-group-item-action bg-light opacity-75">
+                                    <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <span
-                                                class="badge bg-primary me-1">{{ $booking->company->name ?? 'بدون شركة' }}</span>
-                                            <span class="badge bg-info me-1">{{ $booking->rooms }} غرفة</span>
-                                            <span class="badge bg-secondary">
-                                                {{ $booking->check_in->format('d/m') }} -
-                                                {{ $booking->check_out->format('d/m') }}
-                                            </span>
+                                            <h6 class="mb-1 text-decoration-line-through text-muted">
+                                                {{ $booking->client_name }}</h6>
+                                            <small class="text-danger d-block">(مؤرشف)</small>
+                                            <div>
+                                                <span
+                                                    class="badge bg-primary me-1 opacity-50">{{ $booking->company->name ?? 'بدون شركة' }}</span>
+                                                <span class="badge bg-info me-1 opacity-50">{{ $booking->rooms }}
+                                                    غرفة</span>
+                                                <span class="badge bg-secondary opacity-50">
+                                                    {{ $booking->check_in->format('d/m') }} -
+                                                    {{ $booking->check_out->format('d/m') }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted small">مؤرشف</span>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                                        data-bs-target="#assignRoomsModal" data-booking-id="{{ $booking->id }}"
-                                        data-client-name="{{ $booking->client_name }}"
-                                        data-company-name="{{ $booking->company->name ?? '' }}"
-                                        data-rooms-count="{{ $booking->rooms }}"
-                                        data-assigned-count="{{ $booking->roomAssignments->where('status', 'active')->count() }}">
-                                        <i class="fas fa-door-open me-1"></i>
-                                        تخصيص الغرف ({{ $booking->rooms }})
-                                    </button>
                                 </div>
-                            </div>
+                            @else
+                                {{-- الحجوزات النشطة - العرض العادي --}}
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ $booking->client_name }}</h6>
+                                            <div>
+                                                <span
+                                                    class="badge bg-primary me-1">{{ $booking->company->name ?? 'بدون شركة' }}</span>
+                                                <span class="badge bg-info me-1">{{ $booking->rooms }} غرفة</span>
+                                                <span class="badge bg-secondary">
+                                                    {{ $booking->check_in->format('d/m') }} -
+                                                    {{ $booking->check_out->format('d/m') }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#assignRoomsModal" data-booking-id="{{ $booking->id }}"
+                                            data-client-name="{{ $booking->client_name }}"
+                                            data-company-name="{{ $booking->company->name ?? '' }}"
+                                            data-rooms-count="{{ $booking->rooms }}"
+                                            data-assigned-count="{{ $booking->roomAssignments->where('status', 'active')->count() }}">
+                                            <i class="fas fa-door-open me-1"></i>
+                                            تخصيص الغرف ({{ $booking->rooms }})
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 </div>
@@ -691,7 +718,7 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-             
+
 
                 // ===== 3. تبديل طريقة العرض (بطاقات / قائمة) =====
                 const viewCards = document.getElementById('viewCards');
