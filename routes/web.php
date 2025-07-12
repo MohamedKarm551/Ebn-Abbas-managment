@@ -82,7 +82,12 @@ Route::post('/manual-login', function (Request $request) {
             }
         }
 
-        return redirect()->intended('/bookings');
+        // التوجيه حسب نوع المستخدم
+        if ($user->role === 'Company') {
+            return redirect('/company/land-trips');
+        } else {
+            return redirect('/bookings');
+        }
     }
 
     return back()->withErrors(['email' => 'بيانات الدخول غير صحيحة'])->withInput();
@@ -341,18 +346,17 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{company}/{payment}', [CompanyPaymentController::class, 'destroy'])->name('destroy');
             Route::post('/{company}/apply-discount', [CompanyPaymentController::class, 'applyDiscount'])->name('apply-discount');
         });
-            // مدفوعات الوكلاء للرحلات البرية
-    Route::prefix('admin/land-trips-agent-payments')->name('admin.land-trips-agent-payments.')->group(function () {
-        Route::get('/', [LandTripsAgentPaymentController::class, 'index'])->name('index');
-        Route::get('/{agent}', [LandTripsAgentPaymentController::class, 'show'])->name('show');
-        Route::get('/{agent}/create', [LandTripsAgentPaymentController::class, 'create'])->name('create');
-        Route::post('/{agent}', [LandTripsAgentPaymentController::class, 'store'])->name('store');
-        Route::get('/{agent}/{payment}/edit', [LandTripsAgentPaymentController::class, 'edit'])->name('edit');
-        Route::put('/{agent}/{payment}', [LandTripsAgentPaymentController::class, 'update'])->name('update');
-        Route::delete('/{agent}/{payment}', [LandTripsAgentPaymentController::class, 'destroy'])->name('destroy');
-        Route::post('/{agent}/apply-discount', [LandTripsAgentPaymentController::class, 'applyDiscount'])->name('apply-discount');
-    });
-
+        // مدفوعات الوكلاء للرحلات البرية
+        Route::prefix('admin/land-trips-agent-payments')->name('admin.land-trips-agent-payments.')->group(function () {
+            Route::get('/', [LandTripsAgentPaymentController::class, 'index'])->name('index');
+            Route::get('/{agent}', [LandTripsAgentPaymentController::class, 'show'])->name('show');
+            Route::get('/{agent}/create', [LandTripsAgentPaymentController::class, 'create'])->name('create');
+            Route::post('/{agent}', [LandTripsAgentPaymentController::class, 'store'])->name('store');
+            Route::get('/{agent}/{payment}/edit', [LandTripsAgentPaymentController::class, 'edit'])->name('edit');
+            Route::put('/{agent}/{payment}', [LandTripsAgentPaymentController::class, 'update'])->name('update');
+            Route::delete('/{agent}/{payment}', [LandTripsAgentPaymentController::class, 'destroy'])->name('destroy');
+            Route::post('/{agent}/apply-discount', [LandTripsAgentPaymentController::class, 'applyDiscount'])->name('apply-discount');
+        });
     });
 
     /*
