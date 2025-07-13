@@ -29,7 +29,7 @@
             background: #ffffff;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         /* العلامة المائية في الخلفية - محسنة */
@@ -77,7 +77,7 @@
             width: 100px;
             height: auto;
             border-radius: 50%;
-            border: 3px solid rgba(255,255,255,0.3);
+            border: 3px solid rgba(255, 255, 255, 0.3);
             margin-bottom: 15px;
         }
 
@@ -127,7 +127,7 @@
             background: rgba(16, 185, 129, 0.08);
             border-color: rgba(16, 185, 129, 0.2);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
         .info-row {
@@ -163,7 +163,7 @@
             background: rgba(255, 255, 255, 0.9);
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
             position: relative;
             z-index: 2;
             backdrop-filter: blur(3px);
@@ -301,7 +301,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .btn-warning {
@@ -325,16 +325,16 @@
                 width: 95%;
                 padding: 20px;
             }
-            
+
             .info-grid {
                 grid-template-columns: 1fr;
                 gap: 15px;
             }
-            
+
             .header h1 {
                 font-size: 24px;
             }
-            
+
             table th,
             table td {
                 padding: 10px;
@@ -355,19 +355,19 @@
     <div class="container my-4">
         <div class="d-flex flex-wrap justify-content-between flex-row-reverse align-items-center">
             @auth
-            @if(auth()->user()->role === 'Company')
-                <a href="{{ route('bookings.index') }}"
-                   class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
-                    <i class="bi bi-arrow-right"></i>
-                    رجوع
-                </a>
-            @else
-                <a href="{{ route('bookings.show', $booking->id) }}"
-                   class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
-                    <i class="bi bi-arrow-right"></i>
-                    رجوع
-                </a>
-            @endif
+                @if (auth()->user()->role === 'Company')
+                    <a href="{{ route('bookings.index') }}"
+                        class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
+                        <i class="bi bi-arrow-right"></i>
+                        رجوع
+                    </a>
+                @else
+                    <a href="{{ route('bookings.show', $booking->id) }}"
+                        class="btn btn-warning d-flex align-items-center gap-2 mb-2 mb-md-0">
+                        <i class="bi bi-arrow-right"></i>
+                        رجوع
+                    </a>
+                @endif
             @else
                 <a href="{{ url('/') }}" class="btn btn-secondary d-flex align-items-center gap-2 mb-2 mb-md-0">
                     <i class="bi bi-house"></i>
@@ -375,7 +375,11 @@
                 </a>
             @endauth
 
-            <div class="mx-auto">
+            <div class="mx-auto d-flex gap-2">
+                <button id="changeLogo" class="btn btn-secondary d-flex align-items-center gap-2">
+                    <i class="bi bi-image fs-5"></i>
+                    تغيير اللوجو
+                </button>
                 <button id="downloadVoucher" class="btn btn-success d-flex align-items-center gap-2">
                     <i class="bi bi-download fs-5"></i>
                     تحميل صورة الفاتورة
@@ -387,11 +391,11 @@
     <div class="voucher-container">
         <!-- العلامة المائية في الخلفية -->
         <div class="voucher-bg"></div>
-        
+
         <div class="header">
-            <img src="{{ asset('images/cover.jpg') }}" alt="Hotel Logo">
-            <h1>شركة ابن عباس</h1>
-            <h2>لخدمات الحج والعمرة</h2>
+            <img id="headerLogo" src="{{ asset('images/cover.jpg') }}" alt="Hotel Logo">
+            <h1 id="companyName">شركة ابن عباس</h1>
+            <h2 id="companySlogan">لخدمات الحج والعمرة</h2>
         </div>
 
         <hr>
@@ -440,7 +444,8 @@
                 <div class="info-row">
                     <span class="info-label">Voucher No:</span>
                     <div class="info-value">
-                        <span class="voucher-number">{{ $booking->id }}-{{ $booking->agent_id }}-{{ $booking->hotel->id }}-{{ $booking->employee_id }}</span>
+                        <span
+                            class="voucher-number">{{ $booking->id }}-{{ $booking->agent_id }}-{{ $booking->hotel->id }}-{{ $booking->employee_id }}</span>
                     </div>
                 </div>
                 <div class="info-row">
@@ -467,7 +472,8 @@
                         @php
                             $customerPhone = null;
                             if ($booking->notes) {
-                                $pattern = '/(?:\+?(?:(?:966|971)\s?(?:5\d{8}|5\d\s?\d{3}\s?\d{4})|(?:965)\s?(?:[569]\d{7}|[569]\d{3}\s?\d{4})|(?:974)\s?(?:[3567]\d{7}|[3567]\d{3}\s?\d{4})|(?:973)\s?(?:[369]\d{7}|[369]\d{3}\s?\d{4})|(?:968)\s?(?:9\d{7}|9\d{3}\s?\d{4})|(?:20)\s?(?:1[0125]\d{8}|1[0125]\d\s?\d{3}\s?\d{4})))|(?:\b05\d{8}\b|\b01[0125]\d{8}\b)/';
+                                $pattern =
+                                    '/(?:\+?(?:(?:966|971)\s?(?:5\d{8}|5\d\s?\d{3}\s?\d{4})|(?:965)\s?(?:[569]\d{7}|[569]\d{3}\s?\d{4})|(?:974)\s?(?:[3567]\d{7}|[3567]\d{3}\s?\d{4})|(?:973)\s?(?:[369]\d{7}|[369]\d{3}\s?\d{4})|(?:968)\s?(?:9\d{7}|9\d{3}\s?\d{4})|(?:20)\s?(?:1[0125]\d{8}|1[0125]\d\s?\d{3}\s?\d{4})))|(?:\b05\d{8}\b|\b01[0125]\d{8}\b)/';
                                 preg_match($pattern, $booking->notes, $matches);
                                 if (!empty($matches[0])) {
                                     $customerPhone = preg_replace('/\s+/', '', $matches[0]);
@@ -520,6 +526,61 @@
             // إضافة تأثير التحميل
             this.innerHTML = '<i class="bi bi-hourglass-split"></i> جاري التحميل...';
             this.disabled = true;
+
+            html2canvas(document.querySelector('.voucher-container'), {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true
+            }).then(function(canvas) {
+                var link = document.createElement('a');
+                link.download = 'voucher-' + new Date().getTime() + '.png';
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+
+                // إعادة تعيين النص والحالة
+                document.getElementById('downloadVoucher').innerHTML =
+                    '<i class="bi bi-download fs-5"></i> تحميل صورة الفاتورة';
+                document.getElementById('downloadVoucher').disabled = false;
+            });
+        });
+    </script>
+     <script>
+        // Array للوجوهات والأسماء المختلفة
+        const companies = [
+            {
+                name: "شركة ابن عباس",
+                logo: "{{ asset('images/cover.jpg') }}"
+            },
+            {
+                name: "شركة صرح وصال المشاعر",
+                logo: "{{ asset('images/sarhWesal.png') }}"
+            },
+            {
+                name: "شركة إبتاح",
+                logo: "{{ asset('images/EptahLogo.png') }}"
+            }
+        ];
+        
+        let currentCompanyIndex = 0;
+        
+        // تغيير اللوجو واسم الشركة
+        document.getElementById('changeLogo').addEventListener('click', function() {
+            currentCompanyIndex = (currentCompanyIndex + 1) % companies.length;
+            
+            // تغيير لوجو الهيدر
+            document.getElementById('headerLogo').src = companies[currentCompanyIndex].logo;
+            
+            // تغيير اسم الشركة
+            document.getElementById('companyName').textContent = companies[currentCompanyIndex].name;
+            
+            // تغيير العلامة المائية
+            document.querySelector('.voucher-bg').style.backgroundImage = `url('${companies[currentCompanyIndex].logo}')`;
+        });
+
+        document.getElementById('downloadVoucher').addEventListener('click', function() {
+            // إضافة تأثير التحميل
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> جاري التحميل...';
+            this.disabled = true;
             
             html2canvas(document.querySelector('.voucher-container'), {
                 scale: 2,
@@ -537,7 +598,7 @@
             });
         });
     </script>
-   
+
     {{-- <script src="{{ asset('js/preventClick.js') }}"></script> --}}
 </body>
 
