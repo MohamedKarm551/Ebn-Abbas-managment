@@ -29,7 +29,7 @@ class FinancialTrackingObserver
         Log::info('إنشاء متابعة مالية جديدة', [
             'tracking_id' => $tracking->id,
             'booking_id' => $tracking->booking_id,
-            'voucher_number' => $tracking->booking->voucher_number ?? 'غير معروف',
+            'voucher_number' => $tracking->booking->id ?? 'غير معروف',
             'user_id' => Auth::id(),
             'user_name' => Auth::user()->name ?? 'غير معروف'
         ]);
@@ -37,7 +37,7 @@ class FinancialTrackingObserver
         // إرسال الإشعارات للمدراء
         $this->notifyAdmins(
             'إنشاء متابعة مالية جديدة',
-            "تم إنشاء متابعة مالية جديدة للحجز رقم {$tracking->booking->voucher_number}",
+            "تم إنشاء متابعة مالية جديدة للحجز رقم {$tracking->booking->id}",
             $tracking,
             'financial_tracking_created'
         );
@@ -57,7 +57,7 @@ class FinancialTrackingObserver
         Log::info('تحديث متابعة مالية', [
             'tracking_id' => $tracking->id,
             'booking_id' => $tracking->booking_id,
-            'voucher_number' => $tracking->booking->voucher_number ?? 'غير معروف',
+            'voucher_number' => $tracking->booking->id ?? 'غير معروف',
             'changes' => $changes,
             'user_id' => Auth::id(),
             'user_name' => Auth::user()->name ?? 'غير معروف'
@@ -103,7 +103,7 @@ class FinancialTrackingObserver
         Log::warning('حذف متابعة مالية', [
             'tracking_id' => $tracking->id,
             'booking_id' => $tracking->booking_id,
-            'voucher_number' => $tracking->booking->voucher_number ?? 'غير معروف',
+            'voucher_number' => $tracking->booking->id ?? 'غير معروف',
             'user_id' => Auth::id(),
             'user_name' => Auth::user()->name ?? 'غير معروف'
         ]);
@@ -111,7 +111,7 @@ class FinancialTrackingObserver
         // إرسال تنبيه للمدراء
         $this->notifyAdmins(
             'حذف متابعة مالية',
-            "تم حذف المتابعة المالية للحجز رقم {$tracking->booking->voucher_number}",
+            "تم حذف المتابعة المالية للحجز رقم {$tracking->booking->id}",
             $tracking,
             'financial_tracking_deleted'
         );
@@ -127,7 +127,7 @@ class FinancialTrackingObserver
     {
         $agentName = $tracking->booking->agent->name ?? 'غير معروف';
         $statusLabel = $tracking->getAgentPaymentStrategy()->getStatusLabel();
-        $voucherNumber = $tracking->booking->voucher_number ?? 'غير معروف';
+        $voucherNumber = $tracking->booking->id ?? 'غير معروف';
 
         $message = "تم تغيير حالة السداد لجهة الحجز ({$agentName}) إلى: {$statusLabel} - الحجز رقم: {$voucherNumber}";
 
@@ -157,9 +157,9 @@ class FinancialTrackingObserver
     {
         $companyName = $tracking->booking->company->name ?? 'غير معروف';
         $statusLabel = $tracking->getCompanyPaymentStrategy()->getStatusLabel();
-        $voucherNumber = $tracking->booking->voucher_number ?? 'غير معروف';
+        $voucherNumber = $tracking->booking->client_name ?? 'غير معروف';
 
-        $message = "تم تغيير حالة السداد للشركة ({$companyName}) إلى: {$statusLabel} - الحجز رقم: {$voucherNumber}";
+        $message = "تم تغيير حالة السداد للشركة ({$companyName}) إلى: {$statusLabel} - حجز العميل : {$voucherNumber}";
 
         // إرسال إشعار حسب نوع التغيير
         $notificationType = match ($newStatus) {
@@ -185,7 +185,7 @@ class FinancialTrackingObserver
      */
     private function handlePaymentAmountChange(BookingFinancialTracking $tracking, array $changes)
     {
-        $voucherNumber = $tracking->booking->voucher_number ?? 'غير معروف';
+        $voucherNumber = $tracking->booking->id ?? 'غير معروف';
         $currency = $tracking->booking->currency ?? 'غير معروف';
         $messageDetails = [];
 
@@ -223,7 +223,7 @@ class FinancialTrackingObserver
      */
     private function handlePriorityLevelChange(BookingFinancialTracking $tracking, string $newPriority)
     {
-        $voucherNumber = $tracking->booking->voucher_number ?? 'غير معروف';
+        $voucherNumber = $tracking->booking->id ?? 'غير معروف';
         $priorityLabels = [
             'low' => 'منخفضة',
             'medium' => 'متوسطة',
@@ -257,7 +257,7 @@ class FinancialTrackingObserver
      */
     private function handleFollowUpDateChange(BookingFinancialTracking $tracking, ?string $newFollowUpDate)
     {
-        $voucherNumber = $tracking->booking?->voucher_number ?? 'غير معروف';
+        $voucherNumber = $tracking->booking?->id ?? 'غير معروف';
         $formattedDate = $newFollowUpDate ? date('Y-m-d', strtotime($newFollowUpDate)) : 'غير محدد';
 
         $message = "تم تحديث تاريخ المتابعة للحجز رقم {$voucherNumber} إلى: {$formattedDate}";
@@ -294,7 +294,7 @@ class FinancialTrackingObserver
                     'data' => json_encode([
                         'tracking_id' => $tracking->id,
                         'booking_id' => $tracking->booking_id,
-                        'voucher_number' => $tracking->booking->voucher_number ?? null,
+                        'voucher_number' => $tracking->booking->id ?? null,
                         'agent_name' => $tracking->booking->agent->name ?? null,
                         'company_name' => $tracking->booking->company->name ?? null,
                         'updated_by' => Auth::id(),
@@ -343,7 +343,7 @@ class FinancialTrackingObserver
                     'data' => json_encode([
                         'tracking_id' => $tracking->id,
                         'booking_id' => $tracking->booking_id,
-                        'voucher_number' => $tracking->booking->voucher_number ?? null,
+                        'voucher_number' => $tracking->booking->id ?? null,
                         'updated_by' => Auth::id(),
                         'updated_by_name' => Auth::user()->name ?? null,
                         'timestamp' => now()->toDateTimeString()

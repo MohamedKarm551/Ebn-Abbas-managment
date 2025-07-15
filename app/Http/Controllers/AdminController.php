@@ -52,27 +52,100 @@ class AdminController extends Controller
                         'عملية حذف',
                         'تأكيد حجز',
                         'إلغاء حجز',
-                        // أضف كل الأنواع التي تخص الحجوزات فقط
+                        'booking_created',
+                        'booking_confirmed',
+                        'booking_updated',
+                        'booking_cancelled'
                     ];
-                    $query->whereIn('type', $bookingTypes);
+
+                    $query->where(function ($q) use ($bookingTypes) {
+                        $q->whereIn('type', $bookingTypes)
+                            ->orWhere('type', 'LIKE', '%حجز%')
+                            ->orWhere('type', 'LIKE', '%booking%');
+                    });
                     break;
+
                 case 'payments':
-                    // فلتر حسب الكلمات المفتاحية للدفعات
-                    $query->where(function ($q) {
-                        $q->where('message', 'LIKE', '%دفعة%') // كلمة "دفعة"
-                            ->orWhere('message', 'LIKE', '%payment%') // كلمة "payment"
-                            // ممكن تضيف "سداد", "تحصيل" ...إلخ
+                    // فلتر للدفعات - المشكلة الثانية
+                    $paymentTypes = [
+                        // الإشعارات العربية
+                        'دفعة جديدة',
+                        'تعديل دفعة',
+                        'حذف دفعة',
+                        'خصم مطبق',
+                        'متابعة مالية عالية الأهمية',
+                        'اكتمال دفعة الوكيل',
+                        'اكتمال دفعة الشركة',
+                        'دفعة جزئية للوكيل',
+                        'دفعة جزئية للشركة',
+                        'دفعة معلقة للوكيل',
+                        'دفعة معلقة للشركة',
+                        'تغيير تاريخ المتابعة',
+                        'تغيير مستوى الأولوية',
+                        'إنشاء متابعة مالية جديدة',
+                        'تغيير حالة الدفع',
+                        'تغيير قيمة الدفعة',
+
+                        // الإشعارات الإنجليزية
+                        'high_priority_tracking',
+                        'agent_payment_completed',
+                        'company_payment_completed',
+                        'agent_payment_partial',
+                        'company_payment_partial',
+                        'agent_payment_pending',
+                        'company_payment_pending',
+                        'follow_up_date_change',
+                        'priority_level_change',
+                        'financial_tracking_created',
+                        'payment_status_change',
+                        'payment_amount_change',
+                    ];
+
+                    $query->where(function ($q) use ($paymentTypes) {
+                        $q->whereIn('type', $paymentTypes)
+                            ->orWhere('type', 'LIKE', '%دفع%')
+                            ->orWhere('type', 'LIKE', '%مالي%')
+                            ->orWhere('type', 'LIKE', '%مستوى%')
+                            ->orWhere('type', 'LIKE', '%أولوية%')
+                            ->orWhere('type', 'LIKE', '%payment%')
+                            ->orWhere('type', 'LIKE', '%financial%')
+                            ->orWhere('type', 'LIKE', '%track%')
+                            ->orWhere('type', 'LIKE', '%priority%')
+                            ->orWhere('message', 'LIKE', '%دفعة%')
+                            ->orWhere('message', 'LIKE', '%payment%')
                             ->orWhere('message', 'LIKE', '%خصم%');
                     });
                     break;
+
                 case 'availabilities':
-                    // فلتر حسب الكلمات المفتاحية للإتاحات
-                    $query->where(function ($q) {
-                        $q->where('message', 'LIKE', '%إتاحة%') // كلمة "إتاحة"
-                            ->orWhere('message', 'LIKE', '%availability%') // كلمة "availability"
-                            ->orWhere('message', 'LIKE', '%allotment%'); // كلمة "allotment"
+                    // فلتر الإتاحات - المشكلة الثالثة
+                    $availabilityTypes = [
+                        'إتاحة',
+                        'إضافة إتاحة',
+                        'تعديل إتاحة',
+                        'حذف إتاحة',
+                        'تحديث إتاحة',
+                        'availability',
+                        'availability_created',
+                        'availability_updated',
+                        'availability_deleted',
+                        'allotment',
+                        'allotment_created',
+                        'allotment_updated',
+                        'allotment_deleted'
+                    ];
+
+                    $query->where(function ($q) use ($availabilityTypes) {
+                        $q->whereIn('type', $availabilityTypes)
+                            ->orWhere('type', 'LIKE', '%إتاحة%')
+                            ->orWhere('type', 'LIKE', '%availability%')
+                            ->orWhere('type', 'LIKE', '%allotment%')
+                            ->orWhere('message', 'LIKE', '%إتاحة%')
+                            ->orWhere('message', 'LIKE', '%availability%')
+                            ->orWhere('message', 'LIKE', '%allotment%');
                     });
                     break;
+
                 case 'land-trips':
                     $landTripTypes = [
                         'إضافة رحلة',
@@ -85,17 +158,15 @@ class AdminController extends Controller
                     ];
                     $query->whereIn('type', $landTripTypes);
                     break;
+
                 case 'logins':
                     $query->where(function ($q) {
                         $q->where('type', 'LIKE', '%login%')
-                            ->orWhere('type', 'LIKE', '%logout%');
+                            ->orWhere('type', 'LIKE', '%logout%')
+                            ->orWhere('type', 'LIKE', '%تسجيل دخول%')
+                            ->orWhere('type', 'LIKE', '%تسجيل خروج%');
                     });
                     break;
-                    // ممكن تضيف case تانية لأنواع فلاتر تانية لو حبيت
-                    // مثال:
-                    // case 'users':
-                    //     $query->where('message', 'LIKE', '%مستخدم%');
-                    //     break;
             }
         }
 
@@ -398,27 +469,27 @@ class AdminController extends Controller
                 'regex:/^[\pL\pN\s\-()]+$/u'
             ],
             'new_company_email' => ['nullable', 'email', 'unique:users,email'],
-        'new_company_password' => ['nullable', 'string', 'min:8'],
+            'new_company_password' => ['nullable', 'string', 'min:8'],
         ]);
 
         // *** تطبيق التنقية هنا قبل التحديث ***
         $sanitizedName = strip_tags($request->input('name'));
 
         $company->update(['name' => $sanitizedName]); // استخدام الاسم المنقّى
-            // إذا أدخل الأدمن بريد وباسورد جديدين، أنشئ مستخدم جديد مرتبط بنفس الشركة
-    if (
-        $request->filled('new_company_email') &&
-        $request->filled('new_company_password') &&
-        Auth::user()->role === 'Admin'
-    ) {
-        User::create([
-            'name' => $sanitizedName,
-            'email' => $request->input('new_company_email'),
-            'password' => Hash::make($request->input('new_company_password')),
-            'role' => 'Company',
-            'company_id' => $company->id,
-        ]);
-    }
+        // إذا أدخل الأدمن بريد وباسورد جديدين، أنشئ مستخدم جديد مرتبط بنفس الشركة
+        if (
+            $request->filled('new_company_email') &&
+            $request->filled('new_company_password') &&
+            Auth::user()->role === 'Admin'
+        ) {
+            User::create([
+                'name' => $sanitizedName,
+                'email' => $request->input('new_company_email'),
+                'password' => Hash::make($request->input('new_company_password')),
+                'role' => 'Company',
+                'company_id' => $company->id,
+            ]);
+        }
 
         Notification::create([
             'user_id' => Auth::user()->id,

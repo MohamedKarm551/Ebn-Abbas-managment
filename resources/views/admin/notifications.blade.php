@@ -476,51 +476,80 @@
                             if ($notification->user_id != auth()->id()) {
                                 continue;
                             }
-                        @endphp
 
-                        @if ($currentFilter == 'land-trips' && !in_array($notification->type, $landTripTypes))
-                            @continue
-                        @endif
-                        {{-- إضافة التحقق من فلتر الدفعات --}}
-                        @if ($currentFilter == 'payments')
-                            {{-- طباعة معلومات تشخيصية للتأكد من أن الإشعارات تدرج ضمن فلتر الدفعات --}}
-                            @php
-                                $notificationTypes = [];
-                                $matchedNotifications = 0;
-                                $unmatchedNotifications = 0;
-                            @endphp
+                            // تحسين فلترة الحجوزات - المشكلة #1
+                            $isBookingNotification =
+                                in_array($notification->type, [
+                                    'إضافة حجز',
+                                    'تأكيد حجز',
+                                    'تعديل حجز',
+                                    'إلغاء حجز',
+                                    'عملية حذف',
+                                    'booking_created',
+                                    'booking_confirmed',
+                                    'booking_updated',
+                                    'booking_cancelled',
+                                ]) ||
+                                strpos($notification->type, 'حجز') !== false ||
+                                strpos($notification->type, 'booking') !== false;
 
-                            @foreach ($notifications as $notification)
-                                @php
-                                    $isPaymentNotification = in_array($notification->type, $paymentTypes);
+                            // تحسين فلترة الدفعات - المشكلة #2
+                            $isPaymentNotification =
+                                in_array($notification->type, $paymentTypes) ||
+                                strpos($notification->type, 'دفع') !== false ||
+                                strpos($notification->type, 'مالي') !== false ||
+                                strpos($notification->type, 'مستوى') !== false ||
+                                strpos($notification->type, 'أولوية') !== false ||
+                                strpos($notification->type, 'payment') !== false ||
+                                strpos($notification->type, 'financial') !== false ||
+                                strpos($notification->type, 'track') !== false ||
+                                strpos($notification->type, 'priority') !== false;
 
-                                    if (!$isPaymentNotification) {
-                                        $isPaymentNotification =
-                                            strpos($notification->type, 'دفع') !== false ||
-                                            strpos($notification->type, 'مالي') !== false ||
-                                            strpos($notification->type, 'مستوى') !== false ||
-                                            strpos($notification->type, 'أولوية') !== false ||
-                                            strpos($notification->type, 'payment') !== false ||
-                                            strpos($notification->type, 'financial') !== false ||
-                                            strpos($notification->type, 'track') !== false ||
-                                            strpos($notification->type, 'priority') !== false;
-                                    }
+                            // تحسين فلترة الإتاحات - المشكلة #3
+                            $isAvailabilityNotification =
+                                in_array($notification->type, [
+                                    'إتاحة',
+                                    'إضافة إتاحة',
+                                    'تعديل إتاحة',
+                                    'حذف إتاحة',
+                                    'تحديث إتاحة',
+                                    'availability',
+                                    'availability_created',
+                                    'availability_updated',
+                                    'availability_deleted',
+                                    'allotment',
+                                    'allotment_created',
+                                    'allotment_updated',
+                                    'allotment_deleted',
+                                ]) ||
+                                strpos($notification->type, 'إتاحة') !== false ||
+                                strpos($notification->type, 'availability') !== false ||
+                                strpos($notification->type, 'allotment') !== false;
 
-                                    if ($isPaymentNotification) {
-                                        $matchedNotifications++;
-                                        if (!in_array($notification->type, $notificationTypes)) {
-                                            $notificationTypes[] = $notification->type;
-                                        }
-                                    } else {
-                                        $unmatchedNotifications++;
-                                    }
-                                @endphp
-                            @endforeach
+                            $isLandTripNotification = in_array($notification->type, $landTripTypes);
+                            $isLoginNotification = in_array($notification->type, $loginTypes);
 
-                       
-                        @endif
-                        @php
-                            // تحديد نوع الإشعار وإضافة الصفات المناسبة
+                            // تحديد ما إذا كان يجب عرض الإشعار وفقًا للفلتر الحالي
+                            $shouldShowNotification = true;
+
+                            // فلترة حسب النوع المحدد
+                            if ($currentFilter == 'land-trips') {
+                                $shouldShowNotification = $isLandTripNotification;
+                            } elseif ($currentFilter == 'logins') {
+                                $shouldShowNotification = $isLoginNotification;
+                            } elseif ($currentFilter == 'bookings') {
+                                $shouldShowNotification = $isBookingNotification;
+                            } elseif ($currentFilter == 'availabilities') {
+                                $shouldShowNotification = $isAvailabilityNotification;
+                            } elseif ($currentFilter == 'payments') {
+                                $shouldShowNotification = $isPaymentNotification;
+                            }
+
+                            // تخطي الإشعار إذا كان لا يتطابق مع الفلتر
+                            if (!$shouldShowNotification) {
+                                continue;
+                            }
+
                             // تحديد نوع الإشعار وإضافة الصفات المناسبة
                             $itemClass = 'notification-item';
                             $typeClass = '';
@@ -530,51 +559,35 @@
                                 $itemClass .= ' read';
                             }
 
-                            // تحديد النوع بناءً على type أو على البيانات المخزنة في data
-                            $isPaymentType = in_array($notification->type, $paymentTypes);
-
-                            // تحقق إضافي للكلمات المتعلقة بالدفعات والمتابعة
-                            if (!$isPaymentType) {
-                                $isPaymentType =
-                                    strpos($notification->type, 'دفع') !== false ||
-                                    strpos($notification->type, 'مالي') !== false ||
-                                    strpos($notification->type, 'مستوى') !== false ||
-                                    strpos($notification->type, 'أولوية') !== false ||
-                                    strpos($notification->type, 'payment') !== false ||
-                                    strpos($notification->type, 'financial') !== false ||
-                                    strpos($notification->type, 'track') !== false ||
-                                    strpos($notification->type, 'priority') !== false;
-                            }
-
-                            if ($notification->type == 'تنبيه أمني') {
-                                $itemClass .= ' security-alert';
-                                $typeClass = 'security-alert';
-                                $typeIcon = 'fas fa-shield-alt';
-                            } elseif (in_array($notification->type, $landTripTypes)) {
-                                $itemClass .= ' land-trip';
-                                $typeClass = 'land-trip';
-                                $typeIcon = 'fas fa-bus-alt';
-                            } elseif (
-                                in_array($notification->type, ['إضافة حجز', 'تأكيد حجز', 'تعديل حجز', 'إلغاء حجز'])
-                            ) {
-                                $itemClass .= ' booking';
-                                $typeClass = 'booking';
-                                $typeIcon = 'fas fa-calendar-check';
-                            } elseif ($isPaymentType) {
-                                $itemClass .= ' payment';
-                                $typeClass = 'payment';
-                                $typeIcon = 'fas fa-money-bill-wave';
-                            } elseif (in_array($notification->type, ['إتاحة', 'availability', 'allotment'])) {
-                                $itemClass .= ' availability';
-                                $typeClass = 'booking';
-                                $typeIcon = 'fas fa-calendar-alt';
-                            } elseif (str_contains($notification->type, 'حذف')) {
+                            // if ($notification->type == 'تنبيه أمني') {
+                            //     $itemClass .= ' security-alert';
+                            //     $typeClass = 'security-alert';
+                            //     $typeIcon = 'fas fa-shield-alt';
+                            // }
+                            if (str_contains($notification->type, 'حذف')) {
                                 $itemClass .= ' delete';
                                 $typeClass = 'delete';
                                 $typeIcon = 'fas fa-trash-alt';
                             }
-
+                            elseif ($isLandTripNotification) {
+                                $itemClass .= ' land-trip';
+                                $typeClass = 'land-trip';
+                                $typeIcon = 'fas fa-bus-alt';
+                            } elseif ($isBookingNotification) {
+                                $itemClass .= ' booking';
+                                $typeClass = 'booking';
+                                $typeIcon = 'fas fa-calendar-check';
+                            } elseif ($isPaymentNotification) {
+                                $itemClass .= ' payment';
+                                $typeClass = 'payment';
+                                $typeIcon = 'fas fa-money-bill-wave';
+                            } elseif ($isAvailabilityNotification) {
+                                $itemClass .= ' availability';
+                                $typeClass = 'booking';
+                                $typeIcon = 'fas fa-calendar-alt';
+                            } 
                         @endphp
+
                         <div class="{{ $itemClass }}" style="animation-delay: {{ ($i - 1) * 0.05 }}s">
                             <div class="notification-content">
                                 <div class="notification-header">

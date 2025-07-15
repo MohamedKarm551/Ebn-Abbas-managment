@@ -53,7 +53,7 @@ class FinancialTrackingController extends Controller
                 'success' => true,
                 'booking' => [
                     'id' => $booking->id,
-                    'voucher_number' => $booking->voucher_number,
+                    'voucher_number' => $booking->id,
                     'client_name' => $booking->client_name,
                     'check_in' => $booking->check_in,
                     'check_out' => $booking->check_out,

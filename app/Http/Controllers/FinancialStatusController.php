@@ -102,7 +102,7 @@ class FinancialStatusController extends Controller
         return response()->json([
             'booking_id' => $booking->id,
             'client_name' => $booking->client_name,
-            'voucher_number' => $booking->voucher_number,
+            'voucher_number' => $booking->id,
             'check_in' => $booking->check_in,
             'check_out' => $booking->check_out,
             'rooms' => $booking->rooms,
@@ -428,7 +428,7 @@ class FinancialStatusController extends Controller
                 'payment_percentage' => $paymentPercentage,
                 'priority_level' => $priorityLevel,
                 'size' => $nodeSize,
-                'voucher_number' => $booking->voucher_number,
+                'voucher_number' => $booking->id,
             ];
 
             // ربط العقدة بالمركز
@@ -715,7 +715,7 @@ class FinancialStatusController extends Controller
                 return [
                     'id' => $booking->id,
                     'client_name' => $booking->client_name,
-                    'voucher_number' => $booking->voucher_number,
+                    'voucher_number' => $booking->id,
                     'company_name' => $booking->company->name ?? 'غير معروف',
                     'agent_name' => $booking->agent->name ?? 'غير معروف',
                     'payment_deadline' => $booking->financialTracking->payment_deadline,
