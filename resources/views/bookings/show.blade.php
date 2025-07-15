@@ -81,12 +81,16 @@
                 <tr>
                     <td>6</td>
                     <td>تاريخ الدخول <i class="fas fa-calendar-check text-primary"></i></td>
-                    <td>{{ $booking->check_in->format('d/m/Y') }}</td>
+                    <td>{{ $booking->check_in->format('d/m/Y') }} <small class="d-block text-muted hijri-date"
+                            data-date="{{ $booking->check_in->format('Y-m-d') }}"></small>
+                    </td>
                 </tr>
                 <tr>
                     <td>7</td>
                     <td>تاريخ الخروج <i class="fas fa-calendar-times text-danger"></i></td>
-                    <td>{{ $booking->check_out->format('d/m/Y') }}</td>
+                    <td>{{ $booking->check_out->format('d/m/Y') }} <small class="d-block text-muted hijri-date"
+                            data-date="{{ $booking->check_out->format('Y-m-d') }}"></small>
+                    </td>
                 </tr>
                 <tr>
                     <td>8</td>
@@ -2227,7 +2231,7 @@
             // الحصول على التاريخ الهجري
             const hijri = date.toLocaleDateString('ar-SA', {
                 day: 'numeric',
-                month: 'numeric',
+                month: 'long',
                 calendar: 'islamic'
             }).split('/');
 
@@ -2834,6 +2838,38 @@
                 maximumFractionDigits: 2
             }) + ' ' + currency;
         }
+    </script>
+    <script>
+        // Converts Gregorian dates to Hijri
+        function convertToHijri() {
+            document.querySelectorAll('.hijri-date').forEach(element => {
+                const gregorianDate = element.getAttribute('data-date');
+                if (gregorianDate) {
+                    try {
+                        // Use Intl.DateTimeFormat with 'islamic' calendar - month as LONG text
+                        const hijriDate = new Intl.DateTimeFormat('ar-SA-islamic', {
+                            day: 'numeric',
+                            month: 'long', // تم تغييرها من 'numeric' إلى 'long'
+                            calendar: 'islamic'
+                        }).format(new Date(gregorianDate));
+
+                        element.textContent = hijriDate;
+                    } catch (e) {
+                        console.error("Error converting date:", e);
+                        element.textContent = ""; // Clear if error
+                    }
+                }
+            });
+        }
+
+
+        // Convert dates when page loads
+        document.addEventListener("DOMContentLoaded", function() {
+            convertToHijri();
+
+            // Also convert when table is updated via AJAX
+            document.addEventListener('ajaxTableUpdated', convertToHijri);
+        });
     </script>
 @endpush
 

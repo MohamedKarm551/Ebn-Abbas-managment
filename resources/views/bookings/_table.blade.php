@@ -92,8 +92,14 @@
                         {{ $booking->hotel->name }}
                     @endif
                 </td>
-                <td class="text-center align-middle">{{ $booking->check_in->format('d/m/Y') }}</td>
-                <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }}</td>
+                <td class="text-center align-middle">{{ $booking->check_in->format('d/m/Y') }} <small
+                        class="d-block text-muted hijri-date"
+                        data-date="{{ $booking->check_in->format('Y-m-d') }}"></small>
+                </td>
+                <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }} <small
+                        class="d-block text-muted hijri-date"
+                        data-date="{{ $booking->check_out->format('Y-m-d') }}"></small>
+                </td>
                 {{-- <td class="text-center align-middle">{{ $booking->days }}</td> --}}
                 <td class="text-center align-middle">{{ $booking->rooms }}</td>
                 {{-- *** بداية التعديل: إخفاء المستحق للفندق للشركة *** --}}
@@ -229,83 +235,123 @@
     </tbody>
 </table>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    function mergeTableCellsForMobile() {
-        if (window.innerWidth >= 768) {
-            // عند العودة للديسكتوب أظهر كل الأعمدة
+    document.addEventListener("DOMContentLoaded", function() {
+        function mergeTableCellsForMobile() {
+            if (window.innerWidth >= 768) {
+                // عند العودة للديسكتوب أظهر كل الأعمدة
+                document.querySelectorAll('.table').forEach(table => {
+                    table.querySelectorAll('thead th, tbody td').forEach(cell => {
+                        cell.style.display = '';
+                    });
+                });
+                return;
+            }
+
             document.querySelectorAll('.table').forEach(table => {
-                table.querySelectorAll('thead th, tbody td').forEach(cell => {
-                    cell.style.display = '';
+                // استخراج رؤوس الأعمدة الفعلية
+                const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent
+                    .trim());
+
+                // حدد الأعمدة المطلوب إخفاؤها حسب النص
+                const hideCols = ['غرف', 'الدخول', 'الخروج'];
+                // إخفاء رؤوس الأعمدة المطلوبة
+                headers.forEach((h, idx) => {
+                    if (hideCols.some(col => h.includes(col))) {
+                        const th = table.querySelector(`thead th:nth-child(${idx + 1})`);
+                        if (th) th.style.display = 'none';
+                    }
+                });
+
+                // لكل صف بيانات
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const cells = Array.from(row.querySelectorAll('td'));
+                    if (cells.length < 4) return;
+
+                    // ابحث عن الأعمدة حسب النص (وليس الترتيب)
+                    let clientIdx = -1,
+                        roomsIdx = -1,
+                        hotelIdx = -1,
+                        checkInIdx = -1,
+                        checkOutIdx = -1;
+                    headers.forEach((h, i) => {
+                        if (h.includes('العميل')) clientIdx = i;
+                        if (h.includes('غرف')) roomsIdx = i;
+                        if (h.includes('فندق')) hotelIdx = i;
+                        if (h.includes('الدخول')) checkInIdx = i;
+                        if (h.includes('الخروج')) checkOutIdx = i;
+                    });
+
+                    // دمج اسم العميل + عدد الغرف
+                    if (clientIdx !== -1 && roomsIdx !== -1 && cells[clientIdx] && cells[
+                            roomsIdx]) {
+                        if (!cells[clientIdx].innerHTML.includes('غرفة')) {
+                            cells[clientIdx].innerHTML +=
+                                `<span class="d-block text-muted small">(${cells[roomsIdx].textContent.trim()} غرفة)</span>`;
+                        }
+                        cells[roomsIdx].style.display = 'none';
+                    }
+
+                    // دمج التواريخ + الفندق
+                    if (hotelIdx !== -1 && checkInIdx !== -1 && checkOutIdx !== -1 &&
+                        cells[hotelIdx] && cells[checkInIdx] && cells[checkOutIdx]) {
+                        if (!cells[hotelIdx].innerHTML.includes('دخول:')) {
+                            cells[hotelIdx].innerHTML +=
+                                `<div class="text-muted small">دخول: ${cells[checkInIdx].textContent.trim()}<br>خروج: ${cells[checkOutIdx].textContent.trim()}</div>`;
+                        }
+                        cells[checkInIdx].style.display = 'none';
+                        cells[checkOutIdx].style.display = 'none';
+                    }
+                    // <td colspan="8" class="text-end">المجموع في الصفحة:</td> خليه يبقا خمسة بس في الشاشات دي فقط : 
+                    // colspan="5" كود سكريبت  : 
+                    document.querySelectorAll('.table tbody tr').forEach(row => {
+                        // ابحث عن خلية المجموع (عادة تحتوي على النص "المجموع في الصفحة")
+                        row.querySelectorAll('td').forEach(cell => {
+                            if (cell.textContent.includes(
+                                'المجموع في الصفحة')) {
+                                cell.colSpan = 5;
+                            }
+                        });
+                    });
+
+
+
                 });
             });
-            return;
         }
 
-        document.querySelectorAll('.table').forEach(table => {
-            // استخراج رؤوس الأعمدة الفعلية
-            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-
-            // حدد الأعمدة المطلوب إخفاؤها حسب النص
-            const hideCols = ['غرف', 'الدخول', 'الخروج'];
-            // إخفاء رؤوس الأعمدة المطلوبة
-            headers.forEach((h, idx) => {
-                if (hideCols.some(col => h.includes(col))) {
-                    const th = table.querySelector(`thead th:nth-child(${idx + 1})`);
-                    if (th) th.style.display = 'none';
-                }
-            });
-
-            // لكل صف بيانات
-            table.querySelectorAll('tbody tr').forEach(row => {
-                const cells = Array.from(row.querySelectorAll('td'));
-                if (cells.length < 4) return;
-
-                // ابحث عن الأعمدة حسب النص (وليس الترتيب)
-                let clientIdx = -1, roomsIdx = -1, hotelIdx = -1, checkInIdx = -1, checkOutIdx = -1;
-                headers.forEach((h, i) => {
-                    if (h.includes('العميل')) clientIdx = i;
-                    if (h.includes('غرف')) roomsIdx = i;
-                    if (h.includes('فندق')) hotelIdx = i;
-                    if (h.includes('الدخول')) checkInIdx = i;
-                    if (h.includes('الخروج')) checkOutIdx = i;
-                });
-
-                // دمج اسم العميل + عدد الغرف
-                if (clientIdx !== -1 && roomsIdx !== -1 && cells[clientIdx] && cells[roomsIdx]) {
-                    if (!cells[clientIdx].innerHTML.includes('غرفة')) {
-                        cells[clientIdx].innerHTML += `<span class="d-block text-muted small">(${cells[roomsIdx].textContent.trim()} غرفة)</span>`;
-                    }
-                    cells[roomsIdx].style.display = 'none';
-                }
-
-                // دمج التواريخ + الفندق
-                if (hotelIdx !== -1 && checkInIdx !== -1 && checkOutIdx !== -1 &&
-                    cells[hotelIdx] && cells[checkInIdx] && cells[checkOutIdx]) {
-                    if (!cells[hotelIdx].innerHTML.includes('دخول:')) {
-                        cells[hotelIdx].innerHTML += `<div class="text-muted small">دخول: ${cells[checkInIdx].textContent.trim()}<br>خروج: ${cells[checkOutIdx].textContent.trim()}</div>`;
-                    }
-                    cells[checkInIdx].style.display = 'none';
-                    cells[checkOutIdx].style.display = 'none';
-                }
-                // <td colspan="8" class="text-end">المجموع في الصفحة:</td> خليه يبقا خمسة بس في الشاشات دي فقط : 
-                // colspan="5" كود سكريبت  : 
-                 document.querySelectorAll('.table tbody tr').forEach(row => {
-        // ابحث عن خلية المجموع (عادة تحتوي على النص "المجموع في الصفحة")
-        row.querySelectorAll('td').forEach(cell => {
-            if (cell.textContent.includes('المجموع في الصفحة')) {
-                cell.colSpan = 5;
-            }
-        });
+        mergeTableCellsForMobile();
+        window.addEventListener('resize', mergeTableCellsForMobile);
+        document.addEventListener('ajaxTableUpdated', mergeTableCellsForMobile);
     });
+</script>
+<script>
+    // Converts Gregorian dates to Hijri
+    function convertToHijri() {
+        document.querySelectorAll('.hijri-date').forEach(element => {
+            const gregorianDate = element.getAttribute('data-date');
+            if (gregorianDate) {
+                try {
+                    // Use Intl.DateTimeFormat with 'islamic' calendar
+                    const hijriDate = new Intl.DateTimeFormat('ar-SA-islamic', {
+                        day: 'numeric',
+                        month: 'long',
+                        calendar: 'islamic'
+                    }).format(new Date(gregorianDate));
 
-
-
-            });
+                    element.textContent = hijriDate;
+                } catch (e) {
+                    console.error("Error converting date:", e);
+                    element.textContent = ""; // Clear if error
+                }
+            }
         });
     }
 
-    mergeTableCellsForMobile();
-    window.addEventListener('resize', mergeTableCellsForMobile);
-    document.addEventListener('ajaxTableUpdated', mergeTableCellsForMobile);
-});
+    // Convert dates when page loads
+    document.addEventListener("DOMContentLoaded", function() {
+        convertToHijri();
+
+        // Also convert when table is updated via AJAX
+        document.addEventListener('ajaxTableUpdated', convertToHijri);
+    });
 </script>

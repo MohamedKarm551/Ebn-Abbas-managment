@@ -37,11 +37,15 @@
                     </div>
                     <div class="col-md-3 mb-3">
                         <h6>تاريخ المغادرة:</h6>
-                        <p class="lead">{{ $landTrip->departure_date->format('d/m/Y') }}</p>
+                        <p class="lead">{{ $landTrip->departure_date->format('d/m/Y') }} <small
+                                class="d-block text-muted hijri-date"
+                                data-date="{{ $landTrip->departure_date->format('Y-m-d') }}"></small></p>
                     </div>
                     <div class="col-md-3 mb-3">
                         <h6>تاريخ العودة:</h6>
-                        <p class="lead">{{ $landTrip->return_date->format('d/m/Y') }}</p>
+                        <p class="lead">{{ $landTrip->return_date->format('d/m/Y') }} <small
+                                class="d-block text-muted hijri-date"
+                                data-date="{{ $landTrip->return_date->format('Y-m-d') }}"></small></p>
                     </div>
                     <div class="col-md-3 mb-3">
                         <h6>عدد الأيام:</h6>
@@ -224,54 +228,107 @@
         });
     </script>
     <!-- مودال تأكيد حذف الحجز -->
-<div class="modal fade" id="deleteBookingModal" tabindex="-1" aria-labelledby="deleteBookingModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteBookingModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>تأكيد حذف الحجز
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center">
-                    <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
-                    <h5>هل أنت متأكد من حذف هذا الحجز؟</h5>
-                    <p class="text-muted">
-                        العميل: <strong id="clientNameToDelete"></strong><br>
-                        <span class="text-danger">هذا الإجراء لا يمكن التراجع عنه!</span>
-                    </p>
+    <div class="modal fade" id="deleteBookingModal" tabindex="-1" aria-labelledby="deleteBookingModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteBookingModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>تأكيد حذف الحجز
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>إلغاء
-                </button>
-                <form id="deleteBookingForm" method="POST" style="display: inline;">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash me-1"></i>نعم، احذف الحجز
+                <div class="modal-body">
+                    <div class="text-center">
+                        <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
+                        <h5>هل أنت متأكد من حذف هذا الحجز؟</h5>
+                        <p class="text-muted">
+                            العميل: <strong id="clientNameToDelete"></strong><br>
+                            <span class="text-danger">هذا الإجراء لا يمكن التراجع عنه!</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>إلغاء
                     </button>
-                </form>
+                    <form id="deleteBookingForm" method="POST" style="display: inline;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>نعم، احذف الحجز
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
 @push('scripts')
-<script>
-    function confirmDeleteBooking(bookingId, clientName) {
-        // تحديث بيانات المودال
-        document.getElementById('clientNameToDelete').textContent = clientName;
-        
-        // تحديد action للفورم
-        const form = document.getElementById('deleteBookingForm');
-        form.action = `{{ route('admin.land-trips.bookings.destroy', ':booking') }}`.replace(':booking', bookingId);
-        
-        // إظهار المودال
-        const modal = new bootstrap.Modal(document.getElementById('deleteBookingModal'));
-        modal.show();
-    }
-</script>
+    <script>
+        function confirmDeleteBooking(bookingId, clientName) {
+            // تحديث بيانات المودال
+            document.getElementById('clientNameToDelete').textContent = clientName;
+
+            // تحديد action للفورم
+            const form = document.getElementById('deleteBookingForm');
+            form.action = `{{ route('admin.land-trips.bookings.destroy', ':booking') }}`.replace(':booking', bookingId);
+
+            // إظهار المودال
+            const modal = new bootstrap.Modal(document.getElementById('deleteBookingModal'));
+            modal.show();
+        }
+    </script>
+    <script>
+        // Converts Gregorian dates to Hijri
+        function convertToHijri() {
+            // أسماء الأشهر الهجرية بالعربية
+            const hijriMonths = [
+                'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني',
+                'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
+                'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+            ];
+
+            document.querySelectorAll('.hijri-date').forEach(element => {
+                const gregorianDate = element.getAttribute('data-date');
+                if (gregorianDate) {
+                    try {
+                        // الحصول على التاريخ الهجري الأساسي
+                        const hijriDateObj = new Intl.DateTimeFormat('ar-SA-islamic', {
+                            day: 'numeric',
+                            month: 'numeric',
+                            calendar: 'islamic'
+                        }).format(new Date(gregorianDate));
+
+                        // تقسيم التاريخ للحصول على اليوم والشهر
+                        const parts = hijriDateObj.split('/');
+                        if (parts.length >= 2) {
+                            // تحويل الأرقام من العربية للإنجليزية
+                            const day = parseInt(parts[0].replace(/[\u0660-\u0669]/g, d => d.charCodeAt(0) - 1632));
+                            const month = parseInt(parts[1].replace(/[\u0660-\u0669]/g, d => d.charCodeAt(0) -
+                                1632)) - 1;
+
+                            // تكوين التاريخ الهجري النهائي
+                            const formattedDate = `${parts[0]} ${hijriMonths[month]}`;
+                            element.textContent = formattedDate;
+                        } else {
+                            element.textContent = hijriDateObj;
+                        }
+                    } catch (e) {
+                        console.error("Error converting date:", e);
+                        element.textContent = ""; // Clear if error
+                    }
+                }
+            });
+        }
+
+        // Convert dates when page loads
+        document.addEventListener("DOMContentLoaded", function() {
+            convertToHijri();
+
+            // Also convert when table is updated via AJAX
+            document.addEventListener('ajaxTableUpdated', convertToHijri);
+        });
+    </script>
 @endpush

@@ -1032,8 +1032,10 @@
                                         <td>
                                             <span class="fw-medium">{{ $trip->tripType->name ?? 'غير معروف' }}</span>
                                         </td>
-                                        <td>{{ $trip->departure_date->format('Y-m-d') }}</td>
-                                        <td>{{ $trip->return_date->format('Y-m-d') }}</td>
+                                        <td>{{ $trip->departure_date->format('Y-m-d') }} <small class="d-block text-muted hijri-date"
+                                                data-date="{{ $trip->departure_date->format('Y-m-d') }}"></small></td>
+                                        <td>{{ $trip->return_date->format('Y-m-d') }} <small class="d-block text-muted hijri-date"
+                                                data-date="{{ $trip->return_date->format('Y-m-d') }}"></small></td>
                                         <td>{{ $trip->days_count }} أيام</td>
                                         <td>{{ $trip->agent->name ?? 'غير معروف' }}</td>
                                         <td>{{ $trip->employee->name ?? 'غير معروف' }}</td>
@@ -1339,7 +1341,7 @@
 
                             const bookingsElement = row.querySelector('td:nth-child(9) .badge');
                             const bookingsCount = bookingsElement ? parseInt(bookingsElement.textContent.trim()) :
-                            0;
+                                0;
 
                             // تطبيق الفلتر حسب التبويب
                             if (tab === 'active' && status !== 'نشطة') {
@@ -1481,7 +1483,57 @@
 
         });
     </script>
+    <script>
+        // Converts Gregorian dates to Hijri
+        function convertToHijri() {
+            // أسماء الأشهر الهجرية بالعربية
+            const hijriMonths = [
+                'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني',
+                'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
+                'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+            ];
 
+            document.querySelectorAll('.hijri-date').forEach(element => {
+                const gregorianDate = element.getAttribute('data-date');
+                if (gregorianDate) {
+                    try {
+                        // الحصول على التاريخ الهجري الأساسي
+                        const hijriDateObj = new Intl.DateTimeFormat('ar-SA-islamic', {
+                            day: 'numeric',
+                            month: 'numeric',
+                            calendar: 'islamic'
+                        }).format(new Date(gregorianDate));
+
+                        // تقسيم التاريخ للحصول على اليوم والشهر
+                        const parts = hijriDateObj.split('/');
+                        if (parts.length >= 2) {
+                            // تحويل الأرقام من العربية للإنجليزية
+                            const day = parseInt(parts[0].replace(/[\u0660-\u0669]/g, d => d.charCodeAt(0) - 1632));
+                            const month = parseInt(parts[1].replace(/[\u0660-\u0669]/g, d => d.charCodeAt(0) -
+                                1632)) - 1;
+
+                            // تكوين التاريخ الهجري النهائي
+                            const formattedDate = `${parts[0]} ${hijriMonths[month]}`;
+                            element.textContent = formattedDate;
+                        } else {
+                            element.textContent = hijriDateObj;
+                        }
+                    } catch (e) {
+                        console.error("Error converting date:", e);
+                        element.textContent = ""; // Clear if error
+                    }
+                }
+            });
+        }
+
+        // Convert dates when page loads
+        document.addEventListener("DOMContentLoaded", function() {
+            convertToHijri();
+
+            // Also convert when table is updated via AJAX
+            document.addEventListener('ajaxTableUpdated', convertToHijri);
+        });
+    </script>
     <!-- تأكد من تحميل مكتبة XLSX -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
 @endpush
