@@ -404,7 +404,15 @@
             @endif
 
             @php
-                $landTripTypes = ['إضافة رحلة', 'تعديل رحلة', 'حذف رحلة', 'حجز رحلة', 'تحديث_تلقائي', 'تحديث حجز رحلة' ,'حذف حجز رحلة'];
+                $landTripTypes = [
+                    'إضافة رحلة',
+                    'تعديل رحلة',
+                    'حذف رحلة',
+                    'حجز رحلة',
+                    'تحديث_تلقائي',
+                    'تحديث حجز رحلة',
+                    'حذف حجز رحلة',
+                ];
                 $hasSecurityAlert = $notifications->contains(function ($n) {
                     return $n->type == 'تنبيه أمني';
                 });
@@ -412,6 +420,42 @@
             @php
                 // تعريف أنواع إشعارات تسجيل الدخول والخروج
                 $loginTypes = ['login', 'logout', 'تسجيل دخول', 'تسجيل خروج'];
+            @endphp
+            @php
+                // تعريف أنواع إشعارات الدفعات والمتابعة المالية
+                $paymentTypes = [
+                    // الإشعارات العربية
+                    'دفعة جديدة',
+                    'تعديل دفعة',
+                    'حذف دفعة',
+                    'خصم مطبق',
+                    'متابعة مالية عالية الأهمية',
+                    'اكتمال دفعة الوكيل',
+                    'اكتمال دفعة الشركة',
+                    'دفعة جزئية للوكيل',
+                    'دفعة جزئية للشركة',
+                    'دفعة معلقة للوكيل',
+                    'دفعة معلقة للشركة',
+                    'تغيير تاريخ المتابعة',
+                    'تغيير مستوى الأولوية',
+                    'إنشاء متابعة مالية جديدة',
+                    'تغيير حالة الدفع',
+                    'تغيير قيمة الدفعة',
+
+                    // الإشعارات الإنجليزية
+                    'high_priority_tracking',
+                    'agent_payment_completed',
+                    'company_payment_completed',
+                    'agent_payment_partial',
+                    'company_payment_partial',
+                    'agent_payment_pending',
+                    'company_payment_pending',
+                    'follow_up_date_change',
+                    'priority_level_change',
+                    'financial_tracking_created',
+                    'payment_status_change',
+                    'payment_amount_change',
+                ];
             @endphp
 
             @if ($hasSecurityAlert)
@@ -437,8 +481,46 @@
                         @if ($currentFilter == 'land-trips' && !in_array($notification->type, $landTripTypes))
                             @continue
                         @endif
+                        {{-- إضافة التحقق من فلتر الدفعات --}}
+                        @if ($currentFilter == 'payments')
+                            {{-- طباعة معلومات تشخيصية للتأكد من أن الإشعارات تدرج ضمن فلتر الدفعات --}}
+                            @php
+                                $notificationTypes = [];
+                                $matchedNotifications = 0;
+                                $unmatchedNotifications = 0;
+                            @endphp
 
+                            @foreach ($notifications as $notification)
+                                @php
+                                    $isPaymentNotification = in_array($notification->type, $paymentTypes);
+
+                                    if (!$isPaymentNotification) {
+                                        $isPaymentNotification =
+                                            strpos($notification->type, 'دفع') !== false ||
+                                            strpos($notification->type, 'مالي') !== false ||
+                                            strpos($notification->type, 'مستوى') !== false ||
+                                            strpos($notification->type, 'أولوية') !== false ||
+                                            strpos($notification->type, 'payment') !== false ||
+                                            strpos($notification->type, 'financial') !== false ||
+                                            strpos($notification->type, 'track') !== false ||
+                                            strpos($notification->type, 'priority') !== false;
+                                    }
+
+                                    if ($isPaymentNotification) {
+                                        $matchedNotifications++;
+                                        if (!in_array($notification->type, $notificationTypes)) {
+                                            $notificationTypes[] = $notification->type;
+                                        }
+                                    } else {
+                                        $unmatchedNotifications++;
+                                    }
+                                @endphp
+                            @endforeach
+
+                       
+                        @endif
                         @php
+                            // تحديد نوع الإشعار وإضافة الصفات المناسبة
                             // تحديد نوع الإشعار وإضافة الصفات المناسبة
                             $itemClass = 'notification-item';
                             $typeClass = '';
@@ -446,6 +528,22 @@
 
                             if ($notification->is_read) {
                                 $itemClass .= ' read';
+                            }
+
+                            // تحديد النوع بناءً على type أو على البيانات المخزنة في data
+                            $isPaymentType = in_array($notification->type, $paymentTypes);
+
+                            // تحقق إضافي للكلمات المتعلقة بالدفعات والمتابعة
+                            if (!$isPaymentType) {
+                                $isPaymentType =
+                                    strpos($notification->type, 'دفع') !== false ||
+                                    strpos($notification->type, 'مالي') !== false ||
+                                    strpos($notification->type, 'مستوى') !== false ||
+                                    strpos($notification->type, 'أولوية') !== false ||
+                                    strpos($notification->type, 'payment') !== false ||
+                                    strpos($notification->type, 'financial') !== false ||
+                                    strpos($notification->type, 'track') !== false ||
+                                    strpos($notification->type, 'priority') !== false;
                             }
 
                             if ($notification->type == 'تنبيه أمني') {
@@ -462,7 +560,7 @@
                                 $itemClass .= ' booking';
                                 $typeClass = 'booking';
                                 $typeIcon = 'fas fa-calendar-check';
-                            } elseif ($notification->type == 'دفعة جديدة') {
+                            } elseif ($isPaymentType) {
                                 $itemClass .= ' payment';
                                 $typeClass = 'payment';
                                 $typeIcon = 'fas fa-money-bill-wave';
@@ -475,8 +573,8 @@
                                 $typeClass = 'delete';
                                 $typeIcon = 'fas fa-trash-alt';
                             }
-                        @endphp
 
+                        @endphp
                         <div class="{{ $itemClass }}" style="animation-delay: {{ ($i - 1) * 0.05 }}s">
                             <div class="notification-content">
                                 <div class="notification-header">
@@ -665,7 +763,7 @@
                 }).fail(function() {
                     $('#loading-overlay').removeClass('visible');
                     Swal.fire('خطأ', 'حدث خطأ أثناء تحميل الصفحة، يرجى المحاولة مرة أخرى.',
-                    'error');
+                        'error');
                 });
             });
         });

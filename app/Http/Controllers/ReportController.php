@@ -246,7 +246,21 @@ class ReportController extends Controller
             'تعديل دفعة',
             'دفعة جديدة',
             'حذف دفعة',
-            'خصم مطبق'
+            'خصم مطبق',
+            'high_priority_tracking',
+            'agent_payment_completed',
+            'company_payment_completed',
+            'agent_payment_partial',
+            'company_payment_partial',
+            'agent_payment_pending',
+            'company_payment_pending',
+            'follow_up_date_change',
+            'priority_level_change',
+            'financial_tracking_created',
+            'payment_status_change',
+            'payment_amount_change',
+            'متابعة مالية عالية الأهمية',
+            'تغيير مستوى الأولوية',
         ])
             ->where('created_at', '>=', now()->subDays(2))
             ->get()

@@ -5,6 +5,65 @@
 @endsection
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/daily_reports.css') }}">
+    <style>
+                .action-buttons-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* عمود واحد فقط */
+            gap: 6px;
+            justify-items: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* تحسين مظهر الأزرار */
+        .action-buttons-grid .btn {
+            width: 100%;
+            white-space: nowrap;
+            font-size: 0.8rem;
+            padding: 0.35rem 0.6rem;
+            min-height: 32px; /* ارتفاع ثابت للأزرار */
+        }
+
+        /* للشاشات الكبيرة - الأزرار تبقى فوق بعض */
+        @media (min-width: 992px) {
+            .action-buttons-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+        }
+
+        /* للشاشات المتوسطة - الأزرار تبقى فوق بعض */
+        @media (min-width: 768px) and (max-width: 991px) {
+            .action-buttons-grid {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+        }
+
+        /* للشاشات الصغيرة - الأزرار تبقى فوق بعض */
+        @media (max-width: 767px) {
+            .action-buttons-grid {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+            
+            .action-buttons-grid .btn {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.5rem;
+                min-height: 28px;
+            }
+        }
+
+        /* تحسين عرض الجدول على الشاشات الصغيرة */
+        @media (max-width: 576px) {
+            .action-buttons-grid .btn {
+                font-size: 0.7rem;
+                padding: 0.25rem 0.4rem;
+                min-height: 26px;
+            }
+        }
+
+    </style>
 @endpush
 
 
@@ -278,40 +337,41 @@
                                                 @endif
                                             </td>
                                             <td>
-    {{-- المتبقي --}}
-    @php
-        // حساب المتبقي بشكل صحيح (المستحق - المدفوع الصافي)
-        $remainingByCurrency = [];
-        foreach (['SAR', 'KWD'] as $curr) {
-            // 1. المستحق حسب العملة
-            $due = $company->total_due_bookings_by_currency[$curr] ?? 0;
-            
-            // 2. المدفوع الفعلي (المدفوعات الموجبة)
-            $paid = $company->computed_total_paid_by_currency[$curr] ?? 0;
-            
-            // 3. الخصومات (تعامل كجزء من المدفوع)
-            $discounts = $company->computed_total_discounts_by_currency[$curr] ?? 0;
-            
-            // 4. المتبقي = المستحق - (المدفوع - الخصم)
-            // حيث يعتبر الخصم جزءًا من المبلغ المدفوع
-            $remainingByCurrency[$curr] = $due - ($paid + $discounts);
-        }
-    @endphp
+                                                {{-- المتبقي --}}
+                                                @php
+                                                    // حساب المتبقي بشكل صحيح (المستحق - المدفوع الصافي)
+                                                    $remainingByCurrency = [];
+                                                    foreach (['SAR', 'KWD'] as $curr) {
+                                                        // 1. المستحق حسب العملة
+                                                        $due = $company->total_due_bookings_by_currency[$curr] ?? 0;
 
-    @foreach ($remainingByCurrency as $currency => $amount)
-        @if ($amount != 0)
-            <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
-                {{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}
-            </span>
-            {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-            @if ($amount < 0)
-                <small class="text-muted">(دفعوا زيادة)</small>
-            @endif
-        @endif
-    @endforeach
-</td>
+                                                        // 2. المدفوع الفعلي (المدفوعات الموجبة)
+                                                        $paid = $company->computed_total_paid_by_currency[$curr] ?? 0;
+
+                                                        // 3. الخصومات (تعامل كجزء من المدفوع)
+                                                        $discounts =
+                                                            $company->computed_total_discounts_by_currency[$curr] ?? 0;
+
+                                                        // 4. المتبقي = المستحق - (المدفوع - الخصم)
+                                                        // حيث يعتبر الخصم جزءًا من المبلغ المدفوع
+                                                        $remainingByCurrency[$curr] = $due - ($paid + $discounts);
+                                                    }
+                                                @endphp
+
+                                                @foreach ($remainingByCurrency as $currency => $amount)
+                                                    @if ($amount != 0)
+                                                        <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
+                                                            {{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}
+                                                        </span>
+                                                        {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
+                                                        @if ($amount < 0)
+                                                            <small class="text-muted">(دفعوا زيادة)</small>
+                                                        @endif
+                                                    @endif
+                                                @endforeach
+                                            </td>
                                             <td>
-                                                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                                <div class="action-buttons-grid">
                                                     <a href="{{ route('reports.company.bookings', $company->id) }}"
                                                         class="btn btn-info btn-sm">عرض الحجوزات</a>
                                                     <button type="button" class="btn btn-success btn-sm"
@@ -320,8 +380,9 @@
                                                         تسجيل دفعة
                                                     </button>
                                                     <a href="{{ route('reports.company.payments', $company->id) }}"
-                                                        class="btn btn-primary btn-sm">كشف حساب </a>
+                                                        class="btn btn-primary btn-sm">كشف حساب</a>
                                                 </div>
+
                                             </td>
                                         </tr>
                                     @endforeach

@@ -166,6 +166,54 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/bookings/{id}', [BookingsController::class, 'destroy'])->name('bookings.destroy');
     Route::get('/bookings/{id}', [BookingsController::class, 'show'])->name('bookings.show');
     Route::post('/bookings/{booking}/record-payment', [BookingsController::class, 'recordPayment'])->name('bookings.record-payment');
+        // ===== مسارات المتابعة المالية للحجوزات =====
+    // مجموعة مسارات شاملة للمتابعة المالية مع توضيح كل مسار
+    Route::prefix('bookings/{booking}/financial-tracking')->name('bookings.financial-tracking.')->group(function () {
+        
+        // عرض المتابعة المالية للحجز (GET)
+        // يستخدم لتحميل بيانات المتابعة المالية الموجودة أو إنشاء قالب جديد
+        Route::get('/', [App\Http\Controllers\FinancialTrackingController::class, 'show'])
+              ->name('show')
+              ->where('booking', '[0-9]+'); // التأكد من أن معرف الحجز رقم صحيح
+        
+        // حفظ أو تحديث المتابعة المالية (POST)
+        // يستخدم لإنشاء متابعة مالية جديدة أو تحديث الموجودة
+        Route::post('/', [App\Http\Controllers\FinancialTrackingController::class, 'store'])
+              ->name('store')
+              ->where('booking', '[0-9]+');
+        
+        // تحديث المتابعة المالية (PUT) - مسار اختياري إضافي
+        // يمكن استخدامه للتحديثات المباشرة
+        Route::put('/', [App\Http\Controllers\FinancialTrackingController::class, 'store'])
+              ->name('update')
+              ->where('booking', '[0-9]+');
+        
+        // حذف المتابعة المالية (DELETE)
+        // يستخدم لحذف المتابعة المالية نهائياً (للمدراء فقط)
+        Route::delete('/', [App\Http\Controllers\FinancialTrackingController::class, 'destroy'])
+              ->name('destroy')
+              ->where('booking', '[0-9]+')
+              ->middleware('can:delete,financial-tracking'); // إضافة تحقق من الصلاحيات
+    });
+
+    // ===== مسارات إضافية للإحصائيات والتقارير =====
+    Route::prefix('financial-tracking')->name('financial-tracking.')->group(function () {
+        
+        // إحصائيات المتابعة المالية العامة
+        Route::get('/statistics', [App\Http\Controllers\FinancialTrackingController::class, 'statistics'])
+              ->name('statistics')
+              ->middleware('can:view-financial-statistics'); // صلاحية عرض الإحصائيات
+        
+        // تقرير المتابعات المتأخرة
+        Route::get('/overdue', [App\Http\Controllers\FinancialTrackingController::class, 'overdueReport'])
+              ->name('overdue')
+              ->middleware('can:view-financial-reports');
+        
+        // تقرير المتابعات عالية الأولوية
+        Route::get('/high-priority', [App\Http\Controllers\FinancialTrackingController::class, 'highPriorityReport'])
+              ->name('high-priority')
+              ->middleware('can:view-financial-reports');
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -396,7 +444,15 @@ Route::middleware(['auth'])->group(function () {
         return app(\App\Http\Controllers\Auth\RegisterController::class)->register($request);
     })->name('admin.register.user.post');
 });
-
+// مسارات مخطط الحالة المالية
+Route::middleware(['auth'])->group(function () {
+    Route::get('/reports/financial', [App\Http\Controllers\FinancialStatusController::class, 'index'])
+        ->name('financial.status.index');
+    Route::get('/financial/data', [App\Http\Controllers\FinancialStatusController::class, 'getFinancialData'])
+        ->name('financial.status.data');
+    Route::get('/financial/booking/{id}', [App\Http\Controllers\FinancialStatusController::class, 'getBookingFinancialDetails'])
+        ->name('financial.status.booking');
+});
 /*
 |--------------------------------------------------------------------------
 | Land Trip Management Routes (Admin & Employee)

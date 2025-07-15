@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ class Booking extends Model
 {
     use HasFactory, SoftDeletes; // <-- أضف SoftDeletes هنا
 
-// عملت تعديلات كتير لازم أعدل كل المايجريشن دي
+    // عملت تعديلات كتير لازم أعدل كل المايجريشن دي
     protected $fillable = [
         'client_name',
         'company_id',
@@ -71,21 +72,21 @@ class Booking extends Model
     {
         return $this->hasMany(EditLog::class);
     }
-        // *** علاقة الحجز بصف سعر الإتاحة ***
-        public function availabilityRoomType()
-        {
-            return $this->belongsTo(AvailabilityRoomType::class);
-        }
-    
-        // *** علاقة مساعدة للوصول للإتاحة مباشرة ***
-        public function availability()
-        {
-            // نستخدم optional() للتعامل مع حالة null بأمان
-            return optional($this->availabilityRoomType)->availability();
-            // أو الطريقة الأحدث باستخدام Nullsafe operator (PHP 8+)
-            // return $this->availabilityRoomType?->availability();
-        }
-    
+    // *** علاقة الحجز بصف سعر الإتاحة ***
+    public function availabilityRoomType()
+    {
+        return $this->belongsTo(AvailabilityRoomType::class);
+    }
+
+    // *** علاقة مساعدة للوصول للإتاحة مباشرة ***
+    public function availability()
+    {
+        // نستخدم optional() للتعامل مع حالة null بأمان
+        return optional($this->availabilityRoomType)->availability();
+        // أو الطريقة الأحدث باستخدام Nullsafe operator (PHP 8+)
+        // return $this->availabilityRoomType?->availability();
+    }
+
     /** 
      * عدد الليالي المنتهية حتى اليوم (أو حتى تاريخ الخروج إن سبق اليوم)
      */
@@ -149,7 +150,7 @@ class Booking extends Model
     public function getTotalDueAttribute()
     {
         $totalNights = Carbon::parse($this->check_in)
-                        ->diffInDays(Carbon::parse($this->check_out));
+            ->diffInDays(Carbon::parse($this->check_out));
         return $totalNights * $this->rooms * $this->cost_price;
         // عدد الليالي الكلي مضروب في سعر الفندق
     }
@@ -158,7 +159,7 @@ class Booking extends Model
     public function getTotalNightsAttribute()
     {
         return Carbon::parse($this->check_in)
-                     ->diffInDays(Carbon::parse($this->check_out));
+            ->diffInDays(Carbon::parse($this->check_out));
     }
 
     /** المستحق الكلي للشركة: ليالي × غرف × سعر البيع */
@@ -174,19 +175,27 @@ class Booking extends Model
     }
     // *** علاقة الحجز بالغرف المخصصة ***
     /**
- * العلاقة مع تخصيص الغرفة
- * تمثل تخصيص الغرفة لهذا الحجز
- */
-public function roomAssignment()
-{
-    return $this->hasOne(RoomAssignment::class);
-}
+     * العلاقة مع تخصيص الغرفة
+     * تمثل تخصيص الغرفة لهذا الحجز
+     */
+    public function roomAssignment()
+    {
+        return $this->hasOne(RoomAssignment::class);
+    }
 
-/**
- * إذا كان الحجز يمكن أن يكون له أكثر من تخصيص غرفة (تاريخياً)
- */
-public function roomAssignments()
-{
-    return $this->hasMany(RoomAssignment::class);
-}
+    /**
+     * إذا كان الحجز يمكن أن يكون له أكثر من تخصيص غرفة (تاريخياً)
+     */
+    public function roomAssignments()
+    {
+        return $this->hasMany(RoomAssignment::class);
+    }
+    // ===== علاقة مع المتابعة المالية للحجز =====
+    /**
+     * علاقة مع المتابعة المالية للحجز
+     */
+    public function financialTracking()
+    {
+        return $this->hasOne(BookingFinancialTracking::class);
+    }
 }
