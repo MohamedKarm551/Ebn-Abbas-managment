@@ -1405,8 +1405,7 @@
                     day: '2-digit'
                 });
                 // تعبئة تاريخ الدخول بالتاريخ الهجري
-                document.getElementById('bookingCheckInHijri').textContent = formatHijriDate(new Date(data.booking
-                    .check_in));
+
 
                 // تعبئة تاريخ الخروج بالتاريخ الميلادي والهجري
                 const checkOutDate = new Date(data.booking.check_out);
@@ -1420,8 +1419,32 @@
 
 
                 // تعبئة تاريخ الخروج بالتاريخ الهجري
-                document.getElementById('bookingCheckOutHijri').textContent = formatHijriDate(new Date(data.booking
-                    .check_out));
+                // تحديث التاريخ الهجري للحقلين باستخدام نفس أسلوب hijriDataConvert.js
+                try {
+                    // تحويل تاريخ الدخول إلى هجري
+                    const checkInDate = new Date(data.booking.check_in);
+                    const checkInHijri = new Intl.DateTimeFormat("ar-SA-islamic", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        calendar: "islamic"
+                    }).format(checkInDate);
+                    document.getElementById('bookingCheckInHijri').textContent = checkInHijri;
+
+                    // تحويل تاريخ الخروج إلى هجري
+                    const checkOutDate = new Date(data.booking.check_out);
+                    const checkOutHijri = new Intl.DateTimeFormat("ar-SA-islamic", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        calendar: "islamic"
+                    }).format(checkOutDate);
+                    document.getElementById('bookingCheckOutHijri').textContent = checkOutHijri;
+                } catch (e) {
+                    console.error("Error converting dates to Hijri:", e);
+                    document.getElementById('bookingCheckInHijri').textContent = "";
+                    document.getElementById('bookingCheckOutHijri').textContent = "";
+                }
 
                 // ===== ملء بيانات جهة الحجز =====
                 document.getElementById('agentName').textContent = data.booking.agent.name;

@@ -772,6 +772,9 @@
                                             @endif
                                         </td>
                                     </tr>
+                                    <div class="col-4 mb-3">
+                                        <strong> ملاحظات:</strong> {{ $hotel->notes ?? '-' }}
+                                    </div>
                                 @endforeach
                             </tbody>
                             <tfoot>
