@@ -154,11 +154,15 @@
                                             <div class="col-6">
                                                 <div class="text-muted mb-1">تاريخ الدخول</div>
                                                 <div class="fw-bold">{{ $assignment->booking->check_in->format('Y-m-d') }}
+                                                    <small class="d-block text-muted hijri-date"
+                                                           data-date="{{ $assignment->booking->check_in->format('Y-m-d') }}"></small>
                                                 </div>
                                             </div>
                                             <div class="col-6">
                                                 <div class="text-muted mb-1">تاريخ الخروج</div>
                                                 <div class="fw-bold">{{ $assignment->booking->check_out->format('Y-m-d') }}
+                                                    <small class="d-block text-muted hijri-date"
+                                                           data-date="{{ $assignment->booking->check_out->format('Y-m-d') }}"></small>
                                                 </div>
                                             </div>
                                         </div>
@@ -306,8 +310,10 @@
                                     <td>{{ $assignment->booking->company->name ?? '-' }}</td>
 
                                     {{-- نستعمل تواريخ الحجز نفسها من جدول bookings --}}
-                                    <td>{{ $assignment->booking->check_in->format('Y-m-d') }}</td>
-                                    <td>{{ $assignment->booking->check_out->format('Y-m-d') }}</td>
+                                    <td>{{ $assignment->booking->check_in->format('Y-m-d') }}<small class="d-block text-muted hijri-date"
+                            data-date="{{ $assignment->booking->check_in->format('Y-m-d') }}"></small></td>
+                                    <td>{{ $assignment->booking->check_out->format('Y-m-d') }}<small class="d-block text-muted hijri-date"
+                            data-date="{{ $assignment->booking->check_out->format('Y-m-d') }}"></small></td>
                                     <td>
                                         {{ $assignment->booking->check_in->diffInDays($assignment->booking->check_out) }}
                                         ليلة
@@ -551,6 +557,8 @@
         // initMainBookingSelect();
     });
 </script>
+{{-- التاريخ الهجري  --}}
+<script src="{{ asset('js/hijriDataConvert.js') }}"></script>
 @endpush
 
 

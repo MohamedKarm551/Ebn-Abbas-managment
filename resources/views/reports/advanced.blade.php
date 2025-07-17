@@ -463,8 +463,10 @@
                                                 @endif
                                             </td>
                                             <td>{{ $booking->hotel->name }}</td>
-                                            <td>{{ $booking->check_in->format('d/m/Y') }}</td>
-                                            <td>{{ $booking->check_out->format('d/m/Y') }}</td>
+                                            <td>{{ $booking->check_in->format('d/m/Y') }} <small class="d-block text-muted hijri-date"
+                                                data-date="{{ $booking->check_in->format('Y-m-d') }}"></small></td>
+                                            <td>{{ $booking->check_out->format('d/m/Y') }} <small class="d-block text-muted hijri-date"
+                                                data-date="{{ $booking->check_out->format('Y-m-d') }}"></small></td>
                                             <td> {{ $booking->rooms }} غرفة
                                                 <div class="small text-muted">
                                                     @if (isset($booking->is_land_trip) && $booking->is_land_trip && isset($booking->landTrip))
@@ -531,7 +533,8 @@
                                                 @endif
                                             </td>
                                             <td>{{ $booking->hotel->name }}</td>
-                                            <td>{{ $booking->check_in->format('d/m/Y') }}</td>
+                                            <td>{{ $booking->check_in->format('d/m/Y') }} <small class="d-block text-muted hijri-date"
+                            data-date="{{ $booking->check_in->format('Y-m-d') }}"></small></td>
                                             <td>
                                                 @if (isset($booking->is_land_trip) && $booking->is_land_trip && isset($booking->landTrip))
                                                     {{ $booking->landTrip->days_count }} ليلة
@@ -1048,4 +1051,6 @@
 
         });
     </script>
+    {{-- التاريخ الهجري  --}}
+<script src="{{ asset('js/hijriDataConvert.js') }}"></script>
 @endpush

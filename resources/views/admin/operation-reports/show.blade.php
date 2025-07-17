@@ -148,7 +148,9 @@
                         <table class="table table-borderless">
                             <tr>
                                 <th width="40%">تاريخ التقرير:</th>
-                                <td>{{ $operationReport->report_date->format('Y-m-d') }}</td>
+                                <td>{{ $operationReport->report_date->format('Y-m-d') }} <small
+                                        class="d-block text-muted hijri-date"
+                                        data-date="{{ $operationReport->report_date->format('Y-m-d') }}"></small></td>
                             </tr>
                             <tr>
                                 <th>اسم العميل:</th>
@@ -493,7 +495,9 @@
                                 @foreach ($operationReport->flights as $index => $flight)
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
-                                        <td>{{ $flight->flight_date ? $flight->flight_date->format('Y-m-d') : '-' }}</td>
+                                        <td>{{ $flight->flight_date ? $flight->flight_date->format('Y-m-d') : '-' }} <small
+                                                class="d-block text-muted hijri-date"
+                                                data-date="{{ $flight->flight_date->format('Y-m-d') }}"></small></td>
                                         <td>{{ $flight->flight_number ?? '-' }}</td>
                                         <td>{{ $flight->airline ?? '-' }}</td>
                                         <td>{{ $flight->route ?? '-' }}</td>
@@ -540,6 +544,14 @@
                                             {{ number_format($flightsGroup->sum('profit'), 2) }}
                                         </th>
                                     </tr>
+                                    <div class="row">
+                                                                                       </div>
+                                            
+                                            <div class="col-md-4">
+                                                <strong>الملاحظات:</strong>
+                                                <p class="text-muted"> {{ $flight->notes }}</p>
+                                            </div>
+                                        </div>
                                 @endforeach
                             </tfoot>
                         </table>
@@ -550,93 +562,123 @@
 
         <!-- قسم النقل -->
         @if ($operationReport->transports->count() > 0)
-            <div class="report-section">
-                <div class="report-section-header">
-                    <h2 class="h5 mb-0">بيانات النقل</h2>
-                    <span class="badge-section">{{ $operationReport->transports->count() }} وسيلة نقل</span>
-                </div>
-                <div class="report-section-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-striped">
-                            <thead>
+            <div class="report-section-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th width="5%">#</th>
+                                <th>نوع النقل</th>
+                                <th>معلومات السائق</th>
+                                <th>التكلفة</th>
+                                <th>سعر البيع</th>
+                                <th>العملة</th>
+                                <th>الربح</th>
+                                <th>المرفقات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($operationReport->transports as $index => $transport)
                                 <tr>
-                                    <th width="5%">#</th>
-                                    <th>نوع النقل</th>
-                                    <th>اسم السائق</th>
-                                    <th>رقم الهاتف</th>
-                                    <th>معلومات المركبة</th>
-                                    <th>التكلفة</th>
-                                    <th>سعر البيع</th>
-                                    <th>العملة</th>
-                                    <th>الربح</th>
-                                    <th>المرفقات</th>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $transport->transport_type ?? '-' }}</td>
+                                    <td>
+                                        <strong>{{ $transport->driver_name ?? '-' }}</strong>
+                                        @if ($transport->driver_phone)
+                                            <br><small class="text-muted">{{ $transport->driver_phone }}</small>
+                                        @endif
+                                    </td>
+                                    <td>{{ number_format($transport->cost, 2) }}</td>
+                                    <td>{{ number_format($transport->selling_price, 2) }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ $transport->currency == 'KWD' ? 'primary' : 'success' }}">
+                                            {{ $transport->currency == 'KWD'
+                                                ? 'د.ك'
+                                                : ($transport->currency == 'SAR'
+                                                    ? 'ر.س'
+                                                    : ($transport->currency == 'USD'
+                                                        ? '$'
+                                                        : '€')) }}
+                                        </span>
+                                    </td>
+                                    <td class="{{ $transport->profit > 0 ? 'profit-positive' : 'profit-negative' }}">
+                                        {{ number_format($transport->profit, 2) }}
+                                    </td>
+                                    <td>
+                                        @if ($transport->ticket_file_path)
+                                            <a href="{{ asset('storage/' . $transport->ticket_file_path) }}"
+                                                target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-file-alt"></i> عرض
+                                            </a>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($operationReport->transports as $index => $transport)
-                                    <tr>
-                                        <td>{{ $index + 1 }}</td>
-                                        <td>{{ $transport->transport_type ?? '-' }}</td>
-                                        <td>{{ $transport->driver_name ?? '-' }}</td>
-                                        <td>{{ $transport->driver_phone ?? '-' }}</td>
-                                        <td>{{ $transport->vehicle_info ?? '-' }}</td>
-                                        <td>{{ number_format($transport->cost, 2) }}</td>
-                                        <td>{{ number_format($transport->selling_price, 2) }}</td>
-                                        <td>
-                                            <span
-                                                class="badge bg-{{ $transport->currency == 'KWD' ? 'primary' : 'success' }}">
-                                                {{ $transport->currency == 'KWD'
-                                                    ? 'د.ك'
-                                                    : ($transport->currency == 'SAR'
-                                                        ? 'ر.س'
-                                                        : ($transport->currency == 'USD'
-                                                            ? '$'
-                                                            : '€')) }}
-                                            </span>
-                                        </td>
-                                        <td class="{{ $transport->profit > 0 ? 'profit-positive' : 'profit-negative' }}">
-                                            {{ number_format($transport->profit, 2) }}
-                                        </td>
-                                        <td>
-                                            @if ($transport->ticket_file_path)
-                                                <a href="{{ asset('storage/' . $transport->ticket_file_path) }}"
-                                                    target="_blank" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-file-alt"></i> عرض
-                                                </a>
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                            <tfoot>
+                                <tr class="bg-light">
+                                    <td colspan="8" class="small">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <strong>معلومات المركبة:</strong> {{ $transport->vehicle_info ?? '-' }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>موعد الانطلاق:</strong>
+                                                @if (isset($transport->departure_time))
+                                                    {{ \Carbon\Carbon::parse($transport->departure_time)->format('d/m/Y H:i') }}
+                                                    {{-- بالهجري --}}
+                                                    <small class="d-block text-muted hijri-date"
+                                                        data-date="{{ \Carbon\Carbon::parse($transport->departure_time)->format('Y-m-d') }}"></small>
+                                                @else
+                                                    <span class="text-muted">غير محدد</span>
+                                                @endif
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>موعد الوصول:</strong>
+                                                @if (isset($transport->arrival_time))
+                                                    {{ \Carbon\Carbon::parse($transport->arrival_time)->format('d/m/Y H:i') }}
+                                                    {{-- بالهجري --}}
+                                                    <small class="d-block text-muted hijri-date"
+                                                        data-date="{{ \Carbon\Carbon::parse($transport->arrival_time)->format('Y-m-d') }}"></small>
+                                                @else
+                                                    <span class="text-muted">غير محدد</span>
+                                                @endif
+                                            </div>
+                                            {{-- الملاحظات --}}
+                                            <div class="col-md-4">
+                                                <strong>الملاحظات:</strong>
+                                                <p class="text-muted">{{ $transport->notes ?? '-' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="8" class="text-center bg-light">إجماليات حسب العملة</th>
+                            </tr>
+                            @php
+                                $transportsByCurrency = $operationReport->transports->groupBy('currency');
+                            @endphp
+                            @foreach ($transportsByCurrency as $currency => $transportsGroup)
                                 <tr>
-                                    <th colspan="10" class="text-center bg-light">إجماليات حسب العملة</th>
+                                    <th colspan="3">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
+                                    <th>{{ number_format($transportsGroup->sum('cost'), 2) }}</th>
+                                    <th>{{ number_format($transportsGroup->sum('selling_price'), 2) }}</th>
+                                    <th>
+                                        <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
+                                            {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
+                                        </span>
+                                    </th>
+                                    <th
+                                        class="{{ $transportsGroup->sum('profit') > 0 ? 'profit-positive' : 'profit-negative' }}">
+                                        {{ number_format($transportsGroup->sum('profit'), 2) }}
+                                    </th>
+                                    <th></th>
                                 </tr>
-                                @php
-                                    $transportsByCurrency = $operationReport->transports->groupBy('currency');
-                                @endphp
-                                @foreach ($transportsByCurrency as $currency => $transportsGroup)
-                                    <tr>
-                                        <th colspan="5">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                        <th>{{ number_format($transportsGroup->sum('cost'), 2) }}</th>
-                                        <th>{{ number_format($transportsGroup->sum('selling_price'), 2) }}</th>
-                                        <th>
-                                            <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
-                                                {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
-                                            </span>
-                                        </th>
-                                        <th
-                                            class="{{ $transportsGroup->sum('profit') > 0 ? 'profit-positive' : 'profit-negative' }}">
-                                            {{ number_format($transportsGroup->sum('profit'), 2) }}
-                                        </th>
-                                        <th></th>
-                                    </tr>
-                                @endforeach
-                            </tfoot>
-                        </table>
-                    </div>
+                            @endforeach
+                        </tfoot>
+                    </table>
                 </div>
             </div>
         @endif
@@ -675,8 +717,12 @@
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $hotel->hotel_name ?? '-' }}</td>
                                         <td>{{ $hotel->city ?? '-' }}</td>
-                                        <td>{{ $hotel->check_in ? $hotel->check_in->format('Y-m-d') : '-' }}</td>
-                                        <td>{{ $hotel->check_out ? $hotel->check_out->format('Y-m-d') : '-' }}</td>
+                                        <td>{{ $hotel->check_in ? $hotel->check_in->format('Y-m-d') : '-' }}<small
+                                                class="d-block text-muted hijri-date"
+                                                data-date="{{ $hotel->check_in->format('Y-m-d') }}"></small></td>
+                                        <td>{{ $hotel->check_out ? $hotel->check_out->format('Y-m-d') : '-' }}<small
+                                                class="d-block text-muted hijri-date"
+                                                data-date="{{ $hotel->check_out->format('Y-m-d') }}"></small></td>
                                         <td>{{ $hotel->nights }}</td>
                                         <td>{{ $hotel->rooms }}</td>
                                         <td>{{ number_format($hotel->night_cost, 2) }}</td>
@@ -684,7 +730,8 @@
                                         <td>{{ number_format($hotel->total_cost, 2) }}</td>
                                         <td>{{ number_format($hotel->total_selling_price, 2) }}</td>
                                         <td>
-                                            <span class="badge bg-{{ $hotel->currency == 'KWD' ? 'primary' : 'success' }}">
+                                            <span
+                                                class="badge bg-{{ $hotel->currency == 'KWD' ? 'primary' : 'success' }}">
                                                 {{ $hotel->currency == 'KWD'
                                                     ? 'د.ك'
                                                     : ($hotel->currency == 'SAR'
@@ -791,8 +838,12 @@
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $landTrip->trip_type ?? '-' }}</td>
                                         <td>{{ $landTrip->departure_date ? $landTrip->departure_date->format('Y-m-d') : '-' }}
+                                            <small class="d-block text-muted hijri-date"
+                                                data-date="{{ $landTrip->departure_date->format('Y-m-d') }}"></small>
                                         </td>
                                         <td>{{ $landTrip->return_date ? $landTrip->return_date->format('Y-m-d') : '-' }}
+                                            <small class="d-block text-muted hijri-date"
+                                                data-date="{{ $landTrip->return_date->format('Y-m-d') }}"></small>
                                         </td>
                                         <td>{{ $landTrip->days }}</td>
                                         <td>{{ number_format($landTrip->transport_cost, 2) }}</td>
@@ -878,4 +929,5 @@
 @endsection
 @push('scripts')
     <script src="{{ asset('js/preventClick.js') }}"></script>
+    <script src="{{ asset('js/hijriDataConvert.js') }}"></script>
 @endpush

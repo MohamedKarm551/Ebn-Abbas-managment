@@ -387,8 +387,9 @@
                 class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                 <h1 class="page-title">
                     <i class="fas fa-chart-line"></i>
-                    تقارير العمليات والربحية
+                    تقارير العمليات والربحية <span style="font-size:10px" class="bg-warning">لموظفي نهر البركة</span>
                 </h1>
+                
                 <div class="d-flex gap-2 mb-3">
                     <!-- ✅ إضافة زر التصدير -->
                     <button onclick="reportExporter.exportReportsToExcel()" class="btn-create"

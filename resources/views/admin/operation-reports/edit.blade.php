@@ -443,6 +443,28 @@
                                             name="transports[{{ $index }}][vehicle_info]"
                                             value="{{ $transport->vehicle_info }}">
                                     </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">معلومات المركبة</label>
+                                        <input type="text" class="form-control"
+                                            name="transports[{{ $index }}][vehicle_info]"
+                                            value="{{ $transport->vehicle_info }}">
+                                    </div>
+
+                                    <!-- إضافة حقول مواعيد الانطلاق والوصول -->
+                                    <div class="col-md-3 mt-3">
+                                        <label class="form-label">موعد الانطلاق</label>
+                                        <input type="datetime-local" class="form-control"
+                                            name="transports[{{ $index }}][departure_time]"
+                                            value="{{ isset($transport->departure_time) ? \Carbon\Carbon::parse($transport->departure_time)->format('Y-m-d\TH:i') : '' }}">
+                                    </div>
+
+                                    <div class="col-md-3 mt-3">
+                                        <label class="form-label">موعد الوصول</label>
+                                        <input type="datetime-local" class="form-control"
+                                            name="transports[{{ $index }}][arrival_time]"
+                                            value="{{ isset($transport->arrival_time) ? \Carbon\Carbon::parse($transport->arrival_time)->format('Y-m-d\TH:i') : '' }}">
+                                    </div>
+
                                     <div class="col-md-2 mt-3">
                                         <label class="form-label">التكلفة</label>
                                         <input type="number" class="form-control"
@@ -974,77 +996,86 @@
             if (emptyState) emptyState.remove();
 
             const section = `
-        <div class="dynamic-section transport-section" data-index="${transportIndex}">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">
-                    <span class="section-counter">${transportIndex + 1}</span>
-                    نقل رقم ${transportIndex + 1}
-                </h6>
-                <button type="button" class="btn-remove-section" onclick="removeSection(this)">
-                    <i class="fas fa-trash"></i> حذف
-                </button>
-            </div>
-            <div class="row">
-                <div class="col-md-3">
-                    <label class="form-label">نوع النقل</label>
-                    <select class="form-select" name="transports[${transportIndex}][transport_type]">
-                        <option value="سيارة خاصة">سيارة خاصة</option>
-                        <option value="حافلة">حافلة</option>
-                        <option value="فان">فان</option>
-                        <option value="ليموزين">ليموزين</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">اسم السائق</label>
-                    <input type="text" class="form-control" name="transports[${transportIndex}][driver_name]">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">هاتف السائق</label>
-                    <input type="text" class="form-control" name="transports[${transportIndex}][driver_phone]">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">معلومات المركبة</label>
-                    <input type="text" class="form-control" name="transports[${transportIndex}][vehicle_info]">
-                </div>
-                <div class="col-md-2 mt-3">
-                    <label class="form-label">التكلفة</label>
-                    <input type="number" class="form-control" name="transports[${transportIndex}][cost]" value="0" step="0.01" onchange="calculateTransportProfit(${transportIndex})">
-                </div>
-                <div class="col-md-2 mt-3">
-                    <label class="form-label">سعر البيع</label>
-                    <input type="number" class="form-control" name="transports[${transportIndex}][selling_price]" value="0" step="0.01" onchange="calculateTransportProfit(${transportIndex})">
-                </div>
-                <div class="col-md-2 mt-3">
-                    <label class="form-label">العملة <span class="currency-badge">مهم</span></label>
-                    <select class="form-select" name="transports[${transportIndex}][currency]" onchange="calculateTransportProfit(${transportIndex})">
-                        <option value="KWD">دينار كويتي</option>
-                        <option value="SAR">ريال سعودي</option>
-                        <option value="USD">دولار أمريكي</option>
-                        <option value="EUR">يورو</option>
-                    </select>
-                </div>
-                <div class="col-md-2 mt-3">
-                    <label class="form-label">الربح</label>
-                    <div class="profit-display" id="transportProfit${transportIndex}">0.00</div>
-                    <input type="hidden" name="transports[${transportIndex}][profit]" value="0" id="transportProfitInput${transportIndex}">
-                </div>
-                <div class="col-md-4 mt-3">
-                    <label class="form-label">تذكرة النقل</label>
-                    <input type="file" class="form-control" name="transports[${transportIndex}][ticket_file]" 
-                           accept=".pdf,.jpg,.jpeg,.png,.gif,.webp">
-                    <small class="text-muted">PDF, JPG, PNG (أقصى 5 ميجا)</small>
-                </div>
-                <div class="col-md-12 mt-2">
-                    <label class="form-label">ملاحظات</label>
-                    <textarea class="form-control" name="transports[${transportIndex}][notes]" rows="2"></textarea>
-                </div>
-            </div>
+<div class="dynamic-section transport-section" data-index="${transportIndex}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">
+            <span class="section-counter">${transportIndex + 1}</span>
+            نقل رقم ${transportIndex + 1}
+        </h6>
+        <button type="button" class="btn-remove-section" onclick="removeSection(this)">
+            <i class="fas fa-trash"></i> حذف
+        </button>
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            <label class="form-label">نوع النقل</label>
+            <select class="form-select" name="transports[${transportIndex}][transport_type]">
+                <option value="سيارة خاصة">سيارة خاصة</option>
+                <option value="حافلة">حافلة</option>
+                <option value="فان">فان</option>
+                <option value="ليموزين">ليموزين</option>
+            </select>
         </div>
-    `;
+        <div class="col-md-3">
+            <label class="form-label">اسم السائق</label>
+            <input type="text" class="form-control" name="transports[${transportIndex}][driver_name]">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">هاتف السائق</label>
+            <input type="text" class="form-control" name="transports[${transportIndex}][driver_phone]">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">معلومات المركبة</label>
+            <input type="text" class="form-control" name="transports[${transportIndex}][vehicle_info]">
+        </div>
+        
+        <!-- إضافة حقول مواعيد الانطلاق والوصول -->
+        <div class="col-md-3 mt-3">
+            <label class="form-label">موعد الانطلاق</label>
+            <input type="datetime-local" class="form-control" name="transports[${transportIndex}][departure_time]">
+        </div>
+        <div class="col-md-3 mt-3">
+            <label class="form-label">موعد الوصول</label>
+            <input type="datetime-local" class="form-control" name="transports[${transportIndex}][arrival_time]">
+        </div>
+        
+        <div class="col-md-2 mt-3">
+            <label class="form-label">التكلفة</label>
+            <input type="number" class="form-control" name="transports[${transportIndex}][cost]" value="0" step="0.01" onchange="calculateTransportProfit(${transportIndex})">
+        </div>
+        <div class="col-md-2 mt-3">
+            <label class="form-label">سعر البيع</label>
+            <input type="number" class="form-control" name="transports[${transportIndex}][selling_price]" value="0" step="0.01" onchange="calculateTransportProfit(${transportIndex})">
+        </div>
+        <div class="col-md-2 mt-3">
+            <label class="form-label">العملة <span class="currency-badge">مهم</span></label>
+            <select class="form-select" name="transports[${transportIndex}][currency]" onchange="calculateTransportProfit(${transportIndex})">
+                <option value="KWD">دينار كويتي</option>
+                <option value="SAR">ريال سعودي</option>
+                <option value="USD">دولار أمريكي</option>
+                <option value="EUR">يورو</option>
+            </select>
+        </div>
+        <div class="col-md-2 mt-3">
+            <label class="form-label">الربح</label>
+            <div class="profit-display" id="transportProfit${transportIndex}">0.00</div>
+            <input type="hidden" name="transports[${transportIndex}][profit]" value="0" id="transportProfitInput${transportIndex}">
+        </div>
+        <div class="col-md-4 mt-3">
+            <label class="form-label">تذكرة النقل</label>
+            <input type="file" class="form-control" name="transports[${transportIndex}][ticket_file]" 
+                   accept=".pdf,.jpg,.jpeg,.png,.gif,.webp">
+            <small class="text-muted">PDF, JPG, PNG (أقصى 5 ميجا)</small>
+        </div>
+        <div class="col-md-12 mt-2">
+            <label class="form-label">ملاحظات</label>
+            <textarea class="form-control" name="transports[${transportIndex}][notes]" rows="2"></textarea>
+        </div>
+    </div>
+</div>`;
             container.insertAdjacentHTML('beforeend', section);
             transportIndex++;
         }
-
         // دالة إضافة قسم الفنادق
         function addHotelSection() {
             const container = document.getElementById('hotelsContainer');

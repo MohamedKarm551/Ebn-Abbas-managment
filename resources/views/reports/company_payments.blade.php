@@ -284,11 +284,31 @@
                             // ثانياً: إذا لا يوجد ملف مرفوع، ابحث عن رابط في الملاحظات
                             elseif ($payment->notes) {
                                 // ابحث عن أول رابط http/https
-                                $pattern = '/(https?:\/\/[^\s]+)/';
+                                // بحث محدد عن روابط Google Drive
+                                $pattern = '/(https?:\/\/(drive\.google\.com|docs\.google\.com)[^\s]+)/i';
                                 if (preg_match($pattern, $payment->notes, $matches)) {
-                                    $receiptUrl = $matches[0]; // استخراج الرابط
-                                    // استبدل الرابط في النص المعروض
-                                    $displayNotes = preg_replace($pattern, '"رابط صورة الإيصال"', $payment->notes, 1); // استبدال مرة واحدة فقط
+                                    $receiptUrl = $matches[0]; // استخراج رابط Google Drive
+
+                                    // استبدل الرابط في النص المعروض فقط
+                                    $displayNotes = preg_replace($pattern, '"رابط صورة الإيصال"', $payment->notes, 1);
+                                }
+                                // بحث عن أي روابط أخرى (احتياطي إذا لم يكن الرابط لـ Google Drive)
+                                elseif (preg_match('/(https?:\/\/[^\s]+)/i', $payment->notes, $matches)) {
+                                    $potentialUrl = $matches[0];
+
+                                    // تحقق أن الرابط ليس من موقعنا
+                                    if (
+                                        strpos($potentialUrl, '127.0.0.1') === false &&
+                                        strpos($potentialUrl, request()->getHost()) === false
+                                    ) {
+                                        $receiptUrl = $potentialUrl;
+                                        $displayNotes = preg_replace(
+                                            '/(https?:\/\/[^\s]+)/i',
+                                            '"رابط صورة الإيصال"',
+                                            $payment->notes,
+                                            1,
+                                        );
+                                    }
                                 }
                             }
                             // --- نهاية المعالجة ---
@@ -296,7 +316,8 @@
 
                         <tr>
                             <td>{{ $loop->iteration }}</td> {{-- *** إضافة خلية الترقيم *** --}}
-                            <td>{{ $payment->payment_date->format('d/m/Y') }}</td>
+                            <td>{{ $payment->payment_date->format('d/m/Y') }} <small class="d-block text-muted hijri-date"
+                                    data-date="{{ $payment->payment_date->format('Y-m-d') }}"></small></td>
                             <td>
                                 {{ number_format($payment->amount, 2) }}
                                 {{ $payment->currency === 'SAR' ? 'ريال' : 'دينار كويتي' }}
@@ -575,5 +596,7 @@
 
                 }); // end DOMContentLoaded
             </script>
+            {{-- التاريخ الهجري  --}}
+            <script src="{{ asset('js/hijriDataConvert.js') }}"></script>
         @endpush
     @endsection
