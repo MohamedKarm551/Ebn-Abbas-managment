@@ -174,6 +174,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="trackingPagination"></div>
                 <div class="loading-overlay d-none" id="loading">
                     <div class="spinner-border text-primary"></div>
                     <span class="ms-2">جاري التحميل...</span>
@@ -221,8 +222,9 @@
             loadTrackingData();
 
             // دالة لتحميل بيانات المتابعة المالية
-            function loadTrackingData() {
+            function loadTrackingData(page = 1) {
                 const formData = new FormData(filterForm);
+                formData.append('page', page);
                 const params = new URLSearchParams(formData).toString();
                 const loading = document.getElementById('loading');
                 const trackingBody = document.getElementById('trackingBody');
@@ -244,6 +246,7 @@
                     .then(data => {
                         if (!data.success) {
                             throw new Error(data.error || 'حدث خطأ غير معروف');
+                            // updateTable(data.financial_tracking, data.pagination); // هذا السطر لن يُنفذ أبداً هنا
                         }
 
                         // تحديث الإحصائيات
@@ -253,8 +256,8 @@
                             .partially_paid || 0;
                         document.getElementById('not_paid_count').textContent = data.statistics.not_paid || 0;
 
-                        // تحديث الجدول
-                        updateTable(data.financial_tracking);
+                        // ✅ مرر بيانات الترقيم هنا
+                        updateTable(data.financial_tracking, data.pagination);
 
                         // رسم الرسومات فقط إذا كانت البيانات موجودة
                         if (data.statistics && data.financial_tracking) {
@@ -262,8 +265,7 @@
                             drawNetworkGraph(data);
                             drawFinancialNetwork(data);
                         }
-                    })
-                    .catch(error => {
+                    }).catch(error => {
                         console.error('Error fetching data:', error);
                         trackingBody.innerHTML = `
                 <tr>
@@ -280,8 +282,12 @@
             }
 
             // تحديث الجدول بالبيانات
-            function updateTable(data) {
+            let lastPagination = null;
+
+            function updateTable(data, pagination = null) {
                 const trackingBody = document.getElementById('trackingBody');
+                const paginationContainer = document.getElementById('trackingPagination');
+
 
                 if (data.length === 0) {
                     trackingBody.innerHTML = `
@@ -325,6 +331,58 @@
                 });
 
                 trackingBody.innerHTML = html;
+                // عرض روابط الترقيم
+                if (pagination && pagination.last_page > 1) {
+                    lastPagination = pagination;
+                    paginationContainer.innerHTML = renderPaginationLinks(pagination);
+                    // إضافة أحداث النقر
+                    document.querySelectorAll('.pagination-link').forEach(link => {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            if (!this.classList.contains('active') && !this.classList.contains(
+                                    'disabled')) {
+                                loadTrackingData(this.dataset.page);
+                            }
+                        });
+                    });
+                } else if (paginationContainer) {
+                    paginationContainer.innerHTML = '';
+                }
+            }
+
+            // دالة رسم روابط الترقيم (Bootstrap 5)
+            function renderPaginationLinks(pagination) {
+                let html = `
+    <div class="pagination-container">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center px-3 py-2 gap-2">
+            <div class="pagination-info order-2 order-md-1 text-center text-md-start">
+                <p class="mb-0">
+                    عرض
+                    <strong>${pagination.from}</strong>
+                    إلى
+                    <strong>${pagination.to}</strong>
+                    من
+                    <strong>${pagination.total}</strong>
+                    سجل
+                </p>
+            </div>
+            <nav class="order-1 order-md-2">
+                <ul class="pagination mb-0">
+    `;
+                // روابط الصفحات
+                for (let i = 1; i <= pagination.last_page; i++) {
+                    html += `<li class="page-item${pagination.current_page === i ? ' active' : ''}">
+            <a href="#" class="page-link pagination-link" data-page="${i}">${i}</a>
+        </li>`;
+                }
+                html += `
+                </ul>
+            </nav>
+        </div>
+    </div>
+    `;
+                return html;
+
             }
             drawCharts(data);
             drawNetworkGraph(data);
@@ -660,22 +718,27 @@
                 }
 
                 // إعداد العقد (الحجوزات) ومربعات الشركات/الجهات مع تصحيح البيانات
-                const bookings = data.financial_tracking.map((item, index) => ({
-                    id: 'booking_' + (item.id || index),
-                    name: item.client_name || 'غير معروف',
-                    x: (index * 300) + 150, // زيادة المسافة إلى 300 بكسل
-                    y: height / 2 + 50, // الدائرة تحتهما
-                    status: item.combined_status || 'not_paid'
-                }));
+                const bookings = data.financial_tracking.map((item, index) => {
+                    const groupIndex = Math.floor(index / 5); // رقم المجموعة (0, 1, 2, ...)
+                    const innerIndex = index % 5; // الترتيب داخل المجموعة (0 إلى 4)
+                    return {
+                        id: 'booking_' + (item.id || index),
+                        name: item.client_name || 'غير معروف',
+                        x: (innerIndex * 250) + (groupIndex * (width /
+                            2)), // 150 بكسل بين الحجوزات، نصف العرض لكل مجموعة
+                        y: (groupIndex * 150) + (height / 2) + 100, // 150 بكسل بين الصفوف
+                        status: item.combined_status || 'not_paid'
+                    };
+                });
 
                 const companies = bookings.map((booking, index) => {
                     const item = data.financial_tracking[index] || {};
                     return {
                         id: 'company_' + booking.id,
-                        name: item.company_name || 'غير محدد', // الوصول المباشر إلى company_name
-                        x: booking.x - 50, // المربع الأول يسار الزوج
-                        y: booking.y - 100, // فوق الدائرة بـ 100 بكسل
-                        status: item.company_payment_status || 'not_paid' // التحقق من حالة الدفع
+                        name: item.company_name || 'غير محدد',
+                        x: booking.x - 50,
+                        y: booking.y - 100,
+                        status: item.company_payment_status || 'not_paid'
                     };
                 });
 
@@ -683,9 +746,9 @@
                     const item = data.financial_tracking[index] || {};
                     return {
                         id: 'agent_' + booking.id,
-                        name: item.agent_name || 'غير محدد', // الوصول المباشر إلى agent_name
-                        x: booking.x + 50, // المربع الثاني يمين الزوج
-                        y: booking.y - 100, // نفس ارتفاع الشركة
+                        name: item.agent_name || 'غير محدد',
+                        x: booking.x + 50,
+                        y: booking.y - 100,
                         status: item.agent_payment_status || 'not_paid'
                     };
                 });
@@ -743,12 +806,12 @@
                     .selectAll("rect")
                     .data([...companies, ...agents])
                     .join("rect")
-                    .attr("x", d => d.x - 50) // عرض المربع 100 بكسل
+                    .attr("x", d => d.x - 50)
                     .attr("y", d => d.y - 20)
                     .attr("width", 100)
                     .attr("height", 40)
                     .attr("fill", d => color(d.id.startsWith('company_') ? 'company' : 'agent'))
-                    .attr("rx", 5); // زوايا مستديرة
+                    .attr("rx", 5);
 
                 // رسم التسميات
                 const label = g.append("g")

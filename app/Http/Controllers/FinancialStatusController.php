@@ -780,63 +780,64 @@ class FinancialStatusController extends Controller
             $dateRange = $this->getDateRange($request);
             $startDate = $dateRange['start_date'];
             $endDate = $dateRange['end_date'];
-            
+
             // استعلام مباشر عن بيانات المتابعة المالية
             $query = BookingFinancialTracking::with(['booking.company', 'booking.agent', 'booking.hotel'])
-                ->whereHas('booking', function($q) use ($startDate, $endDate) {
+                ->whereHas('booking', function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('check_in', [$startDate, $endDate])
-                      ->orWhereBetween('check_out', [$startDate, $endDate]);
+                        ->orWhereBetween('check_in', [$startDate, $endDate])
+                        ->orWhereBetween('check_out', [$startDate, $endDate]);
                 });
-                
+
             // تطبيق فلتر حالة الدفع إذا وجد
             if ($request->filled('payment_status')) {
                 $status = $request->input('payment_status');
-                
+
                 switch ($status) {
                     case 'fully_paid':
                         $query->where('company_payment_status', 'fully_paid')
-                             ->where('agent_payment_status', 'fully_paid');
+                            ->where('agent_payment_status', 'fully_paid');
                         break;
                     case 'partially_paid':
-                        $query->where(function($q) {
+                        $query->where(function ($q) {
                             $q->where('company_payment_status', 'partially_paid')
-                              ->orWhere('agent_payment_status', 'partially_paid')
-                              ->orWhere(function($q2) {
-                                  $q2->where('company_payment_status', 'fully_paid')
-                                    ->where('agent_payment_status', '!=', 'fully_paid');
-                              })
-                              ->orWhere(function($q2) {
-                                  $q2->where('company_payment_status', '!=', 'fully_paid')
-                                    ->where('agent_payment_status', 'fully_paid');
-                              });
+                                ->orWhere('agent_payment_status', 'partially_paid')
+                                ->orWhere(function ($q2) {
+                                    $q2->where('company_payment_status', 'fully_paid')
+                                        ->where('agent_payment_status', '!=', 'fully_paid');
+                                })
+                                ->orWhere(function ($q2) {
+                                    $q2->where('company_payment_status', '!=', 'fully_paid')
+                                        ->where('agent_payment_status', 'fully_paid');
+                                });
                         });
                         break;
                     case 'not_paid':
                         $query->where('company_payment_status', 'not_paid')
-                             ->where('agent_payment_status', 'not_paid');
+                            ->where('agent_payment_status', 'not_paid');
                         break;
                 }
             }
-            
+
             // الحصول على البيانات
-            $trackingData = $query->get();
-            
+            // $trackingData = $query->get();
+            $trackingData = $query->paginate(15);
+
             // تحضير الإحصائيات الأساسية
             $stats = [
                 'total' => $trackingData->count(),
                 'fully_paid' => $trackingData->where('company_payment_status', 'fully_paid')
-                                          ->where('agent_payment_status', 'fully_paid')
-                                          ->count(),
+                    ->where('agent_payment_status', 'fully_paid')
+                    ->count(),
                 'not_paid' => $trackingData->where('company_payment_status', 'not_paid')
-                                         ->where('agent_payment_status', 'not_paid')
-                                         ->count(),
+                    ->where('agent_payment_status', 'not_paid')
+                    ->count(),
             ];
-            
+
             $stats['partially_paid'] = $stats['total'] - $stats['fully_paid'] - $stats['not_paid'];
-            
+
             // تحويل البيانات إلى تنسيق مناسب للعرض
-            $formattedData = $trackingData->map(function($item) {
+            $formattedData = $trackingData->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'booking_id' => $item->booking_id,
@@ -860,14 +861,22 @@ class FinancialStatusController extends Controller
             return response()->json([
                 'success' => true,
                 'financial_tracking' => $formattedData,
-                'statistics' => $stats
+                'statistics' => $stats,
+                'pagination' => [
+                    'current_page' => $trackingData->currentPage(),
+                    'last_page' => $trackingData->lastPage(),
+                    'per_page' => $trackingData->perPage(),
+                    'total' => $trackingData->total(),
+                    'from' => $trackingData->firstItem(),
+                    'to' => $trackingData->lastItem(),
+                    'links' => $trackingData->linkCollection(), // روابط جاهزة
+                ]
             ]);
-            
         } catch (\Exception $e) {
             Log::error('خطأ في الحصول على بيانات المتابعة المالية: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'error' => 'حدث خطأ أثناء معالجة البيانات: ' . $e->getMessage()
