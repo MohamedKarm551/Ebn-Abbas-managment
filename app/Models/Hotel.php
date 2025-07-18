@@ -10,7 +10,7 @@ use App\Models\HotelRoom;
 class Hotel extends Model
 {
     use HasFactory;
-    
+
     protected $fillable = [
         'name',
         'location',
@@ -18,7 +18,7 @@ class Hotel extends Model
         'description',
         'color',
         'purchased_rooms_count', // عدد الغرف المشتراة
-     ];
+    ];
 
     public function bookings()
     {
@@ -82,7 +82,11 @@ class Hotel extends Model
             ->toArray();
     }
     public function rooms()
-{
-    return $this->hasMany(HotelRoom::class, 'hotel_id');
-}
+    {
+        return $this->hasMany(HotelRoom::class, 'hotel_id');
+    }
+    public function financialTracking()
+    {
+        return $this->hasOne(BookingFinancialTracking::class, 'booking_id');
+    }
 }

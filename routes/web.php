@@ -452,6 +452,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('financial.status.data');
     Route::get('/financial/booking/{id}', [App\Http\Controllers\FinancialStatusController::class, 'getBookingFinancialDetails'])
         ->name('financial.status.booking');
+            Route::get('/financial/tracking', [App\Http\Controllers\FinancialStatusController::class, 'getFinancialTrackingData'])
+        ->name('financial.status.tracking');
+    Route::get('/financial/tracking/export', [App\Http\Controllers\FinancialStatusController::class, 'exportFinancialTracking'])
+        ->name('financial.status.tracking.export');
 });
 /*
 |--------------------------------------------------------------------------

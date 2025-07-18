@@ -198,4 +198,19 @@ class Booking extends Model
     {
         return $this->hasOne(BookingFinancialTracking::class);
     }
+    /**
+     * علاقة الحجز مع دفعات الشركة
+     */
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * علاقة الحجز مع دفعات الوكيل
+     */
+    public function agentPayments()
+    {
+        return $this->hasMany(AgentPayment::class);
+    }
 }

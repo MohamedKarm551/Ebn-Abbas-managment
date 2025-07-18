@@ -496,4 +496,8 @@ public function getComputedRemainingAttribute()
 
         return $result;
     }
+    public function financialTracking()
+{
+    return $this->hasOne(BookingFinancialTracking::class, 'booking_id');
+}
 }

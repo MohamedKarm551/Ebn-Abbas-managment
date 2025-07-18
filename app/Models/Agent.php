@@ -61,41 +61,41 @@ class Agent extends Model
      * حساب الإجماليات المالية للرحلات البرية فقط حسب العملة
      */
     public function getLandTripTotalsByCurrency()
-{
-    $totals = [];
+    {
+        $totals = [];
 
-    // ✅ إصلاح: استخدام join مباشر بدلاً من hasManyThrough
-    $bookingsDue = DB::table('land_trip_bookings')
-        ->join('land_trips', 'land_trips.id', '=', 'land_trip_bookings.land_trip_id')
-        ->where('land_trips.agent_id', $this->id)
-        ->whereNull('land_trip_bookings.deleted_at')
-        ->selectRaw('land_trip_bookings.currency, SUM(land_trip_bookings.amount_due_to_agent) as total_due')
-        ->groupBy('land_trip_bookings.currency')
-        ->get()
-        ->keyBy('currency');
+        // ✅ إصلاح: استخدام join مباشر بدلاً من hasManyThrough
+        $bookingsDue = DB::table('land_trip_bookings')
+            ->join('land_trips', 'land_trips.id', '=', 'land_trip_bookings.land_trip_id')
+            ->where('land_trips.agent_id', $this->id)
+            ->whereNull('land_trip_bookings.deleted_at')
+            ->selectRaw('land_trip_bookings.currency, SUM(land_trip_bookings.amount_due_to_agent) as total_due')
+            ->groupBy('land_trip_bookings.currency')
+            ->get()
+            ->keyBy('currency');
 
-    // المدفوع للوكيل من مدفوعات الرحلات البرية
-    $paymentsPaid = $this->landTripsPayments()
-        ->selectRaw('currency, SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid, SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts')
-        ->groupBy('currency')
-        ->get()
-        ->keyBy('currency');
+        // المدفوع للوكيل من مدفوعات الرحلات البرية
+        $paymentsPaid = $this->landTripsPayments()
+            ->selectRaw('currency, SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid, SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts')
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
 
-    foreach (['SAR', 'KWD'] as $currency) {
-        $due = $bookingsDue->get($currency)?->total_due ?? 0;
-        $paid = $paymentsPaid->get($currency)?->total_paid ?? 0;
-        $discounts = $paymentsPaid->get($currency)?->discounts ?? 0;
+        foreach (['SAR', 'KWD'] as $currency) {
+            $due = $bookingsDue->get($currency)?->total_due ?? 0;
+            $paid = $paymentsPaid->get($currency)?->total_paid ?? 0;
+            $discounts = $paymentsPaid->get($currency)?->discounts ?? 0;
 
-        $totals[$currency] = [
-            'due' => (float) $due,
-            'paid' => (float) $paid,
-            'discounts' => (float) $discounts,
-            'remaining' => (float) ($due - $paid - $discounts)
-        ];
+            $totals[$currency] = [
+                'due' => (float) $due,
+                'paid' => (float) $paid,
+                'discounts' => (float) $discounts,
+                'remaining' => (float) ($due - $paid - $discounts)
+            ];
+        }
+
+        return $totals;
     }
-
-    return $totals;
-}
     // ========== الحسابات الإجمالية ==========
     public function calculateTotals()
     {
@@ -324,5 +324,9 @@ class Agent extends Model
     public function getBookingsCountAttribute()
     {
         return $this->bookings()->count();
+    }
+    public function financialTracking()
+    {
+        return $this->hasOne(BookingFinancialTracking::class, 'booking_id');
     }
 }

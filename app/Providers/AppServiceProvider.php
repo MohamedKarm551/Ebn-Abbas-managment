@@ -6,7 +6,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Notification;
-
+use App\Models\Booking;
+use App\Observers\BookingObserver;
 class AppServiceProvider extends ServiceProvider
 {
     // وظيفة الكلاس ده : 
@@ -56,5 +57,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('unreadNotificationsCount', 0);
         }
     });
+        Booking::observe(BookingObserver::class);
+
 }
 }
