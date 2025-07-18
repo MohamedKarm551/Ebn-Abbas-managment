@@ -784,9 +784,14 @@ class FinancialStatusController extends Controller
             // استعلام مباشر عن بيانات المتابعة المالية
             $query = BookingFinancialTracking::with(['booking.company', 'booking.agent', 'booking.hotel'])
                 ->whereHas('booking', function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('created_at', [$startDate, $endDate])
-                        ->orWhereBetween('check_in', [$startDate, $endDate])
-                        ->orWhereBetween('check_out', [$startDate, $endDate]);
+                    $q->whereNull('deleted_at') // استبعاد المؤرشفة
+                        ->where(function ($q2) use ($startDate, $endDate) {
+                            $q2->whereBetween('created_at', [$startDate, $endDate])
+                                ->orWhereBetween('check_in', [$startDate, $endDate])
+                                ->orWhereBetween('check_out', [$startDate, $endDate]);
+                        })
+                        ->where('sale_price', '>', 0) // استبعاد الحجوزات التي البيع بصفر
+                        ->where('cost_price', '>', 0); // استبعاد الحجوزات التي التكلفة بصفر
                 });
 
             // تطبيق فلتر حالة الدفع إذا وجد
