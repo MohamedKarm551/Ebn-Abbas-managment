@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="container-fluid mt-4">
-        <h1 class="mb-4">بيانات المتابعة المالية</h1>
+        <h1 class="mb-4">بيانات المتابعة المالية للحجوزات الفندقية</h1>
 
         <!-- الفلاتر -->
         <div class="card mb-4 border-0 shadow-sm">
@@ -39,6 +39,43 @@
                                 <option value="fully_paid">مدفوع بالكامل</option>
                                 <option value="partially_paid">مدفوع جزئياً</option>
                                 <option value="not_paid">غير مدفوع</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="client_name" class="form-label">اسم العميل</label>
+                            <input type="text" name="client_name" id="client_name" class="form-control"
+                                placeholder="ابحث بالاسم">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="company_name" class="form-label">اسم الشركة</label>
+                            <input type="text" name="company_name" id="company_name" class="form-control"
+                                placeholder="ابحث بالاسم">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="agent_name" class="form-label">اسم الوكيل (جهة الحجز) </label>
+                            <input type="text" name="agent_name" id="agent_name" class="form-control"
+                                placeholder="ابحث بالاسم">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="hotel_name" class="form-label">اسم الفندق</label>
+                            <input type="text" name="hotel_name" id="hotel_name" class="form-control"
+                                placeholder="ابحث بالاسم">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="currency" class="form-label">العملة</label>
+                            <select name="currency" id="currency" class="form-select">
+                                <option value="">الكل</option>
+                                <option value="SAR">SAR</option>
+                                <option value="KWD">KWD</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="priority_level" class="form-label">مستوى الأولوية</label>
+                            <select name="priority_level" id="priority_level" class="form-select">
+                                <option value="">الكل</option>
+                                <option value="high">عالية</option>
+                                <option value="medium">متوسطة</option>
+                                <option value="low">منخفضة</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -76,66 +113,6 @@
                         <p class="stats-value text-danger" id="not_paid_count">0</p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <!-- الرسومات البيانية -->
-        <div class="row mb-4">
-            <div class="col-md-6 mb-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <i class="fas fa-chart-pie me-2 text-primary"></i> توزيع حالات الدفع
-                    </div>
-                    <div class="card-body">
-                        <canvas id="paymentStatusChart" height="220"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <i class="fas fa-chart-bar me-2 text-primary"></i> توزيع مستويات الأولوية
-                    </div>
-                    <div class="card-body">
-                        <canvas id="priorityLevelChart" height="220"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- رسم بياني شبكي للعلاقات المالية -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-project-diagram me-2 text-primary"></i> شبكة العلاقات المالية (الحجز ← الشركة ←
-                    الجهة)</span>
-                <div>
-                    <button id="zoomInBtn" class="btn btn-sm btn-outline-secondary me-2"><i
-                            class="fas fa-search-plus"></i></button>
-                    <button id="zoomOutBtn" class="btn btn-sm btn-outline-secondary me-2"><i
-                            class="fas fa-search-minus"></i></button>
-                    <button id="panBtn" class="btn btn-sm btn-outline-secondary"><i
-                            class="fas fa-arrows-alt"></i></button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div id="networkGraph" style="height: 400px;"></div>
-            </div>
-        </div>
-
-        <!-- شبكة العلاقات المالية الجديدة -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-sitemap me-2 text-primary"></i> شبكة العلاقات المالية الجديدة (الحجوزات ← الشركة ←
-                    الجهة)</span>
-                <div>
-                    <button id="newZoomInBtn" class="btn btn-sm btn-outline-secondary me-2"><i
-                            class="fas fa-search-plus"></i></button>
-                    <button id="newZoomOutBtn" class="btn btn-sm btn-outline-secondary me-2"><i
-                            class="fas fa-search-minus"></i></button>
-                    <button id="newPanBtn" class="btn btn-sm btn-outline-secondary"><i
-                            class="fas fa-arrows-alt"></i></button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div id="financialNetwork" style="height: 400px;"></div>
             </div>
         </div>
         <!-- جدول البيانات -->
@@ -181,14 +158,74 @@
                 </div>
             </div>
         </div>
+        <!-- الرسومات البيانية -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i> توزيع حالات الدفع
+                    </div>
+                    <div class="card-body">
+                        <canvas id="paymentStatusChart" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <i class="fas fa-chart-bar me-2 text-primary"></i> توزيع مستويات الأولوية
+                    </div>
+                    <div class="card-body">
+                        <canvas id="priorityLevelChart" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- شبكة العلاقات المالية الجديدة -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-sitemap me-2 text-primary"></i> شبكة العلاقات المالية الجديدة (الحجوزات ← الشركة ←
+                    الجهة)</span>
+                <div>
+                    <button id="newZoomInBtn" class="btn btn-sm btn-outline-secondary me-2"><i
+                            class="fas fa-search-plus"></i></button>
+                    <button id="newZoomOutBtn" class="btn btn-sm btn-outline-secondary me-2"><i
+                            class="fas fa-search-minus"></i></button>
+                    <button id="newPanBtn" class="btn btn-sm btn-outline-secondary"><i
+                            class="fas fa-arrows-alt"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="financialNetwork" style="height: 400px;"></div>
+            </div>
+        </div>
+        <!-- رسم بياني شبكي للعلاقات المالية -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-project-diagram me-2 text-primary"></i> شبكة العلاقات المالية (الحجز ← الشركة ←
+                    الجهة)</span>
+                <div>
+                    <button id="zoomInBtn" class="btn btn-sm btn-outline-secondary me-2"><i
+                            class="fas fa-search-plus"></i></button>
+                    <button id="zoomOutBtn" class="btn btn-sm btn-outline-secondary me-2"><i
+                            class="fas fa-search-minus"></i></button>
+                    <button id="panBtn" class="btn btn-sm btn-outline-secondary"><i
+                            class="fas fa-arrows-alt"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="networkGraph" style="height: 400px;"></div>
+            </div>
+        </div>
+
+
+
     </div>
 @endsection
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- مكتبة Chart.js للرسومات البيانية -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- مكتبة D3.js للرسومات الشبكية -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
 
     <script>
@@ -246,7 +283,6 @@
                     .then(data => {
                         if (!data.success) {
                             throw new Error(data.error || 'حدث خطأ غير معروف');
-                            // updateTable(data.financial_tracking, data.pagination); // هذا السطر لن يُنفذ أبداً هنا
                         }
 
                         // تحديث الإحصائيات
@@ -256,7 +292,6 @@
                             .partially_paid || 0;
                         document.getElementById('not_paid_count').textContent = data.statistics.not_paid || 0;
 
-                        // ✅ مرر بيانات الترقيم هنا
                         updateTable(data.financial_tracking, data.pagination);
 
                         // رسم الرسومات فقط إذا كانت البيانات موجودة
@@ -265,16 +300,17 @@
                             drawNetworkGraph(data);
                             drawFinancialNetwork(data);
                         }
-                    }).catch(error => {
+                    })
+                    .catch(error => {
                         console.error('Error fetching data:', error);
                         trackingBody.innerHTML = `
-                <tr>
-                    <td colspan="12" class="text-center text-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        فشل تحميل البيانات: ${error.message}
-                    </td>
-                </tr>
-            `;
+                            <tr>
+                                <td colspan="12" class="text-center text-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    فشل تحميل البيانات: ${error.message}
+                                </td>
+                            </tr>
+                        `;
                     })
                     .finally(() => {
                         loading.classList.add('d-none');
@@ -288,54 +324,47 @@
                 const trackingBody = document.getElementById('trackingBody');
                 const paginationContainer = document.getElementById('trackingPagination');
 
-
                 if (data.length === 0) {
                     trackingBody.innerHTML = `
-                    <tr>
-                        <td colspan="12" class="text-center">لا توجد بيانات متابعة مالية تطابق معايير البحث</td>
-                    </tr>
-                `;
+                        <tr>
+                            <td colspan="12" class="text-center">لا توجد بيانات متابعة مالية تطابق معايير البحث</td>
+                        </tr>
+                    `;
                     return;
                 }
 
                 let html = '';
 
                 data.forEach((item, index) => {
-                    // تحديد لون الصف بناءً على حالة الدفع المدمجة
                     const rowClass = item.combined_status === 'fully_paid' ? 'table-success' :
                         item.combined_status === 'partially_paid' ? 'table-warning' : 'table-danger';
 
-                    // تنسيق حالات الدفع
                     const companyStatusBadge = getStatusBadge(item.company_payment_status);
                     const agentStatusBadge = getStatusBadge(item.agent_payment_status);
-
-                    // تنسيق مستوى الأولوية
                     const priorityBadge = getPriorityBadge(item.priority_level);
 
                     html += `
-                    <tr class="${rowClass}">
-                        <td>${index + 1}</td>
-                        <td>${item.client_name}</td>
-                        <td>${item.company_name}</td>
-                        <td>${item.agent_name}</td>
-                        <td>${item.hotel_name}</td>
-                        <td>${item.check_in}</td>
-                        <td>${item.check_out}</td>
-                        <td>${companyStatusBadge}</td>
-                        <td>${agentStatusBadge}</td>
-                        <td>${item.payment_deadline || '-'}</td>
-                        <td>${item.follow_up_date || '-'}</td>
-                        <td>${priorityBadge}</td>
-                    </tr>
-                `;
+                        <tr class="${rowClass}">
+                            <td>${index + 1}</td>
+                            <td>${item.client_name}</td>
+                            <td>${item.company_name}</td>
+                            <td>${item.agent_name}</td>
+                            <td>${item.hotel_name}</td>
+                            <td>${item.check_in}</td>
+                            <td>${item.check_out}</td>
+                            <td>${companyStatusBadge}</td>
+                            <td>${agentStatusBadge}</td>
+                            <td>${item.payment_deadline || '-'}</td>
+                            <td>${item.follow_up_date || '-'}</td>
+                            <td>${priorityBadge}</td>
+                        </tr>
+                    `;
                 });
 
                 trackingBody.innerHTML = html;
-                // عرض روابط الترقيم
                 if (pagination && pagination.last_page > 1) {
                     lastPagination = pagination;
                     paginationContainer.innerHTML = renderPaginationLinks(pagination);
-                    // إضافة أحداث النقر
                     document.querySelectorAll('.pagination-link').forEach(link => {
                         link.addEventListener('click', function(e) {
                             e.preventDefault();
@@ -350,49 +379,43 @@
                 }
             }
 
-            // دالة رسم روابط الترقيم (Bootstrap 5)
+            // دالة رسم روابط الترقيم
             function renderPaginationLinks(pagination) {
                 let html = `
-    <div class="pagination-container">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center px-3 py-2 gap-2">
-            <div class="pagination-info order-2 order-md-1 text-center text-md-start">
-                <p class="mb-0">
-                    عرض
-                    <strong>${pagination.from}</strong>
-                    إلى
-                    <strong>${pagination.to}</strong>
-                    من
-                    <strong>${pagination.total}</strong>
-                    سجل
-                </p>
-            </div>
-            <nav class="order-1 order-md-2">
-                <ul class="pagination mb-0">
-    `;
-                // روابط الصفحات
+                    <div class="pagination-container">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center px-3 py-2 gap-2">
+                            <div class="pagination-info order-2 order-md-1 text-center text-md-start">
+                                <p class="mb-0">
+                                    عرض
+                                    <strong>${pagination.from}</strong>
+                                    إلى
+                                    <strong>${pagination.to}</strong>
+                                    من
+                                    <strong>${pagination.total}</strong>
+                                    سجل
+                                </p>
+                            </div>
+                            <nav class="order-1 order-md-2">
+                                <ul class="pagination mb-0">
+                `;
                 for (let i = 1; i <= pagination.last_page; i++) {
                     html += `<li class="page-item${pagination.current_page === i ? ' active' : ''}">
-            <a href="#" class="page-link pagination-link" data-page="${i}">${i}</a>
-        </li>`;
+                        <a href="#" class="page-link pagination-link" data-page="${i}">${i}</a>
+                    </li>`;
                 }
                 html += `
-                </ul>
-            </nav>
-        </div>
-    </div>
-    `;
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                `;
                 return html;
-
             }
-            drawCharts(data);
-            drawNetworkGraph(data);
-
 
             // دالة مساعدة لإنشاء شارة حالة الدفع
             function getStatusBadge(status) {
                 let badgeClass = '';
                 let text = '';
-
                 switch (status) {
                     case 'fully_paid':
                         badgeClass = 'bg-success';
@@ -410,7 +433,6 @@
                         badgeClass = 'bg-secondary';
                         text = 'غير محدد';
                 }
-
                 return `<span class="badge ${badgeClass}">${text}</span>`;
             }
 
@@ -418,7 +440,6 @@
             function getPriorityBadge(level) {
                 let badgeClass = '';
                 let text = '';
-
                 switch (level) {
                     case 'high':
                         badgeClass = 'bg-danger';
@@ -436,12 +457,11 @@
                         badgeClass = 'bg-secondary';
                         text = 'غير محدد';
                 }
-
                 return `<span class="badge ${badgeClass}">${text}</span>`;
             }
-            // رسم الرسومات البيانية بعد تحميل البيانات
+
+            // رسم الرسومات البيانية
             function drawCharts(data) {
-                // رسم حالات الدفع
                 const ctx1 = document.getElementById('paymentStatusChart').getContext('2d');
                 if (window.paymentChart) window.paymentChart.destroy();
                 window.paymentChart = new Chart(ctx1, {
@@ -473,7 +493,6 @@
                     }
                 });
 
-                // رسم مستويات الأولوية
                 const priorities = data.financial_tracking.reduce((acc, item) => {
                     acc[item.priority_level] = (acc[item.priority_level] || 0) + 1;
                     return acc;
@@ -486,8 +505,7 @@
                         labels: ['عالية', 'متوسطة', 'منخفضة'],
                         datasets: [{
                             data: [priorities.high || 0, priorities.medium || 0, priorities.low ||
-                                0
-                            ],
+                                0],
                             backgroundColor: ['#dc3545', '#ffc107', '#0dcaf0'],
                             borderWidth: 2
                         }]
@@ -515,24 +533,20 @@
                 const width = document.getElementById('networkGraph').offsetWidth;
                 const height = 400;
                 const container = d3.select("#networkGraph");
-                container.selectAll("*").remove(); // تنظيف المحتوى
+                container.selectAll("*").remove();
 
-                // إنشاء SVG مع دعم الزووم
                 const svg = container.append("svg")
                     .attr("width", width)
                     .attr("height", height);
+                const g = svg.append("g");
 
-                const g = svg.append("g"); // مجموعة لتطبيق التحويلات
-
-                // تهيئة الزووم
                 const zoom = d3.zoom()
-                    .scaleExtent([0.1, 10]) // نطاق التكبير/التصغير
+                    .scaleExtent([0.1, 10])
                     .on("zoom", (event) => {
                         g.attr("transform", event.transform);
                     });
                 svg.call(zoom);
 
-                // التحقق من البيانات
                 if (!data.financial_tracking || data.financial_tracking.length === 0) {
                     g.append("text")
                         .attr("class", "text-center text-muted")
@@ -543,7 +557,6 @@
                     return;
                 }
 
-                // إعداد العقد و الروابط
                 const nodes = [];
                 const links = [];
                 const nodeMap = {};
@@ -574,44 +587,36 @@
                     links.push({
                         source: 'booking_' + item.id,
                         target: 'company_' + item.company_name,
-                        value: 2,
                         status: item.company_payment_status
                     });
                     links.push({
                         source: 'booking_' + item.id,
                         target: 'agent_' + item.agent_name,
-                        value: 2,
                         status: item.agent_payment_status
                     });
                 });
 
-                // تحديد الألوان
                 const color = d3.scaleOrdinal()
                     .domain(['booking', 'company', 'agent'])
                     .range(['#0d6efd', '#198754', '#fd7e14']);
-
                 const linkColor = status => {
                     if (status === 'fully_paid') return '#198754';
                     if (status === 'partially_paid') return '#ffc107';
                     return '#dc3545';
                 };
 
-                // تهيئة المحاكاة
                 const simulation = d3.forceSimulation(nodes)
                     .force("link", d3.forceLink(links).id(d => d.id).distance(90).strength(1))
                     .force("charge", d3.forceManyBody().strength(-250))
                     .force("center", d3.forceCenter(width / 2, height / 2));
 
-                // رسم الروابط
                 const link = g.append("g")
                     .attr("stroke", "#999")
                     .selectAll("line")
                     .data(links)
                     .join("line")
-                    .attr("stroke-width", d => d.value * 2)
+                    .attr("stroke-width", 2)
                     .attr("stroke", d => linkColor(d.status));
-
-                // رسم العقد
                 const node = g.append("g")
                     .selectAll("circle")
                     .data(nodes)
@@ -619,8 +624,6 @@
                     .attr("r", d => d.type === 'booking' ? 18 : 14)
                     .attr("fill", d => color(d.type))
                     .call(drag(simulation));
-
-                // رسم التسميات
                 const label = g.append("g")
                     .selectAll("text")
                     .data(nodes)
@@ -631,7 +634,6 @@
                     .attr("font-family", "Cairo, sans-serif")
                     .text(d => d.name);
 
-                // تحديث المواقع عند التغيير
                 simulation.on("tick", () => {
                     link
                         .attr("x1", d => d.source.x)
@@ -646,21 +648,16 @@
                         .attr("y", d => d.y - (d.type === 'booking' ? 24 : 18));
                 });
 
-                // إضافة أحداث الأزرار
                 document.getElementById('zoomInBtn').addEventListener('click', () => {
                     svg.transition().duration(750).call(zoom.scaleBy, 1.2);
                 });
-
                 document.getElementById('zoomOutBtn').addEventListener('click', () => {
                     svg.transition().duration(750).call(zoom.scaleBy, 0.8);
                 });
-
                 document.getElementById('panBtn').addEventListener('click', () => {
-                    // تفعيل التحريك باستخدام السحب
                     svg.call(zoom);
                 });
 
-                // دالة السحب
                 function drag(simulation) {
                     function dragstarted(event, d) {
                         if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -691,22 +688,18 @@
                 const container = d3.select("#financialNetwork");
                 container.selectAll("*").remove();
 
-                // إنشاء SVG مع دعم الزووم
                 const svg = container.append("svg")
                     .attr("width", width)
                     .attr("height", height);
+                const g = svg.append("g");
 
-                const g = svg.append("g"); // مجموعة لتطبيق التحويلات
-
-                // تهيئة الزووم
                 const zoom = d3.zoom()
-                    .scaleExtent([0.1, 10]) // نطاق التكبير/التصغير
+                    .scaleExtent([0.1, 10])
                     .on("zoom", (event) => {
                         g.attr("transform", event.transform);
                     });
                 svg.call(zoom);
 
-                // التحقق من البيانات
                 if (!data.financial_tracking || data.financial_tracking.length === 0) {
                     g.append("text")
                         .attr("class", "text-center text-muted")
@@ -717,16 +710,14 @@
                     return;
                 }
 
-                // إعداد العقد (الحجوزات) ومربعات الشركات/الجهات مع تصحيح البيانات
                 const bookings = data.financial_tracking.map((item, index) => {
-                    const groupIndex = Math.floor(index / 5); // رقم المجموعة (0, 1, 2, ...)
-                    const innerIndex = index % 5; // الترتيب داخل المجموعة (0 إلى 4)
+                    const groupIndex = Math.floor(index / 5);
+                    const innerIndex = index % 5;
                     return {
                         id: 'booking_' + (item.id || index),
                         name: item.client_name || 'غير معروف',
-                        x: (innerIndex * 250) + (groupIndex * (width /
-                            2)), // 150 بكسل بين الحجوزات، نصف العرض لكل مجموعة
-                        y: (groupIndex * 150) + (height / 2) + 100, // 150 بكسل بين الصفوف
+                        x: (innerIndex * 250) + (groupIndex * (width / 2)),
+                        y: (groupIndex * 150) + (height / 2) + 100,
                         status: item.combined_status || 'not_paid'
                     };
                 });
@@ -767,18 +758,15 @@
                     }))
                 ];
 
-                // تحديد الألوان
                 const color = d3.scaleOrdinal()
                     .domain(['booking', 'company', 'agent'])
                     .range(['#0d6efd', '#198754', '#fd7e14']);
-
                 const linkColor = status => {
                     if (status === 'fully_paid') return '#198754';
                     if (status === 'partially_paid') return '#ffc107';
                     return '#dc3545';
                 };
 
-                // رسم الروابط
                 const link = g.append("g")
                     .attr("stroke", "#999")
                     .selectAll("line")
@@ -790,8 +778,6 @@
                     .attr("y1", d => nodes.find(n => n.id === d.source).y)
                     .attr("x2", d => nodes.find(n => n.id === d.target).x)
                     .attr("y2", d => nodes.find(n => n.id === d.target).y);
-
-                // رسم العقد (الأشخاص)
                 const node = g.append("g")
                     .selectAll("circle")
                     .data(bookings)
@@ -800,8 +786,6 @@
                     .attr("cx", d => d.x)
                     .attr("cy", d => d.y)
                     .attr("fill", d => color('booking'));
-
-                // رسم المربعات (الشركات و الجهات) بجانب بعض
                 const rect = g.append("g")
                     .selectAll("rect")
                     .data([...companies, ...agents])
@@ -812,8 +796,6 @@
                     .attr("height", 40)
                     .attr("fill", d => color(d.id.startsWith('company_') ? 'company' : 'agent'))
                     .attr("rx", 5);
-
-                // رسم التسميات
                 const label = g.append("g")
                     .selectAll("text")
                     .data(nodes)
@@ -826,26 +808,20 @@
                     .attr("font-family", "Cairo, sans-serif")
                     .text(d => d.name);
 
-                // إضافة أحداث الأزرار
                 document.getElementById('newZoomInBtn').addEventListener('click', () => {
                     svg.transition().duration(750).call(zoom.scaleBy, 1.2);
                 });
-
                 document.getElementById('newZoomOutBtn').addEventListener('click', () => {
                     svg.transition().duration(750).call(zoom.scaleBy, 0.8);
                 });
-
                 document.getElementById('newPanBtn').addEventListener('click', () => {
                     svg.call(zoom);
                 });
             }
         });
-    </script>
-    <script>
+
         document.getElementById('exportExcelJsBtn').addEventListener('click', function() {
-            // دالة تصدير الجدول الحالي إلى Excel باستخدام SheetJS
-            const table = document.querySelector(
-                '#bookings-table-container table, #bookings-table-container'); // يدعم كلا الحالتين
+            const table = document.querySelector('#bookings-table-container table, #bookings-table-container');
             if (!window.XLSX) {
                 alert('لم يتم تحميل مكتبة XLSX. تأكد من تضمين المكتبة في الصفحة.');
                 return;
