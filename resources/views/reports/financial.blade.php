@@ -505,7 +505,8 @@
                         labels: ['عالية', 'متوسطة', 'منخفضة'],
                         datasets: [{
                             data: [priorities.high || 0, priorities.medium || 0, priorities.low ||
-                                0],
+                                0
+                            ],
                             backgroundColor: ['#dc3545', '#ffc107', '#0dcaf0'],
                             borderWidth: 2
                         }]
@@ -682,142 +683,449 @@
                 }
             }
 
-            function drawFinancialNetwork(data) {
-                const width = document.getElementById('financialNetwork').offsetWidth;
-                const height = 400;
+            function drawFinancialNetwork(data, options = {}) {
+                // الفلاتر - القيم الافتراضية أو المرسلة
+                const selectedStatus = options.selectedStatus || "all";
+                const selectedPriority = options.selectedPriority || "all";
+
+                // تحديد الكونتينر وحساب المساحة
                 const container = d3.select("#financialNetwork");
+                const width = container.node().offsetWidth;
+                const height = 580;
                 container.selectAll("*").remove();
 
-                const svg = container.append("svg")
-                    .attr("width", width)
-                    .attr("height", height);
-                const g = svg.append("g");
+                // رسم الفلاتر أعلى الرسم الشبكي
+                let filtersDiv = d3.select("#financialNetworkFilters");
+                if (filtersDiv.empty()) {
+                    filtersDiv = container.insert("div", ":first-child")
+                        .attr("id", "financialNetworkFilters")
+                        .attr("class", "mb-3 d-flex gap-2 align-items-center");
+                } else {
+                    filtersDiv.html("");
+                }
+                // فلاتر الحالة
+                filtersDiv.append("span").attr("class", "fw-bold ms-2").text("تصفية:");
+                filtersDiv.append("select")
+                    .attr("id", "fn-status-filter")
+                    .attr("class", "form-select form-select-sm mx-2").style("width", "150px")
+                    .html(`
+            <option value="all">كل الحالات</option>
+            <option value="fully_paid">مدفوع بالكامل</option>
+            <option value="partially_paid">مدفوع جزئياً</option>
+            <option value="not_paid">غير مدفوع</option>
+        `)
+                    .property("value", selectedStatus);
+                // فلاتر الأولوية
+                filtersDiv.append("select")
+                    .attr("id", "fn-priority-filter")
+                    .attr("class", "form-select form-select-sm mx-2").style("width", "120px")
+                    .html(`
+            <option value="all">كل الأولويات</option>
+            <option value="high">عالية</option>
+            <option value="medium">متوسطة</option>
+            <option value="low">منخفضة</option>
+        `)
+                    .property("value", selectedPriority);
 
-                const zoom = d3.zoom()
-                    .scaleExtent([0.1, 10])
-                    .on("zoom", (event) => {
-                        g.attr("transform", event.transform);
+                // عند تغيير الفلاتر، أعد رسم الرسم الشبكي بفلاتر جديدة
+                filtersDiv.select("#fn-status-filter").on("change", function() {
+                    drawFinancialNetwork(data, {
+                        selectedStatus: this.value,
+                        selectedPriority
                     });
-                svg.call(zoom);
+                });
+                filtersDiv.select("#fn-priority-filter").on("change", function() {
+                    drawFinancialNetwork(data, {
+                        selectedStatus,
+                        selectedPriority: this.value
+                    });
+                });
 
-                if (!data.financial_tracking || data.financial_tracking.length === 0) {
-                    g.append("text")
-                        .attr("class", "text-center text-muted")
-                        .attr("x", width / 2)
-                        .attr("y", height / 2)
-                        .attr("text-anchor", "middle")
-                        .text("لا توجد بيانات لعرض الشبكة المالية.");
+                // الفلاتر البرمجية
+                let bookingsRaw = data.financial_tracking || [];
+                if (selectedStatus !== "all") {
+                    bookingsRaw = bookingsRaw.filter(item => (item.combined_status || 'not_paid') ===
+                        selectedStatus);
+                }
+                if (selectedPriority !== "all") {
+                    bookingsRaw = bookingsRaw.filter(item => (item.priority_level || 'medium') ===
+                    selectedPriority);
+                }
+                if (!bookingsRaw.length) {
+                    container.selectAll("svg").remove();
+                    container.append("div").attr("class", "text-center text-muted py-5").style("font-size", "22px")
+                        .text("لا توجد بيانات تطابق معايير التصفية.");
                     return;
                 }
 
-                const bookings = data.financial_tracking.map((item, index) => {
-                    const groupIndex = Math.floor(index / 5);
-                    const innerIndex = index % 5;
-                    return {
-                        id: 'booking_' + (item.id || index),
-                        name: item.client_name || 'غير معروف',
-                        x: (innerIndex * 250) + (groupIndex * (width / 2)),
-                        y: (groupIndex * 150) + (height / 2) + 100,
-                        status: item.combined_status || 'not_paid'
-                    };
+                // رسم الـ svg الأساسي
+                const svg = container.append("svg")
+                    .attr("width", "100%")
+                    .attr("height", height)
+                    .attr("viewBox", `0 0 ${width} ${height}`)
+                    .style("background", "#f7f9fb")
+                    .style("border-radius", "20px");
+                const g = svg.append("g");
+
+                // Zoom مع إعادة الضبط
+                const zoom = d3.zoom()
+                    .scaleExtent([0.5, 6])
+                    .on("zoom", (event) => g.attr("transform", event.transform));
+                svg.call(zoom);
+
+                d3.select("#newZoomInBtn").on("click", () => {
+                    svg.transition().duration(300).call(zoom.scaleBy, 1.18);
+                });
+                d3.select("#newZoomOutBtn").on("click", () => {
+                    svg.transition().duration(300).call(zoom.scaleBy, 0.85);
+                });
+                d3.select("#newPanBtn").on("click", () => {
+                    svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
                 });
 
-                const companies = bookings.map((booking, index) => {
-                    const item = data.financial_tracking[index] || {};
+                // تقسيم كل خمسة بجانب بعضهم في سطر (صفوف)
+                const perRow = 5;
+                const spacingX = 270;
+                const spacingY = 200;
+                const n = bookingsRaw.length;
+                const numRows = Math.ceil(n / perRow);
+
+                // دعم الألوان للأولوية والحالة
+                const typeColor = {
+                    booking: "#3b82f6",
+                    company: "#22c55e",
+                    agent: "#f59e42"
+                };
+                const statusColor = {
+                    fully_paid: "#22c55e",
+                    partially_paid: "#facc15",
+                    not_paid: "#ef4444"
+                };
+                const priorityColor = {
+                    high: "#ef4444",
+                    medium: "#facc15",
+                    low: "#3b82f6"
+                };
+
+                // إعداد العقد (Bookings مع بيانات إضافية)
+                const bookings = bookingsRaw.map((item, i) => {
+                    const row = Math.floor(i / perRow);
+                    const col = i % perRow;
+                    const itemsInRow = (row === numRows - 1) ? n - perRow * row : perRow;
+                    const totalRowWidth = (itemsInRow - 1) * spacingX;
+                    const xOffset = (width - totalRowWidth) / 2;
                     return {
-                        id: 'company_' + booking.id,
-                        name: item.company_name || 'غير محدد',
-                        x: booking.x - 50,
-                        y: booking.y - 100,
-                        status: item.company_payment_status || 'not_paid'
-                    };
+                        id: `booking_${item.id ?? i}`,
+                        type: "booking",
+                        name: item.client_name ?? "غير معروف",
+                        hotel: item.hotel_name ?? "",
+                        check_in: item.check_in ?? "",
+                        check_out: item.check_out ?? "",
+                        booking_number: item.booking_number || item.id || (i + 1),
+                        status: item.combined_status ?? "not_paid",
+                        priority: item.priority_level ?? "medium",
+                        x: xOffset + col * spacingX,
+                        y: (row * spacingY) + 140,
+                        raw: item // كل بيانات الحجز نفسها لاستخدامها لاحقًا
+                    }
                 });
 
-                const agents = bookings.map((booking, index) => {
-                    const item = data.financial_tracking[index] || {};
-                    return {
-                        id: 'agent_' + booking.id,
-                        name: item.agent_name || 'غير محدد',
-                        x: booking.x + 50,
-                        y: booking.y - 100,
-                        status: item.agent_payment_status || 'not_paid'
-                    };
-                });
+                const companies = bookings.map((b, i) => ({
+                    id: `company_${b.id}`,
+                    type: "company",
+                    name: bookingsRaw[i]?.company_name ?? "غير محدد",
+                    x: b.x - 70,
+                    y: b.y - 100,
+                    status: bookingsRaw[i]?.company_payment_status ?? "not_paid"
+                }));
+
+                const agents = bookings.map((b, i) => ({
+                    id: `agent_${b.id}`,
+                    type: "agent",
+                    name: bookingsRaw[i]?.agent_name ?? "غير محدد",
+                    x: b.x + 70,
+                    y: b.y - 100,
+                    status: bookingsRaw[i]?.agent_payment_status ?? "not_paid"
+                }));
 
                 const nodes = [...bookings, ...companies, ...agents];
                 const links = [
-                    ...bookings.map(booking => ({
-                        source: booking.id,
-                        target: 'company_' + booking.id,
-                        status: companies.find(c => c.id === 'company_' + booking.id).status
+                    ...bookings.map((b, i) => ({
+                        source: b.id,
+                        target: `company_${b.id}`,
+                        status: companies[i]?.status
                     })),
-                    ...bookings.map(booking => ({
-                        source: booking.id,
-                        target: 'agent_' + booking.id,
-                        status: agents.find(a => a.id === 'agent_' + booking.id).status
+                    ...bookings.map((b, i) => ({
+                        source: b.id,
+                        target: `agent_${b.id}`,
+                        status: agents[i]?.status
                     }))
                 ];
 
-                const color = d3.scaleOrdinal()
-                    .domain(['booking', 'company', 'agent'])
-                    .range(['#0d6efd', '#198754', '#fd7e14']);
-                const linkColor = status => {
-                    if (status === 'fully_paid') return '#198754';
-                    if (status === 'partially_paid') return '#ffc107';
-                    return '#dc3545';
-                };
+                const getStatusColor = s => statusColor[s] ?? "#9ca3af";
+                const getPriorityColor = p => priorityColor[p] ?? "#aaa";
 
-                const link = g.append("g")
-                    .attr("stroke", "#999")
-                    .selectAll("line")
+                // خطوط الشبكة
+                g.append("g").selectAll("path")
                     .data(links)
-                    .join("line")
-                    .attr("stroke-width", 2)
-                    .attr("stroke", d => linkColor(d.status))
-                    .attr("x1", d => nodes.find(n => n.id === d.source).x)
-                    .attr("y1", d => nodes.find(n => n.id === d.source).y)
-                    .attr("x2", d => nodes.find(n => n.id === d.target).x)
-                    .attr("y2", d => nodes.find(n => n.id === d.target).y);
-                const node = g.append("g")
-                    .selectAll("circle")
+                    .join("path")
+                    .attr("d", d => {
+                        const s = nodes.find(n => n.id === d.source);
+                        const t = nodes.find(n => n.id === d.target);
+                        return `M${s.x},${s.y} Q${(s.x + t.x) / 2},${s.y - 60} ${t.x},${t.y}`;
+                    })
+                    .attr("stroke", d => getStatusColor(d.status))
+                    .attr("stroke-width", 3)
+                    .attr("fill", "none")
+                    .attr("opacity", 0.8);
+
+                // Tooltip مطور
+                const tooltip = container.append("div")
+                    .style("position", "absolute")
+                    .style("background", "#fff")
+                    .style("padding", "14px 18px")
+                    .style("border-radius", "13px")
+                    .style("box-shadow", "0 4px 24px #0002")
+                    .style("font-family", "Cairo, sans-serif")
+                    .style("font-size", "15px")
+                    .style("color", "#222")
+                    .style("pointer-events", "none")
+                    .style("opacity", 0);
+
+                // رسم الدوائر (الحجوزات) مع تلوين حسب الأولوية أو الحالة
+                g.append("g").selectAll("circle")
                     .data(bookings)
                     .join("circle")
-                    .attr("r", 20)
                     .attr("cx", d => d.x)
                     .attr("cy", d => d.y)
-                    .attr("fill", d => color('booking'));
-                const rect = g.append("g")
-                    .selectAll("rect")
-                    .data([...companies, ...agents])
+                    .attr("r", 28)
+                    .attr("fill", d => getPriorityColor(d.priority))
+                    .attr("stroke", d => getStatusColor(d.status))
+                    .attr("stroke-width", 3)
+                    .attr("filter", "drop-shadow(0px 2px 10px #0002)")
+                    .style("cursor", "pointer")
+                    .on("mouseover", (e, d) => {
+                        d3.select(e.currentTarget).attr("stroke", "#333").attr("stroke-width", 4);
+                        tooltip.style("opacity", 1).html(
+                            `
+                <div style="font-size:16px;font-weight:bold;color:#2563eb;white-space:normal;">${d.name}</div>
+                <div style="margin:2px 0 3px 0">
+                    <span style="color:#777">من:</span> <span style="color:#198754">${d.check_in || '-'}</span>
+                    <span style="color:#888">إلى</span> <span style="color:#dc3545">${d.check_out || '-'}</span>
+                </div>
+                ${d.hotel ? `<div style="color:#666;font-size:14px">الفندق: ${d.hotel}</div>` : ''}
+                <div style="margin-top:4px">
+                    <span style="padding:2px 8px;border-radius:7px;background:${getStatusColor(d.status)}20;color:${getStatusColor(d.status)};font-weight:600;font-size:14px">${statusText(d.status)}</span>
+                </div>
+                <div style="margin-top:3px">
+                    <span style="padding:2px 8px;border-radius:7px;background:${getPriorityColor(d.priority)}20;color:${getPriorityColor(d.priority)};font-weight:600;font-size:13px">${priorityText(d.priority)}</span>
+                </div>
+                `
+                        );
+                    })
+                    .on("mousemove", e => {
+                        tooltip.style("left", (e.pageX + 18) + "px").style("top", (e.pageY - 14) + "px");
+                    })
+                    .on("mouseleave", e => {
+                        d3.select(e.currentTarget).attr("stroke", getStatusColor(d3.select(e.currentTarget)
+                            .datum().status)).attr("stroke-width", 3);
+                        tooltip.style("opacity", 0);
+                    })
+                    .on("click", (e, d) => {
+                        showBookingDetailsSidebar(d.raw); // سيعرض سلايدر التفاصيل الجانبي
+                    });
+
+                // رقم الحجز أو كود الحجز داخل الدائرة
+                g.append("g").selectAll("text.booking_number")
+                    .data(bookings)
+                    .join("text")
+                    .attr("class", "booking_number")
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y + 7)
+                    .attr("text-anchor", "middle")
+                    .attr("font-family", "Cairo, sans-serif")
+                    .attr("font-size", "15px")
+                    .attr("fill", "#fff")
+                    .attr("font-weight", 800)
+                    .text(d => d.booking_number);
+
+                // شارة حالة الدفع أعلى الدائرة مباشرة
+                g.append("g").selectAll("rect.status_badge")
+                    .data(bookings)
                     .join("rect")
-                    .attr("x", d => d.x - 50)
-                    .attr("y", d => d.y - 20)
-                    .attr("width", 100)
-                    .attr("height", 40)
-                    .attr("fill", d => color(d.id.startsWith('company_') ? 'company' : 'agent'))
-                    .attr("rx", 5);
-                const label = g.append("g")
-                    .selectAll("text")
-                    .data(nodes)
+                    .attr("class", "status_badge")
+                    .attr("x", d => d.x - 38)
+                    .attr("y", d => d.y - 48)
+                    .attr("width", 76)
+                    .attr("height", 19)
+                    .attr("rx", 9)
+                    .attr("fill", d => getStatusColor(d.status))
+                    .attr("opacity", 0.94);
+                g.append("g").selectAll("text.status_badge")
+                    .data(bookings)
                     .join("text")
                     .attr("x", d => d.x)
-                    .attr("y", d => d.y - (d.type === 'booking' ? 30 : -10))
+                    .attr("y", d => d.y - 34)
                     .attr("text-anchor", "middle")
-                    .attr("dy", 4)
-                    .attr("font-size", 12)
                     .attr("font-family", "Cairo, sans-serif")
-                    .text(d => d.name);
+                    .attr("font-size", "12px")
+                    .attr("fill", "#fff")
+                    .attr("font-weight", 700)
+                    .text(d => statusText(d.status));
 
-                document.getElementById('newZoomInBtn').addEventListener('click', () => {
-                    svg.transition().duration(750).call(zoom.scaleBy, 1.2);
+                // اسم العميل أعلى الدائرة
+                g.append("g").selectAll("text.booking_name")
+                    .data(bookings)
+                    .join("text")
+                    .attr("class", "booking_name")
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y - 64)
+                    .attr("text-anchor", "middle")
+                    .attr("font-family", "Cairo, sans-serif")
+                    .attr("font-size", "15px")
+                    .attr("fill", "#334155")
+                    .attr("font-weight", 700)
+                    .style("pointer-events", "none")
+                    .style("white-space", "pre-line")
+                    .text(d => d.name.length > 22 ? d.name.slice(0, 20) + "..." : d.name);
+
+                // التواريخ أسفل الدائرة
+                g.append("g").selectAll("text.dates")
+                    .data(bookings)
+                    .join("text")
+                    .attr("class", "dates")
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y + 48)
+                    .attr("text-anchor", "middle")
+                    .attr("font-family", "Cairo, sans-serif")
+                    .attr("font-size", "12px")
+                    .attr("fill", "#999")
+                    .attr("font-weight", 400)
+                    .text(d => d.check_in && d.check_out ? `(${d.check_in} — ${d.check_out})` : '');
+
+                // مستطيلات الشركة/الوكيل
+                g.append("g").selectAll("rect")
+                    .data([...companies, ...agents])
+                    .join("rect")
+                    .attr("x", d => d.x - 55)
+                    .attr("y", d => d.y - 28)
+                    .attr("width", 110)
+                    .attr("height", 36)
+                    .attr("rx", 11)
+                    .attr("fill", d => typeColor[d.type])
+                    .attr("filter", "drop-shadow(0px 2px 8px #0001)")
+                    .style("cursor", "pointer")
+                    .on("mouseover", (e, d) => {
+                        d3.select(e.currentTarget).attr("stroke", "#fff").attr("stroke-width", 3);
+                        tooltip.style("opacity", 1).html(
+                            `<b>${d.type === "company" ? "شركة" : "وكيل"}:</b> ${d.name}<br>
+                <span style="padding:2px 7px;border-radius:7px;background:${getStatusColor(d.status)}20;color:${getStatusColor(d.status)};font-size:14px">${statusText(d.status)}</span>`
+                        );
+                    })
+                    .on("mousemove", e => {
+                        tooltip.style("left", (e.pageX + 18) + "px").style("top", (e.pageY - 14) + "px");
+                    })
+                    .on("mouseleave", e => {
+                        d3.select(e.currentTarget).attr("stroke", null);
+                        tooltip.style("opacity", 0);
+                    });
+
+                // نص الشركات والوكلاء
+                g.append("g").selectAll("text.company")
+                    .data([...companies, ...agents])
+                    .join("text")
+                    .attr("class", "company")
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y - 38)
+                    .attr("text-anchor", "middle")
+                    .attr("font-family", "Cairo, sans-serif")
+                    .attr("font-size", "13px")
+                    .attr("fill", "#2d3748")
+                    .attr("font-weight", 600)
+                    .text(d => d.name.length > 22 ? d.name.slice(0, 20) + "..." : d.name);
+
+                // إعادة الرسم عند تغيير حجم الشاشة
+                window.addEventListener('resize', () => {
+                    drawFinancialNetwork(data, {
+                        selectedStatus,
+                        selectedPriority
+                    });
+                }, {
+                    once: true
                 });
-                document.getElementById('newZoomOutBtn').addEventListener('click', () => {
-                    svg.transition().duration(750).call(zoom.scaleBy, 0.8);
-                });
-                document.getElementById('newPanBtn').addEventListener('click', () => {
-                    svg.call(zoom);
-                });
+
+                // Helper - حالة الدفع بالعربي
+                function statusText(status) {
+                    switch (status) {
+                        case 'fully_paid':
+                            return 'مدفوع بالكامل';
+                        case 'partially_paid':
+                            return 'مدفوع جزئياً';
+                        case 'not_paid':
+                            return 'غير مدفوع';
+                        default:
+                            return 'غير محدد';
+                    }
+                }
+                // Helper - أولوية بالعربي
+                function priorityText(level) {
+                    switch (level) {
+                        case 'high':
+                            return 'عالية';
+                        case 'medium':
+                            return 'متوسطة';
+                        case 'low':
+                            return 'منخفضة';
+                        default:
+                            return 'غير محدد';
+                    }
+                }
+
+                // Sidebar - تفاصيل الحجز عند الضغط
+                function showBookingDetailsSidebar(item) {
+                    // احذف أي سايدبار قديم
+                    d3.select("#bookingSidebar").remove();
+                    // أنشئ عنصر سايدبار
+                    const sidebar = d3.select("body").append("div")
+                        .attr("id", "bookingSidebar")
+                        .style("position", "fixed")
+                        .style("top", "0").style("right", "0")
+                        .style("width", "350px").style("height", "100vh")
+                        .style("background", "#fff").style("box-shadow", "-2px 0 20px #0002")
+                        .style("z-index", "9999").style("padding", "32px 20px 20px 20px")
+                        .style("transition", "right 0.3s").style("font-family", "Cairo, sans-serif");
+
+                    // زر الإغلاق
+                    sidebar.append("button")
+                        .attr("class", "btn btn-link position-absolute top-0 end-0 mt-2 me-2")
+                        .html('<i class="fa fa-times fa-lg"></i>')
+                        .style("font-size", "1.5rem")
+                        .on("click", () => sidebar.remove());
+
+                    // المحتوى التفصيلي
+                    console.log(item);
+
+                    sidebar.append("h4").attr("class", "mb-3 mt-2").text(item.client_name ?? "عميل");
+                    sidebar.append("div").attr("class", "mb-2")
+                        .html(`<b>الفندق:</b> ${item.hotel_name || "-"}<br>
+                   <b>تاريخ الدخول:</b> ${item.check_in || "-"}<br>
+                   <b>تاريخ الخروج:</b> ${item.check_out || "-"}<br>
+                   <b>رقم الحجز:</b> ${item.booking_number || item.id || "-"}<br>
+                   <b>حالة الدفع:</b> <span style="color:${getStatusColor(item.combined_status)}">${statusText(item.combined_status)}</span><br>
+                   <b>مستوى الأولوية:</b> <span style="color:${getPriorityColor(item.priority_level)}">${priorityText(item.priority_level)}</span><br>
+                   <b>الشركة:</b> ${item.company_name || "-"}<br>
+                   <b>جهة الحجز:</b> ${item.agent_name || "-"}<br>
+                   <b>ملاحظات على الحجز:</b> <span style="color:#007bff">${item.notes || "-"}</span><br>
+                   <b>ملاحظات تسديد الشركة:</b> <span style="color:#22c55e">${item.company_payment_notes || "-"}</span><br>
+                   <b>ملاحظات تسديد الجهة:</b> <span style="color:#fd7e14">${item.agent_payment_notes || "-"}</span>`);
+                    // أي حقول إضافية
+                }
             }
+
+
+
+
+
         });
 
         document.getElementById('exportExcelJsBtn').addEventListener('click', function() {

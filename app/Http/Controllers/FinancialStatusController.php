@@ -774,153 +774,155 @@ class FinancialStatusController extends Controller
      * الحصول على بيانات المتابعة المالية مباشرة من جدول booking_financial_tracking
      */
     public function getFinancialTrackingData(Request $request)
-{
-    try {
-        // استخراج نطاق التاريخ بناءً على الفلتر المحدد
-        $dateRange = $this->getDateRange($request);
-        $startDate = $dateRange['start_date'];
-        $endDate = $dateRange['end_date'];
+    {
+        try {
+            // استخراج نطاق التاريخ بناءً على الفلتر المحدد
+            $dateRange = $this->getDateRange($request);
+            $startDate = $dateRange['start_date'];
+            $endDate = $dateRange['end_date'];
 
-        // بناء الاستعلام الأساسي مع تحميل العلاقات
-        $query = BookingFinancialTracking::with(['booking.company', 'booking.agent', 'booking.hotel'])
-            ->whereHas('booking', function ($q) use ($startDate, $endDate) {
-                $q->whereNull('deleted_at') // تجاهل السجلات المؤرشفة
-                    ->where(function ($q2) use ($startDate, $endDate) {
-                        $q2->whereBetween('created_at', [$startDate, $endDate])
-                            ->orWhereBetween('check_in', [$startDate, $endDate])
-                            ->orWhereBetween('check_out', [$startDate, $endDate]);
-                    })
-                    ->where('sale_price', '>', 0) // استبعاد الحجوزات بدون سعر بيع
-                    ->where('cost_price', '>', 0); // استبعاد الحجوزات بدون تكلفة
-            });
+            // بناء الاستعلام الأساسي مع تحميل العلاقات
+            $query = BookingFinancialTracking::with(['booking.company', 'booking.agent', 'booking.hotel'])
+                ->whereHas('booking', function ($q) use ($startDate, $endDate) {
+                    $q->whereNull('deleted_at') // تجاهل السجلات المؤرشفة
+                        ->where(function ($q2) use ($startDate, $endDate) {
+                            $q2->whereBetween('created_at', [$startDate, $endDate])
+                                ->orWhereBetween('check_in', [$startDate, $endDate])
+                                ->orWhereBetween('check_out', [$startDate, $endDate]);
+                        })
+                        ->where('sale_price', '>', 0) // استبعاد الحجوزات بدون سعر بيع
+                        ->where('cost_price', '>', 0); // استبعاد الحجوزات بدون تكلفة
+                });
 
-        // تطبيق فلتر حالة الدفع إذا تم توفيره
-        if ($request->filled('payment_status')) {
-            $status = $request->input('payment_status');
-            switch ($status) {
-                case 'fully_paid':
-                    $query->where('company_payment_status', 'fully_paid')
-                        ->where('agent_payment_status', 'fully_paid');
-                    break;
-                case 'partially_paid':
-                    $query->where(function ($q) {
-                        $q->where('company_payment_status', 'partially_paid')
-                            ->orWhere('agent_payment_status', 'partially_paid')
-                            ->orWhere(function ($q2) {
-                                $q2->where('company_payment_status', 'fully_paid')
-                                    ->where('agent_payment_status', '!=', 'fully_paid');
-                            })
-                            ->orWhere(function ($q2) {
-                                $q2->where('company_payment_status', '!=', 'fully_paid')
-                                    ->where('agent_payment_status', 'fully_paid');
-                            });
-                    });
-                    break;
-                case 'not_paid':
-                    $query->where('company_payment_status', 'not_paid')
-                        ->where('agent_payment_status', 'not_paid');
-                    break;
+            // تطبيق فلتر حالة الدفع إذا تم توفيره
+            if ($request->filled('payment_status')) {
+                $status = $request->input('payment_status');
+                switch ($status) {
+                    case 'fully_paid':
+                        $query->where('company_payment_status', 'fully_paid')
+                            ->where('agent_payment_status', 'fully_paid');
+                        break;
+                    case 'partially_paid':
+                        $query->where(function ($q) {
+                            $q->where('company_payment_status', 'partially_paid')
+                                ->orWhere('agent_payment_status', 'partially_paid')
+                                ->orWhere(function ($q2) {
+                                    $q2->where('company_payment_status', 'fully_paid')
+                                        ->where('agent_payment_status', '!=', 'fully_paid');
+                                })
+                                ->orWhere(function ($q2) {
+                                    $q2->where('company_payment_status', '!=', 'fully_paid')
+                                        ->where('agent_payment_status', 'fully_paid');
+                                });
+                        });
+                        break;
+                    case 'not_paid':
+                        $query->where('company_payment_status', 'not_paid')
+                            ->where('agent_payment_status', 'not_paid');
+                        break;
+                }
             }
-        }
 
-        // تطبيق الفلاتر المتقدمة
-        if ($request->filled('client_name')) {
-            $query->whereHas('booking', function ($q) use ($request) {
-                $q->where('client_name', 'like', '%' . $request->input('client_name') . '%');
-            });
-        }
+            // تطبيق الفلاتر المتقدمة
+            if ($request->filled('client_name')) {
+                $query->whereHas('booking', function ($q) use ($request) {
+                    $q->where('client_name', 'like', '%' . $request->input('client_name') . '%');
+                });
+            }
 
-        if ($request->filled('company_name')) {
-            $query->whereHas('booking.company', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->input('company_name') . '%');
-            });
-        }
+            if ($request->filled('company_name')) {
+                $query->whereHas('booking.company', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->input('company_name') . '%');
+                });
+            }
 
-        if ($request->filled('agent_name')) {
-            $query->whereHas('booking.agent', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->input('agent_name') . '%');
-            });
-        }
+            if ($request->filled('agent_name')) {
+                $query->whereHas('booking.agent', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->input('agent_name') . '%');
+                });
+            }
 
-        if ($request->filled('hotel_name')) {
-            $query->whereHas('booking.hotel', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->input('hotel_name') . '%');
-            });
-        }
+            if ($request->filled('hotel_name')) {
+                $query->whereHas('booking.hotel', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->input('hotel_name') . '%');
+                });
+            }
 
-        if ($request->filled('currency')) {
-            $query->whereHas('booking', function ($q) use ($request) {
-                $q->where('currency', $request->input('currency'));
-            });
-        }
+            if ($request->filled('currency')) {
+                $query->whereHas('booking', function ($q) use ($request) {
+                    $q->where('currency', $request->input('currency'));
+                });
+            }
 
-        if ($request->filled('priority_level')) {
-            $query->where('priority_level', $request->input('priority_level'));
-        }
+            if ($request->filled('priority_level')) {
+                $query->where('priority_level', $request->input('priority_level'));
+            }
 
-        // تنفيذ الاستعلام مع الترقيم
-        $trackingData = $query->paginate(15);
+            // تنفيذ الاستعلام مع الترقيم
+            $trackingData = $query->paginate(15);
 
-        // حساب الإحصائيات الأساسية
-        $stats = [
-            'total' => $trackingData->count(),
-            'fully_paid' => $trackingData->where('company_payment_status', 'fully_paid')
-                ->where('agent_payment_status', 'fully_paid')
-                ->count(),
-            'not_paid' => $trackingData->where('company_payment_status', 'not_paid')
-                ->where('agent_payment_status', 'not_paid')
-                ->count(),
-        ];
-        $stats['partially_paid'] = $stats['total'] - $stats['fully_paid'] - $stats['not_paid'];
-
-        // تهيئة البيانات النهائية للعرض
-        $formattedData = $trackingData->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'booking_id' => $item->booking_id,
-                'client_name' => $item->booking->client_name ?? '-',
-                'company_name' => $item->booking->company->name ?? '-',
-                'agent_name' => $item->booking->agent->name ?? '-',
-                'hotel_name' => $item->booking->hotel->name ?? '-',
-                'check_in' => $item->booking->check_in ? $item->booking->check_in->format('Y-m-d') : '-',
-                'check_out' => $item->booking->check_out ? $item->booking->check_out->format('Y-m-d') : '-',
-                'company_payment_status' => $item->company_payment_status,
-                'agent_payment_status' => $item->agent_payment_status,
-                'payment_deadline' => $item->payment_deadline ? $item->payment_deadline->format('Y-m-d') : null,
-                'follow_up_date' => $item->follow_up_date ? $item->follow_up_date->format('Y-m-d') : null,
-                'priority_level' => $item->priority_level ?? 'medium',
-                'notes' => $item->notes,
-                'updated_at' => $item->updated_at->format('Y-m-d H:i'),
-                'combined_status' => $this->combinePaymentStatus($item->company_payment_status, $item->agent_payment_status),
+            // حساب الإحصائيات الأساسية
+            $stats = [
+                'total' => $trackingData->count(),
+                'fully_paid' => $trackingData->where('company_payment_status', 'fully_paid')
+                    ->where('agent_payment_status', 'fully_paid')
+                    ->count(),
+                'not_paid' => $trackingData->where('company_payment_status', 'not_paid')
+                    ->where('agent_payment_status', 'not_paid')
+                    ->count(),
             ];
-        });
+            $stats['partially_paid'] = $stats['total'] - $stats['fully_paid'] - $stats['not_paid'];
 
-        // إرجاع الاستجابة بتنسيق JSON
-        return response()->json([
-            'success' => true,
-            'financial_tracking' => $formattedData,
-            'statistics' => $stats,
-            'pagination' => [
-                'current_page' => $trackingData->currentPage(),
-                'last_page' => $trackingData->lastPage(),
-                'per_page' => $trackingData->perPage(),
-                'total' => $trackingData->total(),
-                'from' => $trackingData->firstItem(),
-                'to' => $trackingData->lastItem(),
-                'links' => $trackingData->linkCollection(),
-            ],
-        ]);
-    } catch (\Exception $e) {
-        // تسجيل الخطأ لأغراض التصحيح
-        Log::error('خطأ في الحصول على بيانات المتابعة المالية: ' . $e->getMessage(), [
-            'trace' => $e->getTraceAsString(),
-        ]);
+            // تهيئة البيانات النهائية للعرض
+            $formattedData = $trackingData->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'booking_id' => $item->booking_id,
+                    'client_name' => $item->booking->client_name ?? '-',
+                    'company_name' => $item->booking->company->name ?? '-',
+                    'agent_name' => $item->booking->agent->name ?? '-',
+                    'hotel_name' => $item->booking->hotel->name ?? '-',
+                    'check_in' => $item->booking->check_in ? $item->booking->check_in->format('Y-m-d') : '-',
+                    'check_out' => $item->booking->check_out ? $item->booking->check_out->format('Y-m-d') : '-',
+                    'company_payment_status' => $item->company_payment_status,
+                    'agent_payment_status' => $item->agent_payment_status,
+                    'company_payment_notes' => $item->company_payment_notes,          // ⭐️ أضِف هذا السطر
+                    'agent_payment_notes'   => $item->agent_payment_notes,            // ⭐️ أضِف هذا السطر
+                    'payment_deadline' => $item->payment_deadline ? $item->payment_deadline->format('Y-m-d') : null,
+                    'follow_up_date' => $item->follow_up_date ? $item->follow_up_date->format('Y-m-d') : null,
+                    'priority_level' => $item->priority_level ?? 'medium',
+                    'notes' => $item->booking->notes ,
+                    'updated_at' => $item->updated_at->format('Y-m-d H:i'),
+                    'combined_status' => $this->combinePaymentStatus($item->company_payment_status, $item->agent_payment_status),
+                ];
+            });
 
-        // إرجاع استجابة خطأ
-        return response()->json([
-            'success' => false,
-            'error' => 'حدث خطأ أثناء معالجة البيانات: ' . $e->getMessage(),
-        ], 500);
+            // إرجاع الاستجابة بتنسيق JSON
+            return response()->json([
+                'success' => true,
+                'financial_tracking' => $formattedData,
+                'statistics' => $stats,
+                'pagination' => [
+                    'current_page' => $trackingData->currentPage(),
+                    'last_page' => $trackingData->lastPage(),
+                    'per_page' => $trackingData->perPage(),
+                    'total' => $trackingData->total(),
+                    'from' => $trackingData->firstItem(),
+                    'to' => $trackingData->lastItem(),
+                    'links' => $trackingData->linkCollection(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            // تسجيل الخطأ لأغراض التصحيح
+            Log::error('خطأ في الحصول على بيانات المتابعة المالية: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // إرجاع استجابة خطأ
+            return response()->json([
+                'success' => false,
+                'error' => 'حدث خطأ أثناء معالجة البيانات: ' . $e->getMessage(),
+            ], 500);
+        }
     }
-}
 }
