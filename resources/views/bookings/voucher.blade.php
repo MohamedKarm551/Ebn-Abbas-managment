@@ -79,6 +79,24 @@
             border-radius: 50%;
             border: 3px solid rgba(255, 255, 255, 0.3);
             margin-bottom: 15px;
+            /* إضافة وميض متدرج (glow) */
+            box-shadow: 0 0 30px 8px #38ef7d, 0 0 8px 4px #2563eb;
+            animation: img-glow 2.2s infinite alternate;
+        }
+
+        /* أنيميشن وميض متدرج */
+        @keyframes img-glow {
+            0% {
+                box-shadow: 0 0 10px 3px #38ef7d, 0 0 4px 1px #2563eb;
+            }
+
+            70% {
+                box-shadow: 0 0 50px 16px #38ef7d, 0 0 22px 9px #2563eb;
+            }
+
+            100% {
+                box-shadow: 0 0 15px 4px #38ef7d, 0 0 4px 2px #2563eb;
+            }
         }
 
         .header h1 {
