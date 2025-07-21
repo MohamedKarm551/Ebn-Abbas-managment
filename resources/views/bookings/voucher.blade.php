@@ -347,6 +347,28 @@
                 opacity: 0.2;
             }
         }
+
+        /* تنظيم شريط الأدوات ليكون ريسبونسف ومرتب */
+        .tools-bar {
+            gap: 10px !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .tools-bar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+
+            .tools-bar .btn,
+            .tools-bar .dropdown {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
@@ -375,16 +397,32 @@
                 </a>
             @endauth
 
-            <div class="mx-auto d-flex gap-2">
+            <div class="mx-auto d-flex flex-wrap gap-2 justify-content-center align-items-center tools-bar">
                 <button id="changeLogo" class="btn btn-secondary d-flex align-items-center gap-2">
                     <i class="bi bi-image fs-5"></i>
                     تغيير اللوجو
                 </button>
+                <button id="changeGradient" class="btn btn-secondary d-flex align-items-center gap-2">
+                    <i class="bi bi-palette fs-5"></i>
+                    تغيير التدرج
+                </button>
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-secondary d-flex align-items-center gap-2 dropdown-toggle" type="button"
+                        id="showGradientsBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
+                        كل التدرجات
+                    </button>
+                    <ul class="dropdown-menu p-3" aria-labelledby="showGradientsBtn"
+                        style="min-width: 350px; max-width: 500px;">
+                        <div id="gradientsPalette" class="d-flex flex-wrap gap-2"></div>
+                    </ul>
+                </div>
                 <button id="downloadVoucher" class="btn btn-success d-flex align-items-center gap-2">
                     <i class="bi bi-download fs-5"></i>
                     تحميل صورة الفاتورة
                 </button>
             </div>
+
         </div>
     </div>
 
@@ -544,10 +582,9 @@
             });
         });
     </script>
-     <script>
+    <script>
         // Array للوجوهات والأسماء المختلفة
-        const companies = [
-            {
+        const companies = [{
                 name: "شركة ابن عباس",
                 logo: "{{ asset('images/cover.jpg') }}"
             },
@@ -560,28 +597,29 @@
                 logo: "{{ asset('images/EptahLogo.png') }}"
             }
         ];
-        
+
         let currentCompanyIndex = 0;
-        
+
         // تغيير اللوجو واسم الشركة
         document.getElementById('changeLogo').addEventListener('click', function() {
             currentCompanyIndex = (currentCompanyIndex + 1) % companies.length;
-            
+
             // تغيير لوجو الهيدر
             document.getElementById('headerLogo').src = companies[currentCompanyIndex].logo;
-            
+
             // تغيير اسم الشركة
             document.getElementById('companyName').textContent = companies[currentCompanyIndex].name;
-            
+
             // تغيير العلامة المائية
-            document.querySelector('.voucher-bg').style.backgroundImage = `url('${companies[currentCompanyIndex].logo}')`;
+            document.querySelector('.voucher-bg').style.backgroundImage =
+                `url('${companies[currentCompanyIndex].logo}')`;
         });
 
         document.getElementById('downloadVoucher').addEventListener('click', function() {
             // إضافة تأثير التحميل
             this.innerHTML = '<i class="bi bi-hourglass-split"></i> جاري التحميل...';
             this.disabled = true;
-            
+
             html2canvas(document.querySelector('.voucher-container'), {
                 scale: 2,
                 useCORS: true,
@@ -591,13 +629,250 @@
                 link.download = 'voucher-' + new Date().getTime() + '.png';
                 link.href = canvas.toDataURL('image/png', 1.0);
                 link.click();
-                
+
                 // إعادة تعيين النص والحالة
-                document.getElementById('downloadVoucher').innerHTML = '<i class="bi bi-download fs-5"></i> تحميل صورة الفاتورة';
+                document.getElementById('downloadVoucher').innerHTML =
+                    '<i class="bi bi-download fs-5"></i> تحميل صورة الفاتورة';
                 document.getElementById('downloadVoucher').disabled = false;
             });
         });
     </script>
+    <script>
+        // ====================
+        // تعريف المتغيرات الرئيسية في الأعلى حتى يمكن استخدامها في أي مكان
+        // ====================
+
+        // المتغير الذي يحتفظ برقم التدرج الحالي (صفر يعني أول تدرج)
+        let currentGradientIndex = 0;
+
+        // مصفوفة التدرجات مع ألوان العناصر المصاحبة (الضيوف، التاريخ، الغرفة، التواصل)
+        const defaultGradients = [{
+                bg: "linear-gradient(120deg, #10b981 60%, #2563eb 100%)",
+                guest: "linear-gradient(120deg, #10b981 60%, #2563eb 100%)",
+                date: "#17a2b8",
+                room: "#6f42c1",
+                contact: "#e83e8c"
+            },
+            {
+                bg: "linear-gradient(120deg, #272A35 0%, #A1B1CC 50%, #848B9B 100%)",
+                guest: "#A1B1CC",
+                date: "#272A35",
+                room: "#848B9B",
+                contact: "#272A35"
+            },
+            {
+                bg: "linear-gradient(120deg, #C58746 0%, #573620 50%, #2A180D 80%, #FBCF4C 90%, #C4B79B 100%)",
+                guest: "#FBCF4C",
+                date: "#C58746",
+                room: "#573620",
+                contact: "#C4B79B"
+            },
+            {
+                bg: "linear-gradient(120deg, #F2F2F3 0%, #E89A37 40%, #D7711F 70%, #A33D0B 90%, #8A4F25 100%)",
+                guest: "#E89A37",
+                date: "#A33D0B",
+                room: "#D7711F",
+                contact: "#8A4F25"
+            },
+            {
+                bg: "linear-gradient(135deg, #ffb88c 0%, #de6262 100%)",
+                guest: "#de6262",
+                date: "#ffb88c",
+                room: "#de6262",
+                contact: "#ffb88c"
+            },
+            {
+                bg: "linear-gradient(120deg, #a2d4fa 0%, #076585 100%)",
+                guest: "#076585",
+                date: "#a2d4fa",
+                room: "#076585",
+                contact: "#a2d4fa"
+            },
+            {
+                bg: "linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)",
+                guest: "#a6c1ee",
+                date: "#fbc2eb",
+                room: "#a6c1ee",
+                contact: "#fbc2eb"
+            },
+            {
+                bg: "linear-gradient(120deg, #96fbc4 0%, #f9f586 100%)",
+                guest: "#96fbc4",
+                date: "#f9f586",
+                room: "#96fbc4",
+                contact: "#f9f586"
+            },
+            {
+                bg: "linear-gradient(120deg, #434343 0%, #262626 100%)",
+                guest: "#434343",
+                date: "#262626",
+                room: "#434343",
+                contact: "#262626"
+            },
+            {
+                bg: "linear-gradient(120deg, #a8ff78 0%, #78ffd6 100%)",
+                guest: "#78ffd6",
+                date: "#a8ff78",
+                room: "#78ffd6",
+                contact: "#a8ff78"
+            },
+            {
+                bg: "linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)",
+                guest: "#ffd1ff",
+                date: "#fad0c4",
+                room: "#ffd1ff",
+                contact: "#fad0c4"
+            },
+            {
+                bg: "linear-gradient(135deg, #43cea2 0%, #185a9d 100%)",
+                guest: "#185a9d",
+                date: "#43cea2",
+                room: "#185a9d",
+                contact: "#43cea2"
+            },
+            {
+                bg: "linear-gradient(135deg, #ffe259 0%, #ffa751 100%)",
+                guest: "#ffa751",
+                date: "#ffe259",
+                room: "#ffa751",
+                contact: "#ffe259"
+            },
+            {
+                bg: "linear-gradient(120deg, #c471f5 0%, #fa71cd 100%)",
+                guest: "#fa71cd",
+                date: "#c471f5",
+                room: "#fa71cd",
+                contact: "#c471f5"
+            },
+            {
+                bg: "linear-gradient(120deg, #11998e 0%, #38ef7d 100%)",
+                guest: "#38ef7d",
+                date: "#11998e",
+                room: "#11998e",
+                contact: "#38ef7d"
+            },
+            {
+                bg: "linear-gradient(135deg, #f7971e 0%, #ffd200 100%)",
+                guest: "#ffd200",
+                date: "#f7971e",
+                room: "#ffd200",
+                contact: "#f7971e"
+            },
+            {
+                bg: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                guest: "#43e97b",
+                date: "#38f9d7",
+                room: "#43e97b",
+                contact: "#38f9d7"
+            },
+            {
+                bg: "linear-gradient(120deg, #fc5c7d 0%, #6a82fb 100%)",
+                guest: "#fc5c7d",
+                date: "#6a82fb",
+                room: "#fc5c7d",
+                contact: "#6a82fb"
+            },
+            {
+                bg: "linear-gradient(135deg, #7f53ac 0%, #647dee 100%)",
+                guest: "#647dee",
+                date: "#7f53ac",
+                room: "#647dee",
+                contact: "#7f53ac"
+            },
+            {
+                bg: "linear-gradient(135deg, #232526 0%, #414345 100%)",
+                guest: "linear-gradient(135deg, #fd746c 0%, #ff9068 100%)",
+                date: "#1fa2ff",
+                room: "#232526",
+                contact: "#ff9068"
+            }
+        ];
+        // إذا لم توجد التدرجات في الكاش، احفظها أول مرة
+        if (!localStorage.getItem('voucher_gradients')) {
+            localStorage.setItem('voucher_gradients', JSON.stringify(defaultGradients));
+        }
+
+        // في كل مرة: استرجع التدرجات من الكاش
+        const gradients = JSON.parse(localStorage.getItem('voucher_gradients'));
+
+        // ابدأ دائمًا بأول تدرج (دون استرجاع آخر تدرج مختار)
+        // let currentGradientIndex = 0;
+
+
+        // ====================
+        // بداية الأحداث بعد تحميل الصفحة (تأكد أن العناصر كلها ظهرت)
+        // ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            const palette = document.getElementById('gradientsPalette');
+            if (palette) {
+                palette.innerHTML = '';
+                gradients.forEach((g, idx) => {
+                    const swatch = document.createElement('div');
+                    swatch.style.width = "48px";
+                    swatch.style.height = "48px";
+                    swatch.style.borderRadius = "10px";
+                    swatch.style.cursor = "pointer";
+                    swatch.style.border = "2px solid #eee";
+                    swatch.style.background = g.bg;
+                    swatch.title = `تدرج رقم ${idx + 1}`;
+                    swatch.addEventListener('click', function() {
+                        applyGradient(idx);
+                        currentGradientIndex = idx;
+
+                        // إغلاق القائمة المنسدلة برمجياً (Bootstrap 5)
+                        const dropdown = bootstrap.Dropdown.getOrCreateInstance(document
+                            .getElementById('showGradientsBtn'));
+                        dropdown.hide();
+                    });
+                    palette.appendChild(swatch);
+                });
+            }
+
+            document.getElementById('changeGradient').addEventListener('click', function() {
+                currentGradientIndex = (currentGradientIndex + 1) % gradients.length;
+                applyGradient(currentGradientIndex);
+            });
+
+            applyGradient(currentGradientIndex);
+        });
+        // ====================
+        // دالة موحدة لتطبيق ألوان التدرج على كل عناصر الصفحة حسب رقم التدرج
+        // ====================
+        function applyGradient(idx) {
+            const g = gradients[idx];
+            if (!g) return; // إذا لم يوجد هذا التدرج توقف
+
+            // 1. تغيير تدرج خلفية الهيدر (المربع العلوي)
+            document.querySelector('.header').style.background = g.bg;
+
+            // 2. تغيير لون جميع عناصر الضيوف
+            document.querySelectorAll('.guest-info').forEach(el => {
+                el.style.background = g.guest;
+                el.style.color = "#fff"; // اجعل النص أبيض لظهور أوضح
+            });
+
+            // 3. تغيير لون جميع عناصر التاريخ
+            document.querySelectorAll('.date-info').forEach(el => {
+                el.style.background = g.date;
+                el.style.color = "#fff";
+            });
+
+            // 4. تغيير لون جميع عناصر الغرف
+            document.querySelectorAll('.room-info').forEach(el => {
+                el.style.background = g.room;
+                el.style.color = "#fff";
+            });
+
+            // 5. تغيير لون جميع عناصر التواصل
+            document.querySelectorAll('.contact-info').forEach(el => {
+                el.style.background = g.contact;
+                el.style.color = "#fff";
+            });
+        }
+    </script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     {{-- <script src="{{ asset('js/preventClick.js') }}"></script> --}}
 </body>
