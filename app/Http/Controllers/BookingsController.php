@@ -18,7 +18,7 @@ use App\Models\ArchivedBooking; // <--- 1. نتأكد من إضافة ArchivedBo
 use App\Models\AvailabilityRoomType; // Import AvailabilityRoomType model
 use Illuminate\Validation\ValidationException; // *** تأكد من وجود هذا السطر ***
 use App\Models\RoomType;
-use App\Models\Payment; 
+use App\Models\Payment;
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;  // <--- 2. نضيف DB للـ Transactions
 use Illuminate\Support\Facades\Log; // تأكد من استيراد Log

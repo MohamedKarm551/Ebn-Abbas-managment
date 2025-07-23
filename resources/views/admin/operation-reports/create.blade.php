@@ -280,8 +280,8 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="notes" class="form-label">ملاحظات</label>
-                                    <input type="text" name="notes" id="notes" class="form-control">
+                                    <label for="client_notes" class="form-label">ملاحظات</label>
+                                    <input type="text" name="client_notes" id="client_notes" class="form-control">
                                 </div>
                             </div>
 
@@ -1691,6 +1691,22 @@
 
             // إضافة قسم تأشيرة واحد افتراضياً
             addVisaSection();
+        });
+        document.getElementById('operationReportForm').addEventListener('submit', function(e) {
+            var clientNotes = document.getElementById('client_notes')?.value?.trim() || '';
+            var extraNotes = document.querySelector('textarea[name="notes"]')?.value?.trim() || '';
+
+            // دمج الملاحظات في الحقل السفلي
+            var mergedNotes = '';
+            if (clientNotes && extraNotes) {
+                mergedNotes = 'ملاحظات العميل: ' + clientNotes + '\n' + 'ملاحظات إضافية: ' + extraNotes;
+            } else if (clientNotes) {
+                mergedNotes = clientNotes;
+            } else {
+                mergedNotes = extraNotes;
+            }
+
+            document.querySelector('textarea[name="notes"]').value = mergedNotes;
         });
     </script>
     <script src="{{ asset('js/preventClick.js') }}"></script>

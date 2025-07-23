@@ -39,10 +39,23 @@
                         </li>
                     @endif
                     @if (auth()->user()->role === 'employee')
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('admin.operation-reports.index') }}">
-                                <i class="fas fa-chart-line me-1"></i> الحجوزات المؤكدة
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="dropdownOperationReports" role="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-chart-line me-1"></i> تقارير  
                             </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownOperationReports">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.operation-reports.index') }}">
+                                         تقارير الحجوزات المؤكدة (الكويت)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.masr.financial-reports.index') }}">
+                                          تقارير مصر
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     @endif
                     @if (auth()->user()->role === 'Admin')
@@ -88,8 +101,12 @@
                                 <li class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{{ route('admin.operation-reports.index') }}">
-                                        <i class="fas fa-chart-line me-1"></i>تقارير العمليات
+                                        <i class="fas fa-chart-line me-1"></i>تقارير الكويت
                                     </a>
+
+                                    <a class="dropdown-item" href="{{ route('admin.masr.financial-reports.index') }}">
+                                        <i class="fas fa-chart-line me-1"></i>تقارير مصر</a>
+
                                 </li>
 
 

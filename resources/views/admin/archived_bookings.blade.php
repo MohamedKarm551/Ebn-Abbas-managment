@@ -7,21 +7,25 @@
             <div class="alert alert-info text-center">لا توجد حجوزات مؤرشفة.</div>
         @else
             <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
-            <div class="filter-box p-4 mb-4">
+            <div class="filter-box pulse-border  p-4 mb-4">
+               
                 <h3 class="mb-3 text-muted">عملية البحث والفلترة</h3>
                 <form id="archiveFilterForm" method="GET" action="{{ route('admin.archived_bookings') }}">
                     <div class="row align-items-center text-center">
                         <div class="col-md-4 mb-2">
                             <label for="search" class="form-label">بحث عن العميل، الموظف، الشركة، جهة حجز، فندق</label>
-                            <input type="text" name="search" id="search" class="form-control" value="{{ request('search') }}">
+                            <input type="text" name="search" id="search" class="form-control"
+                                value="{{ request('search') }}">
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="start_date" class="form-label">من تاريخ</label>
-                            <input type="text" name="start_date" id="start_date" class="form-control datepicker" value="{{ request('start_date') }}" placeholder="يوم/شهر/سنة">
+                            <input type="text" name="start_date" id="start_date" class="form-control datepicker"
+                                value="{{ request('start_date') }}" placeholder="يوم/شهر/سنة">
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="end_date" class="form-label">إلى تاريخ</label>
-                            <input type="text" name="end_date" id="end_date" class="form-control datepicker" value="{{ request('end_date') }}" placeholder="يوم/شهر/سنة">
+                            <input type="text" name="end_date" id="end_date" class="form-control datepicker"
+                                value="{{ request('end_date') }}" placeholder="يوم/شهر/سنة">
                         </div>
                     </div>
                     <div class="text-center mt-3">
@@ -45,7 +49,7 @@
             </div>
             <div class="alert alert-info text-center mb-3">
                 تم جلب: <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
-                
+
             </div>
             <div class="table-responsive" id="archivedBookingsTable">
                 @include('admin._archived_table', ['archivedBookings' => $archivedBookings])
@@ -57,36 +61,73 @@
         @endif
     </div>
 @endsection
-@push('styles') {{-- أو ممكن تستخدم @section('styles') لو الـ layout بتاعك فيه yield('styles') --}}
-<style>
-.autocomplete-suggestions {
-  position: absolute; /* عشان يظهر فوق المحتوى اللي تحته */
-  border: 1px solid #ddd;
-  border-top: none;
-  z-index: 999; /* عشان يظهر فوق أي حاجة تانية */
-  background-color: #fff;
-  width: calc(100% - 2px); /* ياخد نفس عرض عمود البحث تقريباً */
-  max-height: 200px; /* أقصى ارتفاع عشان لو الاقتراحات كتير */
-  overflow-y: auto; /* لو الاقتراحات أكتر من الارتفاع، يظهر سكرول */
-  display: none; /* بيكون مخفي في الأول */
-  text-align: right; /* عشان النص يبقى يمين */
-}
-.autocomplete-suggestions div {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #eee; /* خط فاصل بين الاقتراحات */
-}
-.autocomplete-suggestions div:last-child {
-  border-bottom: none; /* آخر اقتراح من غير خط تحته */
-}
-.autocomplete-suggestions div:hover {
-  background-color: #f0f0f0; /* تغيير اللون لما الماوس يجي عليه */
-}
-/* تعديل بسيط عشان الـ div يظهر تحت الانبوت بالظبط */
-.col-md-4 {
-    position: relative; /* مهم عشان الـ absolute يشتغل صح */
-}
-</style>
+@push('styles')
+    {{-- أو ممكن تستخدم @section('styles') لو الـ layout بتاعك فيه yield('styles') --}}
+    <style>
+        .autocomplete-suggestions {
+            position: absolute;
+            /* عشان يظهر فوق المحتوى اللي تحته */
+            border: 1px solid #ddd;
+            border-top: none;
+            z-index: 999;
+            /* عشان يظهر فوق أي حاجة تانية */
+            background-color: #fff;
+            width: calc(100% - 2px);
+            /* ياخد نفس عرض عمود البحث تقريباً */
+            max-height: 200px;
+            /* أقصى ارتفاع عشان لو الاقتراحات كتير */
+            overflow-y: auto;
+            /* لو الاقتراحات أكتر من الارتفاع، يظهر سكرول */
+            display: none;
+            /* بيكون مخفي في الأول */
+            text-align: right;
+            /* عشان النص يبقى يمين */
+        }
+
+        .autocomplete-suggestions div {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            /* خط فاصل بين الاقتراحات */
+        }
+
+        .autocomplete-suggestions div:last-child {
+            border-bottom: none;
+            /* آخر اقتراح من غير خط تحته */
+        }
+
+        .autocomplete-suggestions div:hover {
+            background-color: #f0f0f0;
+            /* تغيير اللون لما الماوس يجي عليه */
+        }
+
+        /* تعديل بسيط عشان الـ div يظهر تحت الانبوت بالظبط */
+        .col-md-4 {
+            position: relative;
+            /* مهم عشان الـ absolute يشتغل صح */
+        }
+
+
+        .pulse-border {
+            border-radius: 22px;
+            box-shadow: 0 0 0 0 #ffe259, 0 0 10px 4px #fff70044;
+            animation: pulseGlow 2.2s infinite cubic-bezier(.66, 0, .26, 1);
+        }
+
+        @keyframes pulseGlow {
+            0% {
+                box-shadow: 0 0 0 0 #ffe259, 0 0 10px 4px #fff70044;
+            }
+
+            50% {
+                box-shadow: 0 0 0 7px #ffe25955, 0 0 24px 10px #fff70077;
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 #ffe259, 0 0 10px 4px #fff70044;
+            }
+        }
+    </style>
 @endpush
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -472,8 +513,8 @@
 
         // تحديث الرسالة عند أول تحميل (قبل أي Ajax)
         updateDateAlert();
-                            // --- 7. كود قائمة الإدارة الدائرية (التثبيت عند الضغط) ---
-                            const adminMenuContainer = document.querySelector('.admin-menu-container');
+        // --- 7. كود قائمة الإدارة الدائرية (التثبيت عند الضغط) ---
+        const adminMenuContainer = document.querySelector('.admin-menu-container');
         const adminCircle = document.querySelector('.admin-circle');
 
         if (adminMenuContainer && adminCircle) {
@@ -485,7 +526,8 @@
             // اختياري: إغلاق القائمة عند الضغط في أي مكان آخر في الصفحة
             document.addEventListener('click', function(event) {
                 // نتأكد أن الضغطة لم تكن على القائمة نفسها أو الدائرة
-                if (!adminMenuContainer.contains(event.target) && adminMenuContainer.classList.contains('is-active')) {
+                if (!adminMenuContainer.contains(event.target) && adminMenuContainer.classList.contains(
+                        'is-active')) {
                     adminMenuContainer.classList.remove('is-active');
                 }
             });
@@ -498,6 +540,8 @@
 </script>
 <!-- استدعاء الخلفية التفاعلية -->
 <script type="module">
-    import { initParticlesBg } from '/js/particles-bg.js';
+    import {
+        initParticlesBg
+    } from '/js/particles-bg.js';
     initParticlesBg(); // يمكنك تمرير خيارات مثل {points:80, colors:[...]} إذا أردت
 </script>

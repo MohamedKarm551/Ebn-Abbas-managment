@@ -197,12 +197,14 @@
         </div>
 
         <!-- ملخص الأرباح حسب العملة -->
-        <div class="report-section">
-            <div class="report-section-header">
-                <h2 class="h5 mb-0">ملخص الأرباح حسب العملة</h2>
+        <div class="report-section shadow-sm rounded-4 border border-2 border-primary-subtle mb-5">
+            <div class="report-section-header bg-gradient bg-primary text-white rounded-top-4 px-4 py-3 d-flex align-items-center">
+                <h2 class="h5 mb-0 flex-grow-1">ملخص الأرباح حسب العملة</h2>
+                        <span class="badge bg-light text-primary fs-6 px-3 py-2">تقرير حديث</span>
+
             </div>
-            <div class="report-section-body">
-                <div class="summary-card">
+            <div class="report-section-body bg-white rounded-bottom-4 px-4 py-4">
+                <div class="summary-card border-0 p-0">
                     @php
                         // تجميع الأرباح حسب العملة منفصلة تماماً
                         $profitsByCurrency = [
@@ -374,16 +376,19 @@
                 @endforeach
                 
                 {{-- إجمالي عام لكل العملات --}}
-                    <div class="summary-item total-row bg-dark text-white">
-                        <span class="fw-bold">إجمالي عام لكل العملات</span>
-                        <div>
-                            @foreach ($profitsByCurrency as $currency => $profits)
-                                @if ($profits['total'] > 0)
-                                    <div>{{ number_format($profits['total'], 2) }} {{ $currencyLabels[$currency] }}</div>
-                                @endif
-                            @endforeach
-                        </div>
-                    </div>
+                        <div class="separator my-4"></div>
+            <div class="summary-item total-row bg-dark text-white rounded-3 px-3 py-3 d-flex justify-content-between align-items-center">
+                <span class="fw-bold"><i class="fas fa-calculator me-2"></i> إجمالي عام لكل العملات</span>
+                <div class="d-flex gap-3 flex-wrap">
+                    @foreach ($profitsByCurrency as $currency => $profits)
+                        @if ($profits['total'] > 0)
+                            <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : ($currency == 'SAR' ? 'success' : ($currency == 'USD' ? 'info' : 'warning')) }} fs-6 px-3 py-2">
+                                {{ number_format($profits['total'], 2) }} {{ $currencyLabels[$currency] }}
+                            </span>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
                 </div>
             </div>
         </div>
