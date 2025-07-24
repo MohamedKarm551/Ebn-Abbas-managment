@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'تعديل تقرير مالي')
 @section('content')
     <div class="container">
         <h3>تعديل تقرير</h3>
@@ -89,4 +90,42 @@
             }
         });
     </script>
+    <script>
+function updateProfit() {
+    let itemsDiv = document.getElementById('items');
+    let totalCost = 0, totalSale = 0;
+    itemsDiv.querySelectorAll('.item').forEach(function(item) {
+        let costInput = item.querySelector('input[name*="[cost_amount]"]');
+        let saleInput = item.querySelector('input[name*="[sale_amount]"]');
+        let cost = parseFloat(costInput?.value) || 0;
+        let sale = parseFloat(saleInput?.value) || 0;
+        totalCost += cost;
+        totalSale += sale;
+    });
+    let profit = totalSale - totalCost;
+    let profitDiv = document.getElementById('liveProfit');
+    if (!profitDiv) {
+        profitDiv = document.createElement('div');
+        profitDiv.id = 'liveProfit';
+        profitDiv.className = 'alert alert-info mt-2';
+        itemsDiv.parentNode.insertBefore(profitDiv, itemsDiv.nextSibling);
+    }
+    profitDiv.innerHTML = `<strong>الربح الحالي:</strong> ${profit}`;
+}
+
+// حدث عند الكتابة أو التغيير في أي بند
+document.getElementById('items').addEventListener('input', updateProfit);
+// عند إضافة بند جديد
+document.getElementById('addItem').addEventListener('click', function() {
+    setTimeout(updateProfit, 100); // بعد إضافة العنصر الجديد
+});
+// عند حذف بند
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-item')) {
+        setTimeout(updateProfit, 100);
+    }
+});
+// حساب الربح عند تحميل الصفحة
+window.addEventListener('DOMContentLoaded', updateProfit);
+</script>
 @endsection

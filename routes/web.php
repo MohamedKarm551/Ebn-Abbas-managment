@@ -471,6 +471,9 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
     Route::get('/bookings/list', [App\Http\Controllers\MasrFinancialReportController::class, 'list'])->name('bookings.list');
     Route::get('/bookings/{id}/info', [App\Http\Controllers\MasrFinancialReportController::class, 'info'])->name('bookings.info');
     Route::get('/operation-reports/get-booking-details', [App\Http\Controllers\MasrFinancialReportController::class, 'getBookingDetails'])->name('operation-reports.get-booking-details');
+    // مصاريف مصر : 
+    Route::resource('masr_expenses', \App\Http\Controllers\MasrExpenseController::class);
+    Route::get('/masr-expenses/filter', [App\Http\Controllers\MasrExpenseController::class, 'filter'])->name('masr_expenses.filter');
 });
 
 /*

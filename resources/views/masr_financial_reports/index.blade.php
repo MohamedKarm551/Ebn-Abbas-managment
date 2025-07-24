@@ -1,9 +1,12 @@
-{{-- filepath: c:\xampp\htdocs\Ebn-Abbas-managment\resources\views\masr_financial_reports\index.blade.php --}}
 @extends('layouts.app')
+@section('title', 'تقارير أرباح ومصروفات شركة مصر')
 @section('content')
     <div class="container">
         <h2>تقارير أرباح ومصروفات شركة مصر</h2>
         <a href="{{ route('admin.masr.financial-reports.create') }}" class="btn btn-success mb-3">إضافة تقرير جديد</a>
+        {{-- مصاريف /admin/masr_expenses/ --}}
+        <a href="{{ route('admin.masr_expenses.index') }}" class="btn btn-warning mb-3">تقارير المصاريف</a>
+        {{-- فلترة التقارير --}}
         <form id="filterForm" class="mb-3">
             <label>من: <input type="date" name="from"></label>
             <label>إلى: <input type="date" name="to"></label>
@@ -33,6 +36,9 @@
             <strong>إجمالي البيع:</strong> {{ $total_sale }} &nbsp; |
             <strong>إجمالي الربح:</strong> {{ $net_profit }}
         </div>
+        {{-- تصدير اكسيل --}}
+        <button onclick="exportFinancialReportsToExcel()" class="btn btn-success mb-3">تصدير إلى Excel</button>
+
         <div class="table-responsive-sm">
             <table class="table table-bordered table-sm align-middle text-center mb-0">
                 <thead>
@@ -163,4 +169,66 @@
             });
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script>
+        function exportFinancialReportsToExcel() {
+            // حدد الجدول
+            const table = document.querySelector('.table-responsive-sm table');
+            if (!window.XLSX) {
+                alert('لم يتم تحميل مكتبة XLSX. تأكد من تضمين المكتبة في الصفحة.');
+                return;
+            }
+
+            // استنساخ الجدول فقط
+            let cloneTable = table.cloneNode(true);
+
+            // موقع عمود الإجراءات (الأخير)
+            const actionsColIdx = cloneTable.rows[0].cells.length - 1;
+
+            // أضف رأس عمود "الموظف" بعد العنوان (col 3)
+            let th = document.createElement('th');
+            th.textContent = 'الموظف';
+            cloneTable.rows[0].insertBefore(th, cloneTable.rows[0].cells[3]); // بعد العنوان
+
+            // احذف خلية الإجراءات من thead (لاحظ أننا زدنا عمود فالأندكس يزيد واحد)
+            cloneTable.rows[0].deleteCell(actionsColIdx + 1);
+
+            // عدّل كل صف
+            for (let i = 1; i < cloneTable.rows.length; i++) {
+                let row = cloneTable.rows[i];
+                if (row.cells.length < actionsColIdx) continue;
+
+                let titleCell = row.cells[2]; // عمود العنوان (بعد الرقم والتاريخ)
+                // ابحث عن العنصر <small class="text-muted"> (اسم الموظف)
+                let tempDiv = document.createElement('div');
+                tempDiv.innerHTML = titleCell.innerHTML;
+                let empElem = tempDiv.querySelector('small.text-muted');
+                let employee = '';
+                if (empElem) {
+                    employee = empElem.textContent.trim();
+                    empElem.remove(); // حذف اسم الموظف من العنوان
+                }
+                // عدل نص العنوان ليكون فقط العنوان (بدون الموظف)
+                titleCell.innerHTML = tempDiv.textContent.trim();
+
+                // أنشئ خلية الموظف وضعها بعد العنوان
+                let empTd = document.createElement('td');
+                empTd.textContent = employee;
+                row.insertBefore(empTd, row.cells[3]);
+
+                // احذف خلية الإجراءات (زود 1 لأننا أضفنا عمود)
+                if (row.cells.length > actionsColIdx + 1) {
+                    row.deleteCell(actionsColIdx + 1);
+                }
+            }
+
+            // التصدير
+            let wb = XLSX.utils.table_to_book(cloneTable, {
+                sheet: "تقارير الأرباح والمصروفات"
+            });
+            const fileName = `financial_reports_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+    </script>
+
 @endsection

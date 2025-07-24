@@ -1,5 +1,5 @@
-{{-- filepath: c:\xampp\htdocs\Ebn-Abbas-managment\resources\views\masr_financial_reports\show.blade.php --}}
 @extends('layouts.app')
+@section('title', 'تفاصيل التقرير المالي')
 @section('content')
     <div class="container">
         <h3>تفاصيل تقرير  ( {{ $report->title }} )</h3>

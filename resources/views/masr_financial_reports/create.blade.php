@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'إضافة تقرير مالي جديد')
 @section('content')
     <div class="container">
         <h3>إضافة تقرير جديد</h3>
