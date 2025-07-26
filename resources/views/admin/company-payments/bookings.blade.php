@@ -209,7 +209,7 @@
                         </td>
                         <td>
                             <div>
-                                <strong>{{ $booking->landTrip->destination ?? 'غير محدد' }}</strong>
+                                {{-- <strong>{{ $booking->landTrip->destination ?? 'غير محدد' }}</strong> --}}
                                 @if($booking->landTrip->hotel)
                                     <br><small class="text-muted">
                                         <i class="fas fa-hotel fa-xs"></i> {{ $booking->landTrip->hotel->name }}

@@ -47,7 +47,8 @@ class BookingsController extends Controller
         // 1. بناء الاستعلام الأساسي وتحميل العلاقات (Eager Loading)
         // --------------------------------------------------
         // سطر 43: بنبدأ نبني الاستعلام لجدول الحجوزات وبنحمل العلاقات عشان الأداء
-        $query = Booking::with(['company', 'employee', 'agent', 'hotel']);
+        $query = Booking::with(['company', 'employee', 'agent', 'hotel' ,'financialTracking']);
+            // ->where('status', 'active'); // بنجيب بس الحجوزات النشطة
 
         // سطر 45-46: بنستبعد الحجوزات المؤرشفة (اللي سعرها صفر)
         $query->where('cost_price', '!=', 0)

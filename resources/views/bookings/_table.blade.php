@@ -110,6 +110,38 @@
                         title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق)">
                         {{ $booking->amount_due_to_hotel }}
                         {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
+                        {{-- الحالة المالية  --}}
+                        <br>
+                        @php
+                            $status = optional($booking->financialTracking)->agent_payment_status ?? 'not_paid';
+                        @endphp
+                        <span
+                            class="badge badge-pill
+    @if ($status === 'fully_paid' || $status === 'paid') bg-success
+    @elseif($status === 'partially_paid')
+        bg-warning text-dark
+    @elseif($status === 'not_paid' || $status === 'unpaid')
+        bg-danger
+    @else
+        bg-secondary @endif
+">
+                            المبلغ المدفوع:
+                            {{ number_format(optional($booking->financialTracking)->agent_payment_amount ?? 0, 2) }}
+                            <br>
+                            حالة الدفع:
+                            @php
+                                $status = optional($booking->financialTracking)->agent_payment_status ?? 'not_paid';
+                                $statusText =
+                                    [
+                                        'fully_paid' => 'مدفوع بالكامل',
+                                        'partially_paid' => 'مدفوع جزئياً',
+                                        'not_paid' => 'غير مدفوع',
+                                        'paid' => 'مدفوع', // لو في عندك حالة باسم paid
+                                        'unpaid' => 'غير مدفوع',
+                                    ][$status] ?? 'غير محدد';
+                            @endphp
+                            {{ $statusText }}
+                        </span>
                     </td>
                     {{-- @endif --}}
                 @endif
@@ -118,6 +150,41 @@
                     title="({{ $booking->days }} ليالي * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة)">
                     {{ $booking->amount_due_from_company }}
                     {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
+                    <br>
+                    {{-- الحالة المالية  --}}
+                    @php
+                        $financial = optional($booking->financialTracking);
+
+                        // جلب حالة الشركة (Company)
+                        $companyStatus = $financial->company_payment_status ?? 'not_paid';
+                        $companyAmount = $financial->company_payment_amount ?? 0;
+
+                        // نص الحالة البشري
+                        $statusText =
+                            [
+                                'fully_paid' => 'مدفوع بالكامل',
+                                'paid' => 'مدفوع',
+                                'partially_paid' => 'مدفوع جزئياً',
+                                'not_paid' => 'غير مدفوع',
+                                'unpaid' => 'غير مدفوع',
+                            ][$companyStatus] ?? 'غير محدد';
+
+                        // كلاس الشارة حسب الحالة
+                        $badgeClass = match ($companyStatus) {
+                            'fully_paid', 'paid' => 'bg-success text-white',
+                            'partially_paid' => 'bg-warning text-dark',
+                            'not_paid', 'unpaid' => 'bg-danger',
+                            default => 'bg-secondary',
+                        };
+                    @endphp
+
+                    <span class="badge badge-pill {{ $badgeClass }}">
+                        المبلغ المدفوع:
+                        {{ number_format($companyAmount, 2) }} <br>
+                        حالة الدفع:
+                        {{ $statusText }}
+                    </span>
+
                 </td>
                 {{-- <td class="text-center align-middle">
                     {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
@@ -307,7 +374,7 @@
                         // ابحث عن خلية المجموع (عادة تحتوي على النص "المجموع في الصفحة")
                         row.querySelectorAll('td').forEach(cell => {
                             if (cell.textContent.includes(
-                                'المجموع في الصفحة')) {
+                                    'المجموع في الصفحة')) {
                                 cell.colSpan = 5;
                             }
                         });
