@@ -6,6 +6,100 @@
 @section('content')
     <div class="container">
         <h1>سجل المدفوعات - {{ $agent->name }}</h1>
+         <a href="{{ route('reports.agent.bookings', $agent->id) }}" class="w-25 p-2 mt-2 mb-2 btn btn-primary btn-sm"> الحجوزات
+            </a>
+            
+        <button type="button" class="w-25 p-2 mt-2 mb-2 btn btn-success btn-sm" data-bs-toggle="modal"
+            data-bs-target="#agentPaymentModal{{ $agent->id }}">
+            تسجيل دفعة
+        </button>
+
+        <button type="button" class=" w-25 p-2 mt-2 mb-2 btn btn-warning btn-sm" data-bs-toggle="modal"
+            data-bs-target="#agentDiscountModal{{ $agent->id }}">
+            تطبيق خصم
+        </button>
+        <!-- نموذج الدفعة العادية -->
+        <div class="modal fade" id="agentPaymentModal{{ $agent->id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="{{ route('reports.agent.payment') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="agent_id" value="{{ $agent->id }}">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">تسجيل دفعة - {{ $agent->name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">المبلغ المدفوع والعملة</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" class="form-control" name="amount" required>
+                                    <select class="form-select" name="currency" style="max-width: 120px;">
+                                        <option value="SAR" selected>ريال سعودي</option>
+                                        <option value="KWD">دينار كويتي</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">ملاحظات</label>
+                                <textarea class="form-control" name="notes"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                            <button type="submit" class="btn btn-primary">تسجيل الدفعة</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- نموذج الخصم المنفصل -->
+        <div class="modal fade" id="agentDiscountModal{{ $agent->id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="{{ route('reports.agent.discount', $agent->id) }}" method="POST">
+                        @csrf
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">تطبيق خصم - {{ $agent->name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">مبلغ الخصم والعملة</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" class="form-control" name="discount_amount"
+                                        required>
+                                    <select class="form-select" name="currency" style="max-width: 120px;">
+                                        <option value="SAR" selected>ريال سعودي</option>
+                                        <option value="KWD">دينار كويتي</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">سبب الخصم</label>
+                                <textarea class="form-control" name="reason" placeholder="اختياري - سبب تطبيق الخصم"></textarea>
+                            </div>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                تأكد من مبلغ الخصم قبل المتابعة. هذا الإجراء سيؤثر على الحساب النهائي
+                                للوكيل.
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                            <button type="submit" class="btn btn-warning">تطبيق الخصم</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
                 {{-- ✅ إضافة قسم ملخص الحسابات الحالية --}}
         <div class="card mb-4" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <div class="card-header" style="background: linear-gradient(120deg, #10b981 60%, #059669 100%); color: white; border-radius: 12px 12px 0 0;">

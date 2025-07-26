@@ -1,11 +1,73 @@
 @extends('layouts.app')
 
-{{-- *** تأكد من وجود رابط Font Awesome في layout الرئيسي layouts/app.blade.php *** --}}
-{{-- مثال: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> --}}
-
+@section('title', 'كشف حساب - ' . $company->name)
 @section('content')
     <div class="container">
         <h1>سجل المدفوعات - {{ $company->name }}</h1>
+         <a href="{{ route('reports.company.bookings', $company->id) }}" class="w-25 p-2 mt-2 mb-2 btn btn-primary btn-sm"> عرض الحجوزات
+             </a>
+        <button type="button" class="w-25 p-2 mt-2 mb-2 btn btn-success btn-sm" data-bs-toggle="modal"
+            data-bs-target="#paymentModal{{ $company->id }}">
+            تسجيل دفعة
+        </button>
+        <div class="modal fade" id="paymentModal{{ $company->id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="{{ route('reports.company.payment') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <input type="hidden" name="company_id" value="{{ $company->id }}">
+                        <input type="hidden" name="is_discount" id="is-discount-{{ $company->id }}" value="0">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">تسجيل دفعة - {{ $company->name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">المبلغ المدفوع والعملة</label>
+                                <div> قم بعمل سند قبض لهذه العملية : <a href="{{ route('admin.receipt.voucher') }}"
+                                        target="_blank">إنشاء سند
+                                        قبض</a></div>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" class="form-control" name="amount" required>
+                                    <select class="form-select" name="currency" style="max-width: 120px;">
+                                        <option value="SAR" selected>ريال سعودي</option>
+                                        <option value="KWD">دينار كويتي</option>
+                                    </select>
+                                </div>
+                            </div>
+                            {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
+                            {{-- <div class="mb-3">
+                                    <label for="receipt_file_company_{{ $company->id }}" class="form-label">إرفاق إيصال
+                                        (اختياري)
+                                    </label>
+                                    <input class="form-control" type="file"
+                                        id="receipt_file_company_{{ $company->id }}" name="receipt_file">
+                                  
+                                <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
+                                    5MB)</small>
+                            </div> --}}
+                            {{-- *** نهاية حقل رفع الملف *** --}}
+                            <div class="mb-3">
+                                <label class="form-label">ملاحظات <br>
+                                    (إن كانت معك صورة من التحويل ارفعها على درايف وضع الرابط هنا)
+                                </label>
+                                <textarea class="form-control" name="notes"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                            <button type="button" class="btn btn-warning" id="toggleDiscountBtn-{{ $company->id }}"
+                                onclick="toggleDiscountMode({{ $company->id }})">تسجيل خصم</button>
+                            <button type="submit" class="btn btn-primary" id="submitBtn-{{ $company->id }}">تسجيل
+                                الدفعة</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         {{-- ✅ إضافة قسم ملخص الحسابات الحالية --}}
         <div class="card mb-4"
             style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -598,5 +660,59 @@
             </script>
             {{-- التاريخ الهجري  --}}
             <script src="{{ asset('js/hijriDataConvert.js') }}"></script>
+               <script>
+        // سكريبت الخصم : 
+        function toggleAgentDiscountMode(agentId) {
+            const isDiscountField = document.getElementById('is-discount-' + agentId);
+            const submitBtn = document.getElementById('agentSubmitBtn-' + agentId);
+            const toggleBtn = document.getElementById('toggleAgentDiscountBtn-' + agentId);
+            const modalTitle = document.querySelector('#agentPaymentModalTitle' + agentId);
+            const agentName = modalTitle.textContent.split('-')[1].trim();
+
+            if (isDiscountField.value === "0") {
+                // تحويل إلى وضع الخصم
+                isDiscountField.value = "1";
+                submitBtn.textContent = "تطبيق الخصم";
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-warning');
+                toggleBtn.textContent = "تسجيل دفعة";
+                modalTitle.textContent = "تسجيل خصم - " + agentName;
+            } else {
+                // العودة إلى وضع الدفع
+                isDiscountField.value = "0";
+                submitBtn.textContent = "تسجيل الدفعة";
+                submitBtn.classList.remove('btn-warning');
+                submitBtn.classList.add('btn-primary');
+                toggleBtn.textContent = "تسجيل خصم";
+                modalTitle.textContent = "تسجيل دفعة - " + agentName;
+            }
+        }
+        // دالة التبديل وضع الخصم
+        function toggleDiscountMode(companyId) {
+            const isDiscountField = document.getElementById('is-discount-' + companyId);
+            const submitBtn = document.getElementById('submitBtn-' + companyId);
+            const toggleBtn = document.getElementById('toggleDiscountBtn-' + companyId);
+            const modalTitle = document.querySelector('#paymentModal' + companyId + ' .modal-title');
+            const companyName = modalTitle.textContent.split('-')[1].trim();
+
+            if (isDiscountField.value === "0") {
+                // تحويل إلى وضع الخصم
+                isDiscountField.value = "1";
+                submitBtn.textContent = "تطبيق الخصم";
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-warning');
+                toggleBtn.textContent = "تسجيل دفعة";
+                modalTitle.textContent = "تسجيل خصم - " + companyName;
+            } else {
+                // العودة إلى وضع الدفع
+                isDiscountField.value = "0";
+                submitBtn.textContent = "تسجيل الدفعة";
+                submitBtn.classList.remove('btn-warning');
+                submitBtn.classList.add('btn-primary');
+                toggleBtn.textContent = "تسجيل خصم";
+                modalTitle.textContent = "تسجيل دفعة - " + companyName;
+            }
+        }
+    </script>
         @endpush
     @endsection

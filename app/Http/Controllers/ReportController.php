@@ -1192,12 +1192,16 @@ class ReportController extends Controller
 
         // هات كل الحجوزات بتاعة الشركة مع بيانات الفندق والوكيل
         $bookings = $company->bookings()
-            ->with(['hotel', 'agent'])
+            ->with(['hotel', 'agent', 'financialTracking'])
             ->orderBy('check_in')
             ->get()
             ->map(function ($b) {
                 // احسب المستحق الكلي: كل الليالي × عدد الغرف × سعر البيع
                 $b->total_company_due = $b->total_nights * $b->rooms * $b->sale_price;
+                // بيانات الدفع من المتابعة المالية (لو موجودة)
+                $b->company_payment_amount = $b->financialTracking->company_payment_amount ?? 0;
+                $b->company_payment_status = $b->financialTracking->company_payment_status ?? 'غير مدفوع';
+
                 return $b;
             });
 
@@ -1254,12 +1258,17 @@ class ReportController extends Controller
 
         // هات كل الحجوزات بتاعة الوكيل مع بيانات الفندق والشركة
         $bookings = $agent->bookings()
-            ->with(['hotel', 'company'])
+            ->with(['hotel', 'company','financialTracking'])
             ->orderBy('check_in')
             ->get()
             ->map(function ($b) {
                 // احسب المستحق للوكيل: عدد الليالي × عدد الغرف × سعر الفندق
                 $b->due_to_agent = $b->rooms * $b->days * $b->cost_price;
+                // بيانات الدفع من المتابعة المالية (لو موجودة)
+                $b->agent_payment_amount = $b->financialTracking->agent_payment_amount ??
+                    0;
+                $b->agent_payment_status = $b->financialTracking->agent_payment_status ??
+                    'غير مدفوع';
                 return $b;
             });
 

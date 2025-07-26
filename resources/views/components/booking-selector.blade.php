@@ -29,7 +29,9 @@
                                 data-days="{{ $booking->days ?? \Carbon\Carbon::parse($booking->check_in)->diffInDays(\Carbon\Carbon::parse($booking->check_out)) }}"
                                 data-cost-price="{{ $booking->{$costPriceField} ?? 0 }}"
                                 data-currency="{{ $booking->currency }}"
-                                 onclick="event.stopPropagation();">
+                                data-payment-amount="{{ optional($booking->financialTracking)->company_payment_amount ?? 0 }}"
+                                data-payment-status="{{ optional($booking->financialTracking)->company_payment_status ?? 'not_paid' }}"
+                                onclick="event.stopPropagation();">
                         </label>
                     </td>
                     {{-- Render the rest of the row columns passed from parent --}}
@@ -55,14 +57,16 @@
             }
 
             function initializeBookingSelector(containerSelector) {
-                const container    = document.querySelector(containerSelector);
+                const container = document.querySelector(containerSelector);
                 if (!container) return;
 
-                const checkboxes   = container.querySelectorAll('.booking-checkbox');
-                const table        = container.querySelector('table');
-                const selectBtn    = container.querySelector('.selectRangeBtn');
-                const resetBtn     = container.querySelector('.resetRangeBtn');
-                let alertDiv       = null, startCheckbox = null, endCheckbox = null;
+                const checkboxes = container.querySelectorAll('.booking-checkbox');
+                const table = container.querySelector('table');
+                const selectBtn = container.querySelector('.selectRangeBtn');
+                const resetBtn = container.querySelector('.resetRangeBtn');
+                let alertDiv = null,
+                    startCheckbox = null,
+                    endCheckbox = null;
 
                 // Add click event listener to each row within this container
                 table.querySelectorAll('tbody tr').forEach(row => {
@@ -180,9 +184,9 @@
                 }
 
                 function updateSelectedRows() {
-                    let totalAmount      = 0;
-                    let bookingDetails   = [];
-
+                    let totalAmount = 0;
+                    let bookingDetails = [];
+                    let bookingDetailsText = []; // أضف هذا
                     checkboxes.forEach((checkbox, index) => {
                         const row = checkbox.closest('tr');
                         if (!checkbox.checked) {
@@ -192,26 +196,38 @@
                         row.classList.add('selected-row');
 
                         // جلب البيانات الخام
-                        const rooms        = parseInt(checkbox.dataset.rooms, 10)    || 0;
-                        const days         = parseInt(checkbox.dataset.days, 10)     || 0;
-                        const costPrice    = parseFloat(checkbox.dataset.costPrice)   || 0;
-                        const clientName   = checkbox.dataset.clientName;
-                        const hotelName    = checkbox.dataset.hotelName || '';
-                        const checkInStr   = checkbox.dataset.checkIn;
-                        const checkOutStr  = checkbox.dataset.checkOut;
-                        const checkInFmt   = formatCombinedDate(checkInStr);
-                        const checkOutFmt  = formatCombinedDate(checkOutStr);
+                        const rooms = parseInt(checkbox.dataset.rooms, 10) || 0;
+                        const days = parseInt(checkbox.dataset.days, 10) || 0;
+                        const costPrice = parseFloat(checkbox.dataset.costPrice) || 0;
+                        const clientName = checkbox.dataset.clientName;
+                        const hotelName = checkbox.dataset.hotelName || '';
+                        const checkInStr = checkbox.dataset.checkIn;
+                        const checkOutStr = checkbox.dataset.checkOut;
+                        const checkInFmt = formatCombinedDate(checkInStr);
+                        const checkOutFmt = formatCombinedDate(checkOutStr);
 
                         // إعادة الحساب اعتمادًا على السعر والليالي
-                        const computedDue  = rooms * days * costPrice;
-                        totalAmount       += computedDue;
+                        const computedDue = rooms * days * costPrice;
+                        totalAmount += computedDue;
 
                         // تحويل الأرقام للعربية
-                        const roomsAr        = toArabicNumber(rooms);
-                        const daysAr         = toArabicNumber(days);
-                        const costPriceAr    = toArabicNumber(costPrice, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        const computedDueAr  = toArabicNumber(computedDue, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
+                        const roomsAr = toArabicNumber(rooms);
+                        const daysAr = toArabicNumber(days);
+                        const costPriceAr = toArabicNumber(costPrice, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                        const computedDueAr = toArabicNumber(computedDue, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                        const paymentAmount = parseFloat(checkbox.dataset.paymentAmount) || 0;
+                        const paymentStatus = checkbox.dataset.paymentStatus || "not_paid";
+                        let paymentStatusLabel = "غير مدفوع";
+                        if (paymentStatus === "fully_paid" || paymentStatus === "paid")
+                            paymentStatusLabel = "مدفوع بالكامل";
+                        else if (paymentStatus === "partially_paid")
+                            paymentStatusLabel = "مدفوع جزئياً";
                         // بناء HTML مع المعادلة كاملة
                         bookingDetails.push(`
                             <li class="list-group-item bg-transparent text-white border-secondary">
@@ -220,8 +236,15 @@
                                     ${roomsAr} غُرف × ${daysAr} ليالي × ${costPriceAr} ر.س<br>
                                     <strong>${roomsAr} × ${daysAr} × ${costPriceAr} = ${computedDueAr} ر.س</strong>
                                 </small>
-                            </li>`
-                        );
+                                <span class="text-info">المبلغ المدفوع: ${toArabicNumber(paymentAmount, { minimumFractionDigits: 2 })}</span>
+            &nbsp;|&nbsp;
+            <span class="text-warning">حالة الدفع: ${paymentStatusLabel}</span>
+        </small>
+                            </li>`);
+                               // بناء نص للنسخ
+        bookingDetailsText.push(
+            `${clientName} - ${hotelName} | دخول: ${checkInFmt} | خروج: ${checkOutFmt} | ${roomsAr} غرف | ${daysAr} ليالي | ${costPriceAr} ر.س | الإجمالي: ${computedDueAr} ر.س | المبلغ المدفوع: ${toArabicNumber(paymentAmount, { minimumFractionDigits: 2 })} | حالة الدفع: ${paymentStatusLabel}`
+        );
                     });
 
                     // Apply styling within this container's table
@@ -253,7 +276,10 @@
 
                     // Show/hide alert logic
                     if (bookingDetails.length) {
-                        const totalAr = toArabicNumber(totalAmount, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const totalAr = toArabicNumber(totalAmount, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
                         const alertHtml = `
                             <div class="alert alert-danger fixed-top shadow-lg" style="direction: rtl; z-index: 2000;">
                                 <h5 class="mb-3">تم تحديد ${toArabicNumber(bookingDetails.length)} حجوزات</h5>
@@ -268,7 +294,10 @@
                             </div>`;
                         showAlert(alertHtml, bookingDetails, totalAmount);
                     } else {
-                        if (alertDiv) { alertDiv.remove(); alertDiv = null; }
+                        if (alertDiv) {
+                            alertDiv.remove();
+                            alertDiv = null;
+                        }
                     }
                 }
 

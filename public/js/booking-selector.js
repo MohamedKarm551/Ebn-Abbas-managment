@@ -367,6 +367,17 @@ function initializeBookingSelector(tableId, selectBtnId, resetBtnId) {
 
                 // حساب المستحق الكلي
                 const computedDue = rooms * days * costPrice;
+                // قراءة بيانات الدفع من الـ data attributes (الأهم)
+                const paymentAmount =
+                    parseFloat(checkbox.dataset.paymentAmount) || 0;
+                const paymentStatus =
+                    checkbox.dataset.paymentStatus || "not_paid";
+                // ترجمة حالة الدفع
+                let paymentStatusLabel = "غير مدفوع";
+                if (paymentStatus === "fully_paid" || paymentStatus === "paid")
+                    paymentStatusLabel = "مدفوع بالكامل";
+                else if (paymentStatus === "partially_paid")
+                    paymentStatusLabel = "مدفوع جزئياً";
 
                 // إضافة المبلغ إلى الإجمالي حسب العملة
                 if (!totalsByCurrency[currency]) {
@@ -376,20 +387,28 @@ function initializeBookingSelector(tableId, selectBtnId, resetBtnId) {
 
                 // بناء تفاصيل الحجز بالشكل الجديد
                 bookingDetailsHTML.push(`
-                <li class="list-group-item d-flex justify-content-between align-items-start bg-transparent text-white border-secondary">
-                    <span class="badge bg-light text-dark rounded-pill me-3">${
-                        index + 1
-                    }</span>
-                    <div class="ms-0 me-auto text-start">
-                        <div class="fw-bold">(${
-                            checkbox.dataset.clientName
-                        }) - [[${checkbox.dataset.hotelName}]]</div>
-                        <small>{دخول: ${checkInFormatted} | خروج: ${checkOutFormatted}} | ${rooms} غرف | ${days} ليالي × ${costPrice.toFixed(
+    <li class="list-group-item d-flex justify-content-between align-items-start bg-transparent text-white border-secondary">
+        <span class="badge bg-light text-dark rounded-pill me-3">${
+            index + 1
+        }</span>
+        <div class="ms-0 me-auto text-start">
+            <div class="fw-bold">(${checkbox.dataset.clientName}) - [[${
+                    checkbox.dataset.hotelName
+                }]]</div>
+            <small>
+                {دخول: ${checkInFormatted} | خروج: ${checkOutFormatted}} | 
+                ${rooms} غرف | ${days} ليالي × ${costPrice.toFixed(
                     2
-                )} = ${computedDue.toFixed(2)} ${currencySymbol}</small>
-                    </div>
-                </li>
-            `);
+                )} = ${computedDue.toFixed(2)} ${currencySymbol}<br>
+                <span class="text-info">المبلغ المدفوع: ${Number(
+                    paymentAmount
+                ).toFixed(2)}</span>
+                &nbsp;|&nbsp;
+                <span class="text-warning">حالة الدفع: ${paymentStatusLabel}</span>
+            </small>
+        </div>
+    </li>
+`);
 
                 bookingDetailsText.push(
                     `(${checkbox.dataset.clientName}) - [[${
@@ -398,7 +417,9 @@ function initializeBookingSelector(tableId, selectBtnId, resetBtnId) {
                         2
                     )} ${currencySymbol} | الإجمالي: ${computedDue.toFixed(
                         2
-                    )} ${currencySymbol}`
+                    )} ${currencySymbol} | المبلغ المدفوع: ${Number(
+                        paymentAmount
+                    ).toFixed(2)} | حالة الدفع: ${paymentStatusLabel}`
                 );
             } else {
                 row.classList.remove("selected-row");
