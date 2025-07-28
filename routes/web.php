@@ -308,6 +308,8 @@ Route::middleware(['auth'])->group(function () {
 
         // تقارير الشركات والوكلاء والفنادق
         Route::get('/reports/company/{id}/bookings', [ReportController::class, 'companyBookings'])->name('reports.company.bookings');
+        Route::get('company/{company}/bookings/pdf', [\App\Http\Controllers\ReportController::class, 'exportCompanyBookingsPdf'])
+            ->name('company.bookings.pdf');
         Route::get('/reports/agent/{id}/bookings', [ReportController::class, 'agentBookings'])->name('reports.agent.bookings');
         Route::get('/reports/hotel/{id}/bookings', [ReportController::class, 'hotelBookings'])->name('reports.hotel.bookings');
 

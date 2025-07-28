@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB; //  لإجراء العمليات على قا
 use Carbon\CarbonPeriod; // لإجراء العمليات على التواريخ
 use Illuminate\Support\Str; // لاستخدام دالة Str::limit
 use Illuminate\Support\Facades\Log; // لتسجيل الأخطاء في السجل
+use Barryvdh\DomPDF\Facade\Pdf; // تصدير بي دي اف!
+
 
 
 /**
@@ -1249,6 +1251,56 @@ class ReportController extends Controller
 
         ));
     }
+    // طباعة الحجوزات كشف حساب 
+  public function exportCompanyBookingsPdf(Company $company)
+{
+    // هات كل الحجوزات مع نفس الـ with والـ map!
+    $bookings = $company->bookings()
+        ->with(['hotel', 'agent', 'financialTracking'])
+        ->orderBy('check_in')
+        ->get()
+        ->map(function ($b) {
+            $b->total_company_due = $b->total_nights * $b->rooms * $b->sale_price;
+            $b->company_payment_amount = $b->financialTracking->company_payment_amount ?? 0;
+            $b->company_payment_status = $b->financialTracking->company_payment_status ?? 'غير مدفوع';
+            return $b;
+        });
+
+    $dueCount = $bookings->count();
+    $totalDue = $bookings->sum('total_company_due');
+
+    $allPayments = $company->payments()->orderBy('payment_date')->get();
+
+    $remaining = $totalDue;
+    $totalPaid = 0;
+    foreach ($allPayments as $payment) {
+        if ($remaining <= 0) break;
+        $pay = min($payment->amount, $remaining);
+        $totalPaid += $pay;
+        $remaining -= $pay;
+    }
+
+    $totalRemaining = $totalDue - $totalPaid;
+
+    // إجماليات العملات
+    $totalDueByCurrency = $company->total_due_by_currency;
+    $totalPaidByCurrency = $company->total_paid_by_currency;
+    $totalRemainingByCurrency = $company->remaining_by_currency;
+
+    // رجع كل القيم للفيو
+    return view('pdf.company_bookings', compact(
+        'company',
+        'bookings',
+        'dueCount',
+        'totalDue',
+        'totalPaid',
+        'totalRemaining',
+        'totalDueByCurrency',
+        'totalPaidByCurrency',
+        'totalRemainingByCurrency'
+    ));
+}
+
 
     // تقرير حجوزات وكيل معين
     public function agentBookings($id)
@@ -1258,7 +1310,7 @@ class ReportController extends Controller
 
         // هات كل الحجوزات بتاعة الوكيل مع بيانات الفندق والشركة
         $bookings = $agent->bookings()
-            ->with(['hotel', 'company','financialTracking'])
+            ->with(['hotel', 'company', 'financialTracking'])
             ->orderBy('check_in')
             ->get()
             ->map(function ($b) {

@@ -24,11 +24,25 @@
                         عرض الفاوتشر
                     </a>
                     @if (Auth::user()->role === 'Admin')
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal"
-                            data-bs-target="#registerPaymentModal">
-                            💸 تسجيل دفعة
-                        </button>
+                        <div class="d-flex flex-wrap gap-2 my-2">
+                            <button type="button" class="btn btn-success px-3 py-2 d-flex align-items-center"
+                                data-bs-toggle="modal" data-bs-target="#registerPaymentModal">
+                                <i class="fas fa-money-bill-wave me-2"></i>
+                                تسجيل دفعة
+                            </button>
+                            <a href="{{ route('reports.agent.payments', $booking->agent->id) }}"
+                                class="btn btn-outline-primary px-3 py-2 d-flex align-items-center">
+                                <i class="fas fa-user-tie me-2"></i>
+                                كشف حساب جهة الحجز
+                            </a>
+                            <a href="{{ route('reports.company.payments', $booking->company->id) }}"
+                                class="btn btn-outline-info px-3 py-2 d-flex align-items-center">
+                                <i class="fas fa-building me-2"></i>
+                                كشف حساب الشركة
+                            </a>
+                        </div>
                     @endif
+
                     <button type="button" class="btn btn-info ms-2" data-bs-toggle="modal"
                         data-bs-target="#financialTrackingModal" onclick="loadFinancialTracking({{ $booking->id }})"
                         title="إدارة المتابعة المالية للحجز">

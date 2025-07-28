@@ -256,45 +256,38 @@ class BookingsController extends Controller
         $remainingToHotelsByCurrency = [];
 
 
-        if (!$request->filled('company_id')) {
-            // تجميع المستحق للفنادق حسب العملة
-            $totalDueToHotelsByCurrency = $allBookings->groupBy('currency')
-                ->map(function ($currencyGroup) {
-                    return [
-                        'currency' => $currencyGroup->first()->currency,
-                        'amount' => $currencyGroup->sum('amount_due_to_hotel')
-                    ];
-                })->values()->toArray();
-            // تجميع المدفوع للفنادق حسب العملة
-            $totalPaidToHotelsByCurrency = $allBookings->groupBy('currency')
-                ->map(function ($currencyGroup) {
-                    return [
-                        'currency' => $currencyGroup->first()->currency,
-                        'amount' => $currencyGroup->sum('amount_paid_to_hotel')
-                    ];
-                })->values()->toArray();
+     // تجميع المستحق للفنادق حسب العملة (دائماً)
+$totalDueToHotelsByCurrency = $allBookings->groupBy('currency')
+    ->map(function ($currencyGroup) {
+        return [
+            'currency' => $currencyGroup->first()->currency,
+            'amount' => $currencyGroup->sum('amount_due_to_hotel')
+        ];
+    })->values()->toArray();
 
-            // حساب المتبقي للفنادق حسب العملة
-            foreach ($totalDueToHotelsByCurrency as $dueItem) {
-                $paid = collect($totalPaidToHotelsByCurrency)
-                    ->where('currency', $dueItem['currency'])
-                    ->first()['amount'] ?? 0;
+$totalPaidToHotelsByCurrency = $allBookings->groupBy('currency')
+    ->map(function ($currencyGroup) {
+        return [
+            'currency' => $currencyGroup->first()->currency,
+            'amount' => $currencyGroup->sum('amount_paid_to_hotel')
+        ];
+    })->values()->toArray();
 
-                $remainingToHotelsByCurrency[] = [
-                    'currency' => $dueItem['currency'],
-                    'amount' => $dueItem['amount'] - $paid
-                ];
-            }
+$remainingToHotelsByCurrency = [];
+foreach ($totalDueToHotelsByCurrency as $dueItem) {
+    $paid = collect($totalPaidToHotelsByCurrency)
+        ->where('currency', $dueItem['currency'])
+        ->first()['amount'] ?? 0;
 
-            // للتوافق مع الكود القديم - المستحق للفنادق الإجمالي
-            $totalDueToHotelsAccurate = array_sum(array_column($totalDueToHotelsByCurrency, 'amount'));
-            $totalPaidToHotelsAccurate = array_sum(array_column($totalPaidToHotelsByCurrency, 'amount'));
-            $remainingToHotelsAccurate = $totalDueToHotelsAccurate - $totalPaidToHotelsAccurate;
-        } else {
-            $totalDueToHotelsAccurate = 0;
-            $totalPaidToHotelsAccurate = 0;
-            $remainingToHotelsAccurate = 0;
-        }
+    $remainingToHotelsByCurrency[] = [
+        'currency' => $dueItem['currency'],
+        'amount' => $dueItem['amount'] - $paid
+    ];
+}
+
+$totalDueToHotelsAccurate = array_sum(array_column($totalDueToHotelsByCurrency, 'amount'));
+$totalPaidToHotelsAccurate = array_sum(array_column($totalPaidToHotelsByCurrency, 'amount'));
+$remainingToHotelsAccurate = $totalDueToHotelsAccurate - $totalPaidToHotelsAccurate;
 
         // تجميع المستحق من الشركات في الصفحة الحالية حسب العملة
         $pageDueFromCompanyByCurrency = $allBookings->groupBy('currency')
