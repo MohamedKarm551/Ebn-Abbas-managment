@@ -159,37 +159,51 @@
 @push('scripts')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var downloadBtn = document.getElementById('downloadPdfBtn');
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', async function() {
-                    downloadBtn.disabled = true;
-                    downloadBtn.textContent = "جاري التحميل ...";
-                    try {
-                        const element = document.getElementById('reportContent');
-                        const canvas = await html2canvas(element, {
-                            scale: 2,
-                            useCORS: true,
-                        });
-                        const {
-                            jsPDF
-                        } = window.jspdf;
-                        const pdf = new jsPDF('p', 'mm', 'a4');
-                        const imgWidth = 210;
-                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-                        pdf.save('كشف-حساب-{{ $company->name }}.pdf');
-                    } catch (e) {
-                        alert("حدث خطأ أثناء توليد الـ PDF");
-                    }
-                    downloadBtn.disabled = false;
-                    downloadBtn.textContent = "تحميل كشف الحساب PDF";
+   <script>
+document.addEventListener('DOMContentLoaded', function() {
+    var downloadBtn = document.getElementById('downloadPdfBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', async function() {
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = "جاري التحميل ...";
+            try {
+                const element = document.getElementById('reportContent');
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
                 });
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const imgProps = pdf.getImageProperties(imgData);
+                const imgWidth = pdfWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pdfHeight;
+
+                while (heightLeft > 0) {
+                    position -= pdfHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pdfHeight;
+                }
+
+                pdf.save('كشف-حساب-{{ $company->name }}.pdf');
+            } catch (e) {
+                alert("حدث خطأ أثناء توليد الـ PDF");
             }
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = "تحميل كشف الحساب PDF";
         });
-    </script>
+    }
+});
+</script>
+
     <script>
     // Converts Gregorian dates to Hijri
     function convertToHijri() {
