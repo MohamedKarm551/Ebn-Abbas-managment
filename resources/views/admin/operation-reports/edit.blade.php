@@ -816,6 +816,17 @@
                     @endif
                 </div>
             </div>
+            {{-- الربح الكلي يظهر وانا بكتب وبعدل --}}
+            <div class="form-section mb-4">
+                <div class="profit-display bg-light p-3 rounded shadow-sm" style="font-size: 1.2rem; text-align: center;">
+                    <span>إجمالي الربح الحالي: </span>
+                    <span id="total-profit-display" style="color: #21a179; font-weight: bold;">0.00</span>
+                    <span id="total-profit-currency" class="text-muted"></span>
+                    <div class="mt-2" id="profit-breakdown" style="font-size: 0.95em;"></div>
+                </div>
+            </div>
+
+
             <!-- أزرار الإجراءات -->
             <div class="form-section">
                 <div class="form-section-body text-center">
@@ -1891,6 +1902,55 @@
                         });
                 });
             }
+        });
+    </script>
+    <script>
+        function showTotalProfit() {
+            let total = 0;
+            let breakdown = [];
+
+            // أرباح التأشيرات
+            document.querySelectorAll('input[id^="visaProfitInput"]').forEach(input => {
+                const profit = parseFloat(input.value) || 0;
+                if (profit !== 0) breakdown.push(`تأشيرات: <b>${profit.toFixed(2)}</b>`);
+                total += profit;
+            });
+            // أرباح الطيران
+            document.querySelectorAll('input[id^="flightProfitInput"]').forEach(input => {
+                const profit = parseFloat(input.value) || 0;
+                if (profit !== 0) breakdown.push(`طيران: <b>${profit.toFixed(2)}</b>`);
+                total += profit;
+            });
+            // أرباح النقل
+            document.querySelectorAll('input[id^="transportProfitInput"]').forEach(input => {
+                const profit = parseFloat(input.value) || 0;
+                if (profit !== 0) breakdown.push(`نقل: <b>${profit.toFixed(2)}</b>`);
+                total += profit;
+            });
+            // أرباح الفنادق
+            document.querySelectorAll('input[id^="hotelProfitInput"]').forEach(input => {
+                const profit = parseFloat(input.value) || 0;
+                if (profit !== 0) breakdown.push(`فنادق: <b>${profit.toFixed(2)}</b>`);
+                total += profit;
+            });
+            // أرباح الرحلات البرية
+            document.querySelectorAll('input[id^="landTripProfitInput"]').forEach(input => {
+                const profit = parseFloat(input.value) || 0;
+                if (profit !== 0) breakdown.push(`رحلات برية: <b>${profit.toFixed(2)}</b>`);
+                total += profit;
+            });
+
+            document.getElementById('total-profit-display').textContent = total.toFixed(2);
+            document.getElementById('total-profit-currency').textContent = ' دينار كويتي / ريال / ...';
+            document.getElementById('profit-breakdown').innerHTML = breakdown.length ? breakdown.join('<br>') :
+                '<small class="text-muted">لا يوجد أرباح بعد</small>';
+        }
+
+        // عندما يفتح الصفحة أو المستخدم يعدل أي قيمة
+        document.addEventListener('DOMContentLoaded', function() {
+            showTotalProfit();
+            document.body.addEventListener('input', showTotalProfit);
+            document.body.addEventListener('change', showTotalProfit);
         });
     </script>
 

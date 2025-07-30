@@ -1252,54 +1252,54 @@ class ReportController extends Controller
         ));
     }
     // طباعة الحجوزات كشف حساب 
-  public function exportCompanyBookingsPdf(Company $company)
-{
-    // هات كل الحجوزات مع نفس الـ with والـ map!
-    $bookings = $company->bookings()
-        ->with(['hotel', 'agent', 'financialTracking'])
-        ->orderBy('check_in')
-        ->get()
-        ->map(function ($b) {
-            $b->total_company_due = $b->total_nights * $b->rooms * $b->sale_price;
-            $b->company_payment_amount = $b->financialTracking->company_payment_amount ?? 0;
-            $b->company_payment_status = $b->financialTracking->company_payment_status ?? 'غير مدفوع';
-            return $b;
-        });
+    public function exportCompanyBookingsPdf(Company $company)
+    {
+        // هات كل الحجوزات مع نفس الـ with والـ map!
+        $bookings = $company->bookings()
+            ->with(['hotel', 'agent', 'financialTracking'])
+            ->orderBy('check_in')
+            ->get()
+            ->map(function ($b) {
+                $b->total_company_due = $b->total_nights * $b->rooms * $b->sale_price;
+                $b->company_payment_amount = $b->financialTracking->company_payment_amount ?? 0;
+                $b->company_payment_status = $b->financialTracking->company_payment_status ?? 'غير مدفوع';
+                return $b;
+            });
 
-    $dueCount = $bookings->count();
-    $totalDue = $bookings->sum('total_company_due');
+        $dueCount = $bookings->count();
+        $totalDue = $bookings->sum('total_company_due');
 
-    $allPayments = $company->payments()->orderBy('payment_date')->get();
+        $allPayments = $company->payments()->orderBy('payment_date')->get();
 
-    $remaining = $totalDue;
-    $totalPaid = 0;
-    foreach ($allPayments as $payment) {
-        if ($remaining <= 0) break;
-        $pay = min($payment->amount, $remaining);
-        $totalPaid += $pay;
-        $remaining -= $pay;
+        $remaining = $totalDue;
+        $totalPaid = 0;
+        foreach ($allPayments as $payment) {
+            if ($remaining <= 0) break;
+            $pay = min($payment->amount, $remaining);
+            $totalPaid += $pay;
+            $remaining -= $pay;
+        }
+
+        $totalRemaining = $totalDue - $totalPaid;
+
+        // إجماليات العملات
+        $totalDueByCurrency = $company->total_due_by_currency;
+        $totalPaidByCurrency = $company->total_paid_by_currency;
+        $totalRemainingByCurrency = $company->remaining_by_currency;
+
+        // رجع كل القيم للفيو
+        return view('pdf.company_bookings', compact(
+            'company',
+            'bookings',
+            'dueCount',
+            'totalDue',
+            'totalPaid',
+            'totalRemaining',
+            'totalDueByCurrency',
+            'totalPaidByCurrency',
+            'totalRemainingByCurrency'
+        ));
     }
-
-    $totalRemaining = $totalDue - $totalPaid;
-
-    // إجماليات العملات
-    $totalDueByCurrency = $company->total_due_by_currency;
-    $totalPaidByCurrency = $company->total_paid_by_currency;
-    $totalRemainingByCurrency = $company->remaining_by_currency;
-
-    // رجع كل القيم للفيو
-    return view('pdf.company_bookings', compact(
-        'company',
-        'bookings',
-        'dueCount',
-        'totalDue',
-        'totalPaid',
-        'totalRemaining',
-        'totalDueByCurrency',
-        'totalPaidByCurrency',
-        'totalRemainingByCurrency'
-    ));
-}
 
 
     // تقرير حجوزات وكيل معين
@@ -1539,6 +1539,17 @@ class ReportController extends Controller
             // 'receipt_path' => $receiptPath, // *** تأكد من إضافة هذا السطر هنا ***
             'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة
         ]);
+        // حدث بيانات الوكيل عشان القيم تتحدث
+        // amount_paid_to_hotel تحديث قيمة الدفعة
+        // الحجز نفسه : 
+        // تحديث حجز واحد فقط إذا تم تمرير booking_id
+        if ($request->filled('booking_id')) {
+            $booking = Booking::find($request->input('booking_id'));
+            if ($booking) {
+                $booking->increment('amount_paid_to_hotel', $payment->amount);
+            }
+        }
+
 
         // إنشاء إشعار للدفعة العادية
         Notification::create([

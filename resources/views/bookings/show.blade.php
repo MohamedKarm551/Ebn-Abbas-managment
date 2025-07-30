@@ -24,23 +24,28 @@
                         عرض الفاوتشر
                     </a>
                     @if (Auth::user()->role === 'Admin')
-                        <div class="d-flex flex-wrap gap-2 my-2">
-                            <button type="button" class="btn btn-success px-3 py-2 d-flex align-items-center"
-                                data-bs-toggle="modal" data-bs-target="#registerPaymentModal">
-                                <i class="fas fa-money-bill-wave me-2"></i>
-                                تسجيل دفعة
-                            </button>
-                            <a href="{{ route('reports.agent.payments', $booking->agent->id) }}"
-                                class="btn btn-outline-primary px-3 py-2 d-flex align-items-center">
-                                <i class="fas fa-user-tie me-2"></i>
-                                كشف حساب جهة الحجز
-                            </a>
-                            <a href="{{ route('reports.company.payments', $booking->company->id) }}"
-                                class="btn btn-outline-info px-3 py-2 d-flex align-items-center">
-                                <i class="fas fa-building me-2"></i>
-                                كشف حساب الشركة
-                            </a>
-                        </div>
+                    <div class="d-flex flex-wrap gap-2 my-3 justify-content-center align-items-center custom-btn-group">
+                        <button type="button" class="btn btn-success px-4 py-2 d-flex align-items-center rounded-3 shadow-sm"
+                            data-bs-toggle="modal" data-bs-target="#registerPaymentModal">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            تسجيل دفعة للشركة
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm px-3 py-2 d-flex align-items-center rounded-3 shadow-sm"
+                            data-bs-toggle="modal" data-bs-target="#agentPaymentModal{{ $booking->agent->id }}">
+                            تسجيل دفعة لجهة الحجز
+                        </button>
+                        <a href="{{ route('reports.agent.payments', $booking->agent->id) }}"
+                            class="btn btn-outline-primary px-4 py-2 d-flex align-items-center rounded-3 shadow-sm">
+                            <i class="fas fa-user-tie me-2"></i>
+                            كشف حساب جهة الحجز
+                        </a>
+                        <a href="{{ route('reports.company.payments', $booking->company->id) }}"
+                            class="btn btn-outline-info px-4 py-2 d-flex align-items-center rounded-3 shadow-sm">
+                            <i class="fas fa-building me-2"></i>
+                            كشف حساب الشركة
+                        </a>
+                    </div>
+                    
                     @endif
 
                     <button type="button" class="btn btn-info ms-2" data-bs-toggle="modal"
@@ -789,6 +794,7 @@
             }
         });
     </script>
+    {{-- نموذج تسجيل دفعة للشركات  --}}
     <div class="modal fade" id="registerPaymentModal" tabindex="-1">
         <div class="modal-dialog modal-md">
             <div class="modal-content">
@@ -909,6 +915,55 @@
             </div>
         </div>
     </div>
+    {{-- نموذج تسجيل دفعة لجهات الحجز --}}
+    <!-- نموذج الدفعة العادية -->
+    <!-- نموذج الدفعة العادية -->
+<div class="modal fade" id="agentPaymentModal{{ $booking->agent->id }}" tabindex="-1" aria-labelledby="agentPaymentLabel{{ $booking->agent->id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('reports.agent.payment') }}" method="POST">
+                @csrf
+                <input type="hidden" name="agent_id" value="{{ $booking->agent->id }}">
+
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="agentPaymentLabel{{ $booking->agent->id }}">
+                        <i class="fas fa-money-bill-wave text-success me-2"></i>
+                        تسجيل دفعة - {{ $booking->agent->name }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">المبلغ المدفوع والعملة</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control" name="amount" placeholder="أدخل المبلغ" required>
+                            <select class="form-select" name="currency" style="max-width: 120px;">
+                                <option value="SAR" selected>ريال سعودي</option>
+                                <option value="KWD">دينار كويتي</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">ملاحظات</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="اكتب أي ملاحظات (اختياري)"></textarea>
+                    </div>
+                    <input type="hidden" name="booking_id" value="{{ $booking->id }}">
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> إغلاق
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-1"></i> تسجيل الدفعة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
     {{--  --}}
     <!-- ===== Modal المتابعة المالية للحجز ===== -->
     <div class="modal fade" id="financialTrackingModal" tabindex="-1" aria-labelledby="financialTrackingModalLabel"
@@ -3212,5 +3267,6 @@
             content: "🌙 ";
             opacity: 0.7;
         }
+        
     </style>
 @endpush

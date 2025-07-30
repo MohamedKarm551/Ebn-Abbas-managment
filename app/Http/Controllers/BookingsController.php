@@ -47,8 +47,8 @@ class BookingsController extends Controller
         // 1. بناء الاستعلام الأساسي وتحميل العلاقات (Eager Loading)
         // --------------------------------------------------
         // سطر 43: بنبدأ نبني الاستعلام لجدول الحجوزات وبنحمل العلاقات عشان الأداء
-        $query = Booking::with(['company', 'employee', 'agent', 'hotel' ,'financialTracking']);
-            // ->where('status', 'active'); // بنجيب بس الحجوزات النشطة
+        $query = Booking::with(['company', 'employee', 'agent', 'hotel', 'financialTracking']);
+        // ->where('status', 'active'); // بنجيب بس الحجوزات النشطة
 
         // سطر 45-46: بنستبعد الحجوزات المؤرشفة (اللي سعرها صفر)
         $query->where('cost_price', '!=', 0)
@@ -256,38 +256,38 @@ class BookingsController extends Controller
         $remainingToHotelsByCurrency = [];
 
 
-     // تجميع المستحق للفنادق حسب العملة (دائماً)
-$totalDueToHotelsByCurrency = $allBookings->groupBy('currency')
-    ->map(function ($currencyGroup) {
-        return [
-            'currency' => $currencyGroup->first()->currency,
-            'amount' => $currencyGroup->sum('amount_due_to_hotel')
-        ];
-    })->values()->toArray();
+        // تجميع المستحق للفنادق حسب العملة (دائماً)
+        $totalDueToHotelsByCurrency = $allBookings->groupBy('currency')
+            ->map(function ($currencyGroup) {
+                return [
+                    'currency' => $currencyGroup->first()->currency,
+                    'amount' => $currencyGroup->sum('amount_due_to_hotel')
+                ];
+            })->values()->toArray();
 
-$totalPaidToHotelsByCurrency = $allBookings->groupBy('currency')
-    ->map(function ($currencyGroup) {
-        return [
-            'currency' => $currencyGroup->first()->currency,
-            'amount' => $currencyGroup->sum('amount_paid_to_hotel')
-        ];
-    })->values()->toArray();
+        $totalPaidToHotelsByCurrency = $allBookings->groupBy('currency')
+            ->map(function ($currencyGroup) {
+                return [
+                    'currency' => $currencyGroup->first()->currency,
+                    'amount' => $currencyGroup->sum('amount_paid_to_hotel')
+                ];
+            })->values()->toArray();
 
-$remainingToHotelsByCurrency = [];
-foreach ($totalDueToHotelsByCurrency as $dueItem) {
-    $paid = collect($totalPaidToHotelsByCurrency)
-        ->where('currency', $dueItem['currency'])
-        ->first()['amount'] ?? 0;
+        $remainingToHotelsByCurrency = [];
+        foreach ($totalDueToHotelsByCurrency as $dueItem) {
+            $paid = collect($totalPaidToHotelsByCurrency)
+                ->where('currency', $dueItem['currency'])
+                ->first()['amount'] ?? 0;
 
-    $remainingToHotelsByCurrency[] = [
-        'currency' => $dueItem['currency'],
-        'amount' => $dueItem['amount'] - $paid
-    ];
-}
+            $remainingToHotelsByCurrency[] = [
+                'currency' => $dueItem['currency'],
+                'amount' => $dueItem['amount'] - $paid
+            ];
+        }
 
-$totalDueToHotelsAccurate = array_sum(array_column($totalDueToHotelsByCurrency, 'amount'));
-$totalPaidToHotelsAccurate = array_sum(array_column($totalPaidToHotelsByCurrency, 'amount'));
-$remainingToHotelsAccurate = $totalDueToHotelsAccurate - $totalPaidToHotelsAccurate;
+        $totalDueToHotelsAccurate = array_sum(array_column($totalDueToHotelsByCurrency, 'amount'));
+        $totalPaidToHotelsAccurate = array_sum(array_column($totalPaidToHotelsByCurrency, 'amount'));
+        $remainingToHotelsAccurate = $totalDueToHotelsAccurate - $totalPaidToHotelsAccurate;
 
         // تجميع المستحق من الشركات في الصفحة الحالية حسب العملة
         $pageDueFromCompanyByCurrency = $allBookings->groupBy('currency')
