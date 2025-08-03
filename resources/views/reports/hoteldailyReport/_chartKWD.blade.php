@@ -1,5 +1,42 @@
 {{-- 📈 رسم بياني للدينار --}}
-
+@php
+    // التحقق من وجود بيانات الدينار الكويتي من المتغيرات المتوفرة في الكنترولر
+    $hasKwdData = false;
+    $kwdTotal = 0;
+    
+    // 1. فحص بيانات صافي الرصيد بالدينار الكويتي
+    if (isset($netBalancesKWD) && !empty($netBalancesKWD)) {
+        foreach ($netBalancesKWD as $balance) {
+            if ($balance != 0) {
+                $hasKwdData = true;
+                $kwdTotal += $balance;
+                break; // مجرد العثور على قيمة غير صفر يكفي
+            }
+        }
+    }
+    
+    // 2. إذا لم نجد بيانات في الرسم البياني، نفحص الإجماليات
+    if (!$hasKwdData) {
+        // فحص إجماليات الشركات بالدينار
+        if (isset($totalDueFromCompaniesByCurrency['KWD']) && $totalDueFromCompaniesByCurrency['KWD'] > 0) {
+            $hasKwdData = true;
+            $kwdTotal += $totalDueFromCompaniesByCurrency['KWD'];
+        }
+        
+        // فحص إجماليات الوكلاء بالدينار
+        if (isset($totalDueToAgentsByCurrency['KWD']) && $totalDueToAgentsByCurrency['KWD'] > 0) {
+            $hasKwdData = true;
+            $kwdTotal += $totalDueToAgentsByCurrency['KWD'];
+        }
+        
+        // فحص صافي الربح بالدينار
+        if (isset($netProfitByCurrency['KWD']) && $netProfitByCurrency['KWD'] != 0) {
+            $hasKwdData = true;
+            $kwdTotal += abs($netProfitByCurrency['KWD']);
+        }
+    }
+@endphp
+@if($hasKwdData)
 {{-- 📈 رسم بياني إضافي للدينار محسن --}}
 <div class="mb-4 col-6 m-auto">
     <div class="collapse-card">
@@ -43,3 +80,10 @@
         </div>
     </div>
 </div>
+@else
+    {{-- رسالة اختيارية عندما لا توجد بيانات بالدينار --}}
+    {{-- <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle"></i>
+        لا توجد معاملات بالدينار الكويتي لعرضها
+    </div> --}}
+@endif

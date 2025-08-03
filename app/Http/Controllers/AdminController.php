@@ -686,7 +686,7 @@ class AdminController extends Controller
 
 
 
-        $archivedBookings = $query->paginate(10)->withQueryString();
+        $archivedBookings = $query->paginate(15)->withQueryString();
 
         // لو الطلب AJAX (للأجاكس)
         if ($request->wantsJson() || $request->ajax()) {

@@ -84,15 +84,15 @@
 ">
                     <div class="indicator-item">
                         <div class="indicator-dot positive"></div>
-                        <span class="indicator-text">رصيد موجب (لك)</span>
+                        <span class="stat-value">رصيد موجب (لك)</span>
                     </div>
                     <div class="indicator-item">
                         <div class="indicator-dot negative"></div>
-                        <span class="indicator-text">رصيد سالب (عليك)</span>
+                        <span class="stat-value">رصيد سالب (عليك)</span>
                     </div>
                     <div class="indicator-item">
                         <div class="indicator-dot neutral"></div>
-                        <span class="indicator-text">نقطة التوازن</span>
+                        <span class="stat-value">نقطة التوازن</span>
                     </div>
                 </div>
 
@@ -142,7 +142,7 @@
                 {{-- Chart Description --}}
                 <div class="chart-description mt-3 p-3 rounded" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.1);">
                     <i class="fas fa-info-circle me-2" style="color: #10b981;"></i>
-                    <span style="color: #1f2937;">يمثل الخط التغير في صافي الرصيد (الموجب = لك، السالب = عليك) بناءً على العمليات المسجلة</span>
+                    <div class="text-success d-inline">يمثل الخط التغير في صافي الرصيد (الموجب = لك، السالب = عليك) بناءً على العمليات المسجلة</div>
                 </div>
             </div>
         </div>

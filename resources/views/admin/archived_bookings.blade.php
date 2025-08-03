@@ -8,7 +8,7 @@
         @else
             <!-- البحث والفلترة - هنا بتقدر تدور على أي حجز أو تفلتر بالتاريخ -->
             <div class="filter-box pulse-border  p-4 mb-4">
-               
+
                 <h3 class="mb-3 text-muted">عملية البحث والفلترة</h3>
                 <form id="archiveFilterForm" method="GET" action="{{ route('admin.archived_bookings') }}">
                     <div class="row align-items-center text-center">
@@ -263,7 +263,7 @@
     function fetchData(url) {
         // console.log('بنجيب بيانات من:', url);
         // بنعرف المتغيرات دي جوه الدالة عشان نضمن إنها بتجيب العناصر الحالية بعد التحديث
-        const bookingsTableContainer = document.getElementById('bookingsTable');
+        const bookingsTableContainer = document.getElementById('archivedBookingsTable');
         const paginationContainer = document.querySelector('.d-flex.justify-content-center.mt-4');
 
         axios.get(url, {
@@ -327,20 +327,27 @@
     // helper لتحديث رسالة الفلترة بالتواريخ
     // ==========================================================
     function updateDateAlert() {
-        const params = new URLSearchParams(window.location.search);
-        const start = params.get('start_date'),
-            end = params.get('end_date');
-        const container = document.getElementById('filterAlert');
-        if (start && end) {
-            container.innerHTML = `
-              <div class="alert alert-info">
-                هذه الحجوزات التي تمت "دخلت أو خرجت" بين 
-                <strong>${start}</strong> و <strong>${end}</strong>
-              </div>`;
-        } else {
-            container.innerHTML = '';
-        }
+    const params = new URLSearchParams(window.location.search);
+    const start = params.get('start_date'), end = params.get('end_date');
+    
+    // ✅ استخدم الـ alert الموجود
+    const existingAlert = document.querySelector('.alert.alert-info.text-center.mb-3');
+    
+    if (!existingAlert) {
+        console.warn('لم يتم العثور على رسالة التنبيه');
+        return;
     }
+    
+    if (start && end) {
+        existingAlert.innerHTML = `
+            تم جلب الحجوزات بين <strong>${start}</strong> و <strong>${end}</strong>
+        `;
+    } else {
+        existingAlert.innerHTML = `
+            تم جلب: <strong>{{ $totalArchivedBookingsCount }}</strong> أرشيف
+        `;
+    }
+}
 
     // ==========================================================
     // الكود الأساسي اللي بيشتغل لما الصفحة تحمل (DOMContentLoaded)
@@ -476,7 +483,8 @@
                     }
                 });
                 const queryString = params.toString();
-                const filterUrl = '{{ route('bookings.index') }}' + (queryString ? '?' + queryString :
+                const filterUrl = '{{ route('admin.archived_bookings') }}' + (queryString ? '?' +
+                    queryString :
                     '');
                 // بنحدث الـ URL في المتصفح
                 window.history.pushState({

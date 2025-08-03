@@ -148,7 +148,7 @@
             <div class="col-12">
                 <div class="card mb-4 overflow-hidden">
                     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h3 class="mb-0">حساب المطلوب من الشركات</h3>
+                        <h3 class="mb-0 text-dark">حساب المطلوب من الشركات</h3>
                         <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTable')">نسخ الجدول</button>
                     </div>
                     <div class="card-body p-0">
@@ -513,7 +513,7 @@
                 <!-- جدول جهات الحجز مع AJAX Pagination -->
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3>حساب المستحق إلى جهات الحجز</h3>
+                        <h3 class="text-dark">حساب المستحق إلى جهات الحجز</h3>
                         <div class="btn-group" role="group">
                             <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTableContent')">نسخ
                                 الجدول</button>
@@ -751,7 +751,7 @@
                 <!-- جدول الفنادق -->
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3>حسابات الفنادق</h3>
+                        <h3 class="text-dark">حسابات الفنادق</h3>
                         <div class="btn-group" role="group">
                             <button class="btn btn-secondary btn-sm" onclick="copyTable('hotelsTableContent')">نسخ
                                 الجدول</button>

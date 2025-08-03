@@ -226,16 +226,29 @@
                                         {{ number_format(collect($totalDueFromCompanyByCurrency)->where('currency', 'SAR')->first()['amount'] ?? 0, 2) }}
                                     </td>
                                 </tr>
-                                {{-- عرض الدينار الكويتي --}}
-                                <tr>
-                                    <th>دينار كويتي</th>
-                                    <td>
-                                        {{ number_format(collect($totalDueToHotelsByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0, 2) }}
-                                    </td>
-                                    <td>
-                                        {{ number_format(collect($totalDueFromCompanyByCurrency)->where('currency', 'KWD')->first()['amount'] ?? 0, 2) }}
-                                    </td>
-                                </tr>
+                                {{-- عرض الدينار الكويتي فقط لو موجود وليس صفر --}}
+                                @php
+                                    $kwdDueToHotels =
+                                        collect($totalDueToHotelsByCurrency)->where('currency', 'KWD')->first()[
+                                            'amount'
+                                        ] ?? 0;
+                                    $kwdDueFromCompany =
+                                        collect($totalDueFromCompanyByCurrency)->where('currency', 'KWD')->first()[
+                                            'amount'
+                                        ] ?? 0;
+                                @endphp
+
+                                @if ($kwdDueToHotels > 0 || $kwdDueFromCompany > 0)
+                                    <tr>
+                                        <th>دينار كويتي</th>
+                                        <td>
+                                            {{ number_format($kwdDueToHotels, 2) }}
+                                        </td>
+                                        <td>
+                                            {{ number_format($kwdDueFromCompany, 2) }}
+                                        </td>
+                                    </tr>
+                                @endif
                             </tbody>
                         </table>
                     </div>
@@ -1009,12 +1022,12 @@
         }
 
         /* html[data-theme="dark"] .filter-box {
-                                                    box-shadow: inset 0px 0px 0px 1.5px #fffaed2d, 0 2px 8px 0 rgba(0, 0, 0, 0.16);
-                                                } */
+                                                        box-shadow: inset 0px 0px 0px 1.5px #fffaed2d, 0 2px 8px 0 rgba(0, 0, 0, 0.16);
+                                                    } */
 
         /* html[data-theme="dark"] .filter-box::before {
-                                                    background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
-                                                } */
+                                                        background: linear-gradient(120deg, #10b981 60%, #2563eb 100%);
+                                                    } */
 
         /* --- Admin Circle Menu Styles --- */
         .admin-menu-container {
@@ -1088,8 +1101,8 @@
 
         /* Remove the rotation from the main hover effect if pulse is applied */
         /* .admin-menu-container:hover .admin-circle {
-                                                                                                                            transform: rotate(360deg) scale(1.1);
-                                                                                                                        } */
+                                                                                                                                transform: rotate(360deg) scale(1.1);
+                                                                                                                            } */
 
 
 
