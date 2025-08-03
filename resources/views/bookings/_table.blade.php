@@ -20,8 +20,8 @@
             @endif
             {{-- *** نهاية التعديل *** --}}
             <th>الفندق</th>
-            <th style="min-width: 100px;"> الدخول</th> {{-- تحديد عرض أدنى للتواريخ --}}
-            <th style="min-width: 100px;"> الخروج</th>
+            <th style="min-width: 70px;"> الدخول</th> {{-- تحديد عرض أدنى للتواريخ --}}
+            <th style="min-width: 70px;"> الخروج</th>
             {{-- <th>عدد الأيام</th> --}}
             <th class="text-center">غرف</th> {{-- اختصار "عدد الغرف" --}}
             {{-- *** بداية التعديل: إخفاء المستحق للفندق للشركة *** --}}
@@ -92,13 +92,27 @@
                         {{ $booking->hotel->name }}
                     @endif
                 </td>
-                <td class="text-center align-middle">{{ $booking->check_in->format('d/m/Y') }} <small
-                        class="d-block text-muted hijri-date"
-                        data-date="{{ $booking->check_in->format('Y-m-d') }}"></small>
+                <td class="text-center align-middle">
+                    <span class="badge badge-pill
+            bg-info
+    ">
+                        {{ optional($booking->check_in)->format('d/m/Y') ?: '--' }}
+                        <br>
+                        <span class="d-block text-muted mt-1 hijri-date"
+                            data-date="{{ optional($booking->check_in)->format('Y-m-d') }}">
+                        </span>
+                    </span>
                 </td>
-                <td class="text-center align-middle">{{ $booking->check_out->format('d/m/Y') }} <small
-                        class="d-block text-muted hijri-date"
-                        data-date="{{ $booking->check_out->format('Y-m-d') }}"></small>
+                <td class="text-center align-middle">
+                    <span class="badge badge-pill
+            bg-warning
+    ">
+                        {{ optional($booking->check_out)->format('d/m/Y') ?: '--' }}
+                        <br>
+                        <span class="d-block text-muted mt-1 hijri-date"
+                            data-date="{{ optional($booking->check_out)->format('Y-m-d') }}">
+                        </span>
+                    </span>
                 </td>
                 {{-- <td class="text-center align-middle">{{ $booking->days }}</td> --}}
                 <td class="text-center align-middle">{{ $booking->rooms }}</td>

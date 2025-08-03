@@ -24,29 +24,53 @@
                         عرض الفاوتشر
                     </a>
                     @if (Auth::user()->role === 'Admin')
-                    <div class="d-flex flex-wrap gap-2 my-3 justify-content-center align-items-center custom-btn-group">
-                        <button type="button" class="btn btn-success px-4 py-2 d-flex align-items-center rounded-3 shadow-sm"
-                            data-bs-toggle="modal" data-bs-target="#registerPaymentModal">
-                            <i class="fas fa-money-bill-wave me-2"></i>
-                            تسجيل دفعة للشركة
-                        </button>
-                        <button type="button" class="btn btn-success btn-sm px-3 py-2 d-flex align-items-center rounded-3 shadow-sm"
-                            data-bs-toggle="modal" data-bs-target="#agentPaymentModal{{ $booking->agent->id }}">
-                            تسجيل دفعة لجهة الحجز
-                        </button>
-                        <a href="{{ route('reports.agent.payments', $booking->agent->id) }}"
-                            class="btn btn-outline-primary px-4 py-2 d-flex align-items-center rounded-3 shadow-sm">
-                            <i class="fas fa-user-tie me-2"></i>
-                            كشف حساب جهة الحجز
-                        </a>
-                        <a href="{{ route('reports.company.payments', $booking->company->id) }}"
-                            class="btn btn-outline-info px-4 py-2 d-flex align-items-center rounded-3 shadow-sm">
-                            <i class="fas fa-building me-2"></i>
-                            كشف حساب الشركة
-                        </a>
-                    </div>
-                    
+                        <div class="container my-4">
+                            <div class="row justify-content-center g-3">
+                                <div class="col-12 col-lg-12">
+                                    <div class="row g-3">
+                                        <!-- الزر الأول -->
+                                        <div class="col-12 col-md-6">
+                                            <button type="button"
+                                                class="btn btn-info w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2"
+                                                data-bs-toggle="modal" data-bs-target="#registerPaymentModal">
+                                                <i class="fas fa-money-bill-wave"></i>
+                                                <span>تسجيل دفعة للشركة</span>
+                                            </button>
+                                        </div>
+                                        <!-- الزر الثاني -->
+                                        <div class="col-12 col-md-6">
+                                            <button type="button"
+                                                class="btn btn-success w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#agentPaymentModal{{ $booking->agent->id }}">
+                                                <i class="fas fa-user-plus"></i>
+                                                <span>تسجيل دفعة لـ{{ $booking->agent->name }}</span>
+                                            </button>
+                                        </div>
+                                        <!-- الزر الثالث -->
+                                        <div class="col-12 col-md-6">
+                                            <a href="{{ route('reports.company.payments', $booking->company->id) }}"
+                                                class="btn btn-outline-info w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2">
+                                                <i class="fas fa-building"></i>
+                                                <span>كشف حساب الشركة</span>
+                                            </a>
+                                        </div>
+                                        <!-- الزر الرابع -->
+                                        <div class="col-12 col-md-6">
+                                            <a href="{{ route('reports.agent.payments', $booking->agent->id) }}"
+                                                class="btn btn-outline-success w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2">
+                                                <i class="fas fa-user-tie"></i>
+                                                <span>كشف حساب جهة الحجز</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     @endif
+
+
+
 
                     <button type="button" class="btn btn-info ms-2" data-bs-toggle="modal"
                         data-bs-target="#financialTrackingModal" onclick="loadFinancialTracking({{ $booking->id }})"
@@ -54,6 +78,20 @@
                         <i class="fas fa-chart-line me-1"></i>
                         حالة التحصيل والسداد
                     </button>
+                    <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-sm btn-warning me-1"
+                        title="تعديل"><i class="fas fa-edit"></i></a>
+                    @auth
+                        @if (auth()->user()->role === 'Admin')
+                            {{-- زر الحذف للأدمن فقط --}}
+                            <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" style="display:inline;"
+                                onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i
+                                        class="fas fa-trash"></i></button>
+                            </form>
+                        @endif
+                    @endauth
                 </h1>
             </div>
             <div class="col-12 col-lg-5 d-flex justify-content-center justify-content-lg-end gap-2">
@@ -918,51 +956,53 @@
     {{-- نموذج تسجيل دفعة لجهات الحجز --}}
     <!-- نموذج الدفعة العادية -->
     <!-- نموذج الدفعة العادية -->
-<div class="modal fade" id="agentPaymentModal{{ $booking->agent->id }}" tabindex="-1" aria-labelledby="agentPaymentLabel{{ $booking->agent->id }}" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ route('reports.agent.payment') }}" method="POST">
-                @csrf
-                <input type="hidden" name="agent_id" value="{{ $booking->agent->id }}">
+    <div class="modal fade" id="agentPaymentModal{{ $booking->agent->id }}" tabindex="-1"
+        aria-labelledby="agentPaymentLabel{{ $booking->agent->id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ route('reports.agent.payment') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="agent_id" value="{{ $booking->agent->id }}">
 
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title fw-bold" id="agentPaymentLabel{{ $booking->agent->id }}">
-                        <i class="fas fa-money-bill-wave text-success me-2"></i>
-                        تسجيل دفعة - {{ $booking->agent->name }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                </div>
+                    <div class="modal-header bg-light">
+                        <h5 class="modal-title fw-bold" id="agentPaymentLabel{{ $booking->agent->id }}">
+                            <i class="fas fa-money-bill-wave text-success me-2"></i>
+                            تسجيل دفعة - {{ $booking->agent->name }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                    </div>
 
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">المبلغ المدفوع والعملة</label>
-                        <div class="input-group">
-                            <input type="number" step="0.01" class="form-control" name="amount" placeholder="أدخل المبلغ" required>
-                            <select class="form-select" name="currency" style="max-width: 120px;">
-                                <option value="SAR" selected>ريال سعودي</option>
-                                <option value="KWD">دينار كويتي</option>
-                            </select>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">المبلغ المدفوع والعملة</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control" name="amount"
+                                    placeholder="أدخل المبلغ" required>
+                                <select class="form-select" name="currency" style="max-width: 120px;">
+                                    <option value="SAR" selected>ريال سعودي</option>
+                                    <option value="KWD">دينار كويتي</option>
+                                </select>
+                            </div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">ملاحظات</label>
+                            <textarea class="form-control" name="notes" rows="2" placeholder="اكتب أي ملاحظات (اختياري)"></textarea>
+                        </div>
+                        <input type="hidden" name="booking_id" value="{{ $booking->id }}">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">ملاحظات</label>
-                        <textarea class="form-control" name="notes" rows="2" placeholder="اكتب أي ملاحظات (اختياري)"></textarea>
-                    </div>
-                    <input type="hidden" name="booking_id" value="{{ $booking->id }}">
-                </div>
 
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> إغلاق
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check me-1"></i> تسجيل الدفعة
-                    </button>
-                </div>
-            </form>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> إغلاق
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check me-1"></i> تسجيل الدفعة
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
     {{--  --}}
     <!-- ===== Modal المتابعة المالية للحجز ===== -->
@@ -3267,6 +3307,5 @@
             content: "🌙 ";
             opacity: 0.7;
         }
-        
     </style>
 @endpush
