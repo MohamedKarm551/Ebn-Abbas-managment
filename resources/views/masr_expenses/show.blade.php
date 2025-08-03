@@ -10,7 +10,22 @@
         <strong>التاريخ:</strong> {{ $masr_expense->date }}
     </div>
     <div class="mb-2">
-        <strong>ملاحظات:</strong> {{ $masr_expense->notes }}
+        {{-- <strong>ملاحظات:</strong> {{ $masr_expense->notes }} --}}
+        @php
+    // وظيفة لتحويل أي رابط في النص لأيقونة قابلة للضغط
+    function convertLinksToIcons($text) {
+        // نمط الرابط
+        $pattern = '/(https?:\/\/[^\s<]+)/i';
+        // الاستبدال: أيقونة FontAwesome
+        $replace = '<a href="$1" target="_blank" rel="noopener" style="text-decoration:none; margin:0 3px;">
+                        <i class="fas fa-link"></i>
+                    </a>';
+        return preg_replace($pattern, $replace, e($text));
+    }
+@endphp
+
+<div>{!! convertLinksToIcons($masr_expense->notes) !!}</div>
+
     </div>
     <hr>
     <h5>بنود المصاريف</h5>
