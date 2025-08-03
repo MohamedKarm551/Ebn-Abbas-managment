@@ -36,7 +36,7 @@
             {{-- <th class="text-center">العملة</th> إضافة عمود العملة --}}
 
             {{-- <th>السداد من الشركة</th> --}}
-            <th>الموظف المسؤول</th>
+            {{-- <th>الموظف المسؤول</th> --}}
             {{-- *** بداية التعديل: إخفاء الملاحظات والإجراءات للشركة *** --}}
             @if (auth()->user()->role !== 'Company')
                 <th class="text-center">الملاحظات</th>
@@ -54,7 +54,9 @@
                     @if (auth()->user()->role !== 'Company')
                         <a href="{{ route('bookings.show', $booking->id) }}"
                             class="text-primary text-decoration-none fw-bold">
-                            {{ $booking->client_name }}
+                            {{ $booking->client_name }} <span
+                                class="text-muted" style="font-size: 10px">{{ $booking->employee->name ?? 'غير محدد' }}</span>
+
                         </a>
                     @else
                         {{ $booking->client_name }}
@@ -203,9 +205,10 @@
                 {{-- <td class="text-center align-middle">
                     {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
                 </td> --}}
-                <td class="text-center align-middle">
+                {{-- الموظف المسؤول | ولا يظهر للشركات  --}}
+                {{-- <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط فلترة الموظف *** --}}
-                    @if (auth()->user()->role !== 'Company')
+                {{-- @if (auth()->user()->role !== 'Company')
                         <a href="{{ route('bookings.index', ['employee_id' => $booking->employee->id]) }}"
                             class="text-primary text-decoration-none">
                             {{ $booking->employee->name }}
@@ -213,7 +216,8 @@
                     @else
                         {{ $booking->employee->name }}
                     @endif
-                </td>
+                </td>  --}}
+
                 {{-- *** بداية التعديل: إخفاء الملاحظات والإجراءات للشركة *** --}}
                 @if (auth()->user()->role !== 'Company')
                     <td class="text-center align-middle">
