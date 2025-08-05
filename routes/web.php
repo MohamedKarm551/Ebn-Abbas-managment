@@ -336,7 +336,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports/hotels-ajax', [ReportController::class, 'getHotelsAjax'])->name('reports.hotels.ajax');
         // جدول جهات الحجز
         Route::get('/reports/agents-ajax', [ReportController::class, 'getAgentsAjax'])->name('reports.agents.ajax');
-
+        // جدول الشركات
+        Route::get('/reports/companies-ajax', [ReportController::class, 'getCompaniesAjax'])->name('reports.companies.ajax');
         // مخطط العلاقات
         Route::get('/network-graph', [ReportController::class, 'networkGraph'])->name('network.graph');
         Route::get('/network-data', [ReportController::class, 'getNetworkData'])->name('network.data');

@@ -50,30 +50,84 @@ class ReportController extends Controller
         // ===================================
 
         // جلب الشركات مع العلاقات المطلوبة فقط (تحسين الأداء)
-        $companiesReport = Company::with([
-            'bookings' => function ($query) {
-                $query->select('id', 'company_id', 'sale_price', 'rooms', 'days', 'currency', 'amount_due_from_company');
-            },
-            'payments' => function ($query) {
-                $query->select('id', 'company_id', 'amount', 'currency', 'payment_date');
-            },
-            'landTripBookings' => function ($query) {
-                $query->select('id', 'company_id', 'amount_due_from_company', 'currency');
-            }
-        ])
-            ->withCount(['bookings as bookings_count', 'landTripBookings as land_trip_bookings_count'])
-            ->get()
+        // $companiesReport = Company::with([
+        //     'bookings' => function ($query) {
+        //         $query->select('id', 'company_id', 'sale_price', 'rooms', 'days', 'currency', 'amount_due_from_company');
+        //     },
+        //     'payments' => function ($query) {
+        //         $query->select('id', 'company_id', 'amount', 'currency', 'payment_date');
+        //     },
+        //     'landTripBookings' => function ($query) {
+        //         $query->select('id', 'company_id', 'amount_due_from_company', 'currency');
+        //     }
+        // ])
+        //     ->withCount(['bookings as bookings_count', 'landTripBookings as land_trip_bookings_count'])
+        //     ->get()
+        //     ->map(function ($company) {
+        //         // حساب إجمالي عدد الحجوزات (عادية + رحلات برية)
+        //         $company->total_bookings_count = $company->bookings_count + $company->land_trip_bookings_count;
+
+        //         // ✅ استدعاء دالة حساب الإجماليات المحسنة
+        //         $company->calculateTotals();
+
+        //         return $company;
+        //     })
+        //     ->sortByDesc('computed_total_due')  // ترتيب حسب المستحق المحسوب
+        //     ->values();
+        $perPage = 15; // عدد العناصر في كل صفحة
+        $currentPage = request()->get('companies_page', 1);
+
+        // عدل الاستعلام ليشمل فقط الشركات التي لها حجوزات
+        $companiesQuery = Company::withCount(['bookings', 'landTripBookings'])
+            ->with([
+                'bookings' => function ($query) {
+                    $query->select('id', 'company_id', 'sale_price', 'rooms', 'days', 'currency', 'amount_due_from_company');
+                },
+                'payments' => function ($query) {
+                    $query->select('id', 'company_id', 'amount', 'currency', 'payment_date');
+                },
+                'landTripBookings' => function ($query) {
+                    $query->select('id', 'company_id', 'amount_due_from_company', 'currency');
+                }
+            ])
+            // فقط الشركات التي لها حجوزات (عادية أو رحلات برية)
+            ->having('bookings_count', '>', 0)
+            ->orHaving('land_trip_bookings_count', '>', 0);
+
+        // الحصول على إجمالي العدد
+        $totalCompanies = $companiesQuery->count();
+        $totalPages = ceil($totalCompanies / $perPage);
+
+        // ضبط رقم الصفحة
+        if ($currentPage > $totalPages && $totalPages > 0) {
+            $currentPage = $totalPages;
+        }
+
+        // الحصول على الشركات للصفحة الحالية
+        $companiesReport = $companiesQuery->get()
             ->map(function ($company) {
                 // حساب إجمالي عدد الحجوزات (عادية + رحلات برية)
                 $company->total_bookings_count = $company->bookings_count + $company->land_trip_bookings_count;
 
-                // ✅ استدعاء دالة حساب الإجماليات المحسنة
+                // استدعاء دالة حساب الإجماليات المحسنة
                 $company->calculateTotals();
 
                 return $company;
             })
             ->sortByDesc('computed_total_due')  // ترتيب حسب المستحق المحسوب
             ->values();
+
+        // تقسيم النتائج يدوياً لعرض الصفحة الأولى فقط
+        $companiesReport = new \Illuminate\Pagination\LengthAwarePaginator(
+            $companiesReport->forPage($currentPage, $perPage),
+            $totalCompanies,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => 'companies_page'
+            ]
+        );
 
         // ===================================
         // 🤝 تقرير الوكلاء/جهات الحجز
@@ -544,6 +598,134 @@ class ReportController extends Controller
         }
 
         return $agentsReport;
+    }
+    // 
+    /**
+     * دالة جلب الشركات بـ AJAX مع Pagination
+     * نفس طريقة الوكلاء والفنادق
+     */
+    public function getCompaniesAjax(Request $request)
+    {
+        try {
+            $page = $request->get('companies_page', 1);
+            $perPage = 15; // عدد العناصر في كل صفحة
+
+            // جلب الشركات مع العلاقات المطلوبة
+            $companiesQuery = Company::withCount(['bookings', 'landTripBookings'])
+                ->with([
+                    'bookings' => function ($query) {
+                        $query->select('id', 'company_id', 'sale_price', 'rooms', 'days', 'currency', 'amount_due_from_company');
+                    },
+                    'payments' => function ($query) {
+                        $query->select('id', 'company_id', 'amount', 'currency', 'payment_date');
+                    },
+                    'landTripBookings' => function ($query) {
+                        $query->select('id', 'company_id', 'amount_due_from_company', 'currency');
+                    }
+                ])
+                // فقط الشركات التي لها حجوزات (عادية أو رحلات برية)
+                ->having('bookings_count', '>', 0)
+                ->orHaving('land_trip_bookings_count', '>', 0);
+
+            // الحصول على إجمالي العدد
+            $totalItems = $companiesQuery->count();
+            $totalPages = ceil($totalItems / $perPage);
+
+            // ضبط رقم الصفحة
+            if ($page > $totalPages && $totalPages > 0) {
+                $page = $totalPages;
+            } elseif ($page < 1) {
+                $page = 1;
+            }
+
+            // الحصول على الشركات ومعالجتها
+            $companies = $companiesQuery->get()
+                ->map(function ($company) {
+                    $company->total_bookings_count = $company->bookings_count + $company->land_trip_bookings_count;
+                    $company->calculateTotals();
+                    return $company;
+                })
+                ->sortByDesc('computed_total_due')
+                ->values();
+
+            // إنشاء pagination
+            $companiesReport = new \Illuminate\Pagination\LengthAwarePaginator(
+                $companies->forPage($page, $perPage),
+                $totalItems,
+                $perPage,
+                $page,
+                [
+                    'path' => request()->url(),
+                    'pageName' => 'companies_page',
+                ]
+            );
+
+            // حساب الإجماليات للتقرير الكلي
+            $totalDueByCurrency = ['SAR' => 0, 'KWD' => 0];
+            $totalPaidByCurrency = ['SAR' => 0, 'KWD' => 0];
+            $totalRemainingByCurrency = ['SAR' => 0, 'KWD' => 0];
+
+
+
+            foreach ($companies as $company) {
+                $dueByCurrency = $company->total_due_by_currency ?? ['SAR' => $company->total_due];
+                $paidByCurrency = $company->total_paid_by_currency ?? ['SAR' => $company->total_paid];
+                $remainingByCurrency = $company->remaining_by_currency ?? ['SAR' => $company->remaining];
+
+                foreach ($dueByCurrency as $currency => $amount) {
+                    $totalDueByCurrency[$currency] += $amount;
+                }
+
+                foreach ($paidByCurrency as $currency => $amount) {
+                    $totalPaidByCurrency[$currency] += $amount;
+                }
+
+                foreach ($remainingByCurrency as $currency => $amount) {
+                    $totalRemainingByCurrency[$currency] += $amount;
+                }
+            }
+            // ✅ إضافة متغير recentCompanyEdits
+            $recentCompanyEdits = \App\Models\Notification::whereIn('type', [
+                'تعديل',
+                'تعديل دفعة',
+                'دفعة جديدة',
+                'حذف دفعة'
+            ])
+                ->where('created_at', '>=', now()->subDays(2))
+                ->get()
+                ->groupBy('message');
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'html' => view('reports.hoteldailyReport.companies-table', [
+                        'companiesReport' => $companiesReport,
+                        'totalDueByCurrency' => $totalDueByCurrency,
+                        'totalPaidByCurrency' => $totalPaidByCurrency,
+                        'totalRemainingByCurrency' => $totalRemainingByCurrency,
+                        'recentCompanyEdits' => $recentCompanyEdits // ✅ إضافة هنا
+                    ])->render(),
+                    'pagination' => (string) $companiesReport->appends(request()->query())->links('pagination::bootstrap-4'),
+                    'totals' => [
+                        'totalDueByCurrency' => $totalDueByCurrency,
+                        'totalPaidByCurrency' => $totalPaidByCurrency,
+                        'totalRemainingByCurrency' => $totalRemainingByCurrency
+                    ]
+                ]);
+            }
+
+            return $companiesReport;
+        } catch (\Exception $e) {
+            Log::error('Error in getCompaniesAjax: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return response()->json([
+                'error' => 'Internal Server Error',
+                'message' => 'حدث خطأ أثناء تحميل بيانات الشركات',
+                'details' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getHotelsAjax(Request $request)

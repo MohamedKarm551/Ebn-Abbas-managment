@@ -47,7 +47,7 @@
         @if ($report->notes)
             <div class="alert alert-info mt-3">
                 <strong>ملاحظات التقرير:</strong>
-                <div>{{ $report->notes }}</div>
+                {{-- <div>{{ $report->notes }}</div> --}}
                 @php
                     // وظيفة لتحويل أي رابط في النص لأيقونة قابلة للضغط
                     function convertLinksToIcons($text)
