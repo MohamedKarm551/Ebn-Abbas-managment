@@ -329,3 +329,96 @@
          </tr>
      </tfoot>
  </table>
+
+     <!-- للشركات نموذج تسجيل الدفعات -->
+            @foreach ($companiesReport as $company)
+                <div class="modal fade" id="paymentModal{{ $company->id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="{{ route('reports.company.payment') }}" method="POST"
+                                enctype="multipart/form-data">
+                                @csrf
+                                <input type="hidden" name="company_id" value="{{ $company->id }}">
+                                <input type="hidden" name="is_discount" id="is-discount-{{ $company->id }}"
+                                    value="0">
+
+                                <div class="modal-header">
+                                    <h5 class="modal-title">تسجيل دفعة - {{ $company->name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">المبلغ المدفوع والعملة</label>
+                                        <div> قم بعمل سند قبض لهذه العملية : <a
+                                                href="{{ route('admin.receipt.voucher') }}" target="_blank">إنشاء سند
+                                                قبض</a></div>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" class="form-control" name="amount"
+                                                required>
+                                            <select class="form-select" name="currency" style="max-width: 120px;">
+                                                <option value="SAR" selected>ريال سعودي</option>
+                                                <option value="KWD">دينار كويتي</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
+                                    {{-- <div class="mb-3">
+                                    <label for="receipt_file_company_{{ $company->id }}" class="form-label">إرفاق إيصال
+                                        (اختياري)
+                                    </label>
+                                    <input class="form-control" type="file"
+                                        id="receipt_file_company_{{ $company->id }}" name="receipt_file">
+                                  
+                                <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
+                                    5MB)</small>
+                            </div> --}}
+                                    {{-- *** نهاية حقل رفع الملف *** --}}
+                                    <div class="mb-3">
+                                        <label class="form-label">ملاحظات <br>
+                                            (إن كانت معك صورة من التحويل ارفعها على درايف وضع الرابط هنا)
+                                        </label>
+                                        <textarea class="form-control" name="notes"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">إغلاق</button>
+                                    <button type="button" class="btn btn-warning"
+                                        id="toggleDiscountBtn-{{ $company->id }}"
+                                        onclick="toggleDiscountMode({{ $company->id }})">تسجيل خصم</button>
+                                    <button type="submit" class="btn btn-primary"
+                                        id="submitBtn-{{ $company->id }}">تسجيل
+                                        الدفعة</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+            <script>
+                   function toggleDiscountMode(companyId) {
+                    const isDiscountField = document.getElementById('is-discount-' + companyId);
+                    const submitBtn = document.getElementById('submitBtn-' + companyId);
+                    const toggleBtn = document.getElementById('toggleDiscountBtn-' + companyId);
+                    const modalTitle = document.querySelector('#paymentModal' + companyId + ' .modal-title');
+                    const companyName = modalTitle.textContent.split('-')[1].trim();
+
+                    if (isDiscountField.value === "0") {
+                        isDiscountField.value = "1";
+                        submitBtn.textContent = "تطبيق الخصم";
+                        submitBtn.classList.remove('btn-primary');
+                        submitBtn.classList.add('btn-warning');
+                        toggleBtn.textContent = "تسجيل دفعة";
+                        modalTitle.textContent = "تسجيل خصم - " + companyName;
+                    } else {
+                        isDiscountField.value = "0";
+                        submitBtn.textContent = "تسجيل الدفعة";
+                        submitBtn.classList.remove('btn-warning');
+                        submitBtn.classList.add('btn-primary');
+                        toggleBtn.textContent = "تسجيل خصم";
+                        modalTitle.textContent = "تسجيل دفعة - " + companyName;
+                    }
+                }
+            </script>

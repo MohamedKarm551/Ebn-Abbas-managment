@@ -4,8 +4,12 @@
 @section('content')
     <div class="container">
         <h1>سجل المدفوعات - {{ $company->name }}</h1>
-         <a href="{{ route('reports.company.bookings', $company->id) }}" class="w-25 p-2 mt-2 mb-2 btn btn-primary btn-sm"> عرض الحجوزات
-             </a>
+        <a href="{{ route('reports.company.bookings', $company->id) }}" class="w-25 p-2 mt-2 mb-2 btn btn-primary btn-sm"> عرض
+            الحجوزات
+        </a>
+        <a href="{{ route('company.bookings.pdf', $company->id) }}" class="btn btn-danger " target="_blank">
+            <i class="fas fa-file-pdf"></i> تحميل كشف الحساب PDF
+        </a>
         <button type="button" class="w-25 p-2 mt-2 mb-2 btn btn-success btn-sm" data-bs-toggle="modal"
             data-bs-target="#paymentModal{{ $company->id }}">
             تسجيل دفعة
@@ -183,7 +187,8 @@
                                     <div class="bg-warning">
                                         إجمالي المستحق بالريال : {{ $company->computed_total_due_by_currency['SAR'] }}
                                         <br>
-                                        إجمالي المستحق بالدينار : {{ $company->computed_total_due_by_currency['KWD'] ?? 0 }}
+                                        إجمالي المستحق بالدينار :
+                                        {{ $company->computed_total_due_by_currency['KWD'] ?? 0 }}
                                     </div>
                                 @endif
 
@@ -405,8 +410,8 @@
                             <td class="d-flex gap-1">
                                 <a href="{{ route('reports.company.payment.edit', $payment->id) }}"
                                     class="btn btn-warning btn-sm">تعديل</a>
-                                <form action="{{ route('reports.company.payment.destroy', $payment->id) }}" method="POST"
-                                    onsubmit="return confirm('هل أنت متأكد من حذف هذه الدفعة؟');">
+                                <form action="{{ route('reports.company.payment.destroy', $payment->id) }}"
+                                    method="POST" onsubmit="return confirm('هل أنت متأكد من حذف هذه الدفعة؟');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm">حذف</button>
@@ -660,59 +665,59 @@
             </script>
             {{-- التاريخ الهجري  --}}
             <script src="{{ asset('js/hijriDataConvert.js') }}"></script>
-               <script>
-        // سكريبت الخصم : 
-        function toggleAgentDiscountMode(agentId) {
-            const isDiscountField = document.getElementById('is-discount-' + agentId);
-            const submitBtn = document.getElementById('agentSubmitBtn-' + agentId);
-            const toggleBtn = document.getElementById('toggleAgentDiscountBtn-' + agentId);
-            const modalTitle = document.querySelector('#agentPaymentModalTitle' + agentId);
-            const agentName = modalTitle.textContent.split('-')[1].trim();
+            <script>
+                // سكريبت الخصم : 
+                function toggleAgentDiscountMode(agentId) {
+                    const isDiscountField = document.getElementById('is-discount-' + agentId);
+                    const submitBtn = document.getElementById('agentSubmitBtn-' + agentId);
+                    const toggleBtn = document.getElementById('toggleAgentDiscountBtn-' + agentId);
+                    const modalTitle = document.querySelector('#agentPaymentModalTitle' + agentId);
+                    const agentName = modalTitle.textContent.split('-')[1].trim();
 
-            if (isDiscountField.value === "0") {
-                // تحويل إلى وضع الخصم
-                isDiscountField.value = "1";
-                submitBtn.textContent = "تطبيق الخصم";
-                submitBtn.classList.remove('btn-primary');
-                submitBtn.classList.add('btn-warning');
-                toggleBtn.textContent = "تسجيل دفعة";
-                modalTitle.textContent = "تسجيل خصم - " + agentName;
-            } else {
-                // العودة إلى وضع الدفع
-                isDiscountField.value = "0";
-                submitBtn.textContent = "تسجيل الدفعة";
-                submitBtn.classList.remove('btn-warning');
-                submitBtn.classList.add('btn-primary');
-                toggleBtn.textContent = "تسجيل خصم";
-                modalTitle.textContent = "تسجيل دفعة - " + agentName;
-            }
-        }
-        // دالة التبديل وضع الخصم
-        function toggleDiscountMode(companyId) {
-            const isDiscountField = document.getElementById('is-discount-' + companyId);
-            const submitBtn = document.getElementById('submitBtn-' + companyId);
-            const toggleBtn = document.getElementById('toggleDiscountBtn-' + companyId);
-            const modalTitle = document.querySelector('#paymentModal' + companyId + ' .modal-title');
-            const companyName = modalTitle.textContent.split('-')[1].trim();
+                    if (isDiscountField.value === "0") {
+                        // تحويل إلى وضع الخصم
+                        isDiscountField.value = "1";
+                        submitBtn.textContent = "تطبيق الخصم";
+                        submitBtn.classList.remove('btn-primary');
+                        submitBtn.classList.add('btn-warning');
+                        toggleBtn.textContent = "تسجيل دفعة";
+                        modalTitle.textContent = "تسجيل خصم - " + agentName;
+                    } else {
+                        // العودة إلى وضع الدفع
+                        isDiscountField.value = "0";
+                        submitBtn.textContent = "تسجيل الدفعة";
+                        submitBtn.classList.remove('btn-warning');
+                        submitBtn.classList.add('btn-primary');
+                        toggleBtn.textContent = "تسجيل خصم";
+                        modalTitle.textContent = "تسجيل دفعة - " + agentName;
+                    }
+                }
+                // دالة التبديل وضع الخصم
+                function toggleDiscountMode(companyId) {
+                    const isDiscountField = document.getElementById('is-discount-' + companyId);
+                    const submitBtn = document.getElementById('submitBtn-' + companyId);
+                    const toggleBtn = document.getElementById('toggleDiscountBtn-' + companyId);
+                    const modalTitle = document.querySelector('#paymentModal' + companyId + ' .modal-title');
+                    const companyName = modalTitle.textContent.split('-')[1].trim();
 
-            if (isDiscountField.value === "0") {
-                // تحويل إلى وضع الخصم
-                isDiscountField.value = "1";
-                submitBtn.textContent = "تطبيق الخصم";
-                submitBtn.classList.remove('btn-primary');
-                submitBtn.classList.add('btn-warning');
-                toggleBtn.textContent = "تسجيل دفعة";
-                modalTitle.textContent = "تسجيل خصم - " + companyName;
-            } else {
-                // العودة إلى وضع الدفع
-                isDiscountField.value = "0";
-                submitBtn.textContent = "تسجيل الدفعة";
-                submitBtn.classList.remove('btn-warning');
-                submitBtn.classList.add('btn-primary');
-                toggleBtn.textContent = "تسجيل خصم";
-                modalTitle.textContent = "تسجيل دفعة - " + companyName;
-            }
-        }
-    </script>
+                    if (isDiscountField.value === "0") {
+                        // تحويل إلى وضع الخصم
+                        isDiscountField.value = "1";
+                        submitBtn.textContent = "تطبيق الخصم";
+                        submitBtn.classList.remove('btn-primary');
+                        submitBtn.classList.add('btn-warning');
+                        toggleBtn.textContent = "تسجيل دفعة";
+                        modalTitle.textContent = "تسجيل خصم - " + companyName;
+                    } else {
+                        // العودة إلى وضع الدفع
+                        isDiscountField.value = "0";
+                        submitBtn.textContent = "تسجيل الدفعة";
+                        submitBtn.classList.remove('btn-warning');
+                        submitBtn.classList.add('btn-primary');
+                        toggleBtn.textContent = "تسجيل خصم";
+                        modalTitle.textContent = "تسجيل دفعة - " + companyName;
+                    }
+                }
+            </script>
         @endpush
     @endsection
