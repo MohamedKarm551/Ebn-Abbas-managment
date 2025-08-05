@@ -222,16 +222,16 @@
                      // ✅ حساب الإجمالي من القيم المحسوبة للشركات (مشابه لجدول الوكلاء)
                      $totalCompanyDueByCurrency = ['SAR' => 0, 'KWD' => 0];
                      foreach ($companiesReport as $company) {
-                         // حصول على مستحقات الفنادق
+                         // 1. مستحقات الفنادق حسب العملة
                          $hotelDueByCurrency = $company->total_due_bookings_by_currency ?? ['SAR' => 0, 'KWD' => 0];
 
-                         // حساب مستحقات الرحلات البرية
+                         // 2. مستحقات الرحلات البرية حسب العملة
                          $tripDueByCurrency = $company->landTripBookings
                              ->groupBy('currency')
                              ->map->sum('amount_due_from_company')
                              ->toArray();
 
-                         // جمع المستحقات
+                         // 3. إضافة المستحقات لإجمالي الشركة
                          foreach (['SAR', 'KWD'] as $cur) {
                              $totalCompanyDueByCurrency[$cur] +=
                                  ($hotelDueByCurrency[$cur] ?? 0) + ($tripDueByCurrency[$cur] ?? 0);
@@ -247,34 +247,39 @@
              </td>
              <td>
                  @php
-                     // ✅ حساب إجمالي المدفوعات من القيم المحسوبة للشركات
+                     // ✅ حساب إجمالي المدفوعات من كل شركة
                      $totalCompanyPaidByCurrency = ['SAR' => 0, 'KWD' => 0];
                      $totalCompanyDiscountsByCurrency = ['SAR' => 0, 'KWD' => 0];
 
                      foreach ($companiesReport as $company) {
+                         // استخدام القيم المحسوبة للمدفوعات مع وجود fallback
                          $paidByCurrency = $company->computed_total_paid_by_currency ?? [];
                          $discountsByCurrency = $company->computed_total_discounts_by_currency ?? [];
 
+                         // جمع المدفوعات لكل عملة
                          foreach ($paidByCurrency as $currency => $amount) {
-                             $totalCompanyPaidByCurrency[$currency] += $amount;
+                             $totalCompanyPaidByCurrency[$currency] += (float) $amount;
                          }
+
+                         // جمع الخصومات لكل عملة
                          foreach ($discountsByCurrency as $currency => $amount) {
-                             $totalCompanyDiscountsByCurrency[$currency] += $amount;
+                             $totalCompanyDiscountsByCurrency[$currency] += (float) $amount;
                          }
                      }
                  @endphp
 
                  @foreach (['SAR', 'KWD'] as $currency)
-                     @if (($totalCompanyPaidByCurrency[$currency] ?? 0) > 0)
+                     @if (($totalCompanyPaidByCurrency[$currency] ?? 0) > 0 || ($totalCompanyDiscountsByCurrency[$currency] ?? 0) > 0)
                          <div class="mb-1">
                              <strong
-                                 class="text-success">{{ number_format($totalCompanyPaidByCurrency[$currency], 2) }}</strong>
+                                 class="text-success">{{ number_format((float) ($totalCompanyPaidByCurrency[$currency] ?? 0), 2) }}</strong>
                              {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
 
                              @if (($totalCompanyDiscountsByCurrency[$currency] ?? 0) > 0)
                                  <br><small class="text-warning">
                                      <i class="fas fa-minus-circle me-1"></i>
-                                     خصومات: {{ number_format($totalCompanyDiscountsByCurrency[$currency], 2) }}
+                                     خصومات:
+                                     {{ number_format((float) ($totalCompanyDiscountsByCurrency[$currency] ?? 0), 2) }}
                                      {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}
                                  </small>
                              @endif
@@ -284,22 +289,21 @@
              </td>
              <td>
                  @php
-                     // ✅ حساب إجمالي المتبقي من القيم المحسوبة للشركات
+                     // ✅ حساب إجمالي المتبقي بناءً على الإجماليات المحسوبة أعلاه
                      $totalCompanyRemainingByCurrency = ['SAR' => 0, 'KWD' => 0];
 
-                     foreach ($companiesReport as $company) {
-                         foreach (['SAR', 'KWD'] as $curr) {
-                             // 1. المستحق حسب العملة
-                             $due = $company->total_due_bookings_by_currency[$curr] ?? 0;
+                     foreach (['SAR', 'KWD'] as $currency) {
+                         // 1. إجمالي المستحق
+                         $totalDue = $totalCompanyDueByCurrency[$currency] ?? 0;
 
-                             // 2. المدفوع والخصومات
-                             $paid = $company->computed_total_paid_by_currency[$curr] ?? 0;
-                             $discounts = $company->computed_total_discounts_by_currency[$curr] ?? 0;
+                         // 2. إجمالي المدفوع + الخصومات (صافي المدفوع)
+                         $totalPaid = $totalCompanyPaidByCurrency[$currency] ?? 0;
+                         $totalDiscounts = $totalCompanyDiscountsByCurrency[$currency] ?? 0;
 
-                             // 3. حساب المتبقي
-                             $remaining = $due - ($paid + $discounts);
-                             $totalCompanyRemainingByCurrency[$curr] += $remaining;
-                         }
+                         // 3. المتبقي = المستحق - (المدفوع + الخصومات)
+                         $remaining = $totalDue - ($totalPaid + $totalDiscounts);
+
+                         $totalCompanyRemainingByCurrency[$currency] = $remaining;
                      }
                  @endphp
 
@@ -315,8 +319,8 @@
                      @endif
                  @endforeach
 
-                 {{-- إذا كان المجموع صفر في كل العملات --}}
-                 @if (array_sum(array_map('abs', $totalCompanyRemainingByCurrency)) == 0)
+                 {{-- عرض 0 إذا كان المجموع صفر في كل العملات --}}
+                 @if (!array_sum(array_map('abs', $totalCompanyRemainingByCurrency)))
                      <span class="text-success">0.00 ريال</span><br>
                      <small class="text-muted">(متوازن)</small>
                  @endif
