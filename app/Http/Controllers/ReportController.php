@@ -1439,6 +1439,7 @@ class ReportController extends Controller
         // هات كل الحجوزات مع نفس الـ with والـ map!
         $bookings = $company->bookings()
             ->with(['hotel', 'agent', 'financialTracking'])
+            ->where('amount_due_from_company', '>', 0)  // استبعاد الحجوزات التي المبلغ المستحق فيها صفر
             ->orderBy('check_in')
             ->get()
             ->map(function ($b) {
