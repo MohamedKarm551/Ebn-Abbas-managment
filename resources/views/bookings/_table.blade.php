@@ -54,7 +54,7 @@
                     @if (auth()->user()->role !== 'Company')
                         <a href="{{ route('bookings.show', $booking->id) }}"
                             class="text-primary text-decoration-none fw-bold">
-                            {{ $booking->client_name }} <span
+                            {{ $booking->client_name }}  <br> <span
                                 class="text-muted" style="font-size: 10px">{{ $booking->employee->name ?? 'غير محدد' }}</span>
 
                         </a>
@@ -117,7 +117,7 @@
                     </span>
                 </td>
                 {{-- <td class="text-center align-middle">{{ $booking->days }}</td> --}}
-                <td class="text-center align-middle">{{ $booking->rooms }}</td>
+                <td class="text-center align-middle" title="{{ $booking->room_type }}">{{ $booking->rooms }}</td>
                 {{-- *** بداية التعديل: إخفاء المستحق للفندق للشركة *** --}}
                 @if (auth()->user()->role !== 'Company')
                     {{-- الشرط القديم بتاع company_id مش محتاجينه هنا --}}
