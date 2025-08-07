@@ -19,6 +19,8 @@ use App\Http\Controllers\HotelRoomController;
 use App\Http\Controllers\BookingOperationReportController;
 use App\Http\Controllers\AdminTransactionController;
 use App\Http\Controllers\LandTripsAgentPaymentController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\NotificationController;
 use App\Models\User;
 use Jenssegers\Agent\Agent;
 use App\Models\Notification;
@@ -36,9 +38,10 @@ use App\Models\Company;
 */
 
 // الصفحة الرئيسية
-Route::get('/', function () {
-    return view('welcome');
-});
+// Route::get('/', function () {
+//     return view('welcome');
+// });
+Route::get('/', [AuthController::class, 'welcome']);
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
@@ -52,86 +55,91 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 Auth::routes(['register' => false]);
 
 // مسارات تسجيل الدخول المخصصة
-Route::get('/login', function () {
-    return redirect('/');
-})->name('login');
+// Route::get('/login', function () {
+//     return redirect('/');
+// })->name('login');
 
-Route::post('/manual-login', function (Request $request) {
-    $credentials = $request->only('email', 'password');
+// Route::post('/manual-login', function (Request $request) {
+//     $credentials = $request->only('email', 'password');
 
-    if (Auth::attempt($credentials, $request->filled('remember'))) {
-        $user = Auth::user();
-        $agent = new Agent();
+//     if (Auth::attempt($credentials, $request->filled('remember'))) {
+//         $user = Auth::user();
+//         $agent = new Agent();
 
-        // جمع معلومات الجهاز للتسجيل
-        $device = $agent->device();
-        $platform = $agent->platform();
-        $browser = $agent->browser();
-        $ip = $request->ip();
+//         // جمع معلومات الجهاز للتسجيل
+//         $device = $agent->device();
+//         $platform = $agent->platform();
+//         $browser = $agent->browser();
+//         $ip = $request->ip();
 
-        if ($user) {
-            // إرسال إشعار تسجيل الدخول للمدراء
-            $adminUsers = User::where('role', 'Admin')->get();
-            foreach ($adminUsers as $admin) {
-                Notification::create([
-                    'user_id' => $admin->id,
-                    'title' => 'تسجيل دخول',
-                    'message' => "تم تسجيل دخول المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
-                    'type' => 'login',
-                ]);
-            }
-        }
+//         if ($user) {
+//             // إرسال إشعار تسجيل الدخول للمدراء
+//             $adminUsers = User::where('role', 'Admin')->get();
+//             foreach ($adminUsers as $admin) {
+//                 Notification::create([
+//                     'user_id' => $admin->id,
+//                     'title' => 'تسجيل دخول',
+//                     'message' => "تم تسجيل دخول المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
+//                     'type' => 'login',
+//                 ]);
+//             }
+//         }
 
-        // التوجيه حسب نوع المستخدم
-        if ($user->role === 'Company') {
-            return redirect('/company/land-trips');
-        } else {
-            return redirect('/bookings');
-        }
-    }
+//         // التوجيه حسب نوع المستخدم
+//         if ($user->role === 'Company') {
+//             return redirect('/company/land-trips');
+//         } else {
+//             return redirect('/bookings');
+//         }
+//     }
 
-    return back()->withErrors(['email' => 'بيانات الدخول غير صحيحة'])->withInput();
-})->name('manual.login');
+//     return back()->withErrors(['email' => 'بيانات الدخول غير صحيحة'])->withInput();
+// })->name('manual.login');
 
-Route::post('/logout', function (Request $request) {
-    $user = Auth::user();
-    $agent = new Agent();
+// Route::post('/logout', function (Request $request) {
+//     $user = Auth::user();
+//     $agent = new Agent();
 
-    // جمع معلومات الجهاز للتسجيل
-    $device = $agent->device();
-    $platform = $agent->platform();
-    $browser = $agent->browser();
-    $ip = $request->ip();
+//     // جمع معلومات الجهاز للتسجيل
+//     $device = $agent->device();
+//     $platform = $agent->platform();
+//     $browser = $agent->browser();
+//     $ip = $request->ip();
 
-    if ($user) {
-        // إرسال إشعار تسجيل الخروج للمدراء
-        $adminUsers = User::where('role', 'Admin')->get();
-        foreach ($adminUsers as $admin) {
-            Notification::create([
-                'user_id' => $admin->id,
-                'title' => 'تسجيل خروج',
-                'message' => "تم تسجيل خروج المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
-                'type' => 'logout',
-            ]);
-        }
-    }
+//     if ($user) {
+//         // إرسال إشعار تسجيل الخروج للمدراء
+//         $adminUsers = User::where('role', 'Admin')->get();
+//         foreach ($adminUsers as $admin) {
+//             Notification::create([
+//                 'user_id' => $admin->id,
+//                 'title' => 'تسجيل خروج',
+//                 'message' => "تم تسجيل خروج المستخدم {$user->name} من جهاز {$device} ونظام {$platform} ومتصفح {$browser} من IP: {$ip}",
+//                 'type' => 'logout',
+//             ]);
+//         }
+//     }
 
-    Auth::logout();
-    return redirect('/');
-})->name('logout');
+//     Auth::logout();
+//     return redirect('/');
+// })->name('logout');
 
-// مسار الحماية من أدوات المطور
-Route::post('/devtools-logout', function () {
-    if (Auth::check()) {
-        Notification::create([
-            'user_id' => Auth::id(),
-            'message' => "محاولة فحص الصفحة أو التعديل عبر أدوات المطور.",
-            'type' => 'تنبيه أمني',
-        ]);
-        Auth::logout();
-    }
-    return response()->json(['status' => 'ok']);
-})->name('devtools.logout');
+// // مسار الحماية من أدوات المطور
+// Route::post('/devtools-logout', function () {
+//     if (Auth::check()) {
+//         Notification::create([
+//             'user_id' => Auth::id(),
+//             'message' => "محاولة فحص الصفحة أو التعديل عبر أدوات المطور.",
+//             'type' => 'تنبيه أمني',
+//         ]);
+//         Auth::logout();
+//     }
+//     return response()->json(['status' => 'ok']);
+// })->name('devtools.logout');
+Route::get('/login', [AuthController::class, 'redirectToHome'])->name('login');
+
+Route::post('/manual-login', [AuthController::class, 'manualLogin'])->name('manual.login');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::post('/devtools-logout', [AuthController::class, 'devtoolsLogout'])->name('devtools.logout');
 
 /*
 |--------------------------------------------------------------------------
@@ -420,11 +428,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
         Route::post('/admin/notifications/{id}/read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.markRead');
         Route::post('/admin/notifications/mark-all-read', [AdminController::class, 'markAllNotificationsRead'])->name('admin.notifications.markAllRead');
-        Route::get('/api/notifications/unread-count', function () {
-            return response()->json([
-                'count' => Notification::where('is_read', false)->count()
-            ]);
-        })->name('api.notifications.unread_count');
+        // Route::get('/api/notifications/unread-count', function () {
+        //     return response()->json([
+        //         'count' => Notification::where('is_read', false)->count()
+        //     ]);
+        // })->name('api.notifications.unread_count');
+        Route::get('/api/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('api.notifications.unread_count');
     });
 
     /*
@@ -433,19 +442,21 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/admin/register-user', function () {
-        if (Auth::user()->role !== 'Admin') {
-            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
-        }
-        return app(\App\Http\Controllers\Auth\RegisterController::class)->showRegistrationForm();
-    })->name('admin.register.user');
+    // Route::get('/admin/register-user', function () {
+    //     if (Auth::user()->role !== 'Admin') {
+    //         abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+    //     }
+    //     return app(\App\Http\Controllers\Auth\RegisterController::class)->showRegistrationForm();
+    // })->name('admin.register.user');
 
-    Route::post('/admin/register-user', function (\Illuminate\Http\Request $request) {
-        if (Auth::user()->role !== 'Admin') {
-            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
-        }
-        return app(\App\Http\Controllers\Auth\RegisterController::class)->register($request);
-    })->name('admin.register.user.post');
+    // Route::post('/admin/register-user', function (\Illuminate\Http\Request $request) {
+    //     if (Auth::user()->role !== 'Admin') {
+    //         abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+    //     }
+    //     return app(\App\Http\Controllers\Auth\RegisterController::class)->register($request);
+    // })->name('admin.register.user.post');
+    Route::get('/admin/register-user', [AuthController::class, 'showRegisterForm'])->name('admin.register.user');
+    Route::post('/admin/register-user', [AuthController::class, 'register'])->name('admin.register.user.post');
 });
 // مسارات مخطط الحالة المالية
 Route::middleware(['auth'])->group(function () {
