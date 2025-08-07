@@ -6,8 +6,6 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
-use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\RoomTypeController;
 use App\Http\Controllers\CompanyAvailabilityController;
@@ -19,12 +17,9 @@ use App\Http\Controllers\HotelRoomController;
 use App\Http\Controllers\BookingOperationReportController;
 use App\Http\Controllers\AdminTransactionController;
 use App\Http\Controllers\LandTripsAgentPaymentController;
+use App\Http\Controllers\CompanyBookingsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
-use App\Models\User;
-use Jenssegers\Agent\Agent;
-use App\Models\Notification;
-use App\Models\Company;
 
 /*
 |--------------------------------------------------------------------------
@@ -418,6 +413,7 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+
     /*
     |--------------------------------------------------------------------------
     | Notification Routes (Non-Company Users)
@@ -561,4 +557,10 @@ Route::middleware(['auth', \App\Http\Middleware\IsCompany::class])->prefix('comp
     Route::get('my-bookings', [CompanyLandTripController::class, 'myBookings'])->name('land-trips.my-bookings');
     Route::get('land-trips/booking/{booking}/voucher', [CompanyLandTripController::class, 'voucher'])->name('land-trips.voucher');
     Route::get('land-trips/booking/{booking}/download-voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.downloadVoucher');
+});
+Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->group(function () {
+
+    // حجوزات الشركات عند كل جهة 
+    Route::get('/admin/companies/bookings', [CompanyBookingsController::class, 'index'])
+        ->name('admin.companies.bookings');
 });

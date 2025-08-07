@@ -1094,8 +1094,10 @@
                         <!-- جميع الحجوزات -->
                         <div class="sidebar-card">
                             <div class="sidebar-header">
-                                <i class="fas fa-bus"></i>
-                                <span>جميع حجوزات الرحلات البرية ({{ $allBookings->total() }})</span>
+                                <i class="fas fa-bus"></i> <a href="{{ route('admin.companies.bookings', ['agent_id' => $agent->id]) }}" target="_blank" class="text-white"> <span>جميع
+                                        حجوزات الرحلات البرية
+                                        ({{ $allBookings->total() }})</span>
+                                </a>
                             </div>
                             <div class="sidebar-content">
                                 @forelse($allBookings as $booking)
