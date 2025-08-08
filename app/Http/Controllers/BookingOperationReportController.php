@@ -641,7 +641,7 @@ class BookingOperationReportController extends Controller
 
             // تحديث بيانات التقرير الرئيسي
             $operationReport->update([
-                'employee_id' => $request->input('employee_id')?? Auth::id(), // معرف الموظف الحالي أو الذي تم اختياره
+                'employee_id' => $request->input('employee_id') ?? Auth::id(), // معرف الموظف الحالي أو الذي تم اختياره
                 'report_date' => $validated['report_date'],
                 'client_id' => $client->id,
                 'client_name' => $client->name,
@@ -1439,72 +1439,66 @@ class BookingOperationReportController extends Controller
         $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now()->subDays(30);
         $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now();
 
-        // تجهيز الاستعلام
+        // استعلام بسيط بدون تجميع بالعملة
         $query = BookingOperationReport::with('employee')
             ->select(
                 'employee_id',
                 DB::raw('COUNT(*) as reports_count'),
-                DB::raw('SUM(grand_total_profit) as total_profit'),
-                DB::raw('SUM(employee_profit) as total_employee_profit'),
-                'currency',
-                'employee_profit_currency'
+                DB::raw('SUM(grand_total_profit) as grand_total_profit'),
+                DB::raw('SUM(employee_profit) as total_employee_profit')
             )
             ->whereBetween('report_date', [$startDate, $endDate])
-            ->groupBy('employee_id', 'currency', 'employee_profit_currency');
+            ->groupBy('employee_id');
 
-        // تطبيق فلتر الموظفين إن وجد
         if ($request->filled('employee_id')) {
             $query->where('employee_id', $request->employee_id);
         }
 
-        // الحصول على النتائج
         $employeeProfits = $query->get();
-
-        // تجميع النتائج حسب الموظف
+        // dd($employeeProfits); : 140 , 180 in total_profit
+        // تجميع النتائج
         $profitsByEmployee = [];
         foreach ($employeeProfits as $profit) {
+
             $employeeId = $profit->employee_id;
 
-            if (!isset($profitsByEmployee[$employeeId])) {
-                $profitsByEmployee[$employeeId] = [
-                    'employee' => $profit->employee,
-                    'reports_count' => 0,
-                    'profits' => [],
-                    'employee_profits' => []
-                ];
-            }
-
-            $profitsByEmployee[$employeeId]['reports_count'] += $profit->reports_count;
-
-            if (!isset($profitsByEmployee[$employeeId]['profits'][$profit->currency])) {
-                $profitsByEmployee[$employeeId]['profits'][$profit->currency] = 0;
-            }
-
-            if (!isset($profitsByEmployee[$employeeId]['employee_profits'][$profit->employee_profit_currency])) {
-                $profitsByEmployee[$employeeId]['employee_profits'][$profit->employee_profit_currency] = 0;
-            }
-
-            $profitsByEmployee[$employeeId]['profits'][$profit->currency] += $profit->total_profit;
-            $profitsByEmployee[$employeeId]['employee_profits'][$profit->employee_profit_currency] += $profit->total_employee_profit;
+            $profitsByEmployee[$employeeId] = [
+                'employee' => $profit->employee,
+                'reports_count' => $profit->reports_count,
+                'total_profit' => (int) $profit->grand_total_profit,
+                'total_employee_profit' => $profit->total_employee_profit,
+            ];
         }
 
-        // الحصول على قائمة الموظفين للفلتر
-        // $employees = User::whereHas('bookingOperationReports', function ($query) {
-        //     // يمكن إضافة شروط إضافية هنا إذا أردت
-        // })->get();
         $employees = User::whereIn('id', function ($query) {
             $query->select('employee_id')
                 ->from('booking_operation_reports')
-                ->whereNotNull('employee_id') // تأكد من أن employee_id ليس فارغاً
-                ->distinct(); // تأكد من أن employee_id ليس فارغاً
+                ->whereNotNull('employee_id')
+                ->distinct();
         })->get();
+
+        // الإجمالي للتقرير : 
+        $totalCompanyProfit = $employeeProfits->sum(function ($item) {
+            return (float) $item->grand_total_profit; // اسم العمود اللي جاي من DB::raw
+        });
+
+        $totalEmployeeProfit = $employeeProfits->sum(function ($item) {
+            return (float) $item->total_employee_profit;
+        });
+        $totalReportsCount = collect($profitsByEmployee)->sum('reports_count');
+
+
         return view('admin.operation-reports.employee-profits', compact(
             'profitsByEmployee',
             'employees',
             'startDate',
-            'endDate'
+            'endDate',
+            'totalCompanyProfit',
+            'totalEmployeeProfit',
+            'totalReportsCount'
         ));
     }
+
 
 
 
