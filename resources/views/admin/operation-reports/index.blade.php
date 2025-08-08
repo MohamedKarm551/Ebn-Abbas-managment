@@ -389,7 +389,7 @@
                     <i class="fas fa-chart-line"></i>
                     تقارير العمليات والربحية <span style="font-size:10px" class="bg-warning">لموظفي نهر البركة</span>
                 </h1>
-                
+
                 <div class="d-flex gap-2 mb-3">
                     <!-- ✅ إضافة زر التصدير -->
                     <button onclick="reportExporter.exportReportsToExcel()" class="btn-create"
@@ -465,6 +465,13 @@
                         <i class="fas fa-list me-2"></i>
                         آخر التقارير
                     </h2>
+                    @if (Auth::user()->role === 'Admin')
+                        <a class="bg-dark mb-2 p-2 rounded text-white"
+                            href="{{ route('admin.operation-reports.employee-profits') }}">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <span>أرباح الموظفين</span>
+                        </a>
+                    @endif
                 </div>
                 {{-- ✅ إضافة جدول مخفي للتصدير --}}
                 <div style="display: none;">

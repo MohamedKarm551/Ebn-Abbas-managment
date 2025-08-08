@@ -591,7 +591,7 @@ class BookingOperationReportController extends Controller
     public function update(Request $request, BookingOperationReport $operationReport)
     {
         // التحقق من صحة البيانات المدخلة
-        $validated = $request->validate([
+        $validationRules = [
             'report_date' => 'required|date',
             'client_name' => 'required|string|max:255',
             'client_phone' => 'nullable|string|max:20',
@@ -605,8 +605,17 @@ class BookingOperationReportController extends Controller
             'hotels.*.voucher_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,gif,webp|max:5120',
             'transports.*.ticket_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,gif,webp|max:5120',
             'notes' => 'nullable|string',
-        ]);
-
+        ];
+        // إضافة validation للموظف المسؤول فقط للأدمن
+        if (Auth::user()->role === 'Admin') {
+            $validationRules['employee_id'] = 'nullable|exists:users,id';
+        }
+        $validated = $request->validate($validationRules);
+        // dd($validated);
+        // التحقق من الصلاحيات: فقط الأدمن أو الموظف المسؤول عن التقرير
+        if (Auth::user()->role !== 'Admin' && $operationReport->employee_id !== Auth::id()) {
+            return back()->with('error', 'ليس لديك صلاحية لتعديل هذا التقرير');
+        }
         // بدء معاملة قاعدة البيانات لضمان تماسك البيانات
         DB::beginTransaction();
 
@@ -632,7 +641,7 @@ class BookingOperationReportController extends Controller
 
             // تحديث بيانات التقرير الرئيسي
             $operationReport->update([
-                'employee_id' => Auth::id(),
+                'employee_id' => $request->input('employee_id')?? Auth::id(), // معرف الموظف الحالي أو الذي تم اختياره
                 'report_date' => $validated['report_date'],
                 'client_id' => $client->id,
                 'client_name' => $client->name,
@@ -930,6 +939,14 @@ class BookingOperationReportController extends Controller
             $operationReport->employee_profit = $profitInKWD * $conversionRate;
             $operationReport->employee_profit_currency = 'EGP';
 
+            // إضافة employee_id فقط للأدمن
+            // ✅ إضافة employee_id فقط للأدمن
+            if (Auth::user()->role === 'Admin' && isset($validated['employee_id'])) {
+                $updateData['employee_id'] = $request->input('employee_id');
+            } else {
+                // للموظفين العاديين، يبقى employee_id كما هو
+                $updateData['employee_id'] = $operationReport->employee_id;
+            }
             // حفظ التقرير مع الأرباح المحدثة
             $operationReport->save();
 
@@ -1068,6 +1085,11 @@ class BookingOperationReportController extends Controller
     // عرض تقرير العمليات
     public function show(BookingOperationReport $operationReport)
     {
+        // التحقق من الصلاحيات: فقط الأدمن أو الموظف المسؤول عن التقرير
+        if (Auth::user()->role !== 'Admin' && $operationReport->employee_id !== Auth::id()) {
+            return redirect()->route('admin.operation-reports.index')
+                ->with('error', 'ليس لديك صلاحية لعرض هذا التقرير');
+        }
         $operationReport->load(['visas', 'flights', 'transports', 'hotels', 'landTrips', 'employee', 'client', 'company']);
 
         return view('admin.operation-reports.show', compact('operationReport'));
@@ -1075,12 +1097,28 @@ class BookingOperationReportController extends Controller
 
     public function edit(BookingOperationReport $operationReport)
     {
+        // التحقق من الصلاحيات: فقط الأدمن أو الموظف المسؤول عن التقرير
+        if (Auth::user()->role !== 'Admin' && $operationReport->employee_id !== Auth::id()) {
+            return redirect()->route('admin.operation-reports.index')
+                ->with('error', 'ليس لديك صلاحية لتعديل هذا التقرير');
+        }
         $operationReport->load(['visas', 'flights', 'transports', 'hotels', 'landTrips']);
         $recentBookings = $this->getRecentBookings();
         $clients = Client::latest()->take(50)->get();
         $companies = Company::all();
+        // جلب قائمة الموظفين للأدمن فقط
+        $employees = collect();
+        if (Auth::user()->role === 'Admin') {
+            $employees = User::where('role', '!=', 'Company')->get();
+        }
 
-        return view('admin.operation-reports.edit', compact('operationReport', 'recentBookings', 'clients', 'companies'));
+        return view('admin.operation-reports.edit', compact(
+            'operationReport',
+            'recentBookings',
+            'clients',
+            'companies',
+            'employees'
+        ));
     }
 
     public function destroy(BookingOperationReport $operationReport)

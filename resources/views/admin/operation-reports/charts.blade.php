@@ -226,12 +226,12 @@
                 </a>
             </div>
         </div>
-          <a class="nav-link" href="{{ route('admin.operation-reports.employee-profits') }}">
+          <a class="bg-warning mb-2 p-2 rounded" href="{{ route('admin.operation-reports.employee-profits') }}">
         <i class="fas fa-money-bill-wave"></i>
         <span>أرباح الموظفين</span>
     </a>
         <!-- إحصائيات شاملة -->
-        <div class="stats-summary">
+        <div class="stats-summary mt-2">
             <div class="stat-box">
                 <div class="stat-value">{{ $totalReports }}</div>
                 <div class="stat-label">إجمالي التقارير</div>

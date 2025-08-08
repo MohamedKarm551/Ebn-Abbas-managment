@@ -87,6 +87,22 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
+                                {{-- employee_id only Admin can edit --}}
+                                @if (Auth::user()->role === 'Admin')
+                                    <label for="employee_id" class="form-label">الموظف المسؤول *</label>
+                                    <select class="form-select @error('employee_id') is-invalid @enderror" id="employee_id"
+                                        name="employee_id" required>
+                                        <option value="">اختر موظف</option>
+                                        @if (isset($employees) && !empty($employees))
+                                            @foreach ($employees as $employee)
+                                                <option value="{{ $employee->id }}"
+                                                    {{ old('employee_id', $operationReport->employee_id) == $employee->id ? 'selected' : '' }}>
+                                                    {{ $employee->name }}
+                                                </option>
+                                            @endforeach
+                                        @endif
+                                    </select>
+                                @endif
                                 <label for="report_date" class="form-label">تاريخ التقرير *</label>
                                 <input type="date" class="form-control @error('report_date') is-invalid @enderror"
                                     id="report_date" name="report_date"
@@ -164,7 +180,8 @@
                             </div>
                             <div class="mb-3">
                                 <label for="booking_reference" class="form-label">مرجع الحجز</label>
-                                <input type="text" class="form-control @error('booking_reference') is-invalid @enderror"
+                                <input type="text"
+                                    class="form-control @error('booking_reference') is-invalid @enderror"
                                     id="booking_reference" name="booking_reference"
                                     value="{{ old('booking_reference', $operationReport->booking_reference) }}">
                                 @error('booking_reference')
