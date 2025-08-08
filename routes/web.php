@@ -514,6 +514,8 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
         Route::get('/', [BookingOperationReportController::class, 'index'])->name('index');
         Route::get('/create', [BookingOperationReportController::class, 'create'])->name('create');
         Route::get('/charts', [BookingOperationReportController::class, 'charts'])->name('charts');
+              // 
+        Route::get('/employee-profits', [BookingOperationReportController::class, 'employeeProfits'])->name('employee-profits');
 
         // API Routes (يجب أن تكون قبل المعاملات الديناميكية)
         Route::get('/get-booking-details', [BookingOperationReportController::class, 'getBookingDetails'])->name('get-booking-details');
@@ -521,7 +523,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
         Route::get('/get-booking-data', [BookingOperationReportController::class, 'getBookingData'])->name('get-booking-data');
         Route::get('/api/clients/search', [BookingOperationReportController::class, 'searchClients'])->name('api.clients.search');
         Route::get('/api/client/latest-booking/{name}', [BookingOperationReportController::class, 'getClientLatestBooking'])->name('api.client.latest-booking');
-
+  
         // CRUD Routes (المعاملات الديناميكية في النهاية)
         Route::post('/', [BookingOperationReportController::class, 'store'])->name('store');
         Route::get('/{operationReport}', [BookingOperationReportController::class, 'show'])->name('show');

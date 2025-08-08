@@ -226,7 +226,10 @@
                 </a>
             </div>
         </div>
-
+          <a class="nav-link" href="{{ route('admin.operation-reports.employee-profits') }}">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>أرباح الموظفين</span>
+    </a>
         <!-- إحصائيات شاملة -->
         <div class="stats-summary">
             <div class="stat-box">
@@ -488,6 +491,8 @@
                 </div>
             </div>
         </div>
+        {{-- تقارير كل موظف وأرباحه ونسبته --}}
+
     </div>
 @endsection
 

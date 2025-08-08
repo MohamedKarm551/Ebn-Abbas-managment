@@ -35,6 +35,8 @@ class BookingOperationReport extends Model
         'total_hotel_profit',
         'total_land_trip_profit',
         'grand_total_profit',
+        'employee_profit',       
+        'employee_profit_currency', 
         'currency',
         'status',
         'notes'
