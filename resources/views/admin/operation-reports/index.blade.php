@@ -390,7 +390,7 @@
                     تقارير العمليات والربحية <span style="font-size:10px" class="bg-warning">لموظفي نهر البركة</span>
                 </h1>
 
-                <div class="d-flex gap-2 mb-3">
+                <div class="d-grid gap-2 gap-sm-3 d-sm-flex mb-3">
                     <!-- ✅ إضافة زر التصدير -->
                     <button onclick="reportExporter.exportReportsToExcel()" class="btn-create"
                         style="background: var(--success-green);">

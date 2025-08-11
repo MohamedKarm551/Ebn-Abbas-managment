@@ -710,7 +710,7 @@ class BookingsController extends Controller
         if ($request->input('hotel_id') != $availability->hotel_id) $errors['hotel_id'] = 'نقدق الإتاحة المحدد غير صحيح.';
         if ($request->input('agent_id') != $availability->agent_id) $errors['agent_id'] = 'جهة حجز الإتاحة المحددة غير صحيحة.';
         if ($request->input('room_type') != $originalRoomTypeInfo->roomType->room_type_name) $errors['room_type'] = 'نوع غرفة الإتاحة المحدد غير صحيح.';
-        if (bccomp((string)$request->input('sale_price'), (string)$originalRoomTypeInfo->sale_price, 2) !== 0) $errors['sale_price'] = 'سعر البيع المحددد لا يطابق سعر الإتاة الأصلي.';
+        if (bccomp((string)$request->input('sale_price'), (string)$originalRoomTypeInfo->sale_price, 2) !== 0) $errors['sale_price'] = 'سعر البيع المحددد لا يطابق سعر الإتاحة الأصلي.';
         if (bccomp((string)$request->input('cost_price'), (string)$originalRoomTypeInfo->cost_price, 2) !== 0) $errors['cost_price'] = 'سعر التكلفة المحدد لا يطابق سعر الإتاحة الأصلي.';
         if ($request->input('employee_id') != $availability->employee_id) $errors['employee_id'] = 'الموظف المسؤول عن الإتاحة غير صحيح.';
 
