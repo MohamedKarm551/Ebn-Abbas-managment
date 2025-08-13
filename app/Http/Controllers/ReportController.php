@@ -1473,6 +1473,8 @@ class ReportController extends Controller
         $totalDueByCurrency = $company->total_due_by_currency;
         $totalPaidByCurrency = $company->total_paid_by_currency;
         $totalRemainingByCurrency = $company->remaining_by_currency;
+           // ✅ الرصيد الحالي حتى اليوم
+        $currentBalance = $company->currentBalance();
 
         // رجع كل القيم للفيو
         return view('pdf.company_bookings', compact(
@@ -1484,7 +1486,8 @@ class ReportController extends Controller
             'totalRemaining',
             'totalDueByCurrency',
             'totalPaidByCurrency',
-            'totalRemainingByCurrency'
+            'totalRemainingByCurrency',
+            'currentBalance'
         ));
     }
 
@@ -1544,6 +1547,8 @@ class ReportController extends Controller
         $totalPaidByCurrency = $agent->total_paid_by_currency;
         $totalRemainingByCurrency = $agent->remaining_by_currency;
 
+         // ✅ الرصيد الحالي للوكيل
+        $currentBalance = $agent->currentBalance();
 
         // رجع البيانات للواجهة
         return view('reports.agent_bookings', compact(
@@ -1555,7 +1560,8 @@ class ReportController extends Controller
             'totalRemaining',
             'totalDueByCurrency',
             'totalPaidByCurrency',
-            'totalRemainingByCurrency'
+            'totalRemainingByCurrency',
+            'currentBalance'
         ));
     }
 

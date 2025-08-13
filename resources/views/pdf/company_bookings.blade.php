@@ -47,6 +47,30 @@
                     <span style="font-weight:bold;">المتبقي ({{ $currency === 'SAR' ? 'ريال' : 'دينار' }}):</span>
                     {{ number_format($amount, 2) }}<br>
                 @endforeach
+                {{-- ✅ الرصيد الحالي حتى تاريخ اليوم --}}
+                @if (isset($currentBalance))
+                    <hr>
+                    <strong>الرصيد حتى اليوم (الحجوزات التي دخلت فعلياً):</strong><br>
+                    المستحق حتى اليوم: {{ number_format($currentBalance['entered_due'], 2) }} ريال<br>
+                    المدفوع: {{ number_format($currentBalance['paid'], 2) }} ريال<br>
+                    الخصومات: {{ number_format($currentBalance['discounts'], 2) }} ريال<br>
+                    الصافي المحتسب (مدفوع + خصومات): {{ number_format($currentBalance['effective_paid'], 2) }} ريال<br>
+                    @php
+                        $bal = $currentBalance['balance'];
+                    @endphp
+                    الرصيد:
+                    @if ($bal > 0)
+                        <span class="text-danger">متبقي على الشركة {{ number_format($bal, 2) }} ريال</span>
+                    @elseif($bal < 0)
+                        <span class="text-success">للشركة رصيد مدفوع زائد {{ number_format(abs($bal), 2) }} ريال</span>
+                    @else
+                        <span class="text-primary">مغلق (لا يوجد رصيد)</span>
+                    @endif
+                @endif
+
+                <small>المعادلة: رصيد اليوم = (مجموع مستحق الحجوزات المدخلة) - (المدفوع + الخصومات)</small>
+
+
             </div>
 
             <!-- الجدول بدون عمود جهة الحجز -->
@@ -77,14 +101,12 @@
                                 <td>{{ $booking->client_name }}</td>
                                 <td>{{ $booking->hotel->name ?? '-' }}</td>
                                 <td>{{ $booking->check_in->format('d/m/Y') }}
-                                    <small
-                        class="d-block text-muted hijri-date"
-                        data-date="{{ $booking->check_in->format('Y-m-d') }}"></small>
+                                    <small class="d-block text-muted hijri-date"
+                                        data-date="{{ $booking->check_in->format('Y-m-d') }}"></small>
                                 </td>
-                                <td>{{ $booking->check_out->format('d/m/Y') }} 
-                                    <small
-                        class="d-block text-muted hijri-date"
-                        data-date="{{ $booking->check_out->format('Y-m-d') }}"></small>
+                                <td>{{ $booking->check_out->format('d/m/Y') }}
+                                    <small class="d-block text-muted hijri-date"
+                                        data-date="{{ $booking->check_out->format('Y-m-d') }}"></small>
                                 </td>
                                 <td>{{ $booking->rooms }}</td>
                                 <td>
@@ -159,80 +181,82 @@
 @push('scripts')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-   <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var downloadBtn = document.getElementById('downloadPdfBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', async function() {
-            downloadBtn.disabled = true;
-            downloadBtn.textContent = "جاري التحميل ...";
-            try {
-                const element = document.getElementById('reportContent');
-                const canvas = await html2canvas(element, {
-                    scale: 2,
-                    useCORS: true,
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var downloadBtn = document.getElementById('downloadPdfBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', async function() {
+                    downloadBtn.disabled = true;
+                    downloadBtn.textContent = "جاري التحميل ...";
+                    try {
+                        const element = document.getElementById('reportContent');
+                        const canvas = await html2canvas(element, {
+                            scale: 2,
+                            useCORS: true,
+                        });
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        const {
+                            jsPDF
+                        } = window.jspdf;
+                        const pdf = new jsPDF('p', 'mm', 'a4');
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+                        const imgProps = pdf.getImageProperties(imgData);
+                        const imgWidth = pdfWidth;
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                        let heightLeft = imgHeight;
+                        let position = 0;
+
+                        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pdfHeight;
+
+                        while (heightLeft > 0) {
+                            position -= pdfHeight;
+                            pdf.addPage();
+                            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                            heightLeft -= pdfHeight;
+                        }
+
+                        pdf.save('كشف-حساب-{{ $company->name }}.pdf');
+                    } catch (e) {
+                        alert("حدث خطأ أثناء توليد الـ PDF");
+                    }
+                    downloadBtn.disabled = false;
+                    downloadBtn.textContent = "تحميل كشف الحساب PDF";
                 });
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const imgProps = pdf.getImageProperties(imgData);
-                const imgWidth = pdfWidth;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pdfHeight;
-
-                while (heightLeft > 0) {
-                    position -= pdfHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pdfHeight;
-                }
-
-                pdf.save('كشف-حساب-{{ $company->name }}.pdf');
-            } catch (e) {
-                alert("حدث خطأ أثناء توليد الـ PDF");
             }
-            downloadBtn.disabled = false;
-            downloadBtn.textContent = "تحميل كشف الحساب PDF";
         });
-    }
-});
-</script>
+    </script>
 
     <script>
-    // Converts Gregorian dates to Hijri
-    function convertToHijri() {
-        document.querySelectorAll('.hijri-date').forEach(element => {
-            const gregorianDate = element.getAttribute('data-date');
-            if (gregorianDate) {
-                try {
-                    // Use Intl.DateTimeFormat with 'islamic' calendar
-                    const hijriDate = new Intl.DateTimeFormat('ar-SA-islamic', {
-                        day: 'numeric',
-                        month: 'long',
-                        calendar: 'islamic'
-                    }).format(new Date(gregorianDate));
+        // Converts Gregorian dates to Hijri
+        function convertToHijri() {
+            document.querySelectorAll('.hijri-date').forEach(element => {
+                const gregorianDate = element.getAttribute('data-date');
+                if (gregorianDate) {
+                    try {
+                        // Use Intl.DateTimeFormat with 'islamic' calendar
+                        const hijriDate = new Intl.DateTimeFormat('ar-SA-islamic', {
+                            day: 'numeric',
+                            month: 'long',
+                            calendar: 'islamic'
+                        }).format(new Date(gregorianDate));
 
-                    element.textContent = hijriDate;
-                } catch (e) {
-                    console.error("Error converting date:", e);
-                    element.textContent = ""; // Clear if error
+                        element.textContent = hijriDate;
+                    } catch (e) {
+                        console.error("Error converting date:", e);
+                        element.textContent = ""; // Clear if error
+                    }
                 }
-            }
+            });
+        }
+
+        // Convert dates when page loads
+        document.addEventListener("DOMContentLoaded", function() {
+            convertToHijri();
+
+            // Also convert when table is updated via AJAX
+            document.addEventListener('ajaxTableUpdated', convertToHijri);
         });
-    }
-
-    // Convert dates when page loads
-    document.addEventListener("DOMContentLoaded", function() {
-        convertToHijri();
-
-        // Also convert when table is updated via AJAX
-        document.addEventListener('ajaxTableUpdated', convertToHijri);
-    });
-</script>
+    </script>
 @endpush

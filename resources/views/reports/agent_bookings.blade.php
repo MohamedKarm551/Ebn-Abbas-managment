@@ -5,7 +5,7 @@
         <h1>حجوزات {{ $agent->name }}</h1>
         <a href="{{ route('reports.agent.payments', $agent->id) }}" class="w-25 p-2 mt-2 mb-2 btn btn-primary btn-sm">كشف
             الحساب</a>
-            
+
         <button type="button" class="w-25 p-2 mt-2 mb-2 btn btn-success btn-sm" data-bs-toggle="modal"
             data-bs-target="#agentPaymentModal{{ $agent->id }}">
             تسجيل دفعة
@@ -118,6 +118,27 @@
                 المتبقي ({{ $currency === 'SAR' ? 'ريال' : 'دينار' }}): {{ number_format($amount, 2) }}<br>
             @endforeach
             <small>المعادلة: ∑ (عدد الليالي الكلي × عدد الغرف × سعر الفندق) لكل الحجوزات</small>
+            {{--  --}}
+            @if (isset($currentBalance))
+                <hr>
+                <strong style="color: blueviolet">الرصيد حتى اليوم (حجوزات دخلت فعلياً):</strong><br>
+                المستحق حتى اليوم: {{ number_format($currentBalance['entered_due'], 2) }} ريال<br>
+                المدفوع: {{ number_format($currentBalance['paid'], 2) }} ريال<br>
+                الخصومات: {{ number_format($currentBalance['discounts'], 2) }} ريال<br>
+                الصافي المحتسب (مدفوع + خصومات): {{ number_format($currentBalance['effective_paid'], 2) }} ريال<br>
+                @php $bal = $currentBalance['balance']; @endphp
+                الرصيد:
+                @if ($bal > 0)
+                    <span class="text-danger">متبقي مستحق للوكيل {{ number_format($bal, 2) }} ريال</span>
+                @elseif($bal < 0)
+                    <span class="text-success">تم دفع زيادة للوكيل {{ number_format(abs($bal), 2) }} ريال</span>
+                @else
+                    <span class="text-primary">مغلق</span>
+                @endif
+                <small class="d-block mt-1">المعادلة: المستحق حتى اليوم - (المدفوع + الخصومات)</small>
+            @endif
+            <small style="color: blueviolet">المعادلة: ∑ (عدد الليالي × عدد الغرف × سعر الفندق) لكل الحجوزات المدخلة</small>
+
         </div>
         <div class="mb-4">
             <div class="table-responsive">

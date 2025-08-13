@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class Agent extends Model
 {
@@ -328,5 +329,51 @@ class Agent extends Model
     public function financialTracking()
     {
         return $this->hasOne(BookingFinancialTracking::class, 'booking_id');
+    }
+    // الرصيد الحالي balance
+     /**
+     * رصيد الوكيل حتى تاريخ (افتراضي اليوم)
+     * balance > 0 يعني ما زلنا مدينين للوكيل
+     * balance < 0 يعني دُفع له أكثر من المستحق حتى ذلك التاريخ
+     */
+    public function currentBalance(Carbon $date = null): array
+    {
+        $date = $date ?? Carbon::today();
+
+        // الحجوزات التي بدأتها (دخلت) حتى التاريخ
+        $enteredBookings = $this->bookings()
+            ->whereDate('check_in', '<=', $date)
+            ->get();
+
+        // إجمالي المستحق (نستخدم due_to_agent إن وُجد)
+        $enteredDue = $enteredBookings->sum(function ($b) {
+            return $b->due_to_agent
+                ?? ($b->amount_due_to_hotel
+                    ?? ($b->cost_price * $b->rooms * ($b->days ?? $b->total_nights ?? 1)));
+        });
+
+        // المدفوعات والخصومات حتى التاريخ
+        $paymentsAgg = $this->payments()
+            ->whereDate('payment_date', '<=', $date)
+            ->selectRaw("
+                SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as paid,
+                SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts
+            ")
+            ->first();
+
+        $paid = (float)($paymentsAgg->paid ?? 0);
+        $discounts = (float)($paymentsAgg->discounts ?? 0);
+        $effectivePaid = $paid + $discounts;
+
+        // الرصيد = المستحق - (المدفوع + الخصومات)
+        $balance = $enteredDue - $effectivePaid;
+
+        return [
+            'entered_due'    => round($enteredDue, 2),
+            'paid'           => round($paid, 2),
+            'discounts'      => round($discounts, 2),
+            'effective_paid' => round($effectivePaid, 2),
+            'balance'        => round($balance, 2),
+        ];
     }
 }
