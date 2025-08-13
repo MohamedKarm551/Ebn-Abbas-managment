@@ -108,7 +108,8 @@ class ReportController extends Controller
             ->map(function ($company) {
                 // حساب إجمالي عدد الحجوزات (عادية + رحلات برية)
                 $company->total_bookings_count = $company->bookings_count + $company->land_trip_bookings_count;
-
+                // ✅ حساب الرصيد الحالي (الحجوزات دخلت حتى اليوم)
+                $company->current_balance = $company->currentBalance();
                 // استدعاء دالة حساب الإجماليات المحسنة
                 $company->calculateTotals();
 
@@ -139,6 +140,7 @@ class ReportController extends Controller
             ->map(function ($agent) {
                 // حساب الإجماليات للوكيل
                 $agent->calculateTotals();
+                $agent->current_balance = $agent->currentBalance();
                 return $agent;
             });
 
@@ -475,6 +477,7 @@ class ReportController extends Controller
             'companiesReport' => $companiesReport,
             'agentsReport' => $agentsReport, // pagination للعرض
             'allAgentsData' => $allAgentsForCalculations, // ✅ البيانات الكاملة للحسابات
+            'agentsCurrentBalances' => $allAgentsForCalculations->pluck('current_balance', 'id'),
             'hotelsReport' => $hotelsReport,
 
             // ✅ الحسابات الخاصة بالوكلاء
@@ -593,7 +596,8 @@ class ReportController extends Controller
                     'agentsReport' => $agentsReport,
                     'agentsTotalCalculations' => $agentsTotalCalculations // ✅ تمرير الحسابات الإجمالية
                 ])->render(),
-                'pagination' => (string) $agentsReport->appends(request()->query())->links('pagination::bootstrap-4')
+                'pagination' => (string) $agentsReport->appends(request()->query())->links('pagination::bootstrap-4'),
+                'balances' => $agentsReport->mapWithKeys(fn($a) => [$a->id => $a->current_balance])
             ]);
         }
 
@@ -643,6 +647,8 @@ class ReportController extends Controller
                 ->map(function ($company) {
                     $company->total_bookings_count = $company->bookings_count + $company->land_trip_bookings_count;
                     $company->calculateTotals();
+                    $company->current_balance = $company->currentBalance(); // يرجع array أو رقم حسب تنفيذك
+
                     return $company;
                 })
                 ->sortByDesc('computed_total_due')
@@ -1418,7 +1424,7 @@ class ReportController extends Controller
         $totalPaidByCurrency = $company->total_paid_by_currency;
         $totalRemainingByCurrency = $company->remaining_by_currency;
 
-          // ✅ الرصيد الحالي حتى اليوم
+        // ✅ الرصيد الحالي حتى اليوم
         $currentBalance = $company->currentBalance();
 
 
@@ -1473,7 +1479,7 @@ class ReportController extends Controller
         $totalDueByCurrency = $company->total_due_by_currency;
         $totalPaidByCurrency = $company->total_paid_by_currency;
         $totalRemainingByCurrency = $company->remaining_by_currency;
-           // ✅ الرصيد الحالي حتى اليوم
+        // ✅ الرصيد الحالي حتى اليوم
         $currentBalance = $company->currentBalance();
 
         // رجع كل القيم للفيو
@@ -1547,7 +1553,7 @@ class ReportController extends Controller
         $totalPaidByCurrency = $agent->total_paid_by_currency;
         $totalRemainingByCurrency = $agent->remaining_by_currency;
 
-         // ✅ الرصيد الحالي للوكيل
+        // ✅ الرصيد الحالي للوكيل
         $currentBalance = $agent->currentBalance();
 
         // رجع البيانات للواجهة

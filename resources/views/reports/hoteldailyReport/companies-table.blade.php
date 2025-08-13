@@ -184,17 +184,61 @@
                          }
                      @endphp
 
-                     @foreach ($remainingByCurrency as $currency => $amount)
-                         @if ($amount != 0)
-                             <span class="{{ $amount > 0 ? 'text-danger' : 'text-success' }}">
-                                 {{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}
+                  @php $hasAny = collect($remainingByCurrency)->filter(fn($v) => $v != 0)->isNotEmpty(); @endphp
+@if ($hasAny)
+    <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
+        @foreach ($remainingByCurrency as $currency => $amount)
+            @continue($amount == 0)
+
+            <span class="d-inline-flex align-items-center bg-{{ $amount > 0 ? 'danger' : 'success' }} text-white rounded-pill px-2 py-1 small lh-sm text-nowrap">
+                {{-- اختياري: علامة + للموجب --}}
+                @if ($amount > 0)
+                    <span class="me-1">+</span>
+                @endif
+
+                <strong dir="ltr" class="mx-1">{{ number_format(abs($amount), 2) }}</strong>
+                <span>{{ $currency === 'SAR' ? 'ر. سعودي' : 'دينار' }}</span>
+
+                @if ($amount < 0)
+                    <span class="ms-1 opacity-75">(دفعوا زيادة)</span>
+                @endif
+            </span>
+        @endforeach
+    </div>
+@endif
+
+
+                      @php
+                         $cb = $company->current_balance ?? [];
+                         $bal = $cb['balance'] ?? 0;
+                         $enteredDue = $cb['entered_due'] ?? 0;
+                         $effectivePaid = $cb['effective_paid'] ?? 0;
+                         $accColor = $bal > 0 ? 'danger' : ($bal < 0 ? 'success' : 'secondary');
+                         $statusTxt = $bal > 0 ? 'مستحق' : ($bal < 0 ? 'دفع زائد' : 'مغلق');
+                     @endphp
+
+                     <div class="mt-2 company-balance-card border rounded-3 p-2 small bg-light-subtle">
+                         <div class="d-flex justify-content-between align-items-center mb-1">
+                             <span class="fw-semibold">
+                                 <i class="fas fa-scale-balanced me-1"></i>رصيد اليوم
                              </span>
-                             {{ $currency === 'SAR' ? 'ريال' : 'دينار' }}<br>
-                             @if ($amount < 0)
-                                 <small class="text-muted">(دفعوا زيادة)</small>
-                             @endif
-                         @endif
-                     @endforeach
+                             <span class="badge bg-{{ $accColor }}">{{ $statusTxt }}</span>
+                         </div>
+                         <div class="d-flex justify-content-between border-bottom pb-1 mb-1">
+                             <span class="text-muted">دخلت</span>
+                             <span class="fw-semibold text-primary" dir="ltr">{{ number_format($enteredDue,2) }} ر.</span>
+                         </div>
+                         <div class="d-flex justify-content-between border-bottom pb-1 mb-1">
+                             <span class="text-muted">مدفوع + خصومات</span>
+                             <span class="fw-semibold text-info" dir="ltr">{{ number_format($effectivePaid,2) }} ر.</span>
+                         </div>
+                         <div class="d-flex justify-content-between">
+                             <span class="text-muted">{{ $bal > 0 ? 'مستحق' : ($bal < 0 ? 'دفع زائد' : 'الصافي') }}</span>
+                             <span class="fw-bold text-{{ $accColor }}" dir="ltr">
+                                 {{ number_format(abs($bal),2) }} ر.
+                             </span>
+                         </div>
+                     </div>
                  </td>
                  <td>
                      <div class="action-buttons-grid">
