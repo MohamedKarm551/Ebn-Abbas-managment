@@ -531,6 +531,7 @@ class ReportController extends Controller
             ->get()
             ->map(function ($agent) {
                 $agent->calculateTotals();
+                 $agent->current_balance = $agent->currentBalance(); 
                 return $agent;
             })
             ->sortByDesc('computed_total_due');
