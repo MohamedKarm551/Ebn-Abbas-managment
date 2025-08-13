@@ -4,9 +4,9 @@
     <div class="container">
         <h1>حجوزات {{ $company->name }}</h1>
         <!-- زر جديد لتحميل كشف الحساب PDF يدعم العربي 100% -->
-       <a href="{{ route('company.bookings.pdf', $company->id) }}" class="btn btn-danger mb-3" target="_blank">
-    <i class="fas fa-file-pdf"></i> تحميل كشف الحساب PDF
-</a>
+        <a href="{{ route('company.bookings.pdf', $company->id) }}" class="btn btn-danger mb-3" target="_blank">
+            <i class="fas fa-file-pdf"></i> تحميل كشف الحساب PDF
+        </a>
         {{-- @php
         $count = $bookings->count();
         $totalDue = $bookings->sum('due_to_agent');
@@ -90,6 +90,29 @@
                 المتبقي ({{ $currency === 'SAR' ? 'ريال' : 'دينار' }}): {{ number_format($amount, 2) }}<br>
             @endforeach
             <small>المعادلة: (عدد الليالي الكلي × عدد الغرف × سعر البيع) ∑ لكل الحجوزات</small>
+
+            {{-- ✅ الرصيد الحالي حتى تاريخ اليوم --}}
+            @if (isset($currentBalance))
+                <hr>
+                <strong>الرصيد حتى اليوم (الحجوزات التي دخلت فعلياً):</strong><br>
+                المستحق حتى اليوم: {{ number_format($currentBalance['entered_due'], 2) }} ريال<br>
+                المدفوع: {{ number_format($currentBalance['paid'], 2) }} ريال<br>
+                الخصومات: {{ number_format($currentBalance['discounts'], 2) }} ريال<br>
+                الصافي المحتسب (مدفوع + خصومات): {{ number_format($currentBalance['effective_paid'], 2) }} ريال<br>
+                @php
+                    $bal = $currentBalance['balance'];
+                @endphp
+                الرصيد:
+                @if ($bal > 0)
+                    <span class="text-danger">متبقي على الشركة {{ number_format($bal, 2) }} ريال</span>
+                @elseif($bal < 0)
+                    <span class="text-success">للشركة رصيد مدفوع زائد {{ number_format(abs($bal), 2) }} ريال</span>
+                @else
+                    <span class="text-primary">مغلق (لا يوجد رصيد)</span>
+                @endif
+            @endif
+
+            <small>المعادلة: رصيد اليوم = (مجموع مستحق الحجوزات المدخلة) - (المدفوع + الخصومات)</small>
         </div>
 
         <div class=" mb-4">
@@ -319,5 +342,3 @@
         }
     </style>
 @endpush
-
-

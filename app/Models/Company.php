@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class Company extends Model
 {
@@ -35,149 +36,148 @@ class Company extends Model
 
     public function users()
     {
-           return $this->hasMany(User::class, 'company_id');
-
+        return $this->hasMany(User::class, 'company_id');
     }
     /**
- * حساب الإجماليات المالية للرحلات البرية فقط حسب العملة
- */
-public function getLandTripTotalsByCurrency()
-{
-    $totals = [];
-    
-    // جلب حجوزات الرحلات البرية مجمعة حسب العملة
-    $bookingsByCurrency = $this->landTripBookings()
-        ->selectRaw('currency, SUM(amount_due_from_company) as total_due')
-        ->groupBy('currency')
-        ->get()
-        ->keyBy('currency');
+     * حساب الإجماليات المالية للرحلات البرية فقط حسب العملة
+     */
+    public function getLandTripTotalsByCurrency()
+    {
+        $totals = [];
 
-    // جلب المدفوعات مجمعة حسب العملة
-    $paymentsByCurrency = $this->companyPayments()
-        ->selectRaw('currency, SUM(amount) as total_paid')
-        ->groupBy('currency')
-        ->get()
-        ->keyBy('currency');
+        // جلب حجوزات الرحلات البرية مجمعة حسب العملة
+        $bookingsByCurrency = $this->landTripBookings()
+            ->selectRaw('currency, SUM(amount_due_from_company) as total_due')
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
 
-    foreach (['SAR', 'KWD'] as $currency) {
-        $due = $bookingsByCurrency->get($currency)?->total_due ?? 0;
-        $paid = $paymentsByCurrency->get($currency)?->total_paid ?? 0;
+        // جلب المدفوعات مجمعة حسب العملة
+        $paymentsByCurrency = $this->companyPayments()
+            ->selectRaw('currency, SUM(amount) as total_paid')
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency');
 
-        $totals[$currency] = [
-            'due' => (float) $due,
-            'paid' => (float) $paid,
-            'remaining' => (float) ($due - $paid)
-        ];
+        foreach (['SAR', 'KWD'] as $currency) {
+            $due = $bookingsByCurrency->get($currency)?->total_due ?? 0;
+            $paid = $paymentsByCurrency->get($currency)?->total_paid ?? 0;
+
+            $totals[$currency] = [
+                'due' => (float) $due,
+                'paid' => (float) $paid,
+                'remaining' => (float) ($due - $paid)
+            ];
+        }
+
+        return $totals;
     }
-
-    return $totals;
-}
 
     // ========== الحسابات الإجمالية ==========
     /**
- * حساب الإجماليات من البيانات المحملة مسبقاً (Eager Loading)
- * تحل مشكلة N+1 بدون تعديل في الكود الموجود
- */
-public function calculateTotals()
-{
-    // التأكد من تحميل العلاقات مسبقاً
-    if (!$this->relationLoaded('bookings') || !$this->relationLoaded('payments')) {
-        $this->load(['bookings', 'payments', 'landTripBookings']);
-    }
-
-    // 1. حساب المستحق حسب العملة من البيانات المحملة
-    $dueByCurrency = [];
-    
-    // من الحجوزات العادية
-    if ($this->bookings) {
-        foreach ($this->bookings as $booking) {
-            $currency = $booking->currency ?? 'SAR';
-            $amount = $booking->amount_due_from_company ?? ($booking->sale_price * $booking->rooms * $booking->days);
-            $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
+     * حساب الإجماليات من البيانات المحملة مسبقاً (Eager Loading)
+     * تحل مشكلة N+1 بدون تعديل في الكود الموجود
+     */
+    public function calculateTotals()
+    {
+        // التأكد من تحميل العلاقات مسبقاً
+        if (!$this->relationLoaded('bookings') || !$this->relationLoaded('payments')) {
+            $this->load(['bookings', 'payments', 'landTripBookings']);
         }
-    }
-    $dueByCurrencyForBookingsHotels = $dueByCurrency;
 
-    // من حجوزات الرحلات البرية
-    $dueByCurrencyForLandTrips = [];
-    if ($this->landTripBookings) {
-        foreach ($this->landTripBookings as $landTrip) {
-            $currency = $landTrip->currency ?? 'SAR';
-            $amount = $landTrip->amount_due_from_company ?? 0;
-            $dueByCurrencyForLandTrips[$currency] = ($dueByCurrencyForLandTrips[$currency] ?? 0) + $amount;
-            $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
-        }
-    }
+        // 1. حساب المستحق حسب العملة من البيانات المحملة
+        $dueByCurrency = [];
 
-    // 2. ✅ حساب المدفوع والخصومات بشكل منفصل (بدون تداخل)
-    $paidByCurrency = [];
-    $discountsByCurrency = [];
-    
-    if ($this->payments) {
-        foreach ($this->payments as $payment) {
-            $currency = $payment->currency ?? 'SAR';
-            
-            if ($payment->amount >= 0) {
-                // المدفوعات الموجبة فقط
-                $paidByCurrency[$currency] = ($paidByCurrency[$currency] ?? 0) + $payment->amount;
-            } else {
-                // الخصومات السالبة - نحتفظ بها منفصلة
-                $discountsByCurrency[$currency] = ($discountsByCurrency[$currency] ?? 0) + abs($payment->amount);
-                // ❌ لا نضيف الخصومات للمدفوع هنا!
+        // من الحجوزات العادية
+        if ($this->bookings) {
+            foreach ($this->bookings as $booking) {
+                $currency = $booking->currency ?? 'SAR';
+                $amount = $booking->amount_due_from_company ?? ($booking->sale_price * $booking->rooms * $booking->days);
+                $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
             }
         }
+        $dueByCurrencyForBookingsHotels = $dueByCurrency;
+
+        // من حجوزات الرحلات البرية
+        $dueByCurrencyForLandTrips = [];
+        if ($this->landTripBookings) {
+            foreach ($this->landTripBookings as $landTrip) {
+                $currency = $landTrip->currency ?? 'SAR';
+                $amount = $landTrip->amount_due_from_company ?? 0;
+                $dueByCurrencyForLandTrips[$currency] = ($dueByCurrencyForLandTrips[$currency] ?? 0) + $amount;
+                $dueByCurrency[$currency] = ($dueByCurrency[$currency] ?? 0) + $amount;
+            }
+        }
+
+        // 2. ✅ حساب المدفوع والخصومات بشكل منفصل (بدون تداخل)
+        $paidByCurrency = [];
+        $discountsByCurrency = [];
+
+        if ($this->payments) {
+            foreach ($this->payments as $payment) {
+                $currency = $payment->currency ?? 'SAR';
+
+                if ($payment->amount >= 0) {
+                    // المدفوعات الموجبة فقط
+                    $paidByCurrency[$currency] = ($paidByCurrency[$currency] ?? 0) + $payment->amount;
+                } else {
+                    // الخصومات السالبة - نحتفظ بها منفصلة
+                    $discountsByCurrency[$currency] = ($discountsByCurrency[$currency] ?? 0) + abs($payment->amount);
+                    // ❌ لا نضيف الخصومات للمدفوع هنا!
+                }
+            }
+        }
+
+        // 3. ✅ حساب المتبقي = المستحق - المدفوع - الخصومات
+        $remainingByCurrency = [];
+        $allCurrencies = array_unique(array_merge(
+            array_keys($dueByCurrency),
+            array_keys($paidByCurrency),
+            array_keys($discountsByCurrency)
+        ));
+
+        foreach ($allCurrencies as $currency) {
+            $due = $dueByCurrency[$currency] ?? 0;
+            $paid = $paidByCurrency[$currency] ?? 0;
+            $discounts = $discountsByCurrency[$currency] ?? 0;
+
+            $remainingByCurrency[$currency] = $due - ($paid - $discounts); // ✅ الحساب الصحيح
+        }
+
+        // 4. حفظ النتائج في attributes للوصول إليها لاحقاً
+        $this->setRawAttributes(array_merge($this->attributes, [
+            'computed_total_due_by_currency' => $dueByCurrency,
+            'computed_total_paid_by_currency' => $paidByCurrency,
+            'computed_total_discounts_by_currency' => $discountsByCurrency,
+            'computed_remaining_by_currency' => $remainingByCurrency,
+            'computed_total_due' => array_sum($dueByCurrency),
+            'computed_total_paid' => array_sum($paidByCurrency),
+            'computed_remaining' => array_sum($remainingByCurrency),
+            'computed_total_due_bookings_by_currency' => $dueByCurrencyForBookingsHotels,
+            'computed_total_due_land_trips_by_currency' => $dueByCurrencyForLandTrips,
+        ]), true);
+
+        return $this;
+    }
+    public function getComputedTotalDueByCurrencyAttribute()
+    {
+        return $this->attributes['computed_total_due_by_currency'] ?? $this->total_due_by_currency;
     }
 
-    // 3. ✅ حساب المتبقي = المستحق - المدفوع - الخصومات
-    $remainingByCurrency = [];
-    $allCurrencies = array_unique(array_merge(
-        array_keys($dueByCurrency), 
-        array_keys($paidByCurrency), 
-        array_keys($discountsByCurrency)
-    ));
-    
-    foreach ($allCurrencies as $currency) {
-        $due = $dueByCurrency[$currency] ?? 0;
-        $paid = $paidByCurrency[$currency] ?? 0;
-        $discounts = $discountsByCurrency[$currency] ?? 0;
-        
-        $remainingByCurrency[$currency] = $due - ($paid - $discounts); // ✅ الحساب الصحيح
+    public function getComputedRemainingByCurrencyAttribute()
+    {
+        return $this->attributes['computed_remaining_by_currency'] ?? $this->remaining_by_currency;
     }
 
-    // 4. حفظ النتائج في attributes للوصول إليها لاحقاً
-    $this->setRawAttributes(array_merge($this->attributes, [
-        'computed_total_due_by_currency' => $dueByCurrency,
-        'computed_total_paid_by_currency' => $paidByCurrency,
-        'computed_total_discounts_by_currency' => $discountsByCurrency,
-        'computed_remaining_by_currency' => $remainingByCurrency,
-        'computed_total_due' => array_sum($dueByCurrency),
-        'computed_total_paid' => array_sum($paidByCurrency),
-        'computed_remaining' => array_sum($remainingByCurrency),
-        'computed_total_due_bookings_by_currency' => $dueByCurrencyForBookingsHotels,
-        'computed_total_due_land_trips_by_currency' => $dueByCurrencyForLandTrips,
-    ]), true);
+    public function getComputedTotalDueAttribute()
+    {
+        return $this->attributes['computed_total_due'] ?? $this->total_due;
+    }
 
-    return $this;
-}
-public function getComputedTotalDueByCurrencyAttribute()
-{
-    return $this->attributes['computed_total_due_by_currency'] ?? $this->total_due_by_currency;
-}
-
-public function getComputedRemainingByCurrencyAttribute()
-{
-    return $this->attributes['computed_remaining_by_currency'] ?? $this->remaining_by_currency;
-}
-
-public function getComputedTotalDueAttribute()
-{
-    return $this->attributes['computed_total_due'] ?? $this->total_due;
-}
-
-public function getComputedRemainingAttribute()
-{
-    return $this->attributes['computed_remaining'] ?? $this->remaining;
-}
+    public function getComputedRemainingAttribute()
+    {
+        return $this->attributes['computed_remaining'] ?? $this->remaining;
+    }
     // 1. إجمالي المستحق من الحجوزات (معادلة النظام القديم: sale_price * rooms * days)
     public function getTotalDueAttribute()
     {
@@ -497,7 +497,53 @@ public function getComputedRemainingAttribute()
         return $result;
     }
     public function financialTracking()
-{
-    return $this->hasOne(BookingFinancialTracking::class, 'booking_id');
-}
+    {
+        return $this->hasOne(BookingFinancialTracking::class, 'booking_id');
+    }
+    // إضافة الرصيد الحالي للشركة : 
+    /**
+     * حساب رصيد الشركة حتى تاريخ محدد (افتراض اليوم)
+     * balance > 0 => الشركة ما زال عليها
+     * balance < 0 => للشركة رصيد مدفوع زائد
+     */
+    public function currentBalance(Carbon $date = null): array
+    {
+        $date = $date ?? Carbon::today();
+
+        // الحجوزات التي دخلت حتى التاريخ
+        $enteredBookings = $this->bookings()
+            ->whereDate('check_in', '<=', $date)
+            ->get();
+
+        // إجمالي المستحق (يمكن تغيير الصيغة حسب اعتمادك الفعلي)
+        $enteredDue = $enteredBookings->sum(function ($b) {
+            // لو عندك عمود amount_due_from_company أدق استخدمه:
+            return $b->amount_due_from_company ?? ($b->total_nights * $b->rooms * $b->sale_price);
+        });
+
+        // المدفوعات حتى التاريخ (نفصل المدفوع والخصومات)
+        $paymentsAgg = $this->payments()
+            ->whereDate('payment_date', '<=', $date)
+            ->selectRaw("
+                SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as paid,
+                SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts
+            ")
+            ->first();
+
+        $paid = (float)($paymentsAgg->paid ?? 0);
+        $discounts = (float)($paymentsAgg->discounts ?? 0);
+
+        // نعتبر الخصومات تخفيض للمستحق مثلها مثل الدفعات
+        $effectivePaid = $paid + $discounts;
+
+        $balance = $enteredDue - $effectivePaid;
+
+        return [
+            'entered_due' => round($enteredDue, 2),
+            'paid' => round($paid, 2),
+            'discounts' => round($discounts, 2),
+            'effective_paid' => round($effectivePaid, 2),
+            'balance' => round($balance, 2),
+        ];
+    }
 }
