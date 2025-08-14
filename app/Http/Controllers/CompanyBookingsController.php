@@ -12,17 +12,17 @@ class CompanyBookingsController extends Controller
 {
     public function index(Request $request)
     {
+        // بناء الاستعلام الأساسي للشركات
         $query = Company::query();
 
-        // فلترة الشركات حسب الوكيل إذا تم تمرير معرّف الوكيل
+        // فلترة حسب الوكيل إذا تم تمرير agent_id
         if ($request->filled('agent_id')) {
-            $agentId = $request->agent_id;
-            $query->whereHas('landTripBookings.landTrip', function ($q) use ($agentId) {
-                $q->where('agent_id', $agentId);
+            $query->whereHas('landTripBookings.landTrip', function ($q) use ($request) {
+                $q->where('agent_id', $request->agent_id);
             });
         }
 
-        // حساب عدد الحجوزات للشركات مع مراعاة فلتر الوكيل
+        // إضافة عدد الحجوزات مع مراعاة فلتر الوكيل
         $query->withCount(['landTripBookings as bookings_count' => function ($q) use ($request) {
             if ($request->filled('agent_id')) {
                 $q->whereHas('landTrip', function ($subQ) use ($request) {
@@ -31,7 +31,7 @@ class CompanyBookingsController extends Controller
             }
         }]);
 
-        // تحميل حجوزات الشركات مع مراعاة فلتر الوكيل
+        // تحميل الحجوزات الأخيرة (مع فلتر الوكيل إن وجد)
         $query->with(['landTripBookings' => function ($q) use ($request) {
             $q->latest();
             if ($request->filled('agent_id')) {
@@ -42,20 +42,16 @@ class CompanyBookingsController extends Controller
             $q->take(5);
         }]);
 
-
-        // فلاتر البحث الأخرى
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where('name', 'like', "%{$search}%");
+        // فلتر البحث بالاسم
+        if ($request->filled('search')) {
+            $query->where('name', 'like', "%{$request->search}%");
         }
 
-        // فلتر التاريخ مع مراعاة فلتر الوكيل
-        if ($request->has('start_date') && $request->start_date) {
-            $startDate = $request->start_date;
-            $query->whereHas('landTripBookings', function ($q) use ($startDate, $request) {
-                $q->whereDate('created_at', '>=', $startDate);
+        // فلتر تاريخ البداية
+        if ($request->filled('start_date')) {
+            $query->whereHas('landTripBookings', function ($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->start_date);
                 if ($request->filled('agent_id')) {
-                    // تعديل هنا: استخدام العلاقة بدلاً من الحقل المباشر
                     $q->whereHas('landTrip', function ($subQ) use ($request) {
                         $subQ->where('agent_id', $request->agent_id);
                     });
@@ -63,12 +59,11 @@ class CompanyBookingsController extends Controller
             });
         }
 
-        if ($request->has('end_date') && $request->end_date) {
-            $endDate = $request->end_date;
-            $query->whereHas('landTripBookings', function ($q) use ($endDate, $request) {
-                $q->whereDate('created_at', '<=', $endDate);
+        // فلتر تاريخ النهاية
+        if ($request->filled('end_date')) {
+            $query->whereHas('landTripBookings', function ($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->end_date);
                 if ($request->filled('agent_id')) {
-                    // تعديل هنا: استخدام العلاقة بدلاً من الحقل المباشر
                     $q->whereHas('landTrip', function ($subQ) use ($request) {
                         $subQ->where('agent_id', $request->agent_id);
                     });
@@ -76,27 +71,36 @@ class CompanyBookingsController extends Controller
             });
         }
 
-        // تنفيذ الاستعلام وجلب الشركات
+        // تنفيذ الاستعلام وجلب الشركات بعد تطبيق الفلاتر
         $companies = $query->get();
 
-        // حساب الإجماليات لكل شركة مع مراعاة فلتر الوكيل
-        $companies->each(function ($company) use ($request) {
-            // جلب أحدث 5 حجوزات
+        // دالة تُستخدم لتطبيق فلاتر التاريخ على الاستعلامات
+        $applyDateFilters = function ($q) use ($request) {
+            if ($request->filled('start_date')) {
+                $q->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->filled('end_date')) {
+                $q->whereDate('created_at', '<=', $request->end_date);
+            }
+        };
+
+        // حساب بيانات كل شركة على حدة (أحدث الحجوزات، المبالغ، المدفوعات)
+        $companies->each(function ($company) use ($request, $applyDateFilters) {
+            // أحدث 5 حجوزات
             $bookingsQuery = $company->landTripBookings()->latest();
             if ($request->filled('agent_id')) {
-                // تعديل هنا: استخدام العلاقة بدلاً من الحقل المباشر
                 $bookingsQuery->whereHas('landTrip', function ($q) use ($request) {
                     $q->where('agent_id', $request->agent_id);
                 });
             }
+            $applyDateFilters($bookingsQuery);
             $company->recent_bookings = $bookingsQuery->take(5)->get();
 
-            // حساب المستحقات حسب العملة
+            // إجمالي المبالغ المستحقة حسب العملة
             $sarQuery = $company->landTripBookings()->where('currency', 'SAR');
             $kwdQuery = $company->landTripBookings()->where('currency', 'KWD');
 
             if ($request->filled('agent_id')) {
-                // تعديل هنا: استخدام العلاقة بدلاً من الحقل المباشر
                 $sarQuery->whereHas('landTrip', function ($q) use ($request) {
                     $q->where('agent_id', $request->agent_id);
                 });
@@ -105,45 +109,63 @@ class CompanyBookingsController extends Controller
                 });
             }
 
-            $company->total_sar = $sarQuery->sum('amount_due_from_company');
-            $company->total_kwd = $kwdQuery->sum('amount_due_from_company');
+            $applyDateFilters($sarQuery);
+            $applyDateFilters($kwdQuery);
 
-            // حساب المدفوعات
-            $company->paid_sar = $company->payments()->where('currency', 'SAR')->sum('amount');
-            $company->paid_kwd = $company->payments()->where('currency', 'KWD')->sum('amount');
+            $company->total_sar = (float) $sarQuery->sum('amount_due_from_company');
+            $company->total_kwd = (float) $kwdQuery->sum('amount_due_from_company');
+
+            // إجمالي المدفوعات
+            $company->paid_sar = (float) $company->payments()->where('currency', 'SAR')->sum('amount');
+            $company->paid_kwd = (float) $company->payments()->where('currency', 'KWD')->sum('amount');
         });
 
-        // إجماليات الصفحة مع مراعاة فلتر الوكيل
-        if ($request->filled('agent_id')) {
-            // استخدام subquery للحصول على الحجوزات المرتبطة بالوكيل المحدد
-            $landTripBookingIds = DB::table('land_trip_bookings')
-                ->join('land_trips', 'land_trip_bookings.land_trip_id', '=', 'land_trips.id')
-                ->where('land_trips.agent_id', $request->agent_id)
-                ->pluck('land_trip_bookings.id');
+        // بناء الاستعلام الأساسي للحجوزات لإجماليات الصفحة
+        $ltbBase = DB::table('land_trip_bookings as ltb')
+            ->join('land_trips as lt', 'ltb.land_trip_id', '=', 'lt.id');
 
-            $totalBookingsQuery = DB::table('land_trip_bookings')->whereIn('id', $landTripBookingIds);
-            $totalAmountSARQuery = DB::table('land_trip_bookings')
-                ->whereIn('id', $landTripBookingIds)
-                ->where('currency', 'SAR');
-            $totalAmountKWDQuery = DB::table('land_trip_bookings')
-                ->whereIn('id', $landTripBookingIds)
-                ->where('currency', 'KWD');
-        } else {
-            $totalBookingsQuery = DB::table('land_trip_bookings');
-            $totalAmountSARQuery = DB::table('land_trip_bookings')->where('currency', 'SAR');
-            $totalAmountKWDQuery = DB::table('land_trip_bookings')->where('currency', 'KWD');
+        if ($request->filled('agent_id')) {
+            $ltbBase->where('lt.agent_id', $request->agent_id);
         }
 
-        $totalBookings = $totalBookingsQuery->count();
-        $totalAmountSAR = $totalAmountSARQuery->sum('amount_due_from_company');
-        $totalAmountKWD = $totalAmountKWDQuery->sum('amount_due_from_company');
-
-        // جلب معلومات الوكيل إذا تم تحديده
-        $agent = null;
-        if ($request->filled('agent_id')) {
-            $agent = Agent::find($request->agent_id);
+        // لو فيه بحث بالاسم نحتاج نربط مع جدول الشركات
+        if ($request->filled('search')) {
+            $ltbBase->join('companies as c', 'ltb.company_id', '=', 'c.id')
+                ->where('c.name', 'like', '%' . $request->search . '%');
         }
 
+        // تطبيق فلاتر التاريخ على الاستعلام العام
+        if ($request->filled('start_date')) {
+            $ltbBase->whereDate('ltb.created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $ltbBase->whereDate('ltb.created_at', '<=', $request->end_date);
+        }
+
+        // إذا كان الحقل deleted_at موجود وتستخدم SoftDeletes فعّل السطر التالي
+        // $ltbBase->whereNull('ltb.deleted_at');
+
+        // إجمالي عدد الحجوزات
+        $totalBookings = (clone $ltbBase)->count();
+
+        // // إجمالي المبالغ حسب العملة
+        // $totalsByCurrency = (clone $ltbBase)
+        //     ->select('ltb.currency', DB::raw('SUM(COALESCE(ltb.amount_due_from_company, 0)) as total'))
+        //     ->groupBy('ltb.currency')
+        //     ->get()
+        //     ->keyBy('currency');
+
+        // $totalAmountSAR = (float) ($totalsByCurrency['SAR']->total ?? 0);
+        // $totalAmountKWD = (float) ($totalsByCurrency['KWD']->total ?? 0);
+        // ✅ اجمع إجماليات الصفحة مباشرة من نفس الشركات المعروضة
+        $totalBookings   = (int) $companies->sum('bookings_count');
+        $totalAmountSAR  = (float) $companies->sum('total_sar');
+        $totalAmountKWD  = (float) $companies->sum('total_kwd');
+
+        // جلب الوكيل إذا تم تمرير agent_id
+        $agent = $request->filled('agent_id') ? Agent::find($request->agent_id) : null;
+
+        // عرض النتائج في الصفحة
         return view('admin.companies.bookings', compact(
             'companies',
             'totalBookings',
