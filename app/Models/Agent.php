@@ -61,38 +61,77 @@ class Agent extends Model
     /**
      * حساب الإجماليات المالية للرحلات البرية فقط حسب العملة
      */
-    public function getLandTripTotalsByCurrency()
+    // public function getLandTripTotalsByCurrency()
+    // {
+    //     $totals = [];
+
+    //     // ✅ إصلاح: استخدام join مباشر بدلاً من hasManyThrough
+    //     $bookingsDue = DB::table('land_trip_bookings')
+    //         ->join('land_trips', 'land_trips.id', '=', 'land_trip_bookings.land_trip_id')
+    //         ->where('land_trips.agent_id', $this->id)
+    //         ->whereNull('land_trip_bookings.deleted_at')
+    //         ->selectRaw('land_trip_bookings.currency, SUM(land_trip_bookings.amount_due_to_agent) as total_due')
+    //         ->groupBy('land_trip_bookings.currency')
+    //         ->get()
+    //         ->keyBy('currency');
+
+    //     // المدفوع للوكيل من مدفوعات الرحلات البرية
+    //     $paymentsPaid = $this->landTripsPayments()
+    //         ->selectRaw('currency, SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid, SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts')
+    //         ->groupBy('currency')
+    //         ->get()
+    //         ->keyBy('currency');
+
+    //     foreach (['SAR', 'KWD'] as $currency) {
+    //         $due = $bookingsDue->get($currency)?->total_due ?? 0;
+    //         $paid = $paymentsPaid->get($currency)?->total_paid ?? 0;
+    //         $discounts = $paymentsPaid->get($currency)?->discounts ?? 0;
+
+    //         $totals[$currency] = [
+    //             'due' => (float) $due,
+    //             'paid' => (float) $paid,
+    //             'discounts' => (float) $discounts,
+    //             'remaining' => (float) ($due - $paid - $discounts)
+    //         ];
+    //     }
+
+    //     return $totals;
+    // }
+
+     public function getLandTripTotalsByCurrency(): array
     {
-        $totals = [];
+        // مجموع المستحق من الشركة (بدون تقطيع صفحات)
+        $bookingsAgg = $this->landTripBookings()
+            ->select('currency', DB::raw('SUM(COALESCE(amount_due_from_company, 0)) as total_due'))
+            ->groupBy('currency')
+            ->pluck('total_due', 'currency');
 
-        // ✅ إصلاح: استخدام join مباشر بدلاً من hasManyThrough
-        $bookingsDue = DB::table('land_trip_bookings')
-            ->join('land_trips', 'land_trips.id', '=', 'land_trip_bookings.land_trip_id')
-            ->where('land_trips.agent_id', $this->id)
-            ->whereNull('land_trip_bookings.deleted_at')
-            ->selectRaw('land_trip_bookings.currency, SUM(land_trip_bookings.amount_due_to_agent) as total_due')
-            ->groupBy('land_trip_bookings.currency')
-            ->get()
-            ->keyBy('currency');
-
-        // المدفوع للوكيل من مدفوعات الرحلات البرية
-        $paymentsPaid = $this->landTripsPayments()
-            ->selectRaw('currency, SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid, SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as discounts')
+        // مدفوعات الوكيل (موجبة = مدفوع، سالبة = خصم)
+        $paymentsAgg = $this->landTripsPayments()
+            ->select(
+                'currency',
+                DB::raw('SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END) as total_paid'),
+                DB::raw('SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_discounts')
+            )
             ->groupBy('currency')
             ->get()
             ->keyBy('currency');
 
-        foreach (['SAR', 'KWD'] as $currency) {
-            $due = $bookingsDue->get($currency)?->total_due ?? 0;
-            $paid = $paymentsPaid->get($currency)?->total_paid ?? 0;
-            $discounts = $paymentsPaid->get($currency)?->discounts ?? 0;
+        $totals = [
+            'SAR' => ['due' => 0.0, 'paid' => 0.0, 'discounts' => 0.0, 'remaining' => 0.0],
+            'KWD' => ['due' => 0.0, 'paid' => 0.0, 'discounts' => 0.0, 'remaining' => 0.0],
+        ];
 
-            $totals[$currency] = [
-                'due' => (float) $due,
-                'paid' => (float) $paid,
-                'discounts' => (float) $discounts,
-                'remaining' => (float) ($due - $paid - $discounts)
-            ];
+        foreach (['SAR', 'KWD'] as $cur) {
+            $due = (float) ($bookingsAgg[$cur] ?? 0);
+            $paid = (float) ($paymentsAgg[$cur]->total_paid ?? 0);
+            $discounts = (float) ($paymentsAgg[$cur]->total_discounts ?? 0);
+            $remaining = $due - ($paid + $discounts);
+
+            $totals[$cur]['due'] = $due;
+            $totals[$cur]['paid'] = $paid;
+            $totals[$cur]['discounts'] = $discounts;
+            $totals[$cur]['remaining'] = $remaining;
         }
 
         return $totals;
