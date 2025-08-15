@@ -233,7 +233,13 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group position-relative">
-                                    <label for="recent_bookings" class="form-label">اختيار من آخر الحجوزات</label>
+                                    <label for="recent_bookings" class="form-label">
+                                        اختيار من آخر الحجوزات المسجلة
+                                        <span class="text-muted small ms-2 d-inline-block">
+                                            لو تم تسجيله بالموقع من خلال موظف التشغيل
+                                        </span>
+                                    </label>
+
                                     <select id="recent_bookings" class="form-control form-select">
                                         <option value="">-- اختر حجز موجود --</option>
                                         @foreach ($recentBookings as $booking)
@@ -249,7 +255,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">أو ابحث عن عميل</label>
+                                    <label class="form-label">أو ابحث عنه لو تم تسجيله</label>
                                     <div class="position-relative">
                                         <input type="text" id="client_search" class="form-control"
                                             placeholder="ابحث باسم العميل...">
@@ -272,10 +278,10 @@
                                     <input type="text" name="client_phone" id="client_phone" class="form-control">
                                 </div>
                             </div>
-                          
+
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label for="client_notes" class="form-label">ملاحظات</label>
+                                    <label for="client_notes" class="form-label">ملاحظات والدفع ولينك درايف الدفع</label>
                                     <input type="text" name="client_notes" id="client_notes" class="form-control">
                                 </div>
                             </div>
@@ -289,7 +295,7 @@
                                     <input type="text" name="company_name" id="company_name" class="form-control">
                                 </div>
                             </div>
-                            
+
                         </div>
 
                         <input type="hidden" name="booking_type" id="booking_type">

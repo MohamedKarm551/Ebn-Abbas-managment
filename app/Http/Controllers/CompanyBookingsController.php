@@ -108,6 +108,12 @@ class CompanyBookingsController extends Controller
                     $q->where('agent_id', $request->agent_id);
                 });
             }
+            // إجمالي المدفوعات من جدول landtrips_company_payments
+            $paidBase = $company->landTripsCompanyPayments();
+            if ($request->filled('agent_id')) {
+                $paidBase->where('agent_id', $request->agent_id);
+            }
+
 
             $applyDateFilters($sarQuery);
             $applyDateFilters($kwdQuery);
@@ -116,8 +122,8 @@ class CompanyBookingsController extends Controller
             $company->total_kwd = (float) $kwdQuery->sum('amount_due_from_company');
 
             // إجمالي المدفوعات
-            $company->paid_sar = (float) $company->payments()->where('currency', 'SAR')->sum('amount');
-            $company->paid_kwd = (float) $company->payments()->where('currency', 'KWD')->sum('amount');
+            $company->paid_sar = (float) (clone $paidBase)->where('currency', 'SAR')->sum('amount');
+            $company->paid_kwd = (float) (clone $paidBase)->where('currency', 'KWD')->sum('amount');
         });
 
         // بناء الاستعلام الأساسي للحجوزات لإجماليات الصفحة

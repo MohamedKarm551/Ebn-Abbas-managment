@@ -17,6 +17,7 @@ use App\Http\Controllers\HotelRoomController;
 use App\Http\Controllers\BookingOperationReportController;
 use App\Http\Controllers\AdminTransactionController;
 use App\Http\Controllers\LandTripsAgentPaymentController;
+use App\Http\Controllers\LandTripsCompanyPaymentController;
 use App\Http\Controllers\CompanyBookingsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
@@ -507,14 +508,14 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
     Route::get('land-trips/{landTrip}/room-types', [LandTripController::class, 'getTripRoomTypes'])->name('land-trips.room-types');
     Route::get('land-trips/bookings/{booking}/voucher', [CompanyLandTripController::class, 'downloadVoucher'])->name('land-trips.bookings.voucher');
     Route::delete('land-trips/bookings/{booking}', [LandTripController::class, 'destroyBooking'])->name('land-trips.bookings.destroy');
-
-
+    Route::post('companies/landtrips-payments', [LandTripsCompanyPaymentController::class, 'store'])
+        ->name('companies.landtrips-payments.store');
     // تقارير العمليات
     Route::prefix('operation-reports')->name('operation-reports.')->group(function () {
         Route::get('/', [BookingOperationReportController::class, 'index'])->name('index');
         Route::get('/create', [BookingOperationReportController::class, 'create'])->name('create');
         Route::get('/charts', [BookingOperationReportController::class, 'charts'])->name('charts');
-              // 
+        // 
         Route::get('/employee-profits', [BookingOperationReportController::class, 'employeeProfits'])->name('employee-profits');
 
         // API Routes (يجب أن تكون قبل المعاملات الديناميكية)
@@ -523,7 +524,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminOrEmployeeMiddleware::class
         Route::get('/get-booking-data', [BookingOperationReportController::class, 'getBookingData'])->name('get-booking-data');
         Route::get('/api/clients/search', [BookingOperationReportController::class, 'searchClients'])->name('api.clients.search');
         Route::get('/api/client/latest-booking/{name}', [BookingOperationReportController::class, 'getClientLatestBooking'])->name('api.client.latest-booking');
-  
+
         // CRUD Routes (المعاملات الديناميكية في النهاية)
         Route::post('/', [BookingOperationReportController::class, 'store'])->name('store');
         Route::get('/{operationReport}', [BookingOperationReportController::class, 'show'])->name('show');

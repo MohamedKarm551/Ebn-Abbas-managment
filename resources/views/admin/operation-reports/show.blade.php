@@ -913,11 +913,15 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $landTrip->trip_type ?? '-' }}</td>
-                                    <td>{{ $landTrip->departure_date ? $landTrip->departure_date->format('Y-m-d') : '-' }}
+                                    <td style="
+    font-size: small;
+">{{ $landTrip->departure_date ? $landTrip->departure_date->format('Y-m-d') : '-' }}
                                         <small class="d-block text-muted hijri-date"
                                             data-date="{{ $landTrip->departure_date->format('Y-m-d') }}"></small>
                                     </td>
-                                    <td>{{ $landTrip->return_date ? $landTrip->return_date->format('Y-m-d') : '-' }}
+                                    <td style="
+    font-size: small;
+">{{ $landTrip->return_date ? $landTrip->return_date->format('Y-m-d') : '-' }}
                                         <small class="d-block text-muted hijri-date"
                                             data-date="{{ $landTrip->return_date->format('Y-m-d') }}"></small>
                                     </td>

@@ -1101,6 +1101,7 @@
                             </div>
                             <div class="sidebar-content">
                                 @forelse($allBookings as $booking)
+                               
                                     <div class="booking-item">
                                         <div class="booking-info">
                                             <h6 class="booking-client">{{ $booking->client_name }}</h6>
@@ -1123,7 +1124,7 @@
                                         </div>
                                         <div class="booking-amount-info">
                                             <span class="booking-amount {{ $booking->currency === 'SAR' ? 'sar' : 'kwd' }}">
-                                                {{ number_format($booking->amount_due_to_agent, 0) }} {{ $booking->currency }}
+                                                {{ number_format($booking->sale_price, 0) }} {{ $booking->currency }}
                                             </span>
                                             @if ($booking->status)
                                                 <small class="d-block mt-1">

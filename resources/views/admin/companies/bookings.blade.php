@@ -330,8 +330,73 @@
                             <i class="fas fa-ticket-alt me-1"></i>
                             {{ $company->bookings_count }} حجز
                         </span>
+                        <!-- زر إضافة دفعة -->
+                        <button class="btn btn-sm btn-light ms-2" data-bs-toggle="modal"
+                            data-bs-target="#companyPayModal{{ $company->id }}">
+                            <i class="fas fa-hand-holding-usd me-1"></i> دفعة جديدة
+                        </button>
                     </div>
                 </div>
+                {{-- مودال دفع للشركة --}}
+                <div class="modal fade" id="companyPayModal{{ $company->id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form class="modal-content" method="POST"
+                            action="{{ route('admin.companies.landtrips-payments.store') }}">
+                            @csrf
+                            <input type="hidden" name="company_id" value="{{ $company->id }}">
+                            @if (isset($agent))
+                                <input type="hidden" name="agent_id" value="{{ $agent->id }}">
+                            @endif
+
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-wallet me-1"></i>
+                                    إضافة دفعة لشركة: {{ $company->name }}
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">العملة</label>
+                                    <select name="currency" class="form-select" required>
+                                        <option value="KWD" selected>دينار كويتي</option>
+                                        <option value="SAR">ريال سعودي</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">المبلغ</label>
+                                    <input type="number" name="amount" class="form-control" step="0.01"
+                                        min="0.01" required>
+                                    <small class="text-muted">
+                                        المتبقي (دينار) الآن:
+                                        {{ number_format(max($company->total_kwd - $company->paid_kwd, 0), 2) }}
+                                    </small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">تاريخ الدفعة</label>
+                                    <input type="date" name="payment_date" class="form-control"
+                                        value="{{ now()->format('Y-m-d') }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">ملاحظات</label>
+                                    <textarea name="notes" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check me-1"></i> حفظ الدفعة
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
 
                 <div class="company-content">
                     <!-- ملخص المبالغ -->

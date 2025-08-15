@@ -130,15 +130,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="mb-3">
-                                <label for="client_email" class="form-label">بريد العميل الإلكتروني</label>
-                                <input type="email" class="form-control @error('client_email') is-invalid @enderror"
-                                    id="client_email" name="client_email"
-                                    value="{{ old('client_email', $operationReport->client_email) }}">
-                                @error('client_email')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                          
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">

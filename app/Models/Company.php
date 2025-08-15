@@ -38,6 +38,10 @@ class Company extends Model
     {
         return $this->hasMany(User::class, 'company_id');
     }
+    public function landTripsCompanyPayments()
+    {
+        return $this->hasMany(\App\Models\LandTripsCompanyPayment::class, 'company_id');
+    }
     /**
      * حساب الإجماليات المالية للرحلات البرية فقط حسب العملة
      */
