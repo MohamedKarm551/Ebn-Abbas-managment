@@ -47,7 +47,7 @@ class BookingOperationReportController extends Controller
             'reports',
             'profitsByCurrency',
             'reportsThisMonth',
-            'operationReport',
+           
             
         ));
     }
