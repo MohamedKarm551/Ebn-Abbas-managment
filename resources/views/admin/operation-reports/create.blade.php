@@ -272,13 +272,8 @@
                                     <input type="text" name="client_phone" id="client_phone" class="form-control">
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="client_email" class="form-label">البريد الإلكتروني للعميل</label>
-                                    <input type="email" name="client_email" id="client_email" class="form-control">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
+                          
+                            <div class="col-md-12">
                                 <div class="form-group">
                                     <label for="client_notes" class="form-label">ملاحظات</label>
                                     <input type="text" name="client_notes" id="client_notes" class="form-control">
@@ -294,12 +289,7 @@
                                     <input type="text" name="company_name" id="company_name" class="form-control">
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="company_phone" class="form-label">رقم هاتف الشركة</label>
-                                    <input type="text" name="company_phone" id="company_phone" class="form-control">
-                                </div>
-                            </div>
+                            
                         </div>
 
                         <input type="hidden" name="booking_type" id="booking_type">
@@ -1226,13 +1216,11 @@
                 // ملء البيانات الأساسية مع التحقق من وجود العناصر
                 const clientNameField = document.getElementById('client_name');
                 const companyNameField = document.getElementById('company_name');
-                const companyPhoneField = document.getElementById('company_phone');
                 const bookingTypeField = document.getElementById('booking_type');
                 const bookingIdField = document.getElementById('booking_id');
 
                 if (clientNameField) clientNameField.value = selectedOption.dataset.clientName || '';
                 if (companyNameField) companyNameField.value = selectedOption.dataset.companyName || '';
-                if (companyPhoneField) companyPhoneField.value = selectedOption.dataset.companyPhone || '';
                 if (bookingTypeField) bookingTypeField.value = selectedOption.dataset.type || '';
                 if (bookingIdField) bookingIdField.value = selectedOption.value;
 
@@ -1624,7 +1612,6 @@
                     if (data.latest_booking) {
                         const booking = data.latest_booking;
                         document.getElementById('company_name').value = booking.company?.name || '';
-                        document.getElementById('company_phone').value = booking.company?.phone || '';
                         document.getElementById('booking_type').value = booking.type || '';
                         document.getElementById('booking_id').value = booking.booking?.id || '';
                     }

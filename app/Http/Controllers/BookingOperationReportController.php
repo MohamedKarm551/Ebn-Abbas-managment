@@ -251,7 +251,7 @@ class BookingOperationReportController extends Controller
             'client_email' => 'nullable|email|max:255',
             'client_notes' => 'nullable|string',
             'company_name' => 'nullable|string|max:255',
-            'company_phone' => 'nullable|string|max:20',
+           
             'booking_type' => 'nullable|string|max:20',
             'booking_id' => 'nullable|integer',
             'booking_reference' => 'nullable|string|max:100',
@@ -278,8 +278,8 @@ class BookingOperationReportController extends Controller
             $company = null;
             if ($request->filled('company_name')) {
                 $company = Company::firstOrCreate(
-                    ['name' => $request->company_name],
-                    ['phone' => $request->company_phone ?? null]
+                    ['name' => $request->company_name]
+                   
                 );
             }
 
@@ -292,7 +292,6 @@ class BookingOperationReportController extends Controller
                 'client_phone' => $client->phone,
                 'company_id' => $company ? $company->id : null,
                 'company_name' => $company ? $company->name : null,
-                'company_phone' => $company ? $company->phone : null,
                 'booking_type' => $validated['booking_type'] ?? null,
                 'booking_id' => $validated['booking_id'] ?? null,
                 'booking_reference' => $validated['booking_reference'] ?? null,
@@ -602,7 +601,6 @@ class BookingOperationReportController extends Controller
             'client_email' => 'nullable|email|max:255',
             'client_notes' => 'nullable|string',
             'company_name' => 'nullable|string|max:255',
-            'company_phone' => 'nullable|string|max:20',
             'booking_type' => 'nullable|string|max:20',
             'booking_id' => 'nullable|integer',
             'booking_reference' => 'nullable|string|max:100',
@@ -638,8 +636,7 @@ class BookingOperationReportController extends Controller
             $company = null;
             if ($request->filled('company_name')) {
                 $company = Company::firstOrCreate(
-                    ['name' => $request->company_name],
-                    ['phone' => $request->company_phone ?? null]
+                    ['name' => $request->company_name]
                 );
             }
 
@@ -652,7 +649,6 @@ class BookingOperationReportController extends Controller
                 'client_phone' => $client->phone,
                 'company_id' => $company ? $company->id : null,
                 'company_name' => $company ? $company->name : null,
-                'company_phone' => $company ? $company->phone : null,
                 'booking_type' => $validated['booking_type'] ?? null,
                 'booking_id' => $validated['booking_id'] ?? null,
                 'booking_reference' => $validated['booking_reference'] ?? null,

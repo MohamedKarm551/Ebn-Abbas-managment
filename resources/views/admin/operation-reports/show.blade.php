@@ -172,10 +172,7 @@
                                 <th width="40%">اسم الشركة:</th>
                                 <td>{{ $operationReport->company_name ?? '-' }}</td>
                             </tr>
-                            <tr>
-                                <th>هاتف الشركة:</th>
-                                <td>{{ $operationReport->company_phone ?? '-' }}</td>
-                            </tr>
+
                             <tr>
                                 <th>نوع الحجز:</th>
                                 <td>{{ $operationReport->booking_type ?? '-' }}</td>
@@ -187,12 +184,37 @@
                         </table>
                     </div>
                 </div>
+                @php
+                    $notes = $operationReport->notes;
+
+                    // Regular expression to detect URLs
+                    $pattern = '/(https?:\/\/[^\s]+)/';
+
+                    // Replace URL with icon HTML
+                    $notesWithIcons = preg_replace_callback(
+                        $pattern,
+                        function ($matches) {
+                            $url = $matches[0];
+                            return '<a href="' .
+                                $url .
+                                '" target="_blank" style="text-decoration:none;">
+                    🔗 لينك :
+                </a>';
+                        },
+                        e($notes),
+                    );
+
+                    // Allow the icon HTML while escaping other parts
+                    $notesWithIcons = nl2br($notesWithIcons); // Preserve line breaks
+                @endphp
+
                 @if ($operationReport->notes)
                     <div class="mt-3">
                         <strong>ملاحظات عامة:</strong>
-                        <p class="mt-2 p-3 bg-light rounded">{{ $operationReport->notes }}</p>
+                        <p class="mt-2 p-3 bg-light rounded">{!! $notesWithIcons !!}</p>
                     </div>
                 @endif
+
             </div>
         </div>
 
@@ -394,20 +416,23 @@
                     </div>
                     {{-- عرض ربح الموظف --}}
                     @php
-    $baseProfit = $operationReport->grand_total_profit;
-    $currency = $operationReport->currency;
-    $rateToKWD = 1;
+                        $baseProfit = $operationReport->grand_total_profit;
+                        $currency = $operationReport->currency;
+                        $rateToKWD = 1;
 
-    if ($currency === 'SAR') {
-        $rateToKWD = 0.081;
-    } elseif ($currency === 'USD') {
-        $rateToKWD = 0.31;
-    }
+                        if ($currency === 'SAR') {
+                            $rateToKWD = 0.081;
+                        } elseif ($currency === 'USD') {
+                            $rateToKWD = 0.31;
+                        }
 
-    $kwdProfit = $baseProfit * $rateToKWD;
-    $finalProfitEGP = $kwdProfit * 10;
-    $equation = "{$baseProfit} {$currency} × {$rateToKWD} × 10 = " . number_format($finalProfitEGP, 2) . " جنيه مصري";
-@endphp
+                        $kwdProfit = $baseProfit * $rateToKWD;
+                        $finalProfitEGP = $kwdProfit * 10;
+                        $equation =
+                            "{$baseProfit} {$currency} × {$rateToKWD} × 10 = " .
+                            number_format($finalProfitEGP, 2) .
+                            ' جنيه مصري';
+                    @endphp
                     @if ($operationReport->employee_profit && $operationReport->employee_profit > 0)
                         <div
                             class="summary-item total-row bg-success text-white rounded-3 px-3 py-3 d-flex justify-content-between align-items-center mt-3">
@@ -858,7 +883,7 @@
             </div>
             <div class="report-section-body">
                 <div class="table-responsive">
-                        {{-- الجهة المُصدِرة للرحلة (من الحجز المرتبط بالتقرير) --}}
+                    {{-- الجهة المُصدِرة للرحلة (من الحجز المرتبط بالتقرير) --}}
                     @if (!empty($linkedAgentName))
                         <div class="alert alert-info py-2 px-3 mb-3">
                             <i class="fas fa-building me-1"></i>
@@ -959,7 +984,7 @@
     @endif
 
 
-                
+
     <!-- رسالة إذا لم توجد بيانات -->
     @if (
         $operationReport->visas->count() == 0 &&

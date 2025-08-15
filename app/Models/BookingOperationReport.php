@@ -25,7 +25,6 @@ class BookingOperationReport extends Model
         'client_phone',
         'company_id',
         'company_name',
-        'company_phone',
         'booking_type',
         'booking_id',
         'booking_reference',

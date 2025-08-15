@@ -150,15 +150,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="mb-3">
-                                <label for="company_phone" class="form-label">هاتف الشركة</label>
-                                <input type="text" class="form-control @error('company_phone') is-invalid @enderror"
-                                    id="company_phone" name="company_phone"
-                                    value="{{ old('company_phone', $operationReport->company_phone) }}">
-                                @error('company_phone')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            
                             <div class="mb-3">
                                 <label for="booking_type" class="form-label">نوع الحجز</label>
                                 <select class="form-select @error('booking_type') is-invalid @enderror" id="booking_type"
