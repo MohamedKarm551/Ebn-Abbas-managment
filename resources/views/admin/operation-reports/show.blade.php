@@ -858,6 +858,13 @@
             </div>
             <div class="report-section-body">
                 <div class="table-responsive">
+                        {{-- الجهة المُصدِرة للرحلة (من الحجز المرتبط بالتقرير) --}}
+                    @if (!empty($linkedAgentName))
+                        <div class="alert alert-info py-2 px-3 mb-3">
+                            <i class="fas fa-building me-1"></i>
+                            الجهة المُصدِرة: <strong>{{ $linkedAgentName }}</strong>
+                        </div>
+                    @endif
                     <table class="table table-bordered table-hover table-striped">
                         <thead>
                             <tr>
@@ -951,6 +958,8 @@
         </div>
     @endif
 
+
+                
     <!-- رسالة إذا لم توجد بيانات -->
     @if (
         $operationReport->visas->count() == 0 &&

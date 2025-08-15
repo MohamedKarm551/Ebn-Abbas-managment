@@ -41,10 +41,14 @@ class BookingOperationReportController extends Controller
             ->whereYear('report_date', now()->year)
             ->count();
 
+
+       
         return view('admin.operation-reports.index', compact(
             'reports',
             'profitsByCurrency',
-            'reportsThisMonth'
+            'reportsThisMonth',
+            'operationReport',
+            
         ));
     }
 
@@ -1092,7 +1096,13 @@ class BookingOperationReportController extends Controller
         }
         $operationReport->load(['visas', 'flights', 'transports', 'hotels', 'landTrips', 'employee', 'client', 'company']);
 
-        return view('admin.operation-reports.show', compact('operationReport'));
+      // NEW: agent name via linked booking (no extra DB fields needed)
+    $linkedAgentName = null;
+    if ($operationReport->booking_type === 'land_trip' && $operationReport->booking_id) {
+        $linkedBooking = \App\Models\LandTripBooking::with('landTrip.agent')->find($operationReport->booking_id);
+        $linkedAgentName = $linkedBooking?->landTrip?->agent?->name;
+    }
+        return view('admin.operation-reports.show', compact('operationReport', 'linkedAgentName'));
     }
 
     public function edit(BookingOperationReport $operationReport)
