@@ -392,6 +392,13 @@
 </head>
 
 <body>
+    <div class="actions">
+    <a href="{{ route('bookings.voucher.download', $booking->id) }}"
+       class="btn btn-secondary ms-2"
+       target="_blank" rel="noopener">
+        تحميل PDF من السيرفر
+    </a>
+</div>
     <div class="container my-4">
         <div class="d-flex flex-wrap justify-content-between flex-row-reverse align-items-center">
             @auth

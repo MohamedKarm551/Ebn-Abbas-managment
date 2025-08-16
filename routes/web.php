@@ -167,6 +167,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/bookings/{id}/update', [BookingsController::class, 'update'])->name('bookings.update');
     Route::get('/bookings/{id}/edits', [BookingsController::class, 'getEdits']);
     Route::get('/bookings/{id}/voucher', [BookingsController::class, 'voucher'])->name('bookings.voucher');
+    Route::get('/bookings/{id}/voucher/download', [BookingsController::class, 'downloadVoucher'])->name('bookings.voucher.download');
+
     Route::delete('/bookings/{id}', [BookingsController::class, 'destroy'])->name('bookings.destroy');
     Route::get('/bookings/{id}', [BookingsController::class, 'show'])->name('bookings.show');
     Route::post('/bookings/{booking}/record-payment', [BookingsController::class, 'recordPayment'])->name('bookings.record-payment');

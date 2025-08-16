@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\File;
 use Carbon\Carbon; // *** استيراد Carbon لمعالجة التواريخ ***
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\BookingsExport;
+use Barryvdh\DomPDF\Facade\Pdf as PDF; // تأكد من تثبيت الحزمة
+
 
 class BookingsController extends Controller
 {
@@ -1623,5 +1625,37 @@ class BookingsController extends Controller
         }
 
         return response()->json($suggestions);
+    }
+
+    /**
+     * Download the voucher for a booking.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function downloadVoucher($id)
+    {
+        $booking = Booking::with(['hotel', 'company'])->findOrFail($id);
+
+        $customerPhone = $booking->customer_phone
+            ?? $booking->client_phone
+            ?? $booking->phone
+            ?? null;
+
+        // // تمرير نفس القالب، DomPDF لن ينفذ الجافاسكربت وسيحترم CSS المطبوع
+        // $pdf = PDF::loadView('bookings.voucherPDF', [
+        //     'booking' => $booking,
+        //     'customerPhone' => $customerPhone,
+        //     // يمكنك تمرير علامة استخدام PDF إذا أردت تخصيص العرض
+        //     'isPdf' => true,
+        // ])->setPaper('a4', 'portrait');
+
+        // $fileName = 'hotel-voucher-' . $booking->id .'-'. $booking->client_name.'.pdf';
+        // return $pdf->download($fileName);
+        return view('bookings.voucherPDF', [
+            'booking' => $booking,
+            'customerPhone' => $customerPhone,
+            'isPdf' => true,
+        ]);
     }
 }
