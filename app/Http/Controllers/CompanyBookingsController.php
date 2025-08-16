@@ -86,7 +86,7 @@ class CompanyBookingsController extends Controller
 
         // حساب بيانات كل شركة على حدة (أحدث الحجوزات، المبالغ، المدفوعات)
         $companies->each(function ($company) use ($request, $applyDateFilters) {
-            // أحدث 5 حجوزات
+            // أحدث 10 حجوزات
             $bookingsQuery = $company->landTripBookings()->latest();
             if ($request->filled('agent_id')) {
                 $bookingsQuery->whereHas('landTrip', function ($q) use ($request) {
@@ -94,7 +94,7 @@ class CompanyBookingsController extends Controller
                 });
             }
             $applyDateFilters($bookingsQuery);
-            $company->recent_bookings = $bookingsQuery->take(5)->get();
+            $company->recent_bookings = $bookingsQuery->take(10)->get();
 
             // إجمالي المبالغ المستحقة حسب العملة
             $sarQuery = $company->landTripBookings()->where('currency', 'SAR');
@@ -168,6 +168,13 @@ class CompanyBookingsController extends Controller
         $totalAmountSAR  = (float) $companies->sum('total_sar');
         $totalAmountKWD  = (float) $companies->sum('total_kwd');
 
+        // ✅ إجمالي المتبقي بعد المدفوعات من نفس الشركات الظاهرة
+        $totalRemainingKWD = (float) $companies->sum(function ($c) {
+            return max(($c->total_kwd - $c->paid_kwd), 0);
+        });
+        $totalRemainingSAR = (float) $companies->sum(function ($c) {
+            return max(($c->total_sar - $c->paid_sar), 0);
+        });
         // جلب الوكيل إذا تم تمرير agent_id
         $agent = $request->filled('agent_id') ? Agent::find($request->agent_id) : null;
 
@@ -177,6 +184,8 @@ class CompanyBookingsController extends Controller
             'totalBookings',
             'totalAmountSAR',
             'totalAmountKWD',
+            'totalRemainingKWD',       
+            'totalRemainingSAR',
             'agent'
         ));
     }

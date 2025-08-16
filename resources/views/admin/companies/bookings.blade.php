@@ -311,6 +311,7 @@
                         <div>
                             <h6 class="card-title text-muted mb-1">إجمالي المستحقات (دينار)</h6>
                             <h2 class="mb-0">{{ number_format($totalAmountKWD, 2) }}</h2>
+                            <small>باقي بعد الدفع: {{ number_format($totalRemainingKWD ?? 0, 2) }}</small>
                         </div>
                     </div>
                 </div>
@@ -434,48 +435,59 @@
                         @endif
                     </div>
 
-                    <!-- قائمة الحجوزات - نعرض أحدث 5 حجوزات فقط -->
-                    <div class="bookings-list">
+                    <!-- قائمة الحجوزات - نعرض أحدث 10 حجوزات فقط -->
+                    <div class="bookings-list row g-3">
                         @forelse($company->recent_bookings as $booking)
-                            <div class="booking-item">
-                                <div class="booking-info">
-                                    <h6>{{ $booking->client_name }}</h6>
-                                    <p class="booking-date">{{ $booking->created_at->format('d/m/Y') }}</p>
-                                    @if ($booking->landTrip)
-                                        <small class="d-block text-info">
-                                            <i
-                                                class="fas fa-route me-1"></i>{{ $booking->landTrip->destination ?? 'رحلة برية' }}
-                                        </small>
-                                    @endif
-                                    @if ($booking->rooms && $booking->days)
-                                        <small class="d-block text-secondary">
-                                            <i class="fas fa-bed me-1"></i>{{ $booking->rooms }} غرفة -
-                                            {{ $booking->days }} ليلة
-                                        </small>
-                                    @endif
-                                    @if (isset($agent))
-                                        <small class="d-block text-primary">
-                                            <i
-                                                class="fas fa-user-tie me-1"></i>{{ $booking->agent->name ?? $agent->name }}
-                                        </small>
-                                    @else
-                                        <small class="d-block text-primary">
-                                            <i class="fas fa-user-tie me-1"></i>{{ $booking->agent->name ?? 'غير محدد' }}
-                                        </small>
-                                    @endif
-                                </div>
-                                <div class="booking-amount-info">
-                                    <span class="booking-amount {{ $booking->currency === 'SAR' ? 'sar' : 'kwd' }}">
-                                        {{ number_format($booking->amount_due_from_company, 0) }} {{ $booking->currency }}
-                                    </span>
-                                    @if ($booking->status)
-                                        <small class="d-block mt-1 text-center">
-                                            <span
-                                                class="badge bg-{{ $booking->status === 'confirmed' ? 'success' : 'warning' }} badge-sm">
-                                                {{ $booking->status === 'confirmed' ? 'مؤكد' : 'في الانتظار' }}
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-body d-flex flex-column justify-content-between">
+                                        <div class="booking-info mb-2">
+                                            <h6 class="mb-1">{{ $booking->client_name }}</h6>
+                                            <p class="text-muted mb-2">{{ $booking->created_at->format('d/m/Y') }}</p>
+
+                                            @if ($booking->landTrip)
+                                                <small class="d-block text-info mb-1">
+                                                    <i
+                                                        class="fas fa-route me-1"></i>{{ $booking->landTrip->destination ?? 'رحلة برية' }}
+                                                </small>
+                                            @endif
+
+                                            @if ($booking->rooms && $booking->days)
+                                                <small class="d-block text-secondary mb-1">
+                                                    <i class="fas fa-bed me-1"></i>{{ $booking->rooms }} غرفة -
+                                                    {{ $booking->days }} ليلة
+                                                </small>
+                                            @endif
+
+                                            @if (isset($agent))
+                                                <small class="d-block text-primary mb-1">
+                                                    <i
+                                                        class="fas fa-user-tie me-1"></i>{{ $booking->agent->name ?? $agent->name }}
+                                                </small>
+                                            @else
+                                                <small class="d-block text-primary mb-1">
+                                                    <i
+                                                        class="fas fa-user-tie me-1"></i>{{ $booking->agent->name ?? 'غير محدد' }}
+                                                </small>
+                                            @endif
+                                        </div>
+
+                                        <div class="booking-amount-info text-center mt-auto">
+                                            <span class="badge bg-warning text-dark py-2 px-3 mb-2 d-inline-block">
+                                                {{ number_format($booking->amount_due_from_company, 0) }}
+                                                {{ $booking->currency }}
                                             </span>
-                                        </small>
-                                    @endif
+
+                                            @if ($booking->status)
+                                                <div>
+                                                    <span
+                                                        class="badge bg-{{ $booking->status === 'confirmed' ? 'success' : 'warning' }}">
+                                                        {{ $booking->status === 'confirmed' ? 'مؤكد' : 'في الانتظار' }}
+                                                    </span>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         @empty
@@ -484,6 +496,7 @@
                             </div>
                         @endforelse
                     </div>
+
 
                     <!-- زر عرض المزيد من الحجوزات مع تمرير معرف الوكيل -->
                     @if ($company->bookings_count > count($company->recent_bookings))
