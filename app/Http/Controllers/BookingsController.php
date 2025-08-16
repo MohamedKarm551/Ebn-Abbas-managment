@@ -1601,28 +1601,34 @@ class BookingsController extends Controller
     {
         $term = $request->input('term');
         $suggestions = collect();
-
+        $like = '%' . $term . '%';
+        $user = Auth::user();
         if ($term) {
             $term = '%' . $term . '%';
+            if ($user->role != "Company") {
+                $clientSuggestions = Booking::where('client_name', 'LIKE', $term)
+                    ->distinct()->limit(5)->pluck('client_name');
+                $suggestions = $suggestions->merge($clientSuggestions);
 
-            $clientSuggestions = Booking::where('client_name', 'LIKE', $term)
-                ->distinct()->limit(5)->pluck('client_name');
-            $suggestions = $suggestions->merge($clientSuggestions);
+                $companySuggestions = Company::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+                $suggestions = $suggestions->merge($companySuggestions);
 
-            $companySuggestions = Company::where('name', 'LIKE', $term)->limit(5)->pluck('name');
-            $suggestions = $suggestions->merge($companySuggestions);
+                $agentSuggestions = Agent::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+                $suggestions = $suggestions->merge($agentSuggestions);
 
-            $agentSuggestions = Agent::where('name', 'LIKE', $term)->limit(5)->pluck('name');
-            $suggestions = $suggestions->merge($agentSuggestions);
+                $hotelSuggestions = Hotel::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+                $suggestions = $suggestions->merge($hotelSuggestions);
 
-            $hotelSuggestions = Hotel::where('name', 'LIKE', $term)->limit(5)->pluck('name');
-            $suggestions = $suggestions->merge($hotelSuggestions);
+                $employeeSuggestions = Employee::where('name', 'LIKE', $term)->limit(5)->pluck('name');
+                $suggestions = $suggestions->merge($employeeSuggestions);
 
-            $employeeSuggestions = Employee::where('name', 'LIKE', $term)->limit(5)->pluck('name');
-            $suggestions = $suggestions->merge($employeeSuggestions);
-
-            $suggestions = $suggestions->unique()->take(10)->values();
+                $suggestions = $suggestions->unique()->take(10)->values();
+            }
+        } else {
+            // إذا لم يتم إدخال أي مصطلح، يمكننا إرجاع اقتراحات عامة أو فارغة
+            $suggestions = collect(['لا توجد اقتراحات متاحة']);
         }
+
 
         return response()->json($suggestions);
     }
