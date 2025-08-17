@@ -184,31 +184,33 @@
                          }
                      @endphp
 
-                  @php $hasAny = collect($remainingByCurrency)->filter(fn($v) => $v != 0)->isNotEmpty(); @endphp
-@if ($hasAny)
-    <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-        @foreach ($remainingByCurrency as $currency => $amount)
-            @continue($amount == 0)
+                     @php $hasAny = collect($remainingByCurrency)->filter(fn($v) => $v != 0)->isNotEmpty(); @endphp
+                     @if ($hasAny)
+                         <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
+                             @foreach ($remainingByCurrency as $currency => $amount)
+                                 @continue($amount == 0)
 
-            <span class="d-inline-flex align-items-center bg-{{ $amount > 0 ? 'danger' : 'success' }} text-white rounded-pill px-2 py-1 small lh-sm text-nowrap">
-                {{-- اختياري: علامة + للموجب --}}
-                @if ($amount > 0)
-                    <span class="me-1">+</span>
-                @endif
+                                 <span
+                                     class="d-inline-flex align-items-center bg-{{ $amount > 0 ? 'danger' : 'success' }} text-white rounded-pill px-2 py-1 small lh-sm text-nowrap">
+                                     {{-- اختياري: علامة + للموجب --}}
+                                     @if ($amount > 0)
+                                         <span class="me-1">+</span>
+                                     @endif
 
-                <strong dir="ltr" class="mx-1">{{ number_format(abs($amount), 2) }}</strong>
-                <span>{{ $currency === 'SAR' ? 'ر. سعودي' : 'دينار' }}</span>
+                                     <strong dir="ltr"
+                                         class="mx-1">{{ number_format(abs($amount), 2) }}</strong>
+                                     <span>{{ $currency === 'SAR' ? 'ر. سعودي' : 'دينار' }}</span>
 
-                @if ($amount < 0)
-                    <span class="ms-1 opacity-75">(دفعوا زيادة)</span>
-                @endif
-            </span>
-        @endforeach
-    </div>
-@endif
+                                     @if ($amount < 0)
+                                         <span class="ms-1 opacity-75">(دفعوا زيادة)</span>
+                                     @endif
+                                 </span>
+                             @endforeach
+                         </div>
+                     @endif
 
 
-                      @php
+                     @php
                          $cb = $company->current_balance ?? [];
                          $bal = $cb['balance'] ?? 0;
                          $enteredDue = $cb['entered_due'] ?? 0;
@@ -226,16 +228,19 @@
                          </div>
                          <div class="d-flex justify-content-between border-bottom pb-1 mb-1">
                              <span class="text-muted">دخلت</span>
-                             <span class="fw-semibold text-primary" dir="ltr">{{ number_format($enteredDue,2) }} ر.</span>
+                             <span class="fw-semibold text-primary" dir="ltr">{{ number_format($enteredDue, 2) }}
+                                 ر.</span>
                          </div>
                          <div class="d-flex justify-content-between border-bottom pb-1 mb-1">
                              <span class="text-muted">مدفوع + خصومات</span>
-                             <span class="fw-semibold text-info" dir="ltr">{{ number_format($effectivePaid,2) }} ر.</span>
+                             <span class="fw-semibold text-info" dir="ltr">{{ number_format($effectivePaid, 2) }}
+                                 ر.</span>
                          </div>
                          <div class="d-flex justify-content-between">
-                             <span class="text-muted">{{ $bal > 0 ? 'مستحق' : ($bal < 0 ? 'دفع زائد' : 'الصافي') }}</span>
+                             <span
+                                 class="text-muted">{{ $bal > 0 ? 'مستحق' : ($bal < 0 ? 'دفع زائد' : 'الصافي') }}</span>
                              <span class="fw-bold text-{{ $accColor }}" dir="ltr">
-                                 {{ number_format(abs($bal),2) }} ر.
+                                 {{ number_format(abs($bal), 2) }} ر.
                              </span>
                          </div>
                      </div>
@@ -374,40 +379,37 @@
      </tfoot>
  </table>
 
-     <!-- للشركات نموذج تسجيل الدفعات -->
-            @foreach ($companiesReport as $company)
-                <div class="modal fade" id="paymentModal{{ $company->id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <form action="{{ route('reports.company.payment') }}" method="POST"
-                                enctype="multipart/form-data">
-                                @csrf
-                                <input type="hidden" name="company_id" value="{{ $company->id }}">
-                                <input type="hidden" name="is_discount" id="is-discount-{{ $company->id }}"
-                                    value="0">
+ <!-- للشركات نموذج تسجيل الدفعات -->
+ @foreach ($companiesReport as $company)
+     <div class="modal fade" id="paymentModal{{ $company->id }}" tabindex="-1">
+         <div class="modal-dialog">
+             <div class="modal-content">
+                 <form action="{{ route('reports.company.payment') }}" method="POST" enctype="multipart/form-data">
+                     @csrf
+                     <input type="hidden" name="company_id" value="{{ $company->id }}">
+                     <input type="hidden" name="is_discount" id="is-discount-{{ $company->id }}" value="0">
 
-                                <div class="modal-header">
-                                    <h5 class="modal-title">تسجيل دفعة - {{ $company->name }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
+                     <div class="modal-header">
+                         <h5 class="modal-title">تسجيل دفعة - {{ $company->name }}</h5>
+                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                     </div>
 
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">المبلغ المدفوع والعملة</label>
-                                        <div> قم بعمل سند قبض لهذه العملية : <a
-                                                href="{{ route('admin.receipt.voucher') }}" target="_blank">إنشاء سند
-                                                قبض</a></div>
-                                        <div class="input-group">
-                                            <input type="number" step="0.01" class="form-control" name="amount"
-                                                required>
-                                            <select class="form-select" name="currency" style="max-width: 120px;">
-                                                <option value="SAR" selected>ريال سعودي</option>
-                                                <option value="KWD">دينار كويتي</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
-                                    {{-- <div class="mb-3">
+                     <div class="modal-body">
+                         <div class="mb-3">
+                             <label class="form-label">المبلغ المدفوع والعملة</label>
+                             <div> قم بعمل سند قبض لهذه العملية : <a href="{{ route('admin.receipt.voucher') }}"
+                                     target="_blank">إنشاء سند
+                                     قبض</a></div>
+                             <div class="input-group">
+                                 <input type="number" step="0.01" class="form-control" name="amount" required>
+                                 <select class="form-select" name="currency" style="max-width: 120px;">
+                                     <option value="SAR" selected>ريال سعودي</option>
+                                     <option value="KWD">دينار كويتي</option>
+                                 </select>
+                             </div>
+                         </div>
+                         {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
+                         {{-- <div class="mb-3">
                                     <label for="receipt_file_company_{{ $company->id }}" class="form-label">إرفاق إيصال
                                         (اختياري)
                                     </label>
@@ -417,52 +419,292 @@
                                 <small class="form-text text-muted">الملفات المسموحة: JPG, PNG, PDF (بحد أقصى
                                     5MB)</small>
                             </div> --}}
-                                    {{-- *** نهاية حقل رفع الملف *** --}}
-                                    <div class="mb-3">
-                                        <label class="form-label">ملاحظات <br>
-                                            (إن كانت معك صورة من التحويل ارفعها على درايف وضع الرابط هنا)
-                                        </label>
-                                        <textarea class="form-control" name="notes"></textarea>
-                                    </div>
-                                </div>
+                         {{-- *** نهاية حقل رفع الملف *** --}}
+                         <div class="mb-3">
+                             <label class="form-label">ملاحظات <br>
+                                 (إن كانت معك صورة من التحويل ارفعها على درايف وضع الرابط هنا)
+                             </label>
+                             <textarea class="form-control" name="notes"></textarea>
+                         </div>
+                     </div>
 
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary"
-                                        data-bs-dismiss="modal">إغلاق</button>
-                                    <button type="button" class="btn btn-warning"
-                                        id="toggleDiscountBtn-{{ $company->id }}"
-                                        onclick="toggleDiscountMode({{ $company->id }})">تسجيل خصم</button>
-                                    <button type="submit" class="btn btn-primary"
-                                        id="submitBtn-{{ $company->id }}">تسجيل
-                                        الدفعة</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-            <script>
-                   function toggleDiscountMode(companyId) {
-                    const isDiscountField = document.getElementById('is-discount-' + companyId);
-                    const submitBtn = document.getElementById('submitBtn-' + companyId);
-                    const toggleBtn = document.getElementById('toggleDiscountBtn-' + companyId);
-                    const modalTitle = document.querySelector('#paymentModal' + companyId + ' .modal-title');
-                    const companyName = modalTitle.textContent.split('-')[1].trim();
+                     <div class="modal-footer">
+                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                         <button type="button" class="btn btn-warning" id="toggleDiscountBtn-{{ $company->id }}"
+                             onclick="toggleDiscountMode({{ $company->id }})">تسجيل خصم</button>
+                         <button type="submit" class="btn btn-primary" id="submitBtn-{{ $company->id }}">تسجيل
+                             الدفعة</button>
+                     </div>
+                 </form>
+             </div>
+         </div>
+     </div>
+ @endforeach
+ <script>
+     function toggleDiscountMode(companyId) {
+         const isDiscountField = document.getElementById('is-discount-' + companyId);
+         const submitBtn = document.getElementById('submitBtn-' + companyId);
+         const toggleBtn = document.getElementById('toggleDiscountBtn-' + companyId);
+         const modalTitle = document.querySelector('#paymentModal' + companyId + ' .modal-title');
+         const companyName = modalTitle.textContent.split('-')[1].trim();
 
-                    if (isDiscountField.value === "0") {
-                        isDiscountField.value = "1";
-                        submitBtn.textContent = "تطبيق الخصم";
-                        submitBtn.classList.remove('btn-primary');
-                        submitBtn.classList.add('btn-warning');
-                        toggleBtn.textContent = "تسجيل دفعة";
-                        modalTitle.textContent = "تسجيل خصم - " + companyName;
-                    } else {
-                        isDiscountField.value = "0";
-                        submitBtn.textContent = "تسجيل الدفعة";
-                        submitBtn.classList.remove('btn-warning');
-                        submitBtn.classList.add('btn-primary');
-                        toggleBtn.textContent = "تسجيل خصم";
-                        modalTitle.textContent = "تسجيل دفعة - " + companyName;
-                    }
-                }
-            </script>
+         if (isDiscountField.value === "0") {
+             isDiscountField.value = "1";
+             submitBtn.textContent = "تطبيق الخصم";
+             submitBtn.classList.remove('btn-primary');
+             submitBtn.classList.add('btn-warning');
+             toggleBtn.textContent = "تسجيل دفعة";
+             modalTitle.textContent = "تسجيل خصم - " + companyName;
+         } else {
+             isDiscountField.value = "0";
+             submitBtn.textContent = "تسجيل الدفعة";
+             submitBtn.classList.remove('btn-warning');
+             submitBtn.classList.add('btn-primary');
+             toggleBtn.textContent = "تسجيل خصم";
+             modalTitle.textContent = "تسجيل دفعة - " + companyName;
+         }
+     }
+ </script>
+ {{-- ✅ إضافة مكتبة XLSX --}}
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+ <script>
+     function exportTableOfCompanies() {
+         (async () => {
+             const tableSelector = '#companiesTableContent';
+             const paginationSelector = 'ul.pagination';
+             const colSelectors = {
+                 company: 'td:nth-child(1)',
+                 bookingsCount: 'td:nth-child(2)',
+                 totalDue: 'td:nth-child(3)',
+                 paid: 'td:nth-child(4)',
+                 remaining: 'td:nth-child(5)',
+             };
+
+             // ===== Helpers =====
+             const normText = (t) => (t || '').replace(/\s+/g, ' ').trim();
+             const normalizeDigits = (s) => (s || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+
+             const firstNumberIn = (txt) => {
+                 if (!txt) return null;
+                 const s = normalizeDigits(txt).replace(/٬/g, ',');
+                 const m = s.match(/-?\d+(?:[\.,]\d+)?/);
+                 return m ? Number(m[0].replace(/,/g, '.')) : null;
+             };
+
+             const parseNumberLoose = (txt) => firstNumberIn(txt);
+
+             const getPageUrls = (rootDoc) => {
+                 const urls = new Set([location.href]); // ضمّن الصفحة الحالية
+                 const pag = rootDoc.querySelector(paginationSelector);
+                 if (pag) {
+                     pag.querySelectorAll('a.page-link[href]').forEach(a => {
+                         try {
+                             urls.add(new URL(a.href, location.href).href);
+                         } catch {}
+                     });
+                 }
+                 return urls;
+             };
+
+             const fetchDoc = async (url) => {
+                 const res = await fetch(url, {
+                     credentials: 'same-origin'
+                 });
+                 const html = await res.text();
+                 return new DOMParser().parseFromString(html, 'text/html');
+             };
+
+             // ===== رصيد اليوم: دخلت / مدفوع(+خصومات) / الصافي =====
+             const extractDailyBalance = (tdRemaining) => {
+                 const out = {
+                     "دخلت": null,
+                     "مدفوع": null,
+                     "الصافي": null
+                 };
+                 if (!tdRemaining) return out;
+                 const card = tdRemaining.querySelector('.company-balance-card');
+                 if (!card) return out;
+
+                 card.querySelectorAll('.d-flex.justify-content-between').forEach(row => {
+                     const key = normText(row.querySelector('span:first-child')?.textContent || '');
+                     const val = normText(row.querySelector('span:last-child')?.textContent || '');
+                     if (/دخلت/.test(key)) out["دخلت"] = val || null;
+                     else if (/مدفوع/.test(key)) out["مدفوع"] = val || null; // يشمل "مدفوع + خصومات"
+                     else if (/الصافي/.test(key)) out["الصافي"] = val || null;
+                 });
+
+                 return out;
+             };
+
+             // ===== استنتاج المتبقي من البادج =====
+             const extractRemainingBadge = (tdRemaining) => {
+                 if (!tdRemaining) return {
+                     num: null,
+                     extra: false
+                 };
+                 const pill = tdRemaining.querySelector('.rounded-pill');
+                 let num = null;
+                 if (pill) {
+                     const amt = normText(pill.querySelector('strong')?.textContent || '');
+                     num = firstNumberIn(amt);
+                 }
+                 const detailsText = normText(tdRemaining.textContent || '');
+                 const extra = /دفع زائد/.test(detailsText);
+                 return {
+                     num,
+                     extra
+                 };
+             };
+
+             const extractRow = (tr) => {
+                 const td1 = tr.querySelector(colSelectors.company);
+                 const td2 = tr.querySelector(colSelectors.bookingsCount);
+                 const td3 = tr.querySelector(colSelectors.totalDue);
+                 const td4 = tr.querySelector(colSelectors.paid);
+                 const td5 = tr.querySelector(colSelectors.remaining);
+
+                 const companyRaw = normText(td1?.textContent);
+                 const company = companyRaw.replace(/^\d+\.\s*/, '');
+
+                 const totalDueRaw = normText(td3?.textContent);
+                 const paidRaw = normText(td4?.textContent);
+
+                 const total_due = parseNumberLoose(totalDueRaw);
+                 const paid = parseNumberLoose(paidRaw);
+
+                 const daily = extractDailyBalance(td5);
+                 const remBadge = extractRemainingBadge(td5);
+
+                 let remaining = null;
+                 if (typeof total_due === 'number' && typeof paid === 'number') {
+                     remaining = Number((total_due - paid).toFixed(2));
+                 } else if (typeof remBadge.num === 'number') {
+                     remaining = remBadge.num;
+                 }
+                 if (remaining === null && remBadge.extra && typeof remBadge.num === 'number') {
+                     remaining = -Math.abs(remBadge.num);
+                 }
+
+                 // كائن العرض العربي (للطباعة/الإكسيل)
+                 const displayRow = {
+                     "اسم الشركة": company,
+                     "عدد الحجوزات المسجلة": td2 ? Number(firstNumberIn(td2.textContent) ?? 0) : 0,
+                     "إجمالي المستحق": (typeof total_due === 'number') ? total_due : null,
+                     "المدفوع": (typeof paid === 'number') ? paid : null,
+                     "المتبقي": (typeof remaining === 'number') ? remaining : null,
+                     "رصيد اليوم - دخلت": daily["دخلت"],
+                     "رصيد اليوم - مدفوع": daily["مدفوع"],
+                     "رصيد اليوم - الصافي": daily["الصافي"]
+                 };
+
+                 // كائن رقمي موازي (اختياري) لو حبيت تجمع جوه إكسل
+                 const numericRow = {
+                     ...displayRow,
+                     "رصيد اليوم - دخلت (num)": firstNumberIn(daily["دخلت"]),
+                     "رصيد اليوم - مدفوع (num)": firstNumberIn(daily["مدفوع"]),
+                     "رصيد اليوم - الصافي (num)": firstNumberIn(daily["الصافي"])
+                 };
+
+                 return {
+                     displayRow,
+                     numericRow
+                 };
+             };
+
+             const extractRowsFromDoc = (doc) => {
+                 const view = [];
+                 const numeric = [];
+                 const table = doc.querySelector(tableSelector);
+                 if (!table) return {
+                     view,
+                     numeric
+                 };
+                 table.querySelectorAll('tbody tr').forEach(tr => {
+                     const tds = tr.querySelectorAll('td');
+                     if (tds.length < 5) return; // تجاهل صفوف غير البيانات
+                     const {
+                         displayRow,
+                         numericRow
+                     } = extractRow(tr);
+                     view.push(displayRow);
+                     numeric.push(numericRow);
+                 });
+                 return {
+                     view,
+                     numeric
+                 };
+             };
+
+             // ===== التنفيذ: نفس منهج تجميع الروابط من الباجيناشن مرة واحدة =====
+             const allUrls = Array.from(getPageUrls(document)).sort((a, b) => {
+                 const getN = (u) => {
+                     const url = new URL(u, location.href);
+                     return Number(url.searchParams.get('companies_page') || (url.href === location
+                         .href ? 1 : 1e9));
+                 };
+                 return getN(a) - getN(b);
+             });
+
+             const allRowsView = [];
+             const allRowsNumeric = [];
+             const currentHref = location.href;
+
+             // الصفحة الحالية
+             {
+                 const {
+                     view,
+                     numeric
+                 } = extractRowsFromDoc(document);
+                 allRowsView.push(...view);
+                 allRowsNumeric.push(...numeric);
+             }
+
+             // باقي الصفحات
+             for (const url of allUrls) {
+                 if (url === currentHref) continue;
+                 try {
+                     const doc = await fetchDoc(url);
+                     const {
+                         view,
+                         numeric
+                     } = extractRowsFromDoc(doc);
+                     allRowsView.push(...view);
+                     allRowsNumeric.push(...numeric);
+                     console.log('✅ Extracted:', url);
+                 } catch (e) {
+                     console.warn('⚠️ Failed:', url, e);
+                 }
+             }
+
+             // ===== طباعة JSON في الكونسول =====
+             console.log('=== النتائج (عرض) ===');
+             console.log(JSON.stringify(allRowsView, null, 2));
+             console.log('=== النتائج (رقمية) ===');
+             console.log(JSON.stringify(allRowsNumeric, null, 2));
+             console.log(`🎉 تم — عدد الصفوف: ${allRowsView.length}`);
+
+             // ===== تصدير إلى Excel باستخدام SheetJS =====
+             if (!window.XLSX) {
+                 alert('لم يتم تحميل مكتبة XLSX. تأكد من تضمين المكتبة في الصفحة.');
+                 return;
+             }
+
+             // Sheet 1: عرض عربي كما هو
+             const ws1 = XLSX.utils.json_to_sheet(allRowsView, {
+                 skipHeader: false
+             });
+
+             // Sheet 2: نسخة رقمية (أعمدة إضافية للأرقام)
+             const ws2 = XLSX.utils.json_to_sheet(allRowsNumeric, {
+                 skipHeader: false
+             });
+
+             const wb = XLSX.utils.book_new();
+             XLSX.utils.book_append_sheet(wb, ws1, 'تقرير (عرض)');
+             XLSX.utils.book_append_sheet(wb, ws2, 'تقرير (رقمي)');
+
+             const fileName = `حساب-المطلوب-من-الشركات-${new Date().toISOString().split('T')[0]}.xlsx`;
+             XLSX.writeFile(wb, fileName);
+         })();
+     }
+ </script>

@@ -150,6 +150,8 @@
                 <div class="card mb-4 overflow-hidden">
                     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <h3 class="mb-0 text-dark">حساب المطلوب من الشركات</h3>
+                        <button class="btn btn-success btn-sm" onclick="exportTableOfCompanies()">تحميل
+                            الجدول   <i class="fas fa-download"></i></button>
                         <div class="btn-group" role="group">
                             <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTableContent')">نسخ
                                 الجدول</button>
@@ -353,7 +355,7 @@
                 </script>
             @endpush
 
-        
+
 
             <!-- جدول الفنادق -->
             <div class="card mb-4">
@@ -698,8 +700,6 @@
                     }
                     window.getSelection().removeAllRanges();
                 }
-
-             
             </script>
             <script>
                 // ==========================================
