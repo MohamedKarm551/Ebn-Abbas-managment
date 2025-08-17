@@ -234,6 +234,7 @@
                                     {{ $trip->tripType->name }} - {{ $trip->hotel->name ?? 'غير محدد' }}
                                     ({{ $trip->departure_date->format('d/m/Y') }} -
                                     {{ $trip->return_date->format('d/m/Y') }})
+                                    {{$trip->agent->name}}
                                 </option>
                             @endforeach
                         </select>
