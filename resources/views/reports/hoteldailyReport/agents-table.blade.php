@@ -317,3 +317,286 @@
         </tfoot>
     @endif
 </table>
+<script>
+    function exportAgentsTable() {
+        const btn = document.getElementById('export-agents-btn');
+        const originalHtml = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = `جاري التحميل... <i class="fas fa-spinner fa-spin"></i>`;
+
+        (async () => {
+            try {
+                // ===== إعدادات الجدول =====
+                const tableSelector = '#agentsTableContent';
+                const paginationSelector = '#agentsPaginationContainer ul.pagination';
+                const colSelectors = {
+                    agent: 'td:nth-child(1)',
+                    bookingsCount: 'td:nth-child(2)',
+                    totalDue: 'td:nth-child(3)',
+                    paid: 'td:nth-child(4)',
+                    remaining: 'td:nth-child(5)',
+                };
+
+                // ===== Helpers =====
+                const normText = (t) => (t || '').replace(/\s+/g, ' ').trim();
+                const normalizeDigits = (s) => (s || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+
+                const parseAmountSmart = (raw) => {
+                    if (!raw) return null;
+                    let s = normalizeDigits(raw)
+                        .replace(/\s|\u00A0|\u200F|\u200E/g, '')
+                        .replace(/٫/g, '.')
+                        .replace(/٬/g, ',');
+                    const token = (s.match(/[-+0-9.,]+/g) || [])[0];
+                    if (!token) return null;
+
+                    s = token;
+                    const dots = (s.match(/\./g) || []).length;
+                    const commas = (s.match(/,/g) || []).length;
+                    const seps = dots + commas;
+
+                    if (seps === 0) return Number(s);
+
+                    if (seps >= 2) {
+                        const lastSepIdx = Math.max(s.lastIndexOf(','), s.lastIndexOf('.'));
+                        const intPart = s.slice(0, lastSepIdx).replace(/[.,]/g, '');
+                        const fracPart = s.slice(lastSepIdx + 1).replace(/[^\d]/g, '');
+                        return Number(`${intPart}.${fracPart || '0'}`);
+                    }
+
+                    const sep = s.includes('.') ? '.' : ',';
+                    const sepIdx = s.lastIndexOf(sep);
+                    const before = s.slice(0, sepIdx);
+                    const after = s.slice(sepIdx + 1);
+
+                    if (/^\d{3}$/.test(after)) {
+                        return Number((before + after).replace(/[^\d\-+]/g, ''));
+                    }
+
+                    const normalized = (sep === ',') ?
+                        s.replace(/\./g, '').replace(',', '.') :
+                        s.replace(/,/g, '');
+                    return Number(normalized);
+                };
+
+                const firstAmountIn = (txt) => {
+                    if (!txt) return null;
+                    const s = normalizeDigits(txt).replace(/٫/g, '.').replace(/٬/g, ',');
+                    const tokens = s.match(/[-+0-9.,]+/g);
+                    if (!tokens) return null;
+                    for (const tok of tokens) {
+                        const n = parseAmountSmart(tok);
+                        if (Number.isFinite(n)) return n;
+                    }
+                    return null;
+                };
+
+                // === اجمع كل روابط صفحات الوكلاء (agents_page) ===
+                const getPageUrls = (rootDoc) => {
+                    const urls = new Set([location.href]); // الصفحة الحالية
+                    const pag = rootDoc.querySelector(paginationSelector);
+                    if (pag) {
+                        pag.querySelectorAll('a.page-link[href]').forEach(a => {
+                            try {
+                                const u = new URL(a.href, location.href);
+                                // نتأكد إن الرابط فعلاً فيه agents_page علشان ما نعملش تكرار
+                                if (u.searchParams.has('agents_page')) urls.add(u.href);
+                            } catch {}
+                        });
+                    }
+                    return Array.from(urls);
+                };
+
+                const fetchDoc = async (url) => {
+                    const res = await fetch(url, {
+                        credentials: 'same-origin'
+                    });
+                    const html = await res.text();
+                    return new DOMParser().parseFromString(html, 'text/html');
+                };
+
+                // ===== رصيد اليوم (دخلت/مدفوع/دفع زائد) + المتبقي =====
+                const extractDailyBalance = (tdRemaining) => {
+                    const out = {
+                        "دخلت": null,
+                        "مدفوع": null,
+                        "دفع زائد": null
+                    };
+                    if (!tdRemaining) return out;
+
+                    // العناصر مثل <li class="list-group-item ...">
+                    tdRemaining.querySelectorAll('li.list-group-item').forEach(row => {
+                        const key = normText(row.querySelector('span:first-child')?.textContent ||
+                            '');
+                        const val = normText(row.querySelector('span:last-child')?.textContent ||
+                            '');
+                        if (/دخلت/.test(key)) out["دخلت"] = val || null;
+                        else if (/مدفوع/.test(key)) out["مدفوع"] = val || null;
+                        else if (/دفع زائد/.test(key)) out["دفع زائد"] = val || null;
+                    });
+
+                    return out;
+                };
+
+                const extractRemainingBadge = (tdRemaining) => {
+                    if (!tdRemaining) return {
+                        num: null,
+                        raw: null
+                    };
+                    const pill = tdRemaining.querySelector('.rounded-pill'); // كل البادج
+                    let num = null,
+                        raw = null;
+                    if (pill) {
+                        raw = normText(pill.textContent || '');
+                        const strong = pill.querySelector('strong');
+                        if (strong) num = firstAmountIn(strong.textContent);
+                        else num = firstAmountIn(raw);
+                    }
+                    return {
+                        num,
+                        raw
+                    };
+                };
+
+                const extractRow = (tr) => {
+                    const td1 = tr.querySelector(colSelectors.agent);
+                    const td2 = tr.querySelector(colSelectors.bookingsCount);
+                    const td3 = tr.querySelector(colSelectors.totalDue);
+                    const td4 = tr.querySelector(colSelectors.paid);
+                    const td5 = tr.querySelector(colSelectors.remaining);
+
+                    const agentRaw = normText(td1?.textContent);
+                    const agent = agentRaw.replace(/^\d+\.\s*/, ''); // يشيل رقم الترتيب "1. "
+
+                    const total_due = firstAmountIn(normText(td3?.textContent));
+                    const paid_main = firstAmountIn(normText(td4?.textContent));
+
+                    const daily = extractDailyBalance(td5);
+                    const rem = extractRemainingBadge(td5);
+                    const remaining = (typeof rem.num === 'number') ? rem.num : null;
+
+                    const displayRow = {
+                        "جهة الحجز": agent,
+                        "عدد الحجوزات": td2 ? Number(firstAmountIn(td2.textContent) ?? 0) : 0,
+                        "إجمالي المستحق": (typeof total_due === 'number') ? total_due : null,
+                        "المدفوع": (typeof paid_main === 'number') ? paid_main : null,
+                        "المتبقي": (typeof remaining === 'number') ? remaining : null,
+                        "رصيد اليوم - دخلت": daily["دخلت"],
+                        "رصيد اليوم - مدفوع": daily["مدفوع"],
+                        "رصيد اليوم - دفع زائد": daily["دفع زائد"],
+                    };
+
+                    const numericRow = {
+                        ...displayRow,
+                        "رصيد اليوم - دخلت (num)": firstAmountIn(daily["دخلت"]),
+                        "رصيد اليوم - مدفوع (num)": firstAmountIn(daily["مدفوع"]),
+                        "رصيد اليوم - دفع زائد (num)": firstAmountIn(daily["دفع زائد"]),
+                    };
+
+                    return {
+                        displayRow,
+                        numericRow
+                    };
+                };
+
+                const extractRowsFromDoc = (doc) => {
+                    const view = [];
+                    const numeric = [];
+                    const table = doc.querySelector(tableSelector);
+                    if (!table) return {
+                        view,
+                        numeric
+                    };
+
+                    table.querySelectorAll('tbody tr').forEach(tr => {
+                        const tds = tr.querySelectorAll('td');
+                        if (tds.length < 5) return; // لازم الخمس أعمدة الأساسية
+                        const {
+                            displayRow,
+                            numericRow
+                        } = extractRow(tr);
+                        view.push(displayRow);
+                        numeric.push(numericRow);
+                    });
+
+                    return {
+                        view,
+                        numeric
+                    };
+                };
+
+                // ===== التنفيذ: نجمع من كل صفحات الوكلاء =====
+                const allUrls = getPageUrls(document).sort((a, b) => {
+                    const getN = (u) => {
+                        const url = new URL(u, location.href);
+                        // الصفحة الحالية قد لا تحتوي agents_page => نعتبرها 1
+                        return Number(url.searchParams.get('agents_page') || (url.href === location
+                            .href ? 1 : 1e9));
+                    };
+                    return getN(a) - getN(b);
+                });
+
+                const allRowsView = [];
+                const allRowsNumeric = [];
+
+                // الصفحة الحالية
+                {
+                    const {
+                        view,
+                        numeric
+                    } = extractRowsFromDoc(document);
+                    allRowsView.push(...view);
+                    allRowsNumeric.push(...numeric);
+                }
+
+                // باقي الصفحات
+                for (const url of allUrls) {
+                    if (url === location.href) continue;
+                    try {
+                        const doc = await fetchDoc(url);
+                        const {
+                            view,
+                            numeric
+                        } = extractRowsFromDoc(doc);
+                        allRowsView.push(...view);
+                        allRowsNumeric.push(...numeric);
+                        console.log('✅ Extracted:', url);
+                    } catch (e) {
+                        console.warn('⚠️ Failed:', url, e);
+                    }
+                }
+
+                console.log('=== وكلاء (عرض) ===');
+                console.log(JSON.stringify(allRowsView, null, 2));
+                console.log('=== وكلاء (رقمي) ===');
+                console.log(JSON.stringify(allRowsNumeric, null, 2));
+                console.log(`🎉 تم — عدد الصفوف: ${allRowsView.length}`);
+
+                // ===== تصدير Excel بـ SheetJS =====
+                if (window.XLSX) {
+                    const ws1 = XLSX.utils.json_to_sheet(allRowsView, {
+                        skipHeader: false
+                    });
+                    const ws2 = XLSX.utils.json_to_sheet(allRowsNumeric, {
+                        skipHeader: false
+                    });
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws1, 'تقرير (عرض)');
+                    XLSX.utils.book_append_sheet(wb, ws2, 'تقرير (رقمي)');
+                    const fileName = `حساب-جهات الحجز-${new Date().toISOString().split('T')[0]}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                } else {
+                    console.warn('XLSX library not found. Skipping Excel export.');
+                }
+
+            } catch (err) {
+                console.error('Export failed:', err);
+            } finally {
+                // ✅ رجوع الزر لحالته الطبيعية مهما حصل
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        })();
+    }
+</script>

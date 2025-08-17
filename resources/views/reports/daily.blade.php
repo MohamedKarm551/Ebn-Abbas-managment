@@ -151,7 +151,7 @@
                     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <h3 class="mb-0 text-dark">حساب المطلوب من الشركات</h3>
                         <button class="btn btn-success btn-sm " id="export-btn" onclick="exportTableOfCompanies()">تحميل
-                            الجدول   <i class="fas fa-download"></i></button>
+                            الجدول <i class="fas fa-download"></i></button>
                         <div class="btn-group" role="group">
                             <button class="btn btn-secondary btn-sm" onclick="copyTable('companiesTableContent')">نسخ
                                 الجدول</button>
@@ -190,7 +190,10 @@
             <!-- جدول جهات الحجز مع AJAX Pagination -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="text-dark">حساب المستحق إلى جهات الحجز</h3>
+                    <h3 class="text-dark">حساب المستحق إلى جهات الحجز</h3> <button class="btn btn-success btn-sm"
+                        id="export-agents-btn" onclick="exportAgentsTable()">
+                        تحميل الجدول <i class="fas fa-download"></i>
+                    </button>
                     <div class="btn-group" role="group">
                         <button class="btn btn-secondary btn-sm" onclick="copyTable('agentsTableContent')">نسخ
                             الجدول</button>
