@@ -469,242 +469,304 @@
  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
  <script>
      function exportTableOfCompanies() {
+         const btn = document.getElementById('export-btn');
+         const originalHtml = btn.innerHTML;
+
+         // حالة التحميل
+         btn.disabled = true;
+         btn.innerHTML = `جاري التحميل... <i class="fas fa-spinner fa-spin"></i>`;
+
          (async () => {
-             const tableSelector = '#companiesTableContent';
-             const paginationSelector = 'ul.pagination';
-             const colSelectors = {
-                 company: 'td:nth-child(1)',
-                 bookingsCount: 'td:nth-child(2)',
-                 totalDue: 'td:nth-child(3)',
-                 paid: 'td:nth-child(4)',
-                 remaining: 'td:nth-child(5)',
-             };
+             try {
+                 const tableSelector = '#companiesTableContent';
+                 const paginationSelector = 'ul.pagination';
+                 const colSelectors = {
+                     company: 'td:nth-child(1)',
+                     bookingsCount: 'td:nth-child(2)',
+                     totalDue: 'td:nth-child(3)',
+                     paid: 'td:nth-child(4)',
+                     remaining: 'td:nth-child(5)',
+                 };
 
-             // ===== Helpers =====
-             const normText = (t) => (t || '').replace(/\s+/g, ' ').trim();
-             const normalizeDigits = (s) => (s || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+                 // ===== Helpers =====
+                 const normText = (t) => (t || '').replace(/\s+/g, ' ').trim();
+                 const normalizeDigits = (s) => (s || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
 
-             const firstNumberIn = (txt) => {
-                 if (!txt) return null;
-                 const s = normalizeDigits(txt).replace(/٬/g, ',');
-                 const m = s.match(/-?\d+(?:[\.,]\d+)?/);
-                 return m ? Number(m[0].replace(/,/g, '.')) : null;
-             };
+                 const parseAmountSmart = (raw) => {
+                     if (!raw) return null;
+                     let s = normalizeDigits(raw)
+                         .replace(/\s|\u00A0|\u200F|\u200E/g, '')
+                         .replace(/٫/g, '.')
+                         .replace(/٬/g, ',');
 
-             const parseNumberLoose = (txt) => firstNumberIn(txt);
+                     const token = (s.match(/[-+0-9.,]+/g) || [])[0];
+                     if (!token) return null;
 
-             const getPageUrls = (rootDoc) => {
-                 const urls = new Set([location.href]); // ضمّن الصفحة الحالية
-                 const pag = rootDoc.querySelector(paginationSelector);
-                 if (pag) {
-                     pag.querySelectorAll('a.page-link[href]').forEach(a => {
-                         try {
-                             urls.add(new URL(a.href, location.href).href);
-                         } catch {}
+                     s = token;
+                     const dots = (s.match(/\./g) || []).length;
+                     const commas = (s.match(/,/g) || []).length;
+                     const seps = dots + commas;
+
+                     if (seps === 0) return Number(s);
+
+                     if (seps >= 2) {
+                         const lastSepIdx = Math.max(s.lastIndexOf(','), s.lastIndexOf('.'));
+                         const intPart = s.slice(0, lastSepIdx).replace(/[.,]/g, '');
+                         const fracPart = s.slice(lastSepIdx + 1).replace(/[^\d]/g, '');
+                         return Number(`${intPart}.${fracPart || '0'}`);
+                     }
+
+                     const sep = s.includes('.') ? '.' : ',';
+                     const sepIdx = s.lastIndexOf(sep);
+                     const before = s.slice(0, sepIdx);
+                     const after = s.slice(sepIdx + 1);
+
+                     if (/^\d{3}$/.test(after)) {
+                         return Number((before + after).replace(/[^\d\-+]/g, ''));
+                     }
+
+                     const normalized = (sep === ',') ?
+                         s.replace(/\./g, '').replace(',', '.') :
+                         s.replace(/,/g, '');
+                     return Number(normalized);
+                 };
+
+                 const firstAmountIn = (txt) => {
+                     if (!txt) return null;
+                     const s = normalizeDigits(txt).replace(/٫/g, '.').replace(/٬/g, ',');
+                     const tokens = s.match(/[-+0-9.,]+/g);
+                     if (!tokens) return null;
+                     for (const tok of tokens) {
+                         const n = parseAmountSmart(tok);
+                         if (Number.isFinite(n)) return n;
+                     }
+                     return null;
+                 };
+
+                 const getPageUrls = (rootDoc) => {
+                     const urls = new Set([location.href]);
+                     const pag = rootDoc.querySelector(paginationSelector);
+                     if (pag) {
+                         pag.querySelectorAll('a.page-link[href]').forEach(a => {
+                             try {
+                                 urls.add(new URL(a.href, location.href).href);
+                             } catch {}
+                         });
+                     }
+                     return urls;
+                 };
+
+                 const fetchDoc = async (url) => {
+                     const res = await fetch(url, {
+                         credentials: 'same-origin'
                      });
-                 }
-                 return urls;
-             };
-
-             const fetchDoc = async (url) => {
-                 const res = await fetch(url, {
-                     credentials: 'same-origin'
-                 });
-                 const html = await res.text();
-                 return new DOMParser().parseFromString(html, 'text/html');
-             };
-
-             // ===== رصيد اليوم: دخلت / مدفوع(+خصومات) / الصافي =====
-             const extractDailyBalance = (tdRemaining) => {
-                 const out = {
-                     "دخلت": null,
-                     "مدفوع": null,
-                     "الصافي": null
-                 };
-                 if (!tdRemaining) return out;
-                 const card = tdRemaining.querySelector('.company-balance-card');
-                 if (!card) return out;
-
-                 card.querySelectorAll('.d-flex.justify-content-between').forEach(row => {
-                     const key = normText(row.querySelector('span:first-child')?.textContent || '');
-                     const val = normText(row.querySelector('span:last-child')?.textContent || '');
-                     if (/دخلت/.test(key)) out["دخلت"] = val || null;
-                     else if (/مدفوع/.test(key)) out["مدفوع"] = val || null; // يشمل "مدفوع + خصومات"
-                     else if (/الصافي/.test(key)) out["الصافي"] = val || null;
-                 });
-
-                 return out;
-             };
-
-             // ===== استنتاج المتبقي من البادج =====
-             const extractRemainingBadge = (tdRemaining) => {
-                 if (!tdRemaining) return {
-                     num: null,
-                     extra: false
-                 };
-                 const pill = tdRemaining.querySelector('.rounded-pill');
-                 let num = null;
-                 if (pill) {
-                     const amt = normText(pill.querySelector('strong')?.textContent || '');
-                     num = firstNumberIn(amt);
-                 }
-                 const detailsText = normText(tdRemaining.textContent || '');
-                 const extra = /دفع زائد/.test(detailsText);
-                 return {
-                     num,
-                     extra
-                 };
-             };
-
-             const extractRow = (tr) => {
-                 const td1 = tr.querySelector(colSelectors.company);
-                 const td2 = tr.querySelector(colSelectors.bookingsCount);
-                 const td3 = tr.querySelector(colSelectors.totalDue);
-                 const td4 = tr.querySelector(colSelectors.paid);
-                 const td5 = tr.querySelector(colSelectors.remaining);
-
-                 const companyRaw = normText(td1?.textContent);
-                 const company = companyRaw.replace(/^\d+\.\s*/, '');
-
-                 const totalDueRaw = normText(td3?.textContent);
-                 const paidRaw = normText(td4?.textContent);
-
-                 const total_due = parseNumberLoose(totalDueRaw);
-                 const paid = parseNumberLoose(paidRaw);
-
-                 const daily = extractDailyBalance(td5);
-                 const remBadge = extractRemainingBadge(td5);
-
-                 let remaining = null;
-                 if (typeof total_due === 'number' && typeof paid === 'number') {
-                     remaining = Number((total_due - paid).toFixed(2));
-                 } else if (typeof remBadge.num === 'number') {
-                     remaining = remBadge.num;
-                 }
-                 if (remaining === null && remBadge.extra && typeof remBadge.num === 'number') {
-                     remaining = -Math.abs(remBadge.num);
-                 }
-
-                 // كائن العرض العربي (للطباعة/الإكسيل)
-                 const displayRow = {
-                     "اسم الشركة": company,
-                     "عدد الحجوزات المسجلة": td2 ? Number(firstNumberIn(td2.textContent) ?? 0) : 0,
-                     "إجمالي المستحق": (typeof total_due === 'number') ? total_due : null,
-                     "المدفوع": (typeof paid === 'number') ? paid : null,
-                     "المتبقي": (typeof remaining === 'number') ? remaining : null,
-                     "رصيد اليوم - دخلت": daily["دخلت"],
-                     "رصيد اليوم - مدفوع": daily["مدفوع"],
-                     "رصيد اليوم - الصافي": daily["الصافي"]
+                     const html = await res.text();
+                     return new DOMParser().parseFromString(html, 'text/html');
                  };
 
-                 // كائن رقمي موازي (اختياري) لو حبيت تجمع جوه إكسل
-                 const numericRow = {
-                     ...displayRow,
-                     "رصيد اليوم - دخلت (num)": firstNumberIn(daily["دخلت"]),
-                     "رصيد اليوم - مدفوع (num)": firstNumberIn(daily["مدفوع"]),
-                     "رصيد اليوم - الصافي (num)": firstNumberIn(daily["الصافي"])
+                 const extractDailyBalance = (tdRemaining) => {
+                     const out = {
+                         "دخلت": null,
+                         "مدفوع": null,
+                         "الصافي": null
+                     };
+                     if (!tdRemaining) return out;
+                     const card = tdRemaining.querySelector('.company-balance-card');
+                     if (!card) return out;
+
+                     card.querySelectorAll('.d-flex.justify-content-between').forEach(row => {
+                         const key = normText(row.querySelector('span:first-child')?.textContent ||
+                             '');
+                         const val = normText(row.querySelector('span:last-child')?.textContent ||
+                             '');
+                         if (/دخلت/.test(key)) out["دخلت"] = val || null;
+                         else if (/مدفوع/.test(key)) out["مدفوع"] = val || null;
+                         else if (/الصافي/.test(key)) out["الصافي"] = val || null;
+                     });
+                     return out;
                  };
 
-                 return {
-                     displayRow,
-                     numericRow
+                 const extractRemainingBadge = (tdRemaining) => {
+                     if (!tdRemaining) return {
+                         num: null,
+                         raw: null
+                     };
+                     const pill = tdRemaining.querySelector('.rounded-pill');
+                     let num = null,
+                         raw = null;
+                     if (pill) {
+                         const amtEl = pill.querySelector('strong');
+                         raw = normText(pill.textContent || '');
+                         if (amtEl) num = firstAmountIn(amtEl.textContent);
+                     }
+                     return {
+                         num,
+                         raw
+                     };
                  };
-             };
 
-             const extractRowsFromDoc = (doc) => {
-                 const view = [];
-                 const numeric = [];
-                 const table = doc.querySelector(tableSelector);
-                 if (!table) return {
-                     view,
-                     numeric
+                 const extractDiscount = (tdPaid) => {
+                     if (!tdPaid) return {
+                         discount: null,
+                         discount_raw: null
+                     };
+                     let discount = null,
+                         discount_raw = null;
+                     tdPaid.querySelectorAll('small, span, div').forEach(el => {
+                         const t = normText(el.textContent || '');
+                         if (/خصومات/.test(t)) {
+                             discount_raw = t;
+                             const n = firstAmountIn(t);
+                             if (Number.isFinite(n)) discount = n;
+                         }
+                     });
+                     return {
+                         discount,
+                         discount_raw
+                     };
                  };
-                 table.querySelectorAll('tbody tr').forEach(tr => {
-                     const tds = tr.querySelectorAll('td');
-                     if (tds.length < 5) return; // تجاهل صفوف غير البيانات
+
+                 const extractRow = (tr) => {
+                     const td1 = tr.querySelector(colSelectors.company);
+                     const td2 = tr.querySelector(colSelectors.bookingsCount);
+                     const td3 = tr.querySelector(colSelectors.totalDue);
+                     const td4 = tr.querySelector(colSelectors.paid);
+                     const td5 = tr.querySelector(colSelectors.remaining);
+
+                     const companyRaw = normText(td1?.textContent);
+                     const company = companyRaw.replace(/^\d+\.\s*/, '');
+
+                     const total_due = firstAmountIn(normText(td3?.textContent));
+                     const paid_main = firstAmountIn(normText(td4?.textContent));
+
                      const {
+                         discount,
+                         discount_raw
+                     } = extractDiscount(td4);
+                     const daily = extractDailyBalance(td5);
+                     const rem = extractRemainingBadge(td5);
+
+                     const remaining = (typeof rem.num === 'number') ? rem.num : null;
+
+                     const displayRow = {
+                         "اسم الشركة": company,
+                         "عدد الحجوزات المسجلة": td2 ? Number(firstAmountIn(td2.textContent) ?? 0) : 0,
+                         "إجمالي المستحق": (typeof total_due === 'number') ? total_due : null,
+                         "المدفوع": (typeof paid_main === 'number') ? paid_main : null,
+                         "الخصومات": (typeof discount === 'number') ? discount : null,
+                         "المتبقي": (typeof remaining === 'number') ? remaining : null,
+                         "رصيد اليوم - دخلت": daily["دخلت"],
+                         "رصيد اليوم - مدفوع": daily["مدفوع"],
+                         "رصيد اليوم - الصافي": daily["الصافي"]
+                     };
+
+                     const numericRow = {
+                         ...displayRow,
+                         "رصيد اليوم - دخلت (num)": firstAmountIn(daily["دخلت"]),
+                         "رصيد اليوم - مدفوع (num)": firstAmountIn(daily["مدفوع"]),
+                         "رصيد اليوم - الصافي (num)": firstAmountIn(daily["الصافي"]),
+                         "الخصومات (raw)": discount_raw ?? null
+                     };
+
+                     return {
                          displayRow,
                          numericRow
-                     } = extractRow(tr);
-                     view.push(displayRow);
-                     numeric.push(numericRow);
+                     };
+                 };
+
+                 const extractRowsFromDoc = (doc) => {
+                     const view = [];
+                     const numeric = [];
+                     const table = doc.querySelector(tableSelector);
+                     if (!table) return {
+                         view,
+                         numeric
+                     };
+                     table.querySelectorAll('tbody tr').forEach(tr => {
+                         const tds = tr.querySelectorAll('td');
+                         if (tds.length < 5) return;
+                         const {
+                             displayRow,
+                             numericRow
+                         } = extractRow(tr);
+                         view.push(displayRow);
+                         numeric.push(numericRow);
+                     });
+                     return {
+                         view,
+                         numeric
+                     };
+                 };
+
+                 // ===== التنفيذ =====
+                 const allUrls = Array.from(getPageUrls(document)).sort((a, b) => {
+                     const getN = (u) => {
+                         const url = new URL(u, location.href);
+                         return Number(url.searchParams.get('companies_page') || (url.href ===
+                             location.href ? 1 : 1e9));
+                     };
+                     return getN(a) - getN(b);
                  });
-                 return {
-                     view,
-                     numeric
-                 };
-             };
 
-             // ===== التنفيذ: نفس منهج تجميع الروابط من الباجيناشن مرة واحدة =====
-             const allUrls = Array.from(getPageUrls(document)).sort((a, b) => {
-                 const getN = (u) => {
-                     const url = new URL(u, location.href);
-                     return Number(url.searchParams.get('companies_page') || (url.href === location
-                         .href ? 1 : 1e9));
-                 };
-                 return getN(a) - getN(b);
-             });
+                 const allRowsView = [];
+                 const allRowsNumeric = [];
+                 const currentHref = location.href;
 
-             const allRowsView = [];
-             const allRowsNumeric = [];
-             const currentHref = location.href;
-
-             // الصفحة الحالية
-             {
-                 const {
-                     view,
-                     numeric
-                 } = extractRowsFromDoc(document);
-                 allRowsView.push(...view);
-                 allRowsNumeric.push(...numeric);
-             }
-
-             // باقي الصفحات
-             for (const url of allUrls) {
-                 if (url === currentHref) continue;
-                 try {
-                     const doc = await fetchDoc(url);
+                 {
                      const {
                          view,
                          numeric
-                     } = extractRowsFromDoc(doc);
+                     } = extractRowsFromDoc(document);
                      allRowsView.push(...view);
                      allRowsNumeric.push(...numeric);
-                     console.log('✅ Extracted:', url);
-                 } catch (e) {
-                     console.warn('⚠️ Failed:', url, e);
                  }
+
+                 for (const url of allUrls) {
+                     if (url === currentHref) continue;
+                     try {
+                         const doc = await fetchDoc(url);
+                         const {
+                             view,
+                             numeric
+                         } = extractRowsFromDoc(doc);
+                         allRowsView.push(...view);
+                         allRowsNumeric.push(...numeric);
+                         console.log('✅ Extracted:', url);
+                     } catch (e) {
+                         console.warn('⚠️ Failed:', url, e);
+                     }
+                 }
+
+                 console.log('=== النتائج (عرض) ===');
+                 console.log(JSON.stringify(allRowsView, null, 2));
+                 console.log('=== النتائج (رقمية) ===');
+                 console.log(JSON.stringify(allRowsNumeric, null, 2));
+                 console.log(`🎉 تم — عدد الصفوف: ${allRowsView.length}`);
+
+                 if (window.XLSX) {
+                     const ws1 = XLSX.utils.json_to_sheet(allRowsView, {
+                         skipHeader: false
+                     });
+                     const ws2 = XLSX.utils.json_to_sheet(allRowsNumeric, {
+                         skipHeader: false
+                     });
+                     const wb = XLSX.utils.book_new();
+                     XLSX.utils.book_append_sheet(wb, ws1, 'تقرير (عرض)');
+                     XLSX.utils.book_append_sheet(wb, ws2, 'تقرير (رقمي)');
+                     const fileName = `حساب-المطلوب-من-الشركات-${new Date().toISOString().split('T')[0]}.xlsx`;
+                     XLSX.writeFile(wb, fileName);
+                 } else {
+                     console.warn('XLSX library not found. Skipping Excel export.');
+                 }
+             } catch (err) {
+                 console.error('Export failed:', err);
+                 // اختياري: بلغ المستخدم
+                 // alert('حصل خطأ أثناء التصدير. راجع الـ Console.');
+             } finally {
+                 // ✅ يرجع الزر لحالته الطبيعية مهما حصل
+                 btn.disabled = false;
+                 btn.innerHTML = originalHtml;
              }
-
-             // ===== طباعة JSON في الكونسول =====
-             console.log('=== النتائج (عرض) ===');
-             console.log(JSON.stringify(allRowsView, null, 2));
-             console.log('=== النتائج (رقمية) ===');
-             console.log(JSON.stringify(allRowsNumeric, null, 2));
-             console.log(`🎉 تم — عدد الصفوف: ${allRowsView.length}`);
-
-             // ===== تصدير إلى Excel باستخدام SheetJS =====
-             if (!window.XLSX) {
-                 alert('لم يتم تحميل مكتبة XLSX. تأكد من تضمين المكتبة في الصفحة.');
-                 return;
-             }
-
-             // Sheet 1: عرض عربي كما هو
-             const ws1 = XLSX.utils.json_to_sheet(allRowsView, {
-                 skipHeader: false
-             });
-
-             // Sheet 2: نسخة رقمية (أعمدة إضافية للأرقام)
-             const ws2 = XLSX.utils.json_to_sheet(allRowsNumeric, {
-                 skipHeader: false
-             });
-
-             const wb = XLSX.utils.book_new();
-             XLSX.utils.book_append_sheet(wb, ws1, 'تقرير (عرض)');
-             XLSX.utils.book_append_sheet(wb, ws2, 'تقرير (رقمي)');
-
-             const fileName = `حساب-المطلوب-من-الشركات-${new Date().toISOString().split('T')[0]}.xlsx`;
-             XLSX.writeFile(wb, fileName);
          })();
      }
  </script>
