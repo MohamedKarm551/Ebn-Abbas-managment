@@ -117,7 +117,7 @@
                 {{-- 📊 إجمالي المطلوب من الشركات --}}
                 <h6 class="text-primary"><i class="fas fa-coins me-2"></i>إجمالي المطلوب من الشركات:</h6>
                 <ul class="list-unstyled">
-                    @php
+                    {{-- @php
                         // ✅ حساب إجمالي المستحق من جميع الشركات حسب العملة
                         $totalDueFromCompaniesByCurrency = ['SAR' => 0, 'KWD' => 0];
                         foreach ($companiesReport as $company) {
@@ -137,6 +137,14 @@
                                 {{ $currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
                             </li>
                         @endif
+                    @endforeach --}}
+
+                    @foreach ($totalDueFromCompaniesByCurrency as $cur => $val)
+                        <li class="text-dark">
+                            <i class="fas fa-arrow-up me-1 text-info"></i>
+                            <strong>{{ number_format($val, 2) }}</strong>
+                            {{ $cur === 'SAR' ? 'ريال سعودي' : ($cur === 'KWD' ? 'دينار كويتي' : $cur) }}
+                        </li>
                     @endforeach
                 </ul>
 

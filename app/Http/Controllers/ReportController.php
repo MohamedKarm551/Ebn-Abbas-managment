@@ -18,6 +18,7 @@ use Carbon\CarbonPeriod; // لإجراء العمليات على التواري�
 use Illuminate\Support\Str; // لاستخدام دالة Str::limit
 use Illuminate\Support\Facades\Log; // لتسجيل الأخطاء في السجل
 use Barryvdh\DomPDF\Facade\Pdf; // تصدير بي دي اف!
+use Illuminate\Database\Eloquent\Builder; // لاستخدام Builder في الدوال
 
 
 
@@ -102,6 +103,10 @@ class ReportController extends Controller
         if ($currentPage > $totalPages && $totalPages > 0) {
             $currentPage = $totalPages;
         }
+        // 1) احسب الإجماليات من كل الشركات (بدون pagination)
+        $companyTotals = $this->computeCompanyTotals(clone $companiesQuery, ['SAR', 'KWD']);
+        // 2) خُد الـ Collection الكاملة للعرض والتقسيم لاحقًا
+        $companiesFull = $companyTotals['all_companies'];
 
         // الحصول على الشركات للصفحة الحالية
         $companiesReport = $companiesQuery->get()
@@ -512,10 +517,84 @@ class ReportController extends Controller
             'companyPaymentsByCurrency' => $companyPaymentsByCurrency,
             'agentPaymentsByCurrency' => $agentPaymentsByCurrency,
             'totalDueFromCompaniesByCurrency' => $totalDueFromCompaniesByCurrency,
-            'netProfitByCurrency' => $netProfitByCurrency
+            'netProfitByCurrency' => $netProfitByCurrency,
+
+            // ✅ إجماليات الشركات الصحيحة (من كل الشركات، ليست أول صفحة)
+            'totalDueFromCompaniesByCurrency'       => $companyTotals['by_currency']['due'],
+            'totalPaidByCompaniesByCurrency'        => $companyTotals['by_currency']['paid'],
+            'totalDiscountsFromCompaniesByCurrency' => $companyTotals['by_currency']['discounts'],
+            'totalRemainingFromCompaniesByCurrency' => $companyTotals['by_currency']['remaining'],
+
+            'totalDueFromCompanies'       => $companyTotals['grand']['due'],
+            'totalPaidByCompanies'        => $companyTotals['grand']['paid'],
+            'totalDiscountsFromCompanies' => $companyTotals['grand']['discounts'],
+            'totalRemainingFromCompanies' => $companyTotals['grand']['remaining'],
         ]);
     }
+    // حساب إجمالي المستحق مظبوط مش أول باجيناشن 
+    private function computeCompanyTotals(Builder $companiesQuery, array $currencies = ['SAR', 'KWD']): array
+    {
+        // ✅ نجيب كل الشركات (بدون pagination) ونحسب التوتالات مرة واحدة
+        $allCompaniesForCalculations = $companiesQuery->get()
+            ->map(function ($company) {
+                $company->total_bookings_count = $company->bookings_count + $company->land_trip_bookings_count;
+                $company->current_balance = $company->currentBalance();
+                $company->calculateTotals(); // لازم تكون بتعبي computed_*_by_currency
+                return $company;
+            })
+            ->sortByDesc('computed_total_due')
+            ->values();
 
+        // تهيئة مجاميع حسب العملة
+        $totalDueFromCompaniesByCurrency       = array_fill_keys($currencies, 0.0);
+        $totalPaidByCompaniesByCurrency        = array_fill_keys($currencies, 0.0);
+        $totalDiscountsFromCompaniesByCurrency = array_fill_keys($currencies, 0.0);
+
+        foreach ($allCompaniesForCalculations as $company) {
+            foreach (($company->computed_total_due_by_currency ?? []) as $cur => $amt) {
+                if (!array_key_exists($cur, $totalDueFromCompaniesByCurrency)) $totalDueFromCompaniesByCurrency[$cur] = 0.0;
+                $totalDueFromCompaniesByCurrency[$cur] += (float) $amt;
+            }
+            foreach (($company->computed_total_paid_by_currency ?? []) as $cur => $amt) {
+                if (!array_key_exists($cur, $totalPaidByCompaniesByCurrency)) $totalPaidByCompaniesByCurrency[$cur] = 0.0;
+                $totalPaidByCompaniesByCurrency[$cur] += (float) $amt;
+            }
+            foreach (($company->computed_total_discounts_by_currency ?? []) as $cur => $amt) {
+                if (!array_key_exists($cur, $totalDiscountsFromCompaniesByCurrency)) $totalDiscountsFromCompaniesByCurrency[$cur] = 0.0;
+                $totalDiscountsFromCompaniesByCurrency[$cur] += (float) $amt;
+            }
+        }
+
+        // المتبقي = المستحق − (المدفوع + الخصومات) لكل عملة
+        $totalRemainingFromCompaniesByCurrency = [];
+        foreach ($totalDueFromCompaniesByCurrency as $cur => $due) {
+            $paid      = $totalPaidByCompaniesByCurrency[$cur]        ?? 0.0;
+            $discounts = $totalDiscountsFromCompaniesByCurrency[$cur] ?? 0.0;
+            $totalRemainingFromCompaniesByCurrency[$cur] = $due - ($paid + $discounts);
+        }
+
+        // مجاميع كلية عبر كل العملات
+        $grandTotalDueFromCompanies       = array_sum($totalDueFromCompaniesByCurrency);
+        $grandTotalPaidByCompanies        = array_sum($totalPaidByCompaniesByCurrency);
+        $grandTotalDiscountsFromCompanies = array_sum($totalDiscountsFromCompaniesByCurrency);
+        $grandTotalRemainingFromCompanies = array_sum($totalRemainingFromCompaniesByCurrency);
+
+        return [
+            'all_companies' => $allCompaniesForCalculations, // Collection
+            'by_currency' => [
+                'due'        => $totalDueFromCompaniesByCurrency,
+                'paid'       => $totalPaidByCompaniesByCurrency,
+                'discounts'  => $totalDiscountsFromCompaniesByCurrency,
+                'remaining'  => $totalRemainingFromCompaniesByCurrency,
+            ],
+            'grand' => [
+                'due'        => $grandTotalDueFromCompanies,
+                'paid'       => $grandTotalPaidByCompanies,
+                'discounts'  => $grandTotalDiscountsFromCompanies,
+                'remaining'  => $grandTotalRemainingFromCompanies,
+            ],
+        ];
+    }
     /**
      * دالة جلب جهات الحجز بـ AJAX مع Pagination
      * نفس طريقة الفنادق تماماً ولكن للوكلاء
@@ -531,7 +610,7 @@ class ReportController extends Controller
             ->get()
             ->map(function ($agent) {
                 $agent->calculateTotals();
-                 $agent->current_balance = $agent->currentBalance(); 
+                $agent->current_balance = $agent->currentBalance();
                 return $agent;
             })
             ->sortByDesc('computed_total_due');
