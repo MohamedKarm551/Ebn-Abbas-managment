@@ -21,7 +21,7 @@
                         <div class="collapse-content">
                             <div class="row">
                                 {{-- القسم الأول: تحليل الشركات --}}
-                                @php
+                                {{-- @php
                                     // ✅ إجمالي المستحق لكل عملة (من companiesReport)
                                     $totalDueFromCompaniesByCurrency = ['SAR' => 0, 'KWD' => 0];
                                     foreach ($companiesReport as $company) {
@@ -35,6 +35,12 @@
                                     }
                                     // ✅ إجمالي المدفوع والخصومات من companyPaymentsByCurrency (مفترض موجود من الكنترولر)
                                     //     $companyPaymentsByCurrency = ['SAR'=>['paid'=>..,'discounts'=>..], 'KWD'=>[...] ];
+                                @endphp --}}
+                                {{-- تحليل الشركات  --}}
+                                @php
+                                    //   dd($totalDueFromCompaniesByCurrency['SAR'], $totalDueFromCompaniesByCurrency['KWD']);
+                                    // في الكنترولر : 
+                                    //'totalDueFromCompaniesByCurrency'       => $companyTotals['by_currency']['due'],
                                 @endphp
                                 <div class="col-md-6 mb-4">
                                     <div class="analysis-section">
@@ -389,7 +395,6 @@
                                                             $netProfit = $companyRemaining - $agentRemaining;
                                                             $symbol = $currency === 'SAR' ? 'ر.س' : 'د.ك';
 
-                                                           
                                                         @endphp
 
                                                         @if ($netProfit !== 0)
