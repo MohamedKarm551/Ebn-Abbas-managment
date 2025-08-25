@@ -646,7 +646,7 @@ class BookingOperationReportController extends Controller
                 'report_date' => $validated['report_date'],
                 'client_id' => $client->id,
                 'client_name' => $client->name,
-                'client_phone' => $client->phone,
+                'client_phone' =>$validated['client_phone'] ?? $client->phone,
                 'company_id' => $company ? $company->id : null,
                 'company_name' => $company ? $company->name : null,
                 'booking_type' => $validated['booking_type'] ?? null,
