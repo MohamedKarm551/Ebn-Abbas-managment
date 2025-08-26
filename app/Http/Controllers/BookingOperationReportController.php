@@ -27,11 +27,22 @@ use Carbon\Carbon;
 class BookingOperationReportController extends Controller
 {
     // عرض صفحة تقارير العمليات
-    public function index()
+    public function index(Request $request)
     {
-        $reports = BookingOperationReport::with(['employee', 'client', 'company', 'visas', 'flights', 'transports', 'hotels', 'landTrips'])
-            ->latest()
-            ->paginate(20);
+        $baseQuery = BookingOperationReport::with(['employee', 'client', 'company', 'visas', 'flights', 'transports', 'hotels', 'landTrips']);
+
+        // 🔍 فلترة بالبحث (اسم العميل / الشركة / مرجع الحجز)
+        if ($request->filled('search')) {
+            $search = trim($request->get('search'));
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('client_name', 'LIKE', "%{$search}%")
+                    ->orWhere('company_name', 'LIKE', "%{$search}%")
+                    ->orWhere('booking_reference', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $reports = $baseQuery->latest()->paginate(20)->appends($request->only('search'));
+
 
         // حساب الأرباح حسب العملة
         $profitsByCurrency = $this->calculateProfitsByCurrency();
@@ -42,13 +53,13 @@ class BookingOperationReportController extends Controller
             ->count();
 
 
-       
+
         return view('admin.operation-reports.index', compact(
             'reports',
             'profitsByCurrency',
             'reportsThisMonth',
-           
-            
+
+
         ));
     }
 
@@ -251,7 +262,7 @@ class BookingOperationReportController extends Controller
             'client_email' => 'nullable|email|max:255',
             'client_notes' => 'nullable|string',
             'company_name' => 'nullable|string|max:255',
-           
+
             'booking_type' => 'nullable|string|max:20',
             'booking_id' => 'nullable|integer',
             'booking_reference' => 'nullable|string|max:100',
@@ -279,7 +290,7 @@ class BookingOperationReportController extends Controller
             if ($request->filled('company_name')) {
                 $company = Company::firstOrCreate(
                     ['name' => $request->company_name]
-                   
+
                 );
             }
 
@@ -646,7 +657,7 @@ class BookingOperationReportController extends Controller
                 'report_date' => $validated['report_date'],
                 'client_id' => $client->id,
                 'client_name' => $client->name,
-                'client_phone' =>$validated['client_phone'] ?? $client->phone,
+                'client_phone' => $validated['client_phone'] ?? $client->phone,
                 'company_id' => $company ? $company->id : null,
                 'company_name' => $company ? $company->name : null,
                 'booking_type' => $validated['booking_type'] ?? null,
@@ -1092,12 +1103,12 @@ class BookingOperationReportController extends Controller
         }
         $operationReport->load(['visas', 'flights', 'transports', 'hotels', 'landTrips', 'employee', 'client', 'company']);
 
-      // NEW: agent name via linked booking (no extra DB fields needed)
-    $linkedAgentName = null;
-    if ($operationReport->booking_type === 'land_trip' && $operationReport->booking_id) {
-        $linkedBooking = \App\Models\LandTripBooking::with('landTrip.agent')->find($operationReport->booking_id);
-        $linkedAgentName = $linkedBooking?->landTrip?->agent?->name;
-    }
+        // NEW: agent name via linked booking (no extra DB fields needed)
+        $linkedAgentName = null;
+        if ($operationReport->booking_type === 'land_trip' && $operationReport->booking_id) {
+            $linkedBooking = \App\Models\LandTripBooking::with('landTrip.agent')->find($operationReport->booking_id);
+            $linkedAgentName = $linkedBooking?->landTrip?->agent?->name;
+        }
         return view('admin.operation-reports.show', compact('operationReport', 'linkedAgentName'));
     }
 

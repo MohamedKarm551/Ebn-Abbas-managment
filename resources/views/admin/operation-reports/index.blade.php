@@ -457,6 +457,31 @@
                     <div class="stat-label">تقارير هذا الشهر</div>
                 </div>
             </div>
+            {{-- علامة البحث بالاسم  --}}
+                        {{-- علامة البحث بالاسم  --}}
+            <form method="GET" action="{{ route('admin.operation-reports.index') }}" class="mb-4">
+                <div class="input-group">
+                    <input type="text"
+                           name="search"
+                           value="{{ request('search') }}"
+                           class="form-control"
+                           placeholder="ابحث باسم العميل / الشركة / مرجع الحجز">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                    @if(request('search'))
+                        <a href="{{ route('admin.operation-reports.index') }}" class="btn btn-outline-secondary">
+                            مسح
+                        </a>
+                    @endif
+                </div>
+                @if(request('search'))
+                    <small class="text-muted d-block mt-1">
+                        نتائج البحث عن: "<strong>{{ e(request('search')) }}</strong>"
+                        ({{ $reports->total() }} نتيجة)
+                    </small>
+                @endif
+            </form>
 
             <!-- قائمة التقارير -->
             <div class="reports-card">
