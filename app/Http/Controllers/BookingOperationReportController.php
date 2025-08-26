@@ -1188,6 +1188,10 @@ class BookingOperationReportController extends Controller
     public function charts()
     {
         try {
+            // ✅ بيانات تحليل أرباح الموظفين شهرياً
+            $employeeProfitsData = $this->getEmployeeMonthlyProfits();
+
+
             // ✅ استخدم نفس طريقة صفحة index - تجميع حسب العملة
             $profitsByCurrency = $this->calculateProfitsByCurrency();
 
@@ -1443,7 +1447,8 @@ class BookingOperationReportController extends Controller
                 'totalClients' => 0,
                 'totalCompanies' => 0,
                 'totalProfit' => 0,
-                'avgProfitPerReport' => 0
+                'avgProfitPerReport' => 0,
+                'employeeProfitsData' => $employeeProfitsData
             ]);
         }
     }
@@ -1515,6 +1520,100 @@ class BookingOperationReportController extends Controller
             'totalReportsCount'
         ));
     }
+    /**
+ * استخراج بيانات أرباح الموظفين شهرياً للرسوم البيانية
+ * @return array
+ */
+private function getEmployeeMonthlyProfits() 
+{
+    // تحديد فترة التحليل (الشهر الحالي)
+    $startDate = now()->startOfMonth()->subMonths(5); // آخر 6 أشهر
+    $endDate = now();
+    
+    // استخراج البيانات من قاعدة البيانات
+    $profitData = DB::table('booking_operation_reports')
+        ->join('users', 'booking_operation_reports.employee_id', '=', 'users.id')
+        ->select(
+            'users.id as employee_id',
+            'users.name as employee_name',
+            DB::raw('YEAR(report_date) as year'),
+            DB::raw('MONTH(report_date) as month'),
+            DB::raw('COUNT(*) as reports_count'),
+            DB::raw('SUM(grand_total_profit) as total_profit'),
+            DB::raw('SUM(employee_profit) as employee_profit')
+        )
+        ->where('report_date', '>=', $startDate)
+        ->where('report_date', '<=', $endDate)
+        ->where('users.role', '!=', 'Admin')  // استثناء الأدمن
+        ->groupBy('users.id', 'users.name', DB::raw('YEAR(report_date)'), DB::raw('MONTH(report_date)'))
+        ->orderBy('year')
+        ->orderBy('month')
+        ->get();
+    
+    // تنظيم البيانات للرسوم البيانية
+    $employees = $profitData->pluck('employee_name', 'employee_id')->unique();
+    $months = [];
+    $employeeData = [];
+    
+    // تهيئة مصفوفات البيانات لكل موظف
+    foreach ($employees as $id => $name) {
+        $employeeData[$id] = [
+            'name' => $name,
+            'profits' => [],
+            'reports_count' => [],
+            'employee_profit' => [],
+            'total_profit' => 0,
+            'total_reports' => 0,
+            'avg_profit_per_report' => 0
+        ];
+    }
+    
+    // تنظيم البيانات حسب الشهر والموظف
+    foreach ($profitData as $record) {
+        $monthKey = Carbon::create($record->year, $record->month, 1)->format('Y-m');
+        if (!in_array($monthKey, $months)) {
+            $months[] = $monthKey;
+        }
+        
+        $employeeData[$record->employee_id]['profits'][$monthKey] = $record->total_profit;
+        $employeeData[$record->employee_id]['reports_count'][$monthKey] = $record->reports_count;
+        $employeeData[$record->employee_id]['employee_profit'][$monthKey] = $record->employee_profit;
+        
+        // إجماليات لكل موظف
+        $employeeData[$record->employee_id]['total_profit'] += $record->total_profit;
+        $employeeData[$record->employee_id]['total_reports'] += $record->reports_count;
+    }
+    
+    // حساب متوسطات لكل موظف
+    foreach ($employeeData as $id => $data) {
+        $employeeData[$id]['avg_profit_per_report'] = 
+            $data['total_reports'] > 0 ? $data['total_profit'] / $data['total_reports'] : 0;
+    }
+    
+    // تحويل المصفوفات إلى تنسيق مناسب للرسوم البيانية
+    $monthLabels = array_map(function($month) {
+        return Carbon::createFromFormat('Y-m', $month)
+                     ->translatedFormat('F Y');
+    }, $months);
+    
+    $colorPalette = [
+        '#4C84FF', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#5AC8FA',
+        '#FFCC00', '#FF2D55', '#007AFF', '#32D74B', '#FF9F0A', '#BF5AF2'
+    ];
+    
+    // ترتيب الموظفين حسب إجمالي الأرباح (تنازلي)
+    uasort($employeeData, function($a, $b) {
+        return $b['total_profit'] - $a['total_profit'];
+    });
+    
+    return [
+        'employees' => $employees,
+        'months' => $months,
+        'monthLabels' => $monthLabels,
+        'employeeData' => $employeeData,
+        'colorPalette' => $colorPalette
+    ];
+}
 
 
 

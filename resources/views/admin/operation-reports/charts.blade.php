@@ -226,10 +226,10 @@
                 </a>
             </div>
         </div>
-          <a class="bg-warning mb-2 p-2 rounded" href="{{ route('admin.operation-reports.employee-profits') }}">
-        <i class="fas fa-money-bill-wave"></i>
-        <span>أرباح الموظفين</span>
-    </a>
+        <a class="bg-warning mb-2 p-2 rounded" href="{{ route('admin.operation-reports.employee-profits') }}">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>أرباح الموظفين</span>
+        </a>
         <!-- إحصائيات شاملة -->
         <div class="stats-summary mt-2">
             <div class="stat-box">
@@ -237,26 +237,26 @@
                 <div class="stat-label">إجمالي التقارير</div>
             </div>
             <div class="stat-box" style="padding-bottom: 1.5rem;">
-    <div class="stat-label mb-2">إجمالي الأرباح لكل عملة</div>
-    <div style="display: flex; gap: 1.2rem;">
-        <div class="currency-row currency-KWD">
-            <span>{{ number_format($totalProfitByCurrency['KWD'] ?? 0, 2) }}</span>
-            <span class="currency-symbol">د.ك</span>
-        </div>
-        <div class="currency-row currency-SAR">
-            <span>{{ number_format($totalProfitByCurrency['SAR'] ?? 0, 2) }}</span>
-            <span class="currency-symbol">ر.س</span>
-        </div>
-        <div class="currency-row currency-USD">
-            <span>{{ number_format($totalProfitByCurrency['USD'] ?? 0, 2) }}</span>
-            <span class="currency-symbol">$</span>
-        </div>
-        <div class="currency-row currency-EUR">
-            <span>{{ number_format($totalProfitByCurrency['EUR'] ?? 0, 2) }}</span>
-            <span class="currency-symbol">€</span>
-        </div>
-    </div>
-</div>
+                <div class="stat-label mb-2">إجمالي الأرباح لكل عملة</div>
+                <div style="display: flex; gap: 1.2rem;">
+                    <div class="currency-row currency-KWD">
+                        <span>{{ number_format($totalProfitByCurrency['KWD'] ?? 0, 2) }}</span>
+                        <span class="currency-symbol">د.ك</span>
+                    </div>
+                    <div class="currency-row currency-SAR">
+                        <span>{{ number_format($totalProfitByCurrency['SAR'] ?? 0, 2) }}</span>
+                        <span class="currency-symbol">ر.س</span>
+                    </div>
+                    <div class="currency-row currency-USD">
+                        <span>{{ number_format($totalProfitByCurrency['USD'] ?? 0, 2) }}</span>
+                        <span class="currency-symbol">$</span>
+                    </div>
+                    <div class="currency-row currency-EUR">
+                        <span>{{ number_format($totalProfitByCurrency['EUR'] ?? 0, 2) }}</span>
+                        <span class="currency-symbol">€</span>
+                    </div>
+                </div>
+            </div>
 
             <div class="stat-box">
                 <div class="stat-value">{{ number_format($avgProfitPerReport, 2) }}</div>
@@ -391,6 +391,100 @@
             </div>
         @endif
 
+        {{-- الموظفين وتقاريرهم وأرباحهم خلال شهر --}}
+        <div class="row mb-5">
+            <div class="col-12 mb-4">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i class="fas fa-user-tie text-primary fa-beat"></i>
+                        تحليل أرباح الموظفين على مدار الأشهر
+                    </h3>
+
+                    <!-- أزرار التبديل بين أنواع الرسوم البيانية -->
+                    <div class="btn-group mb-4" role="group">
+                        <button type="button" class="btn btn-primary active" id="btnTotalProfits">إجمالي الأرباح</button>
+                        <button type="button" class="btn btn-outline-primary" id="btnReportsCount">عدد التقارير</button>
+                        <button type="button" class="btn btn-outline-primary" id="btnEmployeeProfits">أرباح
+                            الموظفين</button>
+                        <button type="button" class="btn btn-outline-primary" id="btnAvgProfitPerReport">متوسط ربح
+                            التقرير</button>
+                    </div>
+
+                    <div class="chart-container large">
+                        <canvas id="employeeProfitsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- مقارنة إجمالي الأرباح لكل موظف -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i class="fas fa-trophy text-warning fa-beat"></i>
+                        مقارنة إجمالي أرباح الموظفين
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="employeeTotalProfitsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- متوسط ربح التقرير لكل موظف -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-line text-success fa-beat"></i>
+                        متوسط ربح التقرير لكل موظف
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="employeeAvgProfitChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- جدول ملخص أداء الموظفين -->
+            <div class="col-12">
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i class="fas fa-table text-info fa-beat"></i>
+                        ملخص أداء الموظفين
+                    </h3>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead style="background: linear-gradient(120deg, #f8f9fa 0%, #e9ecef 100%);">
+                                <tr>
+                                    <th>الموظف</th>
+                                    <th class="text-center">عدد التقارير</th>
+                                    <th class="text-center">إجمالي الأرباح</th>
+                                    <th class="text-center">متوسط ربح التقرير</th>
+                                    <th class="text-center">أرباح الموظف</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (isset($employeeProfitsData) && !empty($employeeProfitsData['employeeData']))
+                                    @foreach ($employeeProfitsData['employeeData'] as $employeeId => $data)
+                                        <tr>
+                                            <td>{{ $data['name'] }}</td>
+                                            <td class="text-center">{{ $data['total_reports'] }}</td>
+                                            <td class="text-center text-success">
+                                                {{ number_format($data['total_profit'], 2) }}</td>
+                                            <td class="text-center text-info">
+                                                {{ number_format($data['avg_profit_per_report'], 2) }}</td>
+                                            <td class="text-center text-primary">
+                                                {{ number_format(array_sum($data['employee_profit'] ?? []), 2) }} جنيه</td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4">لا توجد بيانات متاحة للموظفين</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- الرسوم البيانية -->
         <div class="row">
@@ -1116,6 +1210,280 @@
             }
         });
     </script>
-                <script src="{{ asset('js/preventClick.js') }}"></script>
+    <script>
+        // بيانات أرباح الموظفين
+const employeeProfitsData = @json($employeeProfitsData ?? []);
+let employeeProfitsChart = null;
+let employeeTotalProfitsChart = null;
+let employeeAvgProfitChart = null;
 
+// تهيئة وإنشاء الرسوم البيانية للموظفين
+function initEmployeeCharts() {
+    if (!employeeProfitsData || !employeeProfitsData.months || !employeeProfitsData.employeeData) {
+        console.warn('لا توجد بيانات موظفين كافية للرسوم البيانية');
+        const container = document.getElementById('employeeProfitsChart');
+        if (container) {
+            container.parentElement.innerHTML = 
+                '<div class="text-center text-muted p-4"><i class="fas fa-users fa-3x mb-3"></i><br>لا توجد بيانات أرباح موظفين كافية</div>';
+        }
+        return;
+    }
+    
+    // 1. رسم بياني للأرباح الشهرية للموظفين
+    const profitsCtx = document.getElementById('employeeProfitsChart');
+    const months = employeeProfitsData.monthLabels;
+    
+    // إعداد مجموعات البيانات للرسم البياني
+    const datasets = [];
+    let colorIndex = 0;
+    
+    Object.keys(employeeProfitsData.employeeData).forEach(employeeId => {
+        const employee = employeeProfitsData.employeeData[employeeId];
+        const profits = employeeProfitsData.months.map(month => employee.profits[month] || 0);
+        
+        datasets.push({
+            label: employee.name,
+            data: profits,
+            backgroundColor: employeeProfitsData.colorPalette[colorIndex % employeeProfitsData.colorPalette.length],
+            borderColor: employeeProfitsData.colorPalette[colorIndex % employeeProfitsData.colorPalette.length],
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4
+        });
+        
+        colorIndex++;
+    });
+    
+    employeeProfitsChart = new Chart(profitsCtx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (value) => formatNumber(value)
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${formatNumber(context.parsed.y)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // 2. رسم بياني دائري لإجمالي الأرباح لكل موظف
+    const totalProfitsCtx = document.getElementById('employeeTotalProfitsChart');
+    const employeeNames = [];
+    const totalProfits = [];
+    
+    Object.keys(employeeProfitsData.employeeData).forEach(employeeId => {
+        employeeNames.push(employeeProfitsData.employeeData[employeeId].name);
+        totalProfits.push(employeeProfitsData.employeeData[employeeId].total_profit);
+    });
+    
+    employeeTotalProfitsChart = new Chart(totalProfitsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: employeeNames,
+            datasets: [{
+                data: totalProfits,
+                backgroundColor: employeeProfitsData.colorPalette.slice(0, employeeNames.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const totalAmount = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / totalAmount) * 100).toFixed(1);
+                            return `${context.label}: ${formatNumber(context.parsed)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // 3. رسم بياني شريطي لمتوسط الربح لكل موظف
+    const avgProfitCtx = document.getElementById('employeeAvgProfitChart');
+    const avgProfits = [];
+    
+    Object.keys(employeeProfitsData.employeeData).forEach(employeeId => {
+        avgProfits.push(employeeProfitsData.employeeData[employeeId].avg_profit_per_report);
+    });
+    
+    employeeAvgProfitChart = new Chart(avgProfitCtx, {
+        type: 'bar',
+        data: {
+            labels: employeeNames,
+            datasets: [{
+                label: 'متوسط الربح لكل تقرير',
+                data: avgProfits,
+                backgroundColor: employeeProfitsData.colorPalette.slice(0, employeeNames.length),
+                borderWidth: 0,
+                borderRadius: 4,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (value) => formatNumber(value)
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${formatNumber(context.parsed.x)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// وظائف التبديل بين أنواع الرسوم البيانية للموظفين
+function updateEmployeeChart(chartType) {
+    if (!employeeProfitsData || !employeeProfitsChart) return;
+    
+    const months = employeeProfitsData.monthLabels;
+    const datasets = [];
+    let colorIndex = 0;
+    
+    Object.keys(employeeProfitsData.employeeData).forEach(employeeId => {
+        const employee = employeeProfitsData.employeeData[employeeId];
+        let data;
+        
+        switch(chartType) {
+            case 'profits':
+                data = employeeProfitsData.months.map(month => employee.profits[month] || 0);
+                break;
+            case 'reports':
+                data = employeeProfitsData.months.map(month => employee.reports_count[month] || 0);
+                break;
+            case 'employeeProfits':
+                data = employeeProfitsData.months.map(month => employee.employee_profit[month] || 0);
+                break;
+            case 'avgProfit':
+                data = employeeProfitsData.months.map(month => {
+                    const reports = employee.reports_count[month] || 0;
+                    const profits = employee.profits[month] || 0;
+                    return reports > 0 ? profits / reports : 0;
+                });
+                break;
+            default:
+                data = employeeProfitsData.months.map(month => employee.profits[month] || 0);
+        }
+        
+        datasets.push({
+            label: employee.name,
+            data: data,
+            backgroundColor: employeeProfitsData.colorPalette[colorIndex % employeeProfitsData.colorPalette.length],
+            borderColor: employeeProfitsData.colorPalette[colorIndex % employeeProfitsData.colorPalette.length],
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4
+        });
+        
+        colorIndex++;
+    });
+    
+    employeeProfitsChart.data.datasets = datasets;
+    employeeProfitsChart.update();
+}
+
+// إضافة أحداث النقر على الأزرار
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        initEmployeeCharts();
+        
+        // ربط أحداث أزرار التبديل
+        document.getElementById('btnTotalProfits')?.addEventListener('click', function() {
+            updateEmployeeChart('profits');
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.remove('active', 'btn-primary'));
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.add('btn-outline-primary'));
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('active', 'btn-primary');
+        });
+        
+        document.getElementById('btnReportsCount')?.addEventListener('click', function() {
+            updateEmployeeChart('reports');
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.remove('active', 'btn-primary'));
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.add('btn-outline-primary'));
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('active', 'btn-primary');
+        });
+        
+        document.getElementById('btnEmployeeProfits')?.addEventListener('click', function() {
+            updateEmployeeChart('employeeProfits');
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.remove('active', 'btn-primary'));
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.add('btn-outline-primary'));
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('active', 'btn-primary');
+        });
+        
+        document.getElementById('btnAvgProfitPerReport')?.addEventListener('click', function() {
+            updateEmployeeChart('avgProfit');
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.remove('active', 'btn-primary'));
+            document.querySelectorAll('#btnTotalProfits, #btnReportsCount, #btnEmployeeProfits, #btnAvgProfitPerReport')
+                .forEach(btn => btn.classList.add('btn-outline-primary'));
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('active', 'btn-primary');
+        });
+    } catch (error) {
+        console.error('خطأ في تهيئة الرسوم البيانية للموظفين:', error);
+    }
+});
+
+    </script>
+    <script src="{{ asset('js/preventClick.js') }}"></script>
 @endpush
