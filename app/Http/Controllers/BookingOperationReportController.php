@@ -1190,7 +1190,10 @@ class BookingOperationReportController extends Controller
         try {
             // ✅ بيانات تحليل أرباح الموظفين شهرياً
             $employeeProfitsData = $this->getEmployeeMonthlyProfits();
-
+            Log::info('📊 employeeProfitsData structure', [
+                'is_sample' => $employeeProfitsData['is_sample_data'] ?? null,
+                'employees_count' => isset($employeeProfitsData['employeeData']) ? count($employeeProfitsData['employeeData']) : 0
+            ]);
 
             // ✅ استخدم نفس طريقة صفحة index - تجميع حسب العملة
             $profitsByCurrency = $this->calculateProfitsByCurrency();
@@ -1427,7 +1430,8 @@ class BookingOperationReportController extends Controller
                 'totalClients',
                 'totalCompanies',
                 'totalProfit',
-                'avgProfitPerReport'
+                'avgProfitPerReport',
+                'employeeProfitsData'
             ));
         } catch (\Exception $e) {
             Log::error('❌ خطأ في charts: ' . $e->getMessage());
@@ -1448,7 +1452,7 @@ class BookingOperationReportController extends Controller
                 'totalCompanies' => 0,
                 'totalProfit' => 0,
                 'avgProfitPerReport' => 0,
-                'employeeProfitsData' => $employeeProfitsData
+                'employeeProfitsData'=>$employeeProfitsData // إضافة بيانات أرباح الموظفين حتى في حالة الخطأ
             ]);
         }
     }
@@ -1521,99 +1525,234 @@ class BookingOperationReportController extends Controller
         ));
     }
     /**
- * استخراج بيانات أرباح الموظفين شهرياً للرسوم البيانية
- * @return array
- */
-private function getEmployeeMonthlyProfits() 
-{
-    // تحديد فترة التحليل (الشهر الحالي)
-    $startDate = now()->startOfMonth()->subMonths(5); // آخر 6 أشهر
-    $endDate = now();
-    
-    // استخراج البيانات من قاعدة البيانات
-    $profitData = DB::table('booking_operation_reports')
-        ->join('users', 'booking_operation_reports.employee_id', '=', 'users.id')
-        ->select(
-            'users.id as employee_id',
-            'users.name as employee_name',
-            DB::raw('YEAR(report_date) as year'),
-            DB::raw('MONTH(report_date) as month'),
-            DB::raw('COUNT(*) as reports_count'),
-            DB::raw('SUM(grand_total_profit) as total_profit'),
-            DB::raw('SUM(employee_profit) as employee_profit')
-        )
-        ->where('report_date', '>=', $startDate)
-        ->where('report_date', '<=', $endDate)
-        ->where('users.role', '!=', 'Admin')  // استثناء الأدمن
-        ->groupBy('users.id', 'users.name', DB::raw('YEAR(report_date)'), DB::raw('MONTH(report_date)'))
-        ->orderBy('year')
-        ->orderBy('month')
-        ->get();
-    
-    // تنظيم البيانات للرسوم البيانية
-    $employees = $profitData->pluck('employee_name', 'employee_id')->unique();
-    $months = [];
-    $employeeData = [];
-    
-    // تهيئة مصفوفات البيانات لكل موظف
-    foreach ($employees as $id => $name) {
-        $employeeData[$id] = [
-            'name' => $name,
-            'profits' => [],
-            'reports_count' => [],
-            'employee_profit' => [],
-            'total_profit' => 0,
-            'total_reports' => 0,
-            'avg_profit_per_report' => 0
-        ];
-    }
-    
-    // تنظيم البيانات حسب الشهر والموظف
-    foreach ($profitData as $record) {
-        $monthKey = Carbon::create($record->year, $record->month, 1)->format('Y-m');
-        if (!in_array($monthKey, $months)) {
-            $months[] = $monthKey;
+     * استخراج بيانات أرباح الموظفين شهرياً (مبسط للشهرين الأخيرين فقط)
+     * @return array
+     */
+    private function getEmployeeMonthlyProfits()
+    {
+        try {
+            // 1️⃣ تحديد الفترة: الشهر الحالي والشهر السابق فقط
+            $currentMonth = now()->startOfMonth();
+            $previousMonth = now()->copy()->subMonth()->startOfMonth();
+            $startDate = $previousMonth;
+            $endDate = now()->endOfMonth();
+
+            Log::info('فترة المقارنة بين الشهرين:', [
+                'previous_month' => $previousMonth->format('Y-m-d'),
+                'current_month' => $currentMonth->format('Y-m-d'),
+            ]);
+
+            // 2️⃣ استعلام مبسط للحصول على بيانات الموظفين للشهرين فقط
+            $profitData = DB::table('booking_operation_reports')
+                ->join('users', 'booking_operation_reports.employee_id', '=', 'users.id')
+                ->select(
+                    'users.id as employee_id',
+                    'users.name as employee_name',
+                    DB::raw('DATE_FORMAT(report_date, "%Y-%m") as month_key'),
+                    DB::raw('COUNT(*) as reports_count'),
+                    DB::raw('SUM(grand_total_profit) as total_profit'),
+                    DB::raw('SUM(employee_profit) as employee_profit')
+                )
+                ->whereBetween('report_date', [$startDate, $endDate])
+                ->whereNotNull('booking_operation_reports.employee_id')
+                ->groupBy('users.id', 'users.name', DB::raw('DATE_FORMAT(report_date, "%Y-%m")'))
+                ->orderBy('month_key')
+                ->get();
+
+            Log::info('نتائج استعلام أرباح الموظفين:', [
+                'records_count' => $profitData->count(),
+                'first_record' => $profitData->first(),
+            ]);
+
+            // 3️⃣ تحديد مفاتيح الشهرين للتسهيل
+            $currentMonthKey = $currentMonth->format('Y-m');
+            $previousMonthKey = $previousMonth->format('Y-m');
+            $months = [$previousMonthKey, $currentMonthKey];
+            $monthLabels = [
+                $previousMonthKey => $previousMonth->translatedFormat('F Y') . ' (الشهر السابق)',
+                $currentMonthKey => $currentMonth->translatedFormat('F Y') . ' (الشهر الحالي)'
+            ];
+
+            // 4️⃣ استخراج الموظفين الذين لديهم بيانات
+            $employees = $profitData->pluck('employee_name', 'employee_id')->unique();
+
+            // 5️⃣ إذا لم يتم العثور على بيانات، استخدام بيانات تجريبية
+            if ($profitData->isEmpty()) {
+                Log::warning('لم يتم العثور على بيانات أرباح للموظفين، استخدام بيانات تجريبية');
+                return [
+                    'employees' => ['1' => 'محمد علي', '2' => 'أحمد سعيد'],
+                    'months' => $months,
+                    'monthLabels' => $monthLabels,
+                    'employeeData' => [
+                        '1' => [
+                            'name' => 'محمد علي',
+                            'profits' => [
+                                $previousMonthKey => 2500,
+                                $currentMonthKey => 3200
+                            ],
+                            'reports_count' => [
+                                $previousMonthKey => 8,
+                                $currentMonthKey => 10
+                            ],
+                            'employee_profit' => [
+                                $previousMonthKey => 250,
+                                $currentMonthKey => 320
+                            ],
+                            'total_profit' => 5700,
+                            'total_reports' => 18,
+                            'avg_profit_per_report' => 316.67,
+                            'growth_percentage' => 28.0,
+                            'comparison' => 'زيادة'
+                        ],
+                        '2' => [
+                            'name' => 'أحمد سعيد',
+                            'profits' => [
+                                $previousMonthKey => 1800,
+                                $currentMonthKey => 1500
+                            ],
+                            'reports_count' => [
+                                $previousMonthKey => 7,
+                                $currentMonthKey => 6
+                            ],
+                            'employee_profit' => [
+                                $previousMonthKey => 180,
+                                $currentMonthKey => 150
+                            ],
+                            'total_profit' => 3300,
+                            'total_reports' => 13,
+                            'avg_profit_per_report' => 253.85,
+                            'growth_percentage' => -16.7,
+                            'comparison' => 'نقصان'
+                        ]
+                    ],
+                    'colorPalette' => [
+                        '#4C84FF',
+                        '#34C759',
+                        '#FF9500',
+                        '#AF52DE',
+                        '#FF3B30',
+                        '#5AC8FA',
+                        '#FFCC00',
+                        '#FF2D55',
+                        '#007AFF',
+                        '#32D74B',
+                        '#FF9F0A',
+                        '#BF5AF2'
+                    ],
+                    'is_sample_data' => true
+                ];
+            }
+
+            // 6️⃣ تهيئة بيانات كل موظف مع الشهرين
+            $employeeData = [];
+            foreach ($employees as $id => $name) {
+                $employeeData[$id] = [
+                    'name' => $name,
+                    'profits' => [$previousMonthKey => 0, $currentMonthKey => 0],
+                    'reports_count' => [$previousMonthKey => 0, $currentMonthKey => 0],
+                    'employee_profit' => [$previousMonthKey => 0, $currentMonthKey => 0],
+                    'total_profit' => 0,
+                    'total_reports' => 0,
+                    'avg_profit_per_report' => 0,
+                    'growth_percentage' => 0,
+                    'comparison' => 'ثابت'
+                ];
+            }
+
+            // 7️⃣ ملء بيانات الأرباح للشهرين
+            foreach ($profitData as $record) {
+                $monthKey = $record->month_key;
+                $employeeId = $record->employee_id;
+
+                // تجاهل البيانات خارج نطاق الشهرين المطلوبين
+                if (!in_array($monthKey, $months)) continue;
+
+                // تسجيل بيانات الشهر
+                $employeeData[$employeeId]['profits'][$monthKey] = (float)$record->total_profit;
+                $employeeData[$employeeId]['reports_count'][$monthKey] = (int)$record->reports_count;
+                $employeeData[$employeeId]['employee_profit'][$monthKey] = (float)$record->employee_profit;
+
+                // تحديث المجاميع
+                $employeeData[$employeeId]['total_profit'] += (float)$record->total_profit;
+                $employeeData[$employeeId]['total_reports'] += (int)$record->reports_count;
+            }
+
+            // 8️⃣ حساب المعدلات ونسب النمو لكل موظف
+            foreach ($employeeData as $id => $data) {
+                // متوسط الربح لكل تقرير
+                $employeeData[$id]['avg_profit_per_report'] =
+                    $data['total_reports'] > 0 ? $data['total_profit'] / $data['total_reports'] : 0;
+
+                // حساب نسبة النمو بين الشهرين
+                $prevProfit = $data['profits'][$previousMonthKey];
+                $currProfit = $data['profits'][$currentMonthKey];
+
+                if ($prevProfit > 0) {
+                    // حساب نسبة التغير: (الجديد - القديم) / القديم × 100
+                    $growthPercent = (($currProfit - $prevProfit) / $prevProfit) * 100;
+                    $employeeData[$id]['growth_percentage'] = round($growthPercent, 1);
+
+                    // تحديد نوع التغير
+                    if ($growthPercent > 0) {
+                        $employeeData[$id]['comparison'] = 'زيادة';
+                    } elseif ($growthPercent < 0) {
+                        $employeeData[$id]['comparison'] = 'نقصان';
+                    } else {
+                        $employeeData[$id]['comparison'] = 'ثابت';
+                    }
+                } elseif ($currProfit > 0) {
+                    // حالة خاصة: لم يكن هناك أرباح في الشهر السابق ولكن يوجد الآن
+                    $employeeData[$id]['growth_percentage'] = 100;
+                    $employeeData[$id]['comparison'] = 'زيادة';
+                }
+            }
+
+            // 9️⃣ ترتيب الموظفين حسب أرباح الشهر الحالي
+            uasort($employeeData, function ($a, $b) use ($currentMonthKey) {
+                $currentProfitA = $a['profits'][$currentMonthKey] ?? 0;
+                $currentProfitB = $b['profits'][$currentMonthKey] ?? 0;
+                return $currentProfitB <=> $currentProfitA; // ترتيب تنازلي
+            });
+
+            return [
+                'employees' => $employees,
+                'months' => $months,
+                'monthLabels' => $monthLabels,
+                'employeeData' => $employeeData,
+                'colorPalette' => [
+                    '#4C84FF',
+                    '#34C759',
+                    '#FF9500',
+                    '#AF52DE',
+                    '#FF3B30',
+                    '#5AC8FA',
+                    '#FFCC00',
+                    '#FF2D55',
+                    '#007AFF',
+                    '#32D74B',
+                    '#FF9F0A',
+                    '#BF5AF2'
+                ],
+                'is_sample_data' => false
+            ];
+        } catch (\Exception $e) {
+            Log::error('خطأ في استخراج بيانات أرباح الموظفين: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // إرجاع هيكل بيانات بسيط لتجنب الأخطاء
+            return [
+                'employees' => [],
+                'months' => [now()->subMonth()->format('Y-m'), now()->format('Y-m')],
+                'monthLabels' => [now()->subMonth()->translatedFormat('F Y'), now()->translatedFormat('F Y')],
+                'employeeData' => [],
+                'colorPalette' => [],
+                'is_sample_data' => true,
+                'error' => true
+            ];
         }
-        
-        $employeeData[$record->employee_id]['profits'][$monthKey] = $record->total_profit;
-        $employeeData[$record->employee_id]['reports_count'][$monthKey] = $record->reports_count;
-        $employeeData[$record->employee_id]['employee_profit'][$monthKey] = $record->employee_profit;
-        
-        // إجماليات لكل موظف
-        $employeeData[$record->employee_id]['total_profit'] += $record->total_profit;
-        $employeeData[$record->employee_id]['total_reports'] += $record->reports_count;
     }
-    
-    // حساب متوسطات لكل موظف
-    foreach ($employeeData as $id => $data) {
-        $employeeData[$id]['avg_profit_per_report'] = 
-            $data['total_reports'] > 0 ? $data['total_profit'] / $data['total_reports'] : 0;
-    }
-    
-    // تحويل المصفوفات إلى تنسيق مناسب للرسوم البيانية
-    $monthLabels = array_map(function($month) {
-        return Carbon::createFromFormat('Y-m', $month)
-                     ->translatedFormat('F Y');
-    }, $months);
-    
-    $colorPalette = [
-        '#4C84FF', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#5AC8FA',
-        '#FFCC00', '#FF2D55', '#007AFF', '#32D74B', '#FF9F0A', '#BF5AF2'
-    ];
-    
-    // ترتيب الموظفين حسب إجمالي الأرباح (تنازلي)
-    uasort($employeeData, function($a, $b) {
-        return $b['total_profit'] - $a['total_profit'];
-    });
-    
-    return [
-        'employees' => $employees,
-        'months' => $months,
-        'monthLabels' => $monthLabels,
-        'employeeData' => $employeeData,
-        'colorPalette' => $colorPalette
-    ];
-}
 
 
 
