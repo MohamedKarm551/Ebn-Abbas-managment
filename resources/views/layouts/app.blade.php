@@ -84,7 +84,9 @@
                         if (minAttr) {
                             minDateOption = minAttr;
                         } else if (!isAdmin) {
-                            minDateOption = 0; // اليوم
+                            // minDateOption = 0; // اليوم
+                             minDateOption = minAttr;
+                            // مؤقتا هنلغي إن الأدمن بس اللي يبحث عن تاريخ قديم
                         }
 
                         inputField.datepicker({
