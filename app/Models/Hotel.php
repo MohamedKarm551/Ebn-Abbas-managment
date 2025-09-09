@@ -89,4 +89,14 @@ class Hotel extends Model
     {
         return $this->hasOne(BookingFinancialTracking::class, 'booking_id');
     }
+    // ================
+    public function allotments()
+    {
+        return $this->hasMany(Allotment::class);
+    }
+
+    public function allotmentSales()
+    {
+        return $this->hasMany(AllotmentSale::class);
+    }
 }

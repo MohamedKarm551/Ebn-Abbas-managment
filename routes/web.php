@@ -21,6 +21,8 @@ use App\Http\Controllers\LandTripsCompanyPaymentController;
 use App\Http\Controllers\CompanyBookingsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AllotmentController;
+use App\Http\Controllers\AllotmentSaleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -569,3 +571,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->group(
     Route::get('/admin/companies/bookings', [CompanyBookingsController::class, 'index'])
         ->name('admin.companies.bookings');
 });
+
+Route::resource('allotments', AllotmentController::class);
+Route::resource('allotment-sales', AllotmentSaleController::class)->except(['index', 'show']);
+Route::get('/allotment/monitor', [AllotmentController::class, 'monitor'])->name('allotments.monitor');
