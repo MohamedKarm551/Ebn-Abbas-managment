@@ -18,12 +18,29 @@
                     {{-- ضع هنا صورة اللوجو لو عندك، أو احذف الـ img لو مش محتاج --}}
                     <img src="{{ asset('images/cover.jpg') }}" height="100" alt="Logo" style="max-width:120px;">
                 </div>
-                <div style="text-align:right; font-size:14px;">
-                    <b>بيانات الحساب البنكي للتحويل:</b><br>
-                    اسم البنك: مصرف الانماء<br>
-                    رقم الحساب: 68205418637000<br>
-                    رقم الايبان: SA9705000068205418637000<br>
-                    سويفت كود: INMASARI
+                <div class="bank-accounts"
+                    style="text-align:right; font-size:14px; border: 1px solid #eee; padding: 10px; border-radius: 5px; background-color: #f9f9f9;">
+                    <h4 style="margin-top:0; margin-bottom:10px; color:#333;">بيانات الحساب البنكي للتحويل</h4>
+
+                    <div class="bank-account" style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px dashed #ddd;">
+                        <div style="font-weight:bold; color:#0066cc;">
+                            <i class="fas fa-university" style="margin-left:5px;"></i>بنك الجزيرة
+                        </div>
+                        <div
+                            style="font-family:monospace; padding:3px 15px; letter-spacing:1px; margin-top:3px; direction:ltr; text-align:left;">
+                            SA96 6010 0010 4950 2512 6001
+                        </div>
+                    </div>
+
+                    <div class="bank-account" style="margin-bottom:2px;">
+                        <div style="font-weight:bold; color:#28a745;">
+                            <i class="fas fa-university" style="margin-left:5px;"></i>مصرف الراجحي
+                        </div>
+                        <div
+                            style="font-family:monospace; padding:3px 15px; letter-spacing:1px; margin-top:3px; direction:ltr; text-align:left;">
+                            SA55 8090 0000 2169 9102 5042
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -258,5 +275,175 @@
             // Also convert when table is updated via AJAX
             document.addEventListener('ajaxTableUpdated', convertToHijri);
         });
+    </script>
+    <script>
+            document.addEventListener('DOMContentLoaded', function() {
+        // إعداد تحرير بيانات البنك عند النقر المزدوج
+        setupBankAccountsEditing();
+
+        // وظيفة لإعداد تحرير الحسابات البنكية
+        function setupBankAccountsEditing() {
+            // تحديد العناصر القابلة للتحرير
+            const bankNameElements = document.querySelectorAll('.bank-account div:first-child');
+            const bankIbanElements = document.querySelectorAll('.bank-account div:last-child');
+
+            // إضافة الخاصية data-editable لإظهار أنها قابلة للتحرير
+            [...bankNameElements, ...bankIbanElements].forEach(element => {
+                element.dataset.editable = 'true';
+                element.title = 'انقر نقرًا مزدوجًا للتحرير';
+                element.style.cursor = 'pointer';
+            });
+
+            // استرجاع البيانات المحفوظة سابقًا
+            loadBankData();
+
+            // إضافة حدث النقر المزدوج لجميع العناصر القابلة للتحرير
+            document.querySelector('.bank-accounts').addEventListener('dblclick', function(e) {
+                const target = e.target.closest('[data-editable="true"]');
+                if (!target) return;
+
+                // لا نسمح بالتحرير عند توليد PDF
+                if (document.body.classList.contains('generating-pdf')) return;
+
+                // عنصر الإدخال لتحرير النص
+                const isIban = target.classList.contains('iban-value') || 
+                               target.style.direction === 'ltr';
+                
+                const input = document.createElement(isIban ? 'input' : 'input');
+                
+                // احتفظ بقيمة النص الأصلية
+                const originalText = target.innerText.trim();
+                const originalHTML = target.innerHTML;
+                
+                input.value = originalText.replace(/<i.*?<\/i>/g, '').trim();
+                
+                // نسخ التنسيق من العنصر الأصلي
+                copyStyles(target, input);
+                
+                if (isIban) {
+                    input.style.fontFamily = 'monospace';
+                    input.style.textAlign = 'left';
+                    input.style.direction = 'ltr';
+                    input.style.width = '100%';
+                    input.className = 'iban-edit-input';
+                }
+
+                // حفظ المعرف الفريد للعنصر للاستخدام عند الحفظ
+                const bankIndex = Array.from(target.closest('.bank-account').parentNode.children)
+                                       .indexOf(target.closest('.bank-account'));
+                const isName = target.querySelector('i') !== null || 
+                              !target.classList.contains('iban-value');
+                
+                input.dataset.bankIndex = bankIndex;
+                input.dataset.fieldType = isName ? 'name' : 'iban';
+
+                // استبدال النص بعنصر الإدخال
+                const originalIcon = target.querySelector('i')?.outerHTML || '';
+                target.innerHTML = '';
+                target.appendChild(input);
+                input.focus();
+
+                // عند اكتمال التحرير
+                function finishEditing() {
+                    let newValue = input.value.trim();
+                    
+                    if (newValue && newValue !== originalText) {
+                        if (isName) {
+                            target.innerHTML = originalIcon + ' ' + newValue;
+                        } else {
+                            target.innerText = newValue;
+                        }
+                        
+                        // حفظ البيانات الجديدة محليًا
+                        saveBankData(bankIndex, isName ? 'name' : 'iban', newValue);
+                    } else {
+                        // استعادة النص الأصلي إذا كان الإدخال فارغًا
+                        target.innerHTML = originalHTML;
+                    }
+                }
+
+                // مستمعي الأحداث لإنهاء التحرير
+                input.addEventListener('blur', finishEditing);
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        finishEditing();
+                        e.preventDefault();
+                    } else if (e.key === 'Escape') {
+                        target.innerHTML = originalHTML; // إلغاء التحرير
+                        e.preventDefault();
+                    }
+                });
+            });
+        }
+
+        // نسخ التنسيق من عنصر إلى آخر
+        function copyStyles(source, destination) {
+            const computedStyle = window.getComputedStyle(source);
+            for (const prop of ['color', 'fontSize', 'fontWeight', 'padding']) {
+                destination.style[prop] = computedStyle[prop];
+            }
+            destination.style.border = 'none';
+            destination.style.background = 'rgba(255,255,255,0.8)';
+            destination.style.outline = '1px solid #007bff';
+            destination.style.width = `${source.clientWidth}px`;
+        }
+
+        // حفظ بيانات البنك في التخزين المحلي
+        function saveBankData(index, field, value) {
+            try {
+                let bankAccounts = JSON.parse(localStorage.getItem('bankAccounts')) || [];
+                
+                // إنشاء أو تحديث حساب البنك
+                if (!bankAccounts[index]) {
+                    bankAccounts[index] = { name: '', iban: '' };
+                }
+                
+                bankAccounts[index][field] = value;
+                localStorage.setItem('bankAccounts', JSON.stringify(bankAccounts));
+                
+                console.log('تم حفظ بيانات البنك:', bankAccounts);
+            } catch (error) {
+                console.error('خطأ في حفظ بيانات البنك:', error);
+            }
+        }
+
+        // استرجاع بيانات البنك من التخزين المحلي
+        function loadBankData() {
+            try {
+                const bankAccounts = JSON.parse(localStorage.getItem('bankAccounts')) || [];
+                if (!bankAccounts.length) return;
+
+                const bankElements = document.querySelectorAll('.bank-account');
+                
+                bankAccounts.forEach((account, index) => {
+                    if (!bankElements[index]) return;
+                    
+                    // تحديث اسم البنك إذا كان متوفرًا
+                    if (account.name) {
+                        const nameElement = bankElements[index].querySelector('div:first-child');
+                        const icon = nameElement.querySelector('i')?.outerHTML || '';
+                        nameElement.innerHTML = icon + ' ' + account.name;
+                    }
+                    
+                    // تحديث رقم الآيبان إذا كان متوفرًا
+                    if (account.iban) {
+                        const ibanElement = bankElements[index].querySelector('div:last-child');
+                        ibanElement.innerText = account.iban;
+                    }
+                });
+            } catch (error) {
+                console.error('خطأ في استرجاع بيانات البنك:', error);
+            }
+        }
+        
+        // حدث قبل تحميل PDF لمنع التحرير أثناء التوليد
+        document.getElementById('downloadPdfBtn')?.addEventListener('click', function() {
+            document.body.classList.add('generating-pdf');
+            setTimeout(() => {
+                document.body.classList.remove('generating-pdf');
+            }, 5000); // إزالة الفئة بعد 5 ثوانٍ
+        });
+    });
+
     </script>
 @endpush
