@@ -167,6 +167,30 @@
         <div class="remark">
             ملاحظة: الدخول يبدأ من الساعة الثالثة مساءً
         </div>
+        <div class="bank-accounts"
+            style="text-align:right; font-size:14px; border: 1px solid #eee; padding: 10px; border-radius: 5px; background-color: #f9f9f9;">
+            <h4 style="margin-top:0; margin-bottom:10px; color:#333;">بيانات الحساب البنكي للتحويل</h4>
+
+            <div class="bank-account" style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px dashed #ddd;">
+                <div style="font-weight:bold; color:#0066cc;">
+                    <i class="fas fa-university" style="margin-left:5px;"></i>بنك الجزيرة
+                </div>
+                <div
+                    style="font-family:monospace; padding:3px 15px; letter-spacing:1px; margin-top:3px; direction:ltr; text-align:left;">
+                    SA96 6010 0010 4950 2512 6001
+                </div>
+            </div>
+
+            <div class="bank-account" style="margin-bottom:2px;">
+                <div style="font-weight:bold; color:#28a745;">
+                    <i class="fas fa-university" style="margin-left:5px;"></i>مصرف الراجحي
+                </div>
+                <div
+                    style="font-family:monospace; padding:3px 15px; letter-spacing:1px; margin-top:3px; direction:ltr; text-align:left;">
+                    SA55 8090 0000 2169 9102 5042
+                </div>
+            </div>
+        </div>
 
         <div class="footer">
             تمت الطباعة بواسطة: {{ $booking->employee->name ?? 'النظام' }} - بتاريخ {{ now()->format('Y-m-d H:i') }}
@@ -246,6 +270,156 @@
                 currentIndex = (currentIndex + 1) % companies.length;
                 nameElement.textContent = companies[currentIndex];
             });
+        });
+    </script>
+    {{-- سكريبت تعديل الحسابات البنكية  --}}
+    <script>
+        /*
+      سكريبت "تحرير الحسابات البنكية" بالنقر المزدوج (Inline Edit)
+      — يتيح:
+        1) تعديل "أرقام الحسابات" داخل كل .bank-account.
+        2) تعديل "أسماء البنوك/المصارف" (ويحافظ على الأيقونة <i> ويعيدها بعد الحفظ).
+      — بلا تعارض: كل عنصر يعدّل نفسه فقط.
+    */
+
+        document.addEventListener('DOMContentLoaded', function() {
+
+            /*
+              دالة عامة: attachInlineEditor
+              - تحول أي عنصر إلى "قابل للتحرير" بالنقر المزدوج.
+              - الخيارات:
+                  inputDir        : اتجاه الكتابة داخل حقل الإدخال (rtl/ltr/auto)
+                  titleText       : نص تلميح على العنصر
+                  inputExtraStyle : ستايلات إضافية لحقل الإدخال
+                  onSave(newValue, ctx): Callback يُستدعى بعد الحفظ لإتاحة تخصيص عرض القيمة النهائية
+                                         (ctx فيه { element, originalStyle, beforeHTML, afterHTML })
+            */
+            function attachInlineEditor(element, {
+                inputDir = 'auto',
+                titleText = 'انقر نقرًا مزدوجًا للتعديل',
+                inputExtraStyle = '',
+                onSave = null,
+            } = {}) {
+                const originalStyle = element.getAttribute('style') || '';
+
+                // تجهيزات واجهة بسيطة
+                element.style.cursor = 'pointer';
+                element.title = titleText;
+
+                element.addEventListener('dblclick', function() {
+                    // نخلّي آخر نسخة من محتوى العنصر (ممكن نحتاجها لإرجاع أجزاء مثل الأيقونة)
+                    const beforeHTML = '';
+                    const afterHTML = '';
+                    const currentText = element.textContent.trim();
+
+                    // عمل حقل إدخال بديل
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = currentText;
+                    input.dir = inputDir;
+                    input.style = [
+                        originalStyle,
+                        'width:100%',
+                        'border:2px solid #4CAF50',
+                        'padding:5px',
+                        inputExtraStyle
+                    ].filter(Boolean).join(';');
+
+                    // استبدال محتوى العنصر مؤقتًا
+                    element.innerHTML = '';
+                    element.appendChild(input);
+                    input.select(); // يسهّل الكتابة مباشرة
+
+                    // إنهاء التحرير (حفظ) — تُستدعى بالـ Enter وفقد التركيز
+                    const finishEditing = () => {
+                        const newValue = input.value.trim();
+
+                        // لو عندنا onSave مخصصة (مثلاً لإرجاع الأيقونة)
+                        if (typeof onSave === 'function') {
+                            onSave(newValue, {
+                                element,
+                                originalStyle,
+                                beforeHTML,
+                                afterHTML
+                            });
+                        } else {
+                            // الافتراضي: نعيد النص فقط
+                            element.innerHTML = newValue || '';
+                            element.setAttribute('style', originalStyle);
+                            element.style.cursor = 'pointer';
+                        }
+
+                        // رسالة تأكيد صغيرة ثم تُزال
+                        const ok = document.createElement('span');
+                        ok.textContent = ' ✓ تم التعديل';
+                        ok.style = 'color:green; font-size:0.8em; margin-right:5px;';
+                        element.appendChild(ok);
+                        setTimeout(() => element.contains(ok) && element.removeChild(ok), 2000);
+                    };
+
+                    // حفظ بالـ Enter
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            finishEditing();
+                        }
+                    });
+
+                    // حفظ عند فقدان التركيز
+                    input.addEventListener('blur', finishEditing);
+                });
+            }
+
+            /* ------------------------------------------------------------------ */
+            /* 1) تفعيل التحرير على "أرقام الحسابات" (div الذي يحتوي على monospace) */
+            /* ------------------------------------------------------------------ */
+            const accountNumberEls = document.querySelectorAll('.bank-account div[style*="monospace"]');
+            accountNumberEls.forEach((el) => {
+                attachInlineEditor(el, {
+                    inputDir: 'ltr',
+                    titleText: 'انقر نقرًا مزدوجًا لتعديل رقم الحساب',
+                    inputExtraStyle: 'letter-spacing:1px; text-align:left;',
+                    // مش محتاجين onSave مخصصة هنا — نعرض النص الجديد كما هو.
+                });
+            });
+
+            /* ------------------------------------------------------------------ */
+            /* 2) تفعيل التحرير على "أسماء البنوك/المصارف" (أول div داخل .bank-account) */
+            /*    ونُعيد الأيقونة <i> تلقائيًا بعد الحفظ.                         */
+            /* ------------------------------------------------------------------ */
+            const bankNameEls = document.querySelectorAll('.bank-account > div:first-child');
+            bankNameEls.forEach((el) => {
+                // التقط الأيقونة (إن وجدت) مرة واحدة — سنعيد استخدامها بعد الحفظ
+                const icon = el.querySelector('i');
+                const iconHTML = icon ? icon.outerHTML : '';
+
+                attachInlineEditor(el, {
+                    inputDir: 'rtl',
+                    titleText: 'انقر نقرًا مزدوجًا لتعديل اسم البنك/المصرف',
+                    onSave: (newValue, {
+                        element,
+                        originalStyle
+                    }) => {
+                        // أعِد الأيقونة + الاسم الجديد
+                        element.innerHTML = (iconHTML || '') + (newValue || '');
+                        element.setAttribute('style', originalStyle);
+                        element.style.cursor = 'pointer';
+                    }
+                });
+            });
+
+            /* ------------------------------------------------------------------ */
+            /* (اختياري) إضافة ملاحظة توضيحية أعلى القسم                         */
+            /* ------------------------------------------------------------------ */
+            const section = document.querySelector('.bank-accounts');
+            if (section && section.querySelector('h4')) {
+                // مثال: إظهار ملاحظة (معلّمة افتراضيًا)
+                // const note = document.createElement('small');
+                // note.style = 'color:#666; font-style:italic;';
+                // note.textContent = '(انقر نقرًا مزدوجًا على الاسم أو رقم الحساب لتعديله)';
+                // section.querySelector('h4').appendChild(note);
+            }
+
         });
     </script>
 
