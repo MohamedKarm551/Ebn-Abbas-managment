@@ -513,8 +513,8 @@
                                 @foreach ($visasByCurrency as $currency => $visasGroup)
                                     <tr>
                                         <th colspan="3">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                        <th>{{ number_format($visasGroup->sum('cost'), 2) }}</th>
-                                        <th>{{ number_format($visasGroup->sum('selling_price'), 2) }}</th>
+                                        <th>{{ number_format($visasGroup->sum('cost'), 2) * $visasGroup->sum('quantity') }}</th>
+                                        <th>{{ number_format($visasGroup->sum('selling_price'), 2) * $visasGroup->sum('quantity') }}</th>
                                         <th>
                                             <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                                 {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
@@ -599,8 +599,8 @@
                                 @foreach ($flightsByCurrency as $currency => $flightsGroup)
                                     <tr>
                                         <th colspan="6">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                        <th>{{ number_format($flightsGroup->sum('cost'), 2) }}</th>
-                                        <th>{{ number_format($flightsGroup->sum('selling_price'), 2) }}</th>
+                                        <th>{{ number_format($flightsGroup->sum('cost'), 2)  * $flightsGroup->sum('quantity') }}</th>
+                                        <th>{{ number_format($flightsGroup->sum('selling_price'), 2)  * $flightsGroup->sum('quantity') }}</th>
                                         <th>
                                             <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                                 {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
@@ -730,8 +730,8 @@
                         @foreach ($transportsByCurrency as $currency => $transportsGroup)
                             <tr>
                                 <th colspan="3">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                <th>{{ number_format($transportsGroup->sum('cost'), 2) }}</th>
-                                <th>{{ number_format($transportsGroup->sum('selling_price'), 2) }}</th>
+                                <th>{{ number_format($transportsGroup->sum('cost'), 2) * $transportsGroup->sum('quantity') }}</th>
+                                <th>{{ number_format($transportsGroup->sum('selling_price'), 2) * $transportsGroup->sum('quantity') }}</th>
                                 <th>
                                     <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                         {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
@@ -853,8 +853,8 @@
                             @foreach ($hotelsByCurrency as $currency => $hotelsGroup)
                                 <tr>
                                     <th colspan="9">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                    <th>{{ number_format($hotelsGroup->sum('total_cost'), 2) }}</th>
-                                    <th>{{ number_format($hotelsGroup->sum('total_selling_price'), 2) }}</th>
+                                    <th>{{ number_format($hotelsGroup->sum('total_cost'), 2) * $hotelsGroup->sum('quantity') }}</th>
+                                    <th>{{ number_format($hotelsGroup->sum('total_selling_price'), 2) * $hotelsGroup->sum('quantity') }}</th>
                                     <th>
                                         <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                             {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
@@ -967,8 +967,8 @@
                             @foreach ($landTripsByCurrency as $currency => $landTripsGroup)
                                 <tr>
                                     <th colspan="9">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                    <th>{{ number_format($landTripsGroup->sum('total_cost'), 2) }}</th>
-                                    <th>{{ number_format($landTripsGroup->sum('selling_price'), 2) }}</th>
+                                    <th>{{ number_format($landTripsGroup->sum('total_cost'), 2) * $landTripsGroup->sum('quantity') }}</th>
+                                    <th>{{ number_format($landTripsGroup->sum('selling_price'), 2) * $landTripsGroup->sum('quantity') }}</th>
                                     <th>
                                         <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                             {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
