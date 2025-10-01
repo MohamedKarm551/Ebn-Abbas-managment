@@ -608,9 +608,19 @@
                                 @foreach ($flightsByCurrency as $currency => $flightsGroup)
                                     <tr>
                                         <th colspan="6">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                        <th>{{ number_format($flightsGroup->sum('cost'), 2) * $flightsGroup->sum('quantity') }}
+                                        <th> @php
+                                            $totalCost = $flightsGroup->sum(
+                                                fn($f) => (float) $f->cost * (int) ($f->quantity ?? 1),
+                                            );
+                                        @endphp
+                                            {{ number_format($totalCost, 2) }}
                                         </th>
-                                        <th>{{ number_format($flightsGroup->sum('selling_price'), 2) * $flightsGroup->sum('quantity') }}
+                                        <th> @php
+                                            $totalSell = $flightsGroup->sum(
+                                                fn($f) => (float) $f->selling_price * (int) ($f->quantity ?? 1),
+                                            );
+                                        @endphp
+                                            {{ number_format($totalSell, 2) }}
                                         </th>
                                         <th>
                                             <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
