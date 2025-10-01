@@ -610,14 +610,14 @@
                                         <th colspan="6">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
                                         <th> @php
                                             $totalCost = $flightsGroup->sum(
-                                                fn($f) => (float) $f->cost * (int) ($f->quantity ?? 1),
+                                                fn($f) => (float) $f->cost * (int) ($f->passengers ?? 1),
                                             );
                                         @endphp
                                             {{ number_format($totalCost, 2) }}
                                         </th>
                                         <th> @php
                                             $totalSell = $flightsGroup->sum(
-                                                fn($f) => (float) $f->selling_price * (int) ($f->quantity ?? 1),
+                                                fn($f) => (float) $f->selling_price * (int) ($f->passengers ?? 1),
                                             );
                                         @endphp
                                             {{ number_format($totalSell, 2) }}
