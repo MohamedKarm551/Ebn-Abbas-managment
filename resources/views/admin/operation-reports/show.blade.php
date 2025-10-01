@@ -874,9 +874,23 @@
                             @foreach ($hotelsByCurrency as $currency => $hotelsGroup)
                                 <tr>
                                     <th colspan="9">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                    <th>{{ number_format($hotelsGroup->sum('total_cost'), 2) * $hotelsGroup->sum('quantity') }}
+                                    <th>
+                                        @php
+                                            $totalCost = $hotelsGroup->sum(
+                                                fn($h) => (float) $h->total_cost * (int) ($h->quantity ?? 1),
+                                            );
+                                        @endphp
+                                        {{ number_format($totalCost, 2) }}
+
+
                                     </th>
-                                    <th>{{ number_format($hotelsGroup->sum('total_selling_price'), 2) * $hotelsGroup->sum('quantity') }}
+                                    <th>
+                                        @php
+                                            $totalSell = $hotelsGroup->sum(
+                                                fn($h) => (float) $h->total_selling_price * (int) ($h->quantity ?? 1),
+                                            );
+                                        @endphp
+                                        {{ number_format($totalSell, 2) }}
                                     </th>
                                     <th>
                                         <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
@@ -1004,7 +1018,7 @@
                                             fn($t) => (float) $t->selling_price * (int) ($t->quantity ?? 1),
                                         );
                                     @endphp
-                                        {{ number_format($totalSell, 2) }}  
+                                        {{ number_format($totalSell, 2) }}
                                     </th>
                                     <th>
                                         <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
