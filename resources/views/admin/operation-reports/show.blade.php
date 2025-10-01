@@ -511,18 +511,27 @@
                                     $visasByCurrency = $operationReport->visas->groupBy('currency');
                                 @endphp
                                 @foreach ($visasByCurrency as $currency => $visasGroup)
+                                    @php
+                                        $totalCost = $visasGroup->sum(fn($v) => (float) $v->cost * (int) $v->quantity);
+                                        $totalSell = $visasGroup->sum(
+                                            fn($v) => (float) $v->selling_price * (int) $v->quantity,
+                                        );
+
+                                        // الربح عندك واضح إنه متحسب مسبقًا لكل صف (سعر البيع - التكلفة) × الكمية
+                                        // فالإجمالي يبقى مجموع أرباح الصفوف:
+                                        $totalProfit = $visasGroup->sum('profit');
+                                    @endphp
                                     <tr>
                                         <th colspan="3">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                        <th>{{ number_format($visasGroup->sum('cost'), 2) * $visasGroup->sum('quantity') }}</th>
-                                        <th>{{ number_format($visasGroup->sum('selling_price'), 2) * $visasGroup->sum('quantity') }}</th>
+                                        <th>{{ number_format($totalCost, 2) }}</th>
+                                        <th>{{ number_format($totalSell, 2) }}</th>
                                         <th>
                                             <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                                 {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
                                             </span>
                                         </th>
-                                        <th
-                                            class="{{ $visasGroup->sum('profit') > 0 ? 'profit-positive' : 'profit-negative' }}">
-                                            {{ number_format($visasGroup->sum('profit'), 2) }}
+                                        <th class="{{ $totalProfit > 0 ? 'profit-positive' : 'profit-negative' }}">
+                                            {{ number_format($totalProfit, 2) }}
                                         </th>
                                         <th></th>
                                     </tr>
@@ -599,8 +608,10 @@
                                 @foreach ($flightsByCurrency as $currency => $flightsGroup)
                                     <tr>
                                         <th colspan="6">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                        <th>{{ number_format($flightsGroup->sum('cost'), 2)  * $flightsGroup->sum('quantity') }}</th>
-                                        <th>{{ number_format($flightsGroup->sum('selling_price'), 2)  * $flightsGroup->sum('quantity') }}</th>
+                                        <th>{{ number_format($flightsGroup->sum('cost'), 2) * $flightsGroup->sum('quantity') }}
+                                        </th>
+                                        <th>{{ number_format($flightsGroup->sum('selling_price'), 2) * $flightsGroup->sum('quantity') }}
+                                        </th>
                                         <th>
                                             <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                                 {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
@@ -730,8 +741,18 @@
                         @foreach ($transportsByCurrency as $currency => $transportsGroup)
                             <tr>
                                 <th colspan="3">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                <th>{{ number_format($transportsGroup->sum('cost'), 2) * $transportsGroup->sum('quantity') }}</th>
-                                <th>{{ number_format($transportsGroup->sum('selling_price'), 2) * $transportsGroup->sum('quantity') }}</th>
+                                @php
+                                    $totalCost = $transportsGroup->sum(
+                                        fn($t) => (float) $t->cost * (int) ($t->quantity ?? 1),
+                                    );
+                                    $totalSell = $transportsGroup->sum(
+                                        fn($t) => (float) $t->selling_price * (int) ($t->quantity ?? 1),
+                                    );
+                                    $totalProfit = $transportsGroup->sum('profit');
+                                @endphp
+
+                                <th>{{ number_format($totalCost, 2) }}</th>
+                                <th>{{ number_format($totalSell, 2) }}</th>
                                 <th>
                                     <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                         {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
@@ -853,8 +874,10 @@
                             @foreach ($hotelsByCurrency as $currency => $hotelsGroup)
                                 <tr>
                                     <th colspan="9">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                    <th>{{ number_format($hotelsGroup->sum('total_cost'), 2) * $hotelsGroup->sum('quantity') }}</th>
-                                    <th>{{ number_format($hotelsGroup->sum('total_selling_price'), 2) * $hotelsGroup->sum('quantity') }}</th>
+                                    <th>{{ number_format($hotelsGroup->sum('total_cost'), 2) * $hotelsGroup->sum('quantity') }}
+                                    </th>
+                                    <th>{{ number_format($hotelsGroup->sum('total_selling_price'), 2) * $hotelsGroup->sum('quantity') }}
+                                    </th>
                                     <th>
                                         <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                             {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
@@ -915,13 +938,15 @@
                                     <td>{{ $landTrip->trip_type ?? '-' }}</td>
                                     <td style="
     font-size: small;
-">{{ $landTrip->departure_date ? $landTrip->departure_date->format('Y-m-d') : '-' }}
+">
+                                        {{ $landTrip->departure_date ? $landTrip->departure_date->format('Y-m-d') : '-' }}
                                         <small class="d-block text-muted hijri-date"
                                             data-date="{{ $landTrip->departure_date->format('Y-m-d') }}"></small>
                                     </td>
                                     <td style="
     font-size: small;
-">{{ $landTrip->return_date ? $landTrip->return_date->format('Y-m-d') : '-' }}
+">
+                                        {{ $landTrip->return_date ? $landTrip->return_date->format('Y-m-d') : '-' }}
                                         <small class="d-block text-muted hijri-date"
                                             data-date="{{ $landTrip->return_date->format('Y-m-d') }}"></small>
                                     </td>
@@ -967,8 +992,20 @@
                             @foreach ($landTripsByCurrency as $currency => $landTripsGroup)
                                 <tr>
                                     <th colspan="9">إجمالي {{ $currency == 'KWD' ? 'الدينار' : 'الريال' }}</th>
-                                    <th>{{ number_format($landTripsGroup->sum('total_cost'), 2) * $landTripsGroup->sum('quantity') }}</th>
-                                    <th>{{ number_format($landTripsGroup->sum('selling_price'), 2) * $landTripsGroup->sum('quantity') }}</th>
+                                    <th>
+                                        @php
+                                            $totalCost = $landTripsGroup->sum(
+                                                fn($t) => (float) $t->total_cost * (int) ($t->quantity ?? 1),
+                                            );
+                                        @endphp
+                                        {{ number_format($totalCost, 2) }} </th>
+                                    <th> @php
+                                        $totalSell = $landTripsGroup->sum(
+                                            fn($t) => (float) $t->selling_price * (int) ($t->quantity ?? 1),
+                                        );
+                                    @endphp
+                                        {{ number_format($totalSell, 2) }}  
+                                    </th>
                                     <th>
                                         <span class="badge bg-{{ $currency == 'KWD' ? 'primary' : 'success' }}">
                                             {{ $currency == 'KWD' ? 'د.ك' : 'ر.س' }}
