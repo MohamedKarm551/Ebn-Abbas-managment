@@ -1287,10 +1287,10 @@ class BookingsController extends Controller
         // *** نهاية التحقق الجديد ***
 
         $booking = Booking::findOrFail($id); // جلب بيانات الحجز
-        $agents = Agent::all(); // جلب بيانات جهات الحجز
-        $hotels = Hotel::all(); // جلب بيانات الفنادق
-        $companies = Company::all(); // جلب بيانات الشركات
-        $employees = Employee::all(); // جلب بيانات الموظفين
+        $agents = Agent::orderBy('name', 'asc')->get(); // جلب بيانات جهات الحجز
+        $hotels = Hotel::orderBy('name', 'asc')->get(); // جلب بيانات الفنادق
+        $companies = Company::orderBy('name', 'asc')->get(); // جلب بيانات الشركات
+        $employees = Employee::orderBy('name', 'asc')->get(); // جلب بيانات الموظفين
 
         return view('bookings.edit', compact('booking', 'agents', 'hotels', 'companies', 'employees'));
     }
