@@ -46,7 +46,7 @@ class LandTripController extends Controller
         // بناء الاستعلام
         $query = LandTrip::with(['tripType', 'agent', 'employee'])
             ->withCount('bookings') // إضافة حساب عدد الحجوزات
-            ->latest();
+            ->orderBy('departure_date', 'desc');
 
         // تطبيق الفلاتر
         if ($request->filled('trip_type_id')) {
