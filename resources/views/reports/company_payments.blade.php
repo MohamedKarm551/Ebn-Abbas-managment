@@ -316,6 +316,10 @@
                 <button id="showChartBtn" class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-chart-line me-1"></i> عرض الرسم البياني للدفعات
                 </button>
+                {{-- زر تصدير ملف اكسيل بالدفعات --}}
+                <button type="button" class="btn btn-outline-success btn-sm" onclick="exportCompanyPayments()">
+                    <i class="fas fa-file-excel"></i> تصدير إلى Excel
+                </button>
             </div>
 
             <div id="chartContainer" class="mb-4 shadow-sm"
@@ -325,7 +329,7 @@
             {{-- *** نهاية إضافة زرار ومكان الرسم البياني *** --}}
 
 
-            <table class="table table-bordered">
+            <table id="company-payments-table" class="table table-bordered">
                 <thead>
                     <tr>
                         <th>#</th> {{-- *** إضافة رأس عمود الترقيم *** --}}
@@ -389,7 +393,8 @@
                                 {{ number_format($payment->amount, 2) }}
                                 {{ $payment->currency === 'SAR' ? 'ريال' : 'دينار كويتي' }}
                             </td> {{-- *** عرض الملاحظات بعد استبدال الرابط (إن وجد) *** --}}
-                            <td>{!! nl2br(e($displayNotes)) !!}</td> {{-- استخدم nl2br للحفاظ على الأسطر الجديدة و e للحماية --}}
+                            <td style="max-width:250px; word-break:break-word;">{!! nl2br(e($displayNotes)) !!}</td>
+                            {{-- استخدم nl2br للحفاظ على الأسطر الجديدة و e للحماية --}}
 
                             <td> {{-- *** خلية الإيصال *** --}}
                                 @if ($isUploaded)
@@ -717,6 +722,150 @@
                         toggleBtn.textContent = "تسجيل خصم";
                         modalTitle.textContent = "تسجيل دفعة - " + companyName;
                     }
+                }
+            </script>
+            {{-- دالة تصدير دفعات الشركة إلى إكسيل --}}
+
+            {{-- مكتبة XLSX للتصدير إلى إكسل --}}
+            <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+            <script>
+                function exportCompanyPayments() {
+                    const table = document.querySelector('#company-payments-table');
+                    if (!window.XLSX) {
+                        alert('لم يتم تحميل مكتبة XLSX.');
+                        return;
+                    }
+                    if (!table) {
+                        alert('لم يتم العثور على الجدول.');
+                        return;
+                    }
+
+                    // ننسخ الجدول ونزيل عمود الإجراءات
+                    const tmp = table.cloneNode(true);
+                    tmp.querySelectorAll('td:last-child, th:last-child').forEach(el => el.remove());
+
+                    // فهارس الأعمدة
+                    const headerCells = Array.from(tmp.querySelectorAll('thead tr th'));
+                    // === التعديل: إزالة التاريخ الهجري وإبقاء التاريخ الميلادي فقط ===
+                    const dateColIndex = headerCells.findIndex(th => th.textContent.trim().includes('التاريخ'));
+                    if (dateColIndex >= 0) {
+                        tmp.querySelectorAll('tbody tr').forEach(tr => {
+                            const td = tr.cells[dateColIndex];
+                            if (!td) return;
+
+                            // احذف عنصر <small class="hijri-date"> من النسخة المصدّرة
+                            td.querySelectorAll('.hijri-date').forEach(el => el.remove());
+
+                            // خُذ أول نص في الخلية (التاريخ الميلادي) فقط
+                            const firstTextNode = Array.from(td.childNodes)
+                                .find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== '');
+                            const gregText = (firstTextNode ? firstTextNode.textContent : td.textContent).trim();
+
+                            // اجعل الخلية تحتوي الميلادي فقط
+                            td.textContent = gregText;
+
+                            // اختياري: إجبار الإكسيل على تاريخ قابل للفرز
+                            const [d,m,y] = gregText.split('/').map(Number);
+                             const jsDate = new Date(Date.UTC(y, m-1, d));
+                             td.setAttribute('data-t','d');
+                            td.setAttribute('data-v', jsDate.toISOString());
+                             td.setAttribute('data-z','dd/mm/yyyy');
+                        });
+                    }
+                    // === نهاية التعديل ===
+
+
+                    const amountColIndex = headerCells.findIndex(th => th.textContent.trim().includes('المبلغ'));
+                    const receiptColIndex = headerCells.findIndex(th => th.textContent.trim().includes('الإيصال'));
+
+                    // استخراج الرقم فقط
+                    const extractNumber = (str) => {
+                        const m = (str || '').match(/-?[\d.,]+/);
+                        if (!m) return '';
+                        return m[0].replace(/,/g, '');
+                    };
+
+                    // تنظيف المبلغ + التقاط روابط الإيصال (حلقة واحدة فقط)
+                    const receiptLinks = [];
+                    tmp.querySelectorAll('tbody tr').forEach((tr, rIdx) => {
+                        // المبلغ -> رقم فقط
+                        if (amountColIndex >= 0 && tr.cells[amountColIndex]) {
+                            const td = tr.cells[amountColIndex];
+                            const pure = extractNumber(td.textContent);
+                            const val = pure === '' ? '' : String(parseFloat(pure));
+                            td.textContent = val;
+                            td.setAttribute('data-t', 'n');
+                            td.setAttribute('data-v', val);
+                            td.setAttribute('data-z', '0.00');
+                        }
+                        // الإيصال -> اجمع الرابط
+                        if (receiptColIndex >= 0 && tr.cells[receiptColIndex]) {
+                            const td = tr.cells[receiptColIndex];
+                            const a = td.querySelector('a[href]');
+                            if (a && a.href) {
+                                receiptLinks.push({
+                                    r: rIdx,
+                                    url: a.href
+                                });
+                                td.textContent = 'فتح الإيصال';
+                            }
+                        }
+                    });
+
+                    // نبني ملف العمل من الجدول
+                    const wb = XLSX.utils.table_to_book(tmp, {
+                        sheet: 'مدفوعات الشركة',
+                        raw: false
+                    });
+                    const ws = wb.Sheets['مدفوعات الشركة'];
+
+                    // تثبيت الهايبرلينك بعد تعريف ws
+                    if (ws && receiptColIndex >= 0) {
+                        receiptLinks.forEach(({
+                            r,
+                            url
+                        }) => {
+                            const cellRef = XLSX.utils.encode_cell({
+                                c: receiptColIndex,
+                                r: r + 1
+                            }); // +1 لتخطي العناوين
+                            if (!ws[cellRef]) ws[cellRef] = {
+                                t: 's',
+                                v: 'فتح الإيصال'
+                            };
+                            ws[cellRef].l = {
+                                Target: url,
+                                Tooltip: 'فتح الإيصال'
+                            };
+                        });
+                    }
+
+                    // عرض الأعمدة
+                    ws['!cols'] = [{
+                            wch: 6
+                        }, // #
+                        {
+                            wch: 12
+                        }, // التاريخ
+                        {
+                            wch: 18
+                        }, // المبلغ
+                        {
+                            wch: 60
+                        }, // الملاحظات
+                        {
+                            wch: 20
+                        } // الإيصال
+                    ];
+
+                    // اسم الملف
+                    const companyName = '{{ $company->name }}';
+                    const safeName = companyName.replace(/[\\\/:*?"<>|]+/g, '').replace(/\s+/g, '-');
+                    const today = new Date().toISOString().split('T')[0];
+                    const fileName = `مدفوعات-${safeName}-${today}.xlsx`;
+
+                    XLSX.writeFile(wb, fileName);
                 }
             </script>
         @endpush
