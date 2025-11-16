@@ -1659,7 +1659,7 @@ class ReportController extends Controller
 
         // هات كل الحجوزات بتاعة الفندق مع بيانات الشركة والوكيل
         $bookings = Booking::where('hotel_id', $id)
-            ->with(['company', 'agent'])
+            ->with(['company', 'agent'])->orderBy('check_in', 'asc')
             ->get();
         // حساب المستحق والمتبقي حسب العملة
         $totalDueByCurrency = $bookings->groupBy('currency')
