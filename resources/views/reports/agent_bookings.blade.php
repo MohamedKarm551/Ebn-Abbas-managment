@@ -181,6 +181,9 @@
                                     {{ $booking->client_name }}
                                     <br>
                                     <span class="block text-muted small">
+                                        {{-- اسم الموظف --}}
+                                        {{ optional($booking->employee)->name ?? 'غير محدد' }}
+                                        <br>
                                         المبلغ المدفوع:
                                         {{ number_format(optional($booking->financialTracking)->agent_payment_amount ?? 0, 2) }}
                                         <br>
