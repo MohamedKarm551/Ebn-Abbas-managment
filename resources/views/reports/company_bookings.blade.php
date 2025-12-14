@@ -155,8 +155,19 @@
                                             ])
                                         </td>
                                         <td>
-                                            {{ $booking->client_name }}
+                                            <span
+                                        style="{{ $booking->amount_due_to_hotel == 0 ? 'text-decoration: line-through; opacity: 0.6;' : '' }}">
+                                        {{ $booking->client_name }}
+                                        @if ($booking->amount_due_to_hotel == 0)
+                                            <span class="badge bg-danger ms-2">(متكنسل)</span>
+                                        @endif
+                                    </span>
+                                    
                                             <br>
+                                            <span class="block text-muted small">
+                                        {{-- اسم الموظف --}}
+                                        {{ optional($booking->employee)->name ?? 'غير محدد' }}
+                                        <br>
                                             <span class="block text-muted small">
                                                 المبلغ المدفوع:
                                                 {{ number_format(optional($booking->financialTracking)->company_payment_amount ?? 0, 2) }}
