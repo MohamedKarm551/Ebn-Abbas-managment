@@ -412,16 +412,22 @@
 <script>
     // Converts Gregorian dates to Hijri
     function convertToHijri() {
+    // تعديل يوم 15 ديسمبر لاحظت فرق يوم كامل في التاريخ الهجري والميلادي فسيتم تعديل الكود لتغيير هذا اليوم يدويا 
         document.querySelectorAll('.hijri-date').forEach(element => {
             const gregorianDate = element.getAttribute('data-date');
             if (gregorianDate) {
                 try {
+                     // إنشاء كائن Date من التاريخ الميلادي
+                const date = new Date(gregorianDate);
+                // طرح يوم واحد لتصحيح الفرق
+                date.setDate(date.getDate() - 1);
+
                     // Use Intl.DateTimeFormat with 'islamic' calendar
                     const hijriDate = new Intl.DateTimeFormat('ar-SA-islamic', {
                         day: 'numeric',
                         month: 'long',
                         calendar: 'islamic'
-                    }).format(new Date(gregorianDate));
+                    }).format(date);
 
                     element.textContent = hijriDate;
                 } catch (e) {

@@ -173,11 +173,11 @@
 
             <div class="bank-account" style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px dashed #ddd;">
                 <div style="font-weight:bold; color:#0066cc;">
-                    <i class="fas fa-university" style="margin-left:5px;"></i>بنك الجزيرة
+                    <i class="fas fa-university" style="margin-left:5px;"></i>بنك الإنماء
                 </div>
                 <div
                     style="font-family:monospace; padding:3px 15px; letter-spacing:1px; margin-top:3px; direction:ltr; text-align:left;">
-                    SA96 6010 0010 4950 2512 6001
+                   SA 9705000 0682054 18637000
                 </div>
             </div>
 
