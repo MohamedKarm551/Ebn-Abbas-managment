@@ -249,6 +249,20 @@
 @endsection
 
 @push('scripts')
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+
+<!-- مهم جدًا لزر Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             initializeBookingSelector('companyBookingsTable', 'companySelectRangeBtn', 'companyResetRangeBtn');
@@ -339,8 +353,96 @@
             }
         }
     </script>
+    <script>
+        $(document).ready(function () {
+
+    // احذف صفوف التفاصيل (collapse) قبل تشغيل DataTable
+    $('#companyBookingsTable tbody tr.booking-details-row').remove();
+
+    let table = $('#companyBookingsTable').DataTable({
+        paging: true,
+        pageLength: 25,
+        searching: true,
+        ordering: true,
+        info: true,
+        responsive: false,
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: 'excelHtml5',
+                text: 'Export Excel',
+                title: 'Company Bookings',
+                exportOptions: {
+                    columns: function (idx, data, node) {
+                        // استبعد عمود زر الموبايل (+) (أول th عندك)
+                        if (idx === 0) return false;
+
+                        // استبعد عمود checkbox (الثالث عندك)
+                        if (idx === 2) return false;
+
+                        return true;
+                    },
+                    rows: function (idx, data, node) {
+                        return $(node).hasClass('booking-main-row');
+                    },
+                    format: {
+                        body: function (data, row, column, node) {
+                            return $('<div>').html(data).text().trim(); // يشيل HTML ويطلع نص فقط
+                        }
+                    }
+                }
+            },
+            {
+                extend: 'csvHtml5',
+                text: 'Export CSV',
+                title: 'Company Bookings',
+                bom: true,
+                exportOptions: {
+                    columns: function (idx) {
+                        if (idx === 0) return false;
+                        if (idx === 2) return false;
+                        return true;
+                    },
+                    rows: function (idx, data, node) {
+                        return $(node).hasClass('booking-main-row');
+                    },
+                    format: {
+                        body: function (data) {
+                            return $('<div>').html(data).text().trim();
+                        }
+                    }
+                }
+            },
+            {
+                extend: 'print',
+                text: 'Print',
+                exportOptions: {
+                    columns: function (idx) {
+                        if (idx === 0) return false;
+                        if (idx === 2) return false;
+                        return true;
+                    },
+                    rows: function (idx, data, node) {
+                        return $(node).hasClass('booking-main-row');
+                    },
+                    format: {
+                        body: function (data) {
+                            return $('<div>').html(data).text().trim();
+                        }
+                    }
+                }
+            }
+        ]
+    });
+
+});
+
+    </script>
 @endpush
 @push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body,
