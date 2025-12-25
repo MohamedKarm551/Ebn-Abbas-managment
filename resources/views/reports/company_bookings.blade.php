@@ -156,45 +156,45 @@
                                         </td>
                                         <td>
                                             <span
-                                        style="{{ $booking->amount_due_to_hotel == 0 ? 'text-decoration: line-through; opacity: 0.6;' : '' }}">
-                                        {{ $booking->client_name }}
-                                        @if ($booking->amount_due_to_hotel == 0)
-                                            <span class="badge bg-danger ms-2">(متكنسل)</span>
-                                        @endif
-                                    </span>
-                                    
+                                                style="{{ $booking->amount_due_to_hotel == 0 ? 'text-decoration: line-through; opacity: 0.6;' : '' }}">
+                                                {{ $booking->client_name }}
+                                                @if ($booking->amount_due_to_hotel == 0)
+                                                    <span class="badge bg-danger ms-2">(متكنسل)</span>
+                                                @endif
+                                            </span>
+
                                             <br>
                                             <span class="block text-muted small">
-                                        {{-- اسم الموظف --}}
-                                        {{ optional($booking->employee)->name ?? 'غير محدد' }}
-                                        <br>
-                                            <span class="block text-muted small">
-                                                المبلغ المدفوع:
-                                                {{ number_format(optional($booking->financialTracking)->company_payment_amount ?? 0, 2) }}
+                                                {{-- اسم الموظف --}}
+                                                {{ optional($booking->employee)->name ?? 'غير محدد' }}
                                                 <br>
-                                                حالة الدفع:
-                                                @php
-                                                    $status =
-                                                        optional($booking->financialTracking)->company_payment_status ??
-                                                        'not_paid';
-                                                    $statusText =
-                                                        [
-                                                            'fully_paid' => 'مدفوع بالكامل',
-                                                            'partially_paid' => 'مدفوع جزئياً',
-                                                            'not_paid' => 'غير مدفوع',
-                                                            'paid' => 'مدفوع', // لو في عندك حالة باسم paid
-                                                            'unpaid' => 'غير مدفوع',
-                                                        ][$status] ?? 'غير محدد';
-                                                @endphp
-                                                {{ $statusText }}
-                                            </span>
-                                            @if (!empty($booking->notes))
-                                                <i class="fas fa-info-circle text-primary ms-2 fs-5 p-1"
-                                                    data-bs-toggle="popover" data-bs-trigger="hover focus"
-                                                    data-bs-placement="auto" title="ملاحظات"
-                                                    data-bs-content="{{ e($booking->notes) }}">
-                                                </i>
-                                            @endif
+                                                <span class="block text-muted small">
+                                                    المبلغ المدفوع:
+                                                    {{ number_format(optional($booking->financialTracking)->company_payment_amount ?? 0, 2) }}
+                                                    <br>
+                                                    حالة الدفع:
+                                                    @php
+                                                        $status =
+                                                            optional($booking->financialTracking)
+                                                                ->company_payment_status ?? 'not_paid';
+                                                        $statusText =
+                                                            [
+                                                                'fully_paid' => 'مدفوع بالكامل',
+                                                                'partially_paid' => 'مدفوع جزئياً',
+                                                                'not_paid' => 'غير مدفوع',
+                                                                'paid' => 'مدفوع', // لو في عندك حالة باسم paid
+                                                                'unpaid' => 'غير مدفوع',
+                                                            ][$status] ?? 'غير محدد';
+                                                    @endphp
+                                                    {{ $statusText }}
+                                                </span>
+                                                @if (!empty($booking->notes))
+                                                    <i class="fas fa-info-circle text-primary ms-2 fs-5 p-1"
+                                                        data-bs-toggle="popover" data-bs-trigger="hover focus"
+                                                        data-bs-placement="auto" title="ملاحظات"
+                                                        data-bs-content="{{ e($booking->notes) }}">
+                                                    </i>
+                                                @endif
                                         </td>
 
                                         <td class="d-none d-md-table-cell">{{ $booking->agent->name ?? 'غير محدد' }}</td>
@@ -249,19 +249,19 @@
 @endsection
 
 @push('scripts')
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
 
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
 
-<!-- مهم جدًا لزر Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- مهم جدًا لزر Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -354,12 +354,39 @@
         }
     </script>
     <script>
-        $(document).ready(function () {
+        const companyName = @json($company->name ?? '');
+    </script>
 
-    // احذف صفوف التفاصيل (collapse) قبل تشغيل DataTable
+    <script>
+$(document).ready(function() {
+
+    // 1) شيل صفوف تفاصيل الموبايل
     $('#companyBookingsTable tbody tr.booking-details-row').remove();
 
-    let table = $('#companyBookingsTable').DataTable({
+    const exportTitle = `حجوزات شركة ${companyName}`;
+
+    // 2) دالة تنظف HTML وتجيب نص
+    function stripHtml(data) {
+        return $('<div>').html(data).text().trim();
+    }
+
+    // 3) دالة تجيب الرقم فقط
+    function extractNumber(text) {
+        const match = text.match(/-?\d[\d,]*\.\d+|-?\d[\d,]*/);
+        return match ? match[0].replace(/,/g, '') : text;
+    }
+
+    // 4) الأعمدة اللي عايزها فقط (حسب ترتيب جدولك)
+    const exportCols = [3, 4, 5, 6, 7, 8, 9, 10];
+
+    // 5) ملاحظة مهمة:
+    // داخل format.body -> (column) هنا هو ترتيب العمود في التصدير (0..7)
+    // لأننا اخترنا 8 أعمدة فقط.
+    // column=0 => العميل
+    // column=6 => السعر
+    // column=7 => الإجمالي
+
+    $('#companyBookingsTable').DataTable({
         paging: true,
         pageLength: 25,
         searching: true,
@@ -371,23 +398,33 @@
             {
                 extend: 'excelHtml5',
                 text: 'Export Excel',
-                title: 'Company Bookings',
+                title: exportTitle,
                 exportOptions: {
-                    columns: function (idx, data, node) {
-                        // استبعد عمود زر الموبايل (+) (أول th عندك)
-                        if (idx === 0) return false;
-
-                        // استبعد عمود checkbox (الثالث عندك)
-                        if (idx === 2) return false;
-
-                        return true;
-                    },
-                    rows: function (idx, data, node) {
+                    columns: exportCols,
+                    rows: function(idx, data, node) {
                         return $(node).hasClass('booking-main-row');
                     },
                     format: {
-                        body: function (data, row, column, node) {
-                            return $('<div>').html(data).text().trim(); // يشيل HTML ويطلع نص فقط
+                        body: function(data, row, column, node) {
+
+                            // ✅ العميل (أول عمود في exportCols)
+                            if (column === 0) {
+                                const client = $(node).closest('tr')
+                                    .find('input.booking-checkbox')
+                                    .data('client-name');
+
+                                return (client ?? '').toString().trim();
+                            }
+
+                            // باقي الأعمدة: نص نظيف
+                            let text = stripHtml(data);
+
+                            // ✅ السعر + الإجمالي (آخر عمودين في exportCols)
+                            if (column === 6 || column === 7) {
+                                return extractNumber(text);
+                            }
+
+                            return text;
                         }
                     }
                 }
@@ -395,20 +432,30 @@
             {
                 extend: 'csvHtml5',
                 text: 'Export CSV',
-                title: 'Company Bookings',
+                title: exportTitle,
                 bom: true,
                 exportOptions: {
-                    columns: function (idx) {
-                        if (idx === 0) return false;
-                        if (idx === 2) return false;
-                        return true;
-                    },
-                    rows: function (idx, data, node) {
+                    columns: exportCols,
+                    rows: function(idx, data, node) {
                         return $(node).hasClass('booking-main-row');
                     },
                     format: {
-                        body: function (data) {
-                            return $('<div>').html(data).text().trim();
+                        body: function(data, row, column, node) {
+
+                            if (column === 0) {
+                                const client = $(node).closest('tr')
+                                    .find('input.booking-checkbox')
+                                    .data('client-name');
+                                return (client ?? '').toString().trim();
+                            }
+
+                            let text = stripHtml(data);
+
+                            if (column === 6 || column === 7) {
+                                return extractNumber(text);
+                            }
+
+                            return text;
                         }
                     }
                 }
@@ -416,18 +463,29 @@
             {
                 extend: 'print',
                 text: 'Print',
+                title: exportTitle,
                 exportOptions: {
-                    columns: function (idx) {
-                        if (idx === 0) return false;
-                        if (idx === 2) return false;
-                        return true;
-                    },
-                    rows: function (idx, data, node) {
+                    columns: exportCols,
+                    rows: function(idx, data, node) {
                         return $(node).hasClass('booking-main-row');
                     },
                     format: {
-                        body: function (data) {
-                            return $('<div>').html(data).text().trim();
+                        body: function(data, row, column, node) {
+
+                            if (column === 0) {
+                                const client = $(node).closest('tr')
+                                    .find('input.booking-checkbox')
+                                    .data('client-name');
+                                return (client ?? '').toString().trim();
+                            }
+
+                            let text = stripHtml(data);
+
+                            if (column === 6 || column === 7) {
+                                return extractNumber(text);
+                            }
+
+                            return text;
                         }
                     }
                 }
@@ -436,12 +494,11 @@
     });
 
 });
-
-    </script>
+</script>
 @endpush
 @push('styles')
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
     <style>
