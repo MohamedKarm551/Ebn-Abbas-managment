@@ -260,6 +260,20 @@
 @endsection
 
 @push('scripts')
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+
+    <!-- مهم جدًا لزر Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             initializeBookingSelector('agentBookingsTable', 'agentSelectRangeBtn', 'agentResetRangeBtn');
@@ -316,4 +330,139 @@
             }
         }
     </script>
+    <script>
+        const agentName = @json($agent->name ?? '');
+    </script>
+    <script>
+        $(document).ready(function() {
+
+            // 1) شيل صفوف التفاصيل للموبايل
+            $('#agentBookingsTable tbody tr.booking-details-row').remove();
+
+    const exportTitle = `حجوزات  ${agentName} - تقرير الحجوزات`;
+
+            function stripHtml(data) {
+                return $('<div>').html(data).text().trim();
+            }
+
+            function extractNumber(text) {
+                const match = text.match(/-?\d[\d,]*\.\d+|-?\d[\d,]*/);
+                return match ? match[0].replace(/,/g, '') : text;
+            }
+
+            // الأعمدة المطلوبة فقط
+            const exportCols = [3, 4, 5, 6, 7, 8, 9, 10];
+
+            $('#agentBookingsTable').DataTable({
+                paging: true,
+                pageLength: 25,
+                searching: true,
+                ordering: true,
+                info: true,
+                responsive: false,
+                dom: 'Bfrtip',
+                buttons: [{
+                        extend: 'excelHtml5',
+                        text: 'Export Excel',
+                        title: exportTitle,
+                        exportOptions: {
+                            columns: exportCols,
+                            rows: function(idx, data, node) {
+                                return $(node).hasClass('booking-main-row');
+                            },
+                            format: {
+                                body: function(data, row, column, node) {
+
+                                    // column هنا 0..7 (ترتيب الأعمدة داخل exportCols)
+
+                                    // ✅ العميل (أول عمود في exportCols)
+                                    if (column === 0) {
+                                        const client = $(node).closest('tr')
+                                            .find('input.booking-checkbox')
+                                            .data('client-name');
+                                        return (client ?? '').toString().trim();
+                                    }
+
+                                    let text = stripHtml(data);
+
+                                    // ✅ سعر الفندق + السعر الكلي (آخر عمودين في exportCols)
+                                    if (column === 6 || column === 7) {
+                                        return extractNumber(text);
+                                    }
+
+                                    return text;
+                                }
+                            }
+                        }
+                    },
+                    {
+                        extend: 'csvHtml5',
+                        text: 'Export CSV',
+                        title: exportTitle,
+                        bom: true,
+                        exportOptions: {
+                            columns: exportCols,
+                            rows: function(idx, data, node) {
+                                return $(node).hasClass('booking-main-row');
+                            },
+                            format: {
+                                body: function(data, row, column, node) {
+
+                                    if (column === 0) {
+                                        const client = $(node).closest('tr')
+                                            .find('input.booking-checkbox')
+                                            .data('client-name');
+                                        return (client ?? '').toString().trim();
+                                    }
+
+                                    let text = stripHtml(data);
+
+                                    if (column === 6 || column === 7) {
+                                        return extractNumber(text);
+                                    }
+
+                                    return text;
+                                }
+                            }
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        text: 'Print',
+                        title: exportTitle,
+                        exportOptions: {
+                            columns: exportCols,
+                            rows: function(idx, data, node) {
+                                return $(node).hasClass('booking-main-row');
+                            },
+                            format: {
+                                body: function(data, row, column, node) {
+
+                                    if (column === 0) {
+                                        const client = $(node).closest('tr')
+                                            .find('input.booking-checkbox')
+                                            .data('client-name');
+                                        return (client ?? '').toString().trim();
+                                    }
+
+                                    let text = stripHtml(data);
+
+                                    if (column === 6 || column === 7) {
+                                        return extractNumber(text);
+                                    }
+
+                                    return text;
+                                }
+                            }
+                        }
+                    }
+                ]
+            });
+
+        });
+    </script>
+@endpush
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 @endpush
