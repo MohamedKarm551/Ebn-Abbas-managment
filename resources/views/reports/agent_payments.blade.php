@@ -6,9 +6,10 @@
 @section('content')
     <div class="container">
         <h1>سجل المدفوعات - {{ $agent->name }}</h1>
-         <a href="{{ route('reports.agent.bookings', $agent->id) }}" class="w-25 p-2 mt-2 mb-2 btn btn-primary btn-sm"> الحجوزات
-            </a>
-            
+        <a href="{{ route('reports.agent.bookings', $agent->id) }}" class="w-25 p-2 mt-2 mb-2 btn btn-primary btn-sm">
+            الحجوزات
+        </a>
+
         <button type="button" class="w-25 p-2 mt-2 mb-2 btn btn-success btn-sm" data-bs-toggle="modal"
             data-bs-target="#agentPaymentModal{{ $agent->id }}">
             تسجيل دفعة
@@ -100,9 +101,11 @@
                 </div>
             </div>
         </div>
-                {{-- ✅ إضافة قسم ملخص الحسابات الحالية --}}
-        <div class="card mb-4" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            <div class="card-header" style="background: linear-gradient(120deg, #10b981 60%, #059669 100%); color: white; border-radius: 12px 12px 0 0;">
+        {{-- ✅ إضافة قسم ملخص الحسابات الحالية --}}
+        <div class="card mb-4"
+            style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div class="card-header"
+                style="background: linear-gradient(120deg, #10b981 60%, #059669 100%); color: white; border-radius: 12px 12px 0 0;">
                 <h5 class="mb-0 d-flex align-items-center">
                     <i class="fas fa-calculator me-2"></i>
                     ملخص الحسابات الحالية
@@ -112,37 +115,42 @@
                 @php
                     // ✅ استخدام الحسابات المحسوبة مسبقاً في الوكيل
                     $agent->calculateTotals();
-                    
+
                     // عدد الحجوزات
                     $totalBookings = $agent->bookings_count ?? $agent->bookings()->count();
-                    
+
                     // المستحق حسب العملة
-                    $dueByCurrency = $agent->computed_total_due_by_currency ?? 
-                                    ($agent->total_due_by_currency ?? ['SAR' => $agent->total_due ?? 0]);
-                    
+                    $dueByCurrency =
+                        $agent->computed_total_due_by_currency ??
+                        ($agent->total_due_by_currency ?? ['SAR' => $agent->total_due ?? 0]);
+
                     // المدفوع والخصومات حسب العملة
                     $paidByCurrency = $agent->computed_total_paid_by_currency ?? [];
                     $discountsByCurrency = $agent->computed_total_discounts_by_currency ?? [];
-                    
+
                     // إذا لم تكن محسوبة، احسبها من المدفوعات
                     if (empty($paidByCurrency) && $agent->payments) {
                         $agentPaymentsGrouped = $agent->payments->groupBy('currency');
-                        
+
                         foreach ($agentPaymentsGrouped as $currency => $paymentsForCurrency) {
                             $paidByCurrency[$currency] = $paymentsForCurrency->where('amount', '>=', 0)->sum('amount');
-                            $discountsByCurrency[$currency] = abs($paymentsForCurrency->where('amount', '<', 0)->sum('amount'));
+                            $discountsByCurrency[$currency] = abs(
+                                $paymentsForCurrency->where('amount', '<', 0)->sum('amount'),
+                            );
                         }
                     }
-                    
+
                     // المتبقي حسب العملة
-                    $remainingByCurrency = $agent->computed_remaining_by_currency ?? 
-                                          ($agent->remaining_by_currency ?? ['SAR' => $agent->remaining_amount ?? 0]);
+                    $remainingByCurrency =
+                        $agent->computed_remaining_by_currency ??
+                        ($agent->remaining_by_currency ?? ['SAR' => $agent->remaining_amount ?? 0]);
                 @endphp
 
                 <div class="row g-3">
                     {{-- عدد الحجوزات --}}
                     <div class="col-md-3">
-                        <div class="text-center p-3" style="background: linear-gradient(135deg, #3b82f6, #60a5fa); border-radius: 10px; color: white;">
+                        <div class="text-center p-3"
+                            style="background: linear-gradient(135deg, #3b82f6, #60a5fa); border-radius: 10px; color: white;">
                             <div class="mb-2">
                                 <i class="fas fa-calendar-check" style="font-size: 2rem;"></i>
                             </div>
@@ -153,7 +161,8 @@
 
                     {{-- إجمالي المستحق --}}
                     <div class="col-md-3">
-                        <div class="text-center p-3" style="background: linear-gradient(135deg, #f59e0b, #fbbf24); border-radius: 10px; color: white;">
+                        <div class="text-center p-3"
+                            style="background: linear-gradient(135deg, #f59e0b, #fbbf24); border-radius: 10px; color: white;">
                             <div class="mb-2">
                                 <i class="fas fa-file-invoice-dollar" style="font-size: 2rem;"></i>
                             </div>
@@ -177,7 +186,8 @@
 
                     {{-- المدفوع --}}
                     <div class="col-md-3">
-                        <div class="text-center p-3" style="background: linear-gradient(135deg, #10b981, #34d399); border-radius: 10px; color: white;">
+                        <div class="text-center p-3"
+                            style="background: linear-gradient(135deg, #10b981, #34d399); border-radius: 10px; color: white;">
                             <div class="mb-2">
                                 <i class="fas fa-hand-holding-usd" style="font-size: 2rem;"></i>
                             </div>
@@ -187,7 +197,8 @@
                                     @if (($paidByCurrency[$currency] ?? 0) > 0 || ($discountsByCurrency[$currency] ?? 0) > 0)
                                         @php $hasPaidAmount = true; @endphp
                                         <div class="mb-1">
-                                            <h6 class="mb-0">{{ number_format($paidByCurrency[$currency] ?? 0, 2) }}</h6>
+                                            <h6 class="mb-0">{{ number_format($paidByCurrency[$currency] ?? 0, 2) }}
+                                            </h6>
                                             <small class="opacity-90">{{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</small>
                                             @if (($discountsByCurrency[$currency] ?? 0) > 0)
                                                 <div style="font-size: 0.7rem; opacity: 0.8;">
@@ -212,22 +223,26 @@
                             $hasRemaining = !empty(array_filter($remainingByCurrency));
                             $isOverpaid = false;
                             if ($hasRemaining) {
-                                $isOverpaid = collect($remainingByCurrency)->some(function($amount) {
+                                $isOverpaid = collect($remainingByCurrency)->some(function ($amount) {
                                     return $amount < 0;
                                 });
                             }
                         @endphp
-                        <div class="text-center p-3" style="background: linear-gradient(135deg, {{ $isOverpaid ? '#ef4444, #f87171' : ($hasRemaining ? '#ef4444, #f87171' : '#6b7280, #9ca3af') }}); border-radius: 10px; color: white;">
+                        <div class="text-center p-3"
+                            style="background: linear-gradient(135deg, {{ $isOverpaid ? '#ef4444, #f87171' : ($hasRemaining ? '#ef4444, #f87171' : '#6b7280, #9ca3af') }}); border-radius: 10px; color: white;">
                             <div class="mb-2">
-                                <i class="fas {{ $isOverpaid ? 'fa-arrow-down' : ($hasRemaining ? 'fa-exclamation-triangle' : 'fa-check-circle') }}" style="font-size: 2rem;"></i>
+                                <i class="fas {{ $isOverpaid ? 'fa-arrow-down' : ($hasRemaining ? 'fa-exclamation-triangle' : 'fa-check-circle') }}"
+                                    style="font-size: 2rem;"></i>
                             </div>
                             <div>
                                 @if ($hasRemaining)
                                     @foreach ($remainingByCurrency as $currency => $amount)
                                         @if ($amount != 0)
                                             <div class="mb-1">
-                                                <h5 class="mb-0">{{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}</h5>
-                                                <small class="opacity-90">{{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</small>
+                                                <h5 class="mb-0">
+                                                    {{ $amount > 0 ? '+' : '' }}{{ number_format($amount, 2) }}</h5>
+                                                <small
+                                                    class="opacity-90">{{ $currency === 'SAR' ? 'ريال' : 'دينار' }}</small>
                                             </div>
                                         @endif
                                     @endforeach
@@ -289,13 +304,14 @@
         </div>
 
         {{-- المكان اللي هيظهر فيه الرسم (هيكون مخفي في الأول) --}}
-        <div id="chartContainer" class="mb-4 shadow-sm" style="display: none; position: relative; height:300px; width:100%;">
+        <div id="chartContainer" class="mb-4 shadow-sm"
+            style="display: none; position: relative; height:300px; width:100%;">
             <canvas id="paymentsChart"></canvas>
         </div>
         {{-- *** نهاية إضافة زرار ومكان الرسم البياني *** --}}
 
 
-        <table class="table table-bordered">
+        <table class="table table-bordered" id="paymentsTable">
             <thead>
                 <tr>
                     <th>#</th> {{-- *** إضافة رأس عمود الترقيم *** --}}
@@ -380,6 +396,14 @@
         {{-- مكتبة الزووم --}}
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+
+        <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
         <script>
             // دالة حساب حجم النقطة
@@ -535,5 +559,128 @@
                 }
             });
         </script>
+        <script>
+            const agentName = @json($agent->name ?? '');
+        </script>
+        <script>
+            $(document).ready(function() {
+
+                function stripHtml(data) {
+                    return $('<div>').html(data).text().trim();
+                }
+
+                function extractNumber(text) {
+                    const match = text.match(/-?\d[\d,]*\.\d+|-?\d[\d,]*/);
+                    return match ? match[0].replace(/,/g, '') : text;
+                }
+
+                $('#paymentsTable').DataTable({
+                    paging: true,
+                    searching: true,
+                    ordering: true,
+                    info: true,
+                    pageLength: 20,
+                    dom: 'Bfrtip',
+
+                    buttons: [{
+                            extend: 'excelHtml5',
+                            text: '<i class="fa fa-file-excel"></i> Excel',
+                            className: 'btn btn-success btn-sm mb-3',
+                            title: `تقرير دفعات ${agentName}`,
+
+                            exportOptions: {
+                                columns: [0, 1, 2, 3, 4], // #, amount, date, notes, receipt
+                                format: {
+                                    body: function(data, row, column, node) {
+
+                                        let text = stripHtml(data);
+
+                                        // ✅ المبلغ: رقم فقط
+                                        if (column === 1) {
+                                            return extractNumber(text);
+                                        }
+
+                                        // ✅ الإيصال: HYPERLINK Formula
+                                        if (column === 4) {
+                                            let link = $(node).find('a').attr('href');
+                                            if (link) {
+                                                return `${link}`;
+                                            }
+                                            return '';
+                                        }
+
+                                        return text;
+                                    }
+                                }
+                            },
+
+
+                        },
+
+                        {
+                            extend: 'csvHtml5',
+                            text: '<i class="fa fa-file-csv"></i> CSV',
+                            className: 'btn btn-info btn-sm mb-3',
+                            title: `تقرير دفعات ${agentName}`,
+                            bom: true,
+
+                            exportOptions: {
+                                columns: [0, 1, 2, 3, 4],
+                                format: {
+                                    body: function(data, row, column, node) {
+
+                                        // 1️⃣ شيل أي HTML
+                                        let text = stripHtml(data);
+
+                                        // 2️⃣ وحّد الأسطر (شيل كسر السطر)
+                                        text = text
+                                            .replace(/\r?\n|\r/g, ' ') // يشيل new lines
+                                            .replace(/\s+/g, ' ') // يشيل مسافات زيادة
+                                            .trim(); // trim نهائي
+
+                                        // ✅ المبلغ: رقم فقط
+                                        if (column === 1) {
+                                            return extractNumber(text);
+                                        }
+
+                                        // ✅ الإيصال في CSV: رابط فقط
+                                        if (column === 4) {
+                                            let link = $(node).find('a').attr('href');
+                                            return link ? link.trim() : '';
+                                        }
+
+                                        // باقي الأعمدة: نص نظيف
+                                        return text;
+                                    }
+                                }
+
+                            }
+                        }
+                    ],
+
+                    // ✅ منع ترتيب/بحث الإيصال + الإجراءات
+                    columnDefs: [{
+                        targets: [4, 5],
+                        orderable: false,
+                        searchable: false
+                    }],
+
+                    language: {
+                        search: "بحث:",
+                        lengthMenu: "عرض _MENU_ سجل",
+                        info: "عرض _START_ إلى _END_ من أصل _TOTAL_ دفعة",
+                        paginate: {
+                            previous: "السابق",
+                            next: "التالي"
+                        }
+                    }
+                });
+
+            });
+        </script>
+    @endpush
+    @push('styles')
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
     @endpush
 @endsection
