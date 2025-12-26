@@ -363,7 +363,8 @@
                 dom: 'Bfrtip',
                 buttons: [{
                         extend: 'excelHtml5',
-                        text: 'Export Excel',
+                        text: '<i class="fa fa-file-excel"></i> Excel',
+                        className: 'btn btn-success btn-sm mb-3',
                         title: exportTitle,
                         exportOptions: {
                             columns: exportCols,
@@ -397,7 +398,8 @@
                     },
                     {
                         extend: 'csvHtml5',
-                        text: 'Export CSV',
+                        text: 'CSV',
+                        className: 'btn btn-info btn-sm mb-3',
                         title: exportTitle,
                         bom: true,
                         exportOptions: {
@@ -429,6 +431,7 @@
                     {
                         extend: 'print',
                         text: 'Print',
+                        className: 'btn btn-secondary btn-sm mb-3',
                         title: exportTitle,
                         exportOptions: {
                             columns: exportCols,
@@ -460,7 +463,9 @@
             });
 
         });
+        
     </script>
+  
 @endpush
 @push('styles')
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
