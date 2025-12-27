@@ -2,9 +2,8 @@
 
 @section('title', 'حجوزات الرحلة البرية')
 @push('styles')
-    <style>
-
-    </style>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 @endpush
 @section('content')
     <div class="container mt-4">
@@ -66,7 +65,7 @@
                     <div class="alert alert-info">لا توجد حجوزات لهذه الرحلة حتى الآن.</div>
                 @else
                     <div class="table-responsive">
-                        <table class="table table-striped table-bordered">
+                        <table class="table table-striped table-bordered" id="landTripsBookingsTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -331,4 +330,121 @@
             document.addEventListener('ajaxTableUpdated', convertToHijri);
         });
     </script>
+    @push('scripts')
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+        <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+        <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+
+        <!-- مطلوب لزر Excel -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+        <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+
+        <script>
+            $(document).ready(function() {
+
+                function stripHtml(data) {
+                    return $('<div>').html(data).text().trim();
+                }
+
+                function extractNumber(text) {
+                    const m = (text || '').match(/-?\d[\d,]*\.\d+|-?\d[\d,]*/);
+                    return m ? m[0].replace(/,/g, '') : '';
+                }
+
+                // أعمدة المال (0-based)
+                const moneyCols = [5, 6, 7, 8];
+
+                // الأعمدة المصدّرة (بدون الإجراءات)
+                const exportCols = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+
+                $('#landTripsBookingsTable').DataTable({
+                    paging: true,
+                    pageLength: 25,
+                    lengthMenu: [10, 25, 50, 100, 200],
+                    searching: true,
+                    ordering: true,
+                    info: true,
+                    responsive: false,
+                    scrollX: true,
+
+                    dom: 'Bfrtip',
+                    buttons: [{
+                            extend: 'excelHtml5',
+                            text: 'Excel',
+                            className: 'btn btn-success btn-sm mb-2',
+                            title: 'تقرير حجوزات الرحلات البرية',
+                            exportOptions: {
+                                columns: exportCols,
+                                format: {
+                                    body: function(data, row, column) {
+
+                                        let text = stripHtml(data);
+
+                                        if (moneyCols.includes(column)) {
+                                            return extractNumber(text);
+                                        }
+
+                                        return text
+                                            .replace(/\r?\n|\r/g, ' ')
+                                            .replace(/\s+/g, ' ')
+                                            .trim();
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            extend: 'csvHtml5',
+                            text: 'CSV',
+                            className: 'btn btn-info btn-sm mb-2',
+                            title: 'تقرير حجوزات الرحلات البرية',
+                            bom: true,
+                            exportOptions: {
+                                columns: exportCols,
+                                format: {
+                                    body: function(data, row, column) {
+
+                                        let text = stripHtml(data);
+
+                                        if (moneyCols.includes(column)) {
+                                            return extractNumber(text);
+                                        }
+
+                                        return text
+                                            .replace(/\r?\n|\r/g, ' ')
+                                            .replace(/\s+/g, ' ')
+                                            .trim();
+                                    }
+                                }
+                            }
+                        }
+                    ],
+
+                    // منع ترتيب وبحث عمود الإجراءات
+                    columnDefs: [{
+                        targets: [9],
+                        orderable: false,
+                        searchable: false
+                    }],
+
+                    language: {
+                        search: "بحث:",
+                        lengthMenu: "عرض _MENU_ سجل",
+                        info: "عرض _START_ إلى _END_ من أصل _TOTAL_ سجل",
+                        paginate: {
+                            previous: "السابق",
+                            next: "التالي"
+                        },
+                        zeroRecords: "لا توجد بيانات",
+                        infoEmpty: "لا توجد بيانات"
+                    }
+                });
+
+            });
+        </script>
+    @endpush
 @endpush
