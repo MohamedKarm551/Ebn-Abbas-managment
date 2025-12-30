@@ -112,6 +112,7 @@
 
     <div class="actions">
         <button id="downloadPdfBtn" class="btn btn-dark">تحميل PDF</button>
+        {{-- <button class="btn btn-dark">عرض السعر في الفاتورة</button> --}}
     </div>
 
     <div id="reportContent">
@@ -148,7 +149,8 @@
         <table>
             <thead>
                 <tr>
-                    <th>العدد</th>
+                    <th class="clickToPrice">العدد</th>
+
                     <th>نوع الغرفة</th>
                     <th>الإطلالة</th>
                     <th>الوجبة</th>
@@ -156,7 +158,8 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>{{ $booking->rooms }}</td>
+                    <td class="bookingRoom">{{ $booking->rooms }}</td>
+                    <td class=" bookingPrice d-none">{{ $booking->sale_price }}</td>
                     <td>{{ $booking->room_type }}</td>
                     <td>City View</td>
                     <td>RO</td>
@@ -177,7 +180,7 @@
                 </div>
                 <div
                     style="font-family:monospace; padding:3px 15px; letter-spacing:1px; margin-top:3px; direction:ltr; text-align:left;">
-                   SA 9705000 0682054 18637000
+                    SA 9705000 0682054 18637000
                 </div>
             </div>
 
@@ -275,12 +278,12 @@
     {{-- سكريبت تعديل الحسابات البنكية  --}}
     <script>
         /*
-      سكريبت "تحرير الحسابات البنكية" بالنقر المزدوج (Inline Edit)
-      — يتيح:
-        1) تعديل "أرقام الحسابات" داخل كل .bank-account.
-        2) تعديل "أسماء البنوك/المصارف" (ويحافظ على الأيقونة <i> ويعيدها بعد الحفظ).
-      — بلا تعارض: كل عنصر يعدّل نفسه فقط.
-    */
+          سكريبت "تحرير الحسابات البنكية" بالنقر المزدوج (Inline Edit)
+          — يتيح:
+            1) تعديل "أرقام الحسابات" داخل كل .bank-account.
+            2) تعديل "أسماء البنوك/المصارف" (ويحافظ على الأيقونة <i> ويعيدها بعد الحفظ).
+          — بلا تعارض: كل عنصر يعدّل نفسه فقط.
+        */
 
         document.addEventListener('DOMContentLoaded', function() {
 
@@ -422,6 +425,31 @@
 
         });
     </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelector('.clickToPrice').addEventListener('click', function () {
+
+        const th = this;
+        const room = document.querySelector('.bookingRoom');
+        const price = document.querySelector('.bookingPrice');
+
+        if (th.textContent.trim() === 'العدد') {
+            th.textContent = 'السعر';
+            room.classList.add('d-none');
+            price.classList.remove('d-none');
+        } else {
+            th.textContent = 'العدد';
+            price.classList.add('d-none');
+            room.classList.remove('d-none');
+        }
+
+    });
+
+});
+</script>
+
+
 
 </body>
 
