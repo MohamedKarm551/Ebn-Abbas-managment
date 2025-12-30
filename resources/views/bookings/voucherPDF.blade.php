@@ -151,7 +151,7 @@
                 <tr>
                     <th class="clickToPrice">العدد</th>
 
-                    <th>نوع الغرفة</th>
+                    <th class="clickToTotalPrice">نوع الغرفة</th>
                     <th>الإطلالة</th>
                     <th>الوجبة</th>
                 </tr>
@@ -160,7 +160,8 @@
                 <tr>
                     <td class="bookingRoom">{{ $booking->rooms }}</td>
                     <td class=" bookingPrice d-none">{{ $booking->sale_price }}</td>
-                    <td>{{ $booking->room_type }}</td>
+                    <td class="bookingRoomType">{{ $booking->room_type }}</td>
+                    <td class=" bookingToTalPrice d-none">{{$booking->amount_due_from_company}}</td>
                     <td>City View</td>
                     <td>RO</td>
                 </tr>
@@ -428,26 +429,52 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    document.querySelector('.clickToPrice').addEventListener('click', function () {
+    const countHeader = document.querySelector('.clickToPrice');
+    const typeHeader  = document.querySelector('.clickToTotalPrice');
 
-        const th = this;
-        const room = document.querySelector('.bookingRoom');
-        const price = document.querySelector('.bookingPrice');
+    countHeader.addEventListener('click', function () {
 
-        if (th.textContent.trim() === 'العدد') {
-            th.textContent = 'السعر';
-            room.classList.add('d-none');
-            price.classList.remove('d-none');
+        const isCountMode = countHeader.textContent.trim() === 'العدد';
+
+        // 🔁 عدّي على كل الصفوف
+        document.querySelectorAll('tbody tr').forEach(row => {
+
+            const roomCount   = row.querySelector('.bookingRoom');
+            const nightPrice  = row.querySelector('.bookingPrice');
+            const roomType    = row.querySelector('.bookingRoomType');
+            const totalPrice  = row.querySelector('.bookingToTalPrice');
+
+            if (isCountMode) {
+                // 👉 عرض الأسعار
+                roomCount.classList.add('d-none');
+                nightPrice.classList.remove('d-none');
+
+                roomType.classList.add('d-none');
+                totalPrice.classList.remove('d-none');
+            } else {
+                // 👉 الرجوع للوضع الطبيعي
+                nightPrice.classList.add('d-none');
+                roomCount.classList.remove('d-none');
+
+                totalPrice.classList.add('d-none');
+                roomType.classList.remove('d-none');
+            }
+        });
+
+        // 🧠 تغيير العناوين
+        if (isCountMode) {
+            countHeader.textContent = 'سعر الليلة';
+            typeHeader.textContent  = 'السعر الإجمالي';
         } else {
-            th.textContent = 'العدد';
-            price.classList.add('d-none');
-            room.classList.remove('d-none');
+            countHeader.textContent = 'العدد';
+            typeHeader.textContent  = 'نوع الغرفة';
         }
-
     });
 
 });
 </script>
+
+
 
 
 
