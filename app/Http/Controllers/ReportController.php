@@ -1250,7 +1250,15 @@ class ReportController extends Controller
                 $hotel->total_rooms = $defaultRooms;
 
                 return $hotel;
-            });
+            })
+            // ✅ إضافة التصفية هنا: إخفاء الفنادق التي معدل إشغالها صفر
+            ->filter(function ($hotel) {
+                return $hotel->occupancy_rate > 0;
+            })
+            // ✅ ترتيب الفنادق النشطة حسب معدل الإشغال (الأعلى أولاً)
+            ->sortByDesc('occupancy_rate')
+            ->values(); // إعادة فهرسة المجموعة
+
 
         // بنجيب بيانات للرسم البياني للإشغال اليومي لمدة أسبوع
         $occupancyData = $this->calculateOccupancyForWeek();
