@@ -14,11 +14,15 @@
             \Carbon\Carbon::parse($booking->check_out),
         );
         $editLogs = \App\Models\EditLog::where('booking_id', $id)->orderBy('created_at', 'desc')->get();
+
+        $companyAccount = \App\Http\Controllers\AccountController::getCompanyAccount($booking->company);
+        $agentAccount   = \App\Http\Controllers\AccountController::getAgentAccount($booking->agent);
     @endphp
     <div class="container">
         <div class="row align-items-center mb-3">
             <div class="col-12 col-lg-7 mb-2 mb-lg-0">
-                <h1 class="h4 mb-0 text-center text-lg-start">تفاصيل الحجز للعميل: {{ $booking->client_name }}
+                <p>رقم الحجز الداخلى: {{ $booking->id }}</P>
+                <h1 class="h4 mb-0 text-center text-lg-start">  اسم العميل: {{ $booking->client_name }}
                     <br> <br>
                     <a href="{{ route('bookings.voucher', $booking->id) }}" class="btn btn-warning btn-sm" target="_blank">
                         عرض الفاوتشر
@@ -49,19 +53,27 @@
                                         </div>
                                         <!-- الزر الثالث -->
                                         <div class="col-12 col-md-6">
-                                            <a href="{{ route('reports.company.payments', $booking->company->id) }}"
-                                                class="btn btn-outline-info w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2">
-                                                <i class="fas fa-building"></i>
-                                                <span>كشف حساب الشركة</span>
-                                            </a>
+                                           @if($companyAccount)
+                                                <a href="{{ route('accounts.ledger', $companyAccount->id) }}"
+                                                   class="btn btn-outline-info w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2">
+                                                   <i class="fas fa-building"></i>
+                                                   <span>كشف حساب الشركة</span>
+                                                </a>
+                                            @else
+                                                <span class="text-muted">لا يوجد حساب للشركة في الشجرة</span>
+                                            @endif
                                         </div>
                                         <!-- الزر الرابع -->
                                         <div class="col-12 col-md-6">
-                                            <a href="{{ route('reports.agent.payments', $booking->agent->id) }}"
-                                                class="btn btn-outline-success w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2">
-                                                <i class="fas fa-user-tie"></i>
-                                                <span>كشف حساب جهة الحجز</span>
-                                            </a>
+                                            @if($agentAccount)
+                                                <a href="{{ route('accounts.ledger', $agentAccount->id) }}"
+                                                   class="btn btn-outline-success w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2">
+                                                   <i class="fas fa-user-tie"></i>
+                                                   <span>كشف حساب جهة الحجز</span>
+                                                </a>
+                                            @else
+                                                <span class="text-muted">لا يوجد حساب لجهة الحجز في الشجرة</span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -83,12 +95,13 @@
                     @auth
                         @if (auth()->user()->role === 'Admin')
                             {{-- زر الحذف للأدمن فقط --}}
-                            <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" style="display:inline;"
-                                onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
+                            <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" id="delete-form-{{ $booking->id }}" style="display:inline;">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i
-                                        class="fas fa-trash"></i></button>
+                               <button type="button" class="btn btn-danger btn-sm" 
+                                        onclick="confirmDelete({{ $booking->id }}, {{ $isAutoAvailability ? 'true' : 'false' }})">
+                                    <i class="fas fa-trash-alt"></i> حذف
+                                </button>
                             </form>
                         @endif
                     @endauth
@@ -561,69 +574,31 @@
             }
 
             // عند الضغط على زر "calculate-total"
-            document.getElementById('calculate-total').addEventListener('click', function() {
-                let totalDueFromCompany = 0;
-                let totalDueToHotel = 0;
-                let profitPerNight = 0;
-                let profitSoFar = 0;
-                let totalProfit = 0;
-
-                // حساب عدد الليالي التي قضاها العميل حتى الآن
-                let checkInDate = new Date("{{ $booking->check_in }}");
-                let checkOutDate = new Date("{{ $booking->check_out }}");
-                let today = new Date();
-
-                let nightsStayed = Math.min(
-                    Math.max(0, Math.ceil((today - checkInDate) / (1000 * 60 * 60 * 24))),
-                    {{ $booking->days }}
-                );
-
-                // حساب عدد الليالي الإجمالية
-                let totalNights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-
-                // حساب الإجمالي من الشركة والفندق
-                totalDueFromCompany = nightsStayed * {{ $booking->rooms }} * {{ $booking->sale_price }};
-                totalDueToHotel = nightsStayed * {{ $booking->rooms }} * {{ $booking->cost_price }};
-
-                // تحديث صف "المستحق للفندق" بالقيمة المحسوبة
-                document.getElementById('hotel-due-value').innerText = totalDueToHotel +
-                    ' {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}';
-
-                // حساب المكسب
-                profitPerNight = ({{ $booking->sale_price }} - {{ $booking->cost_price }}) *
-                    {{ $booking->rooms }};
-                profitSoFar = profitPerNight * nightsStayed;
-                totalProfit = profitPerNight * totalNights;
-
-                // المبالغ المدفوعة
-                let amountPaidByCompany = {{ $booking->amount_paid_by_company }};
-                let amountPaidToHotel = {{ $booking->amount_paid_to_hotel }};
-
-                // حساب المبالغ المتبقية
-                let remainingFromCompany = totalDueFromCompany - amountPaidByCompany;
-                let remainingToHotel = totalDueToHotel - amountPaidToHotel;
-
-                // بناء رسالة التنبيه بالتفاصيل بما في ذلك المستحق للفندق
-                let alertMessage = `💲 الإجمالي حتى الآن: 💲
-
-ما لك من الشركة: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->sale_price }} سعر الليلة = ${totalDueFromCompany} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  
-ما عليك للفندق: ${nightsStayed} ليلة * {{ $booking->rooms }} غرفة * {{ $booking->cost_price }} سعر الفندق = ${totalDueToHotel} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}  
-
-💰 المكسب:
-- المكسب لكل ليلة: ${profitPerNight} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-- المكسب حتى الآن: ${profitSoFar} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-- المكسب الإجمالي: ${totalProfit} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-
-💳 المبالغ المدفوعة:
-- المدفوع من الشركة: ${amountPaidByCompany} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-- المدفوع للفندق: ${amountPaidToHotel} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-
-⚖️ المبالغ المتبقية:
-- المتبقي من الشركة: ${remainingFromCompany} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}
-- المتبقي للفندق: ${remainingToHotel} {{ $booking->currency === 'SAR' ? 'ريال سعودي' : 'دينار كويتي' }}`;
-
-                showAlert(alertMessage, 'info');
-            });
+          // عند الضغط على زر "calculate-total"
+document.getElementById('calculate-total').addEventListener('click', function() {
+    // جلب البيانات الفعلية من API
+    fetch('/bookings/{{ $booking->id }}/financial-data')
+        .then(response => response.json())
+        .then(data => {
+            let alertMessage = `
+╔════════════════════════════════════════╗
+║          💰 البيانات المالية 💰         ║
+╠════════════════════════════════════════╣
+║ المستحق من الشركة: ${data.total_due_from_company} ريال
+║ المدفوع من الشركة: ${data.total_paid_by_company} ريال
+║ المتبقي على الشركة: ${data.remaining_from_company} ريال
+╠════════════════════════════════════════╣
+║ رصيد الصندوق الفعلي: ${data.cash_balance} ريال
+║ رصيد ذمم مدينة: ${data.receivable_balance} ريال
+╚════════════════════════════════════════╝
+            `;
+            showAlert(alertMessage, 'info');
+        })
+        .catch(error => {
+            console.error('خطأ:', error);
+            showAlert('حدث خطأ في جلب البيانات المالية', 'danger');
+        });
+});
 
             function showAlert(message, type) {
                 const alertBox = document.createElement('div');
@@ -872,6 +847,30 @@
                             </div>
                         </div>
 
+                    <!-- ✅ القائمة المنسدلة لاختيار الحساب -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-building-columns text-info me-2"></i>
+                            اختر حساب الدفع (المصدر)
+                        </label>
+                        <select class="form-select form-select-lg" name="account_id" required>
+                            <option value="">-- اختر حساب الدفع --</option>
+                            @php
+                                // جلب جميع الحسابات النهائية (is_leaf = true) المرتبطة بالأصول
+                                $paymentAccounts = \App\Models\Account::where('is_leaf', true)
+                                    ->where('is_active', true)
+                                    ->orderBy('code')
+                                    ->get();
+                            @endphp
+                            @foreach($paymentAccounts as $acc)
+                                <option value="{{ $acc->id }}" {{ $acc->code === '1.1.1' ? 'selected' : '' }}>
+                                    {{ $acc->code }} - {{ $acc->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">اختر الحساب الذي ستستلم منه الدفعة (صندوق، بنك، ...)</small>
+                    </div>
+
                         <!-- حقل الملاحظات -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">
@@ -984,6 +983,31 @@
                                 </select>
                             </div>
                         </div>
+
+                                <!-- ✅ قائمة اختيار حساب الدفع (مصدر السداد) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-building-columns text-info me-2"></i>
+                            اختر حساب الدفع (المصدر)
+                        </label>
+                        <select class="form-select" name="payment_account_id" required>
+                            <option value="">-- اختر حساب الدفع --</option>
+                            @php
+                                $paymentAccounts = \App\Models\Account::where('is_leaf', true)
+                                    ->where('is_active', true)
+                                    ->orderBy('code')
+                                    ->get();
+                            @endphp
+                            @foreach($paymentAccounts as $acc)
+                                <option value="{{ $acc->id }}" {{ $acc->code === '1.1.1' ? 'selected' : '' }}>
+                                    {{ $acc->code }} - {{ $acc->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">اختر الحساب الذي سيتم الدفع منه (صندوق، بنك، ...)</small>
+                    </div>
+
+
                         <div class="mb-3">
                             <label class="form-label fw-semibold">ملاحظات</label>
                             <textarea class="form-control" name="notes" rows="2" placeholder="اكتب أي ملاحظات (اختياري)"></textarea>
@@ -2446,6 +2470,7 @@
 
             console.log('✅ تم تجهيز جميع أحداث المتابعة المالية');
         });
+        
     </script>
     <script>
         /**
@@ -3002,6 +3027,62 @@
             // Also convert when table is updated via AJAX
             document.addEventListener('ajaxTableUpdated', convertToHijri);
         });
+
+
+      function confirmDelete(bookingId, isAutoAvailability) {
+    if (!isAutoAvailability) {
+        // حذف عادي (ليس مرتبط بإتاحة تلقائية)
+        if (confirm('هل أنت متأكد من حذف هذا الحجز؟')) {
+            document.getElementById('delete-form-' + bookingId).submit();
+        }
+        return;
+    }
+
+    // === حذف مرتبط بإتاحة تلقائية: عرض 3 خيارات باستخدام SweetAlert ===
+    Swal.fire({
+        title: 'حذف الحجز',
+        html: `
+            <p>هذا الحجز مرتبط <strong>بإتاحة تلقائية</strong>.</p>
+            <p>اختر الإجراء المناسب:</p>
+            <ul style="text-align: right; direction: rtl;">
+                <li><strong>حذف الحجز فقط</strong> - سيتم تحرير الأماكن في الإتاحة</li>
+                <li><strong>حذف الحجز والإتاحة معاً</strong> - سيتم حذف الحجز والإتاحة بالكامل</li>
+                <li><strong>إلغاء</strong> - بدون حذف</li>
+            </ul>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '🗑️ حذف الحجز فقط',
+        denyButtonText: '🔥 حذف الحجز والإتاحة',
+        cancelButtonText: '❌ إلغاء',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // حذف الحجز فقط (لا تحذف الإتاحة)
+            let form = document.getElementById('delete-form-' + bookingId);
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'delete_availability';
+            input.value = 'false';   // false يعني لا تحذف الإتاحة
+            form.appendChild(input);
+            form.submit();
+        } else if (result.isDenied) {
+            // حذف الحجز والإتاحة معاً
+            let form = document.getElementById('delete-form-' + bookingId);
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'delete_availability';
+            input.value = 'true';    // true يعني احذف الإتاحة أيضاً
+            form.appendChild(input);
+            form.submit();
+        }
+        // else if (result.dismiss === Swal.DismissReason.cancel) -> لا تفعل شيئاً
+    });
+}
+
+
+
     </script>
 @endpush
 

@@ -157,6 +157,7 @@
                                         <td>
                                             <span
                                                 style="{{ $booking->amount_due_to_hotel == 0 ? 'text-decoration: line-through; opacity: 0.6;' : '' }}">
+                                                <a href="/bookings/{{$booking->id}}">{{ $booking->id }} <a> 
                                                 {{ $booking->client_name }}
                                                 @if ($booking->amount_due_to_hotel == 0)
                                                     <span class="badge bg-danger ms-2">(متكنسل)</span>

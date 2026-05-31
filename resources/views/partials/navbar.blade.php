@@ -1,4 +1,52 @@
-<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+
+<style>
+
+/* تنسيق القوائم الفرعية في الـ dropdown */
+.dropdown-submenu {
+    position: relative;
+}
+.dropdown-submenu > .dropdown-menu {
+    top: 0;
+    right: 100%; /* RTL → right:100% */
+    margin-top: -6px;
+    margin-right: -1px;
+    border-radius: 6px;
+}
+.dropdown-submenu:hover > .dropdown-menu {
+    display: block;
+}
+.dropdown-submenu > .dropdown-toggle:active {
+    pointer-events: none;
+}
+
+/* توسيع قائمة الحسابات لاستيعاب النصوص الطويلة */
+.dropdown-menu {
+    min-width: 280px;
+    white-space: nowrap;
+}
+
+/* للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .dropdown-submenu > .dropdown-menu {
+        position: static;
+        float: none;
+        width: auto;
+        margin-top: 0;
+        background-color: transparent;
+        border: 0;
+        box-shadow: none;
+    }
+    .dropdown-submenu > .dropdown-menu .dropdown-item {
+        padding-right: 2rem;
+    }
+     .dropdown-menu {
+        white-space: normal;
+        min-width: 220px;
+    }
+}
+
+</style>
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm no-print">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">نظام إدارة الحجوزات</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -10,12 +58,13 @@
                 <li class="nav-item">
                     <a class="nav-link" href="/bookings"><i class="fas fa-calendar-alt me-1"></i>الحجوزات</a>
                 </li>
-                @auth
-                    @if (auth()->user()->role === 'Company')
-                        <li class="nav-item">
+                 <li class="nav-item">
                             <a class="nav-link" href="{{ route('company.availabilities.index') }}"><i
                                     class="fas fa-calendar-check me-1"></i>الإتاحات المتاحة</a>
                         </li>
+                @auth
+                    @if (auth()->user()->role === 'Company')
+                       
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('company.land-trips.index') }}"><i
                                     class="fas fa-bus me-1"></i>الرحلات البرية</a>
@@ -33,30 +82,6 @@
                             <a class="nav-link" href="{{ route('admin.availabilities.index') }}">الإتاحات <i
                                     class="fas fa-calendar-check me-1"></i></a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('admin.land-trips.index') }}">الرحلات البرية <i
-                                    class="fas fa-bus me-1"></i></a>
-                        </li>
-                    @endif
-                    @if (auth()->user()->role === 'employee')
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="dropdownOperationReports" role="button"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-chart-line me-1"></i> تقارير  
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownOperationReports">
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.operation-reports.index') }}">
-                                         تقارير الحجوزات المؤكدة (الكويت)
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.masr.financial-reports.index') }}">
-                                          تقارير مصر
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
                     @endif
                     @if (auth()->user()->role === 'Admin')
                         <li class="nav-item">
@@ -65,6 +90,98 @@
                                 التقارير اليومية
                             </a>
                         </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="accountsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                الحسابات <i class="fas fa-chart-line me-1"></i>
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="accountsDropdown">
+                                {{-- عناصر الحسابات --}}
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('accounts.index') }}">
+                                        <i class="fas fa-sitemap me-2"></i> شجرة الحسابات
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('journal.index') }}">
+                                        <i class="fas fa-book me-2"></i> قائمة القيود
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('journal.create') }}">
+                                        <i class="fas fa-plus-circle me-2"></i> قيد جديد
+                                    </a>
+                                </li>
+
+                                {{-- فاصل قبل التقارير --}}
+                                <li><hr class="dropdown-divider"></li>
+
+                                {{-- عنوان التقارير المالية (غير قابل للنقر) --}}
+                                <li class="dropdown-header">📊 التقارير المالية</li>
+
+                                {{-- عناصر التقارير --}}
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('accounts.select.ledger') }}">
+                                        <i class="fas fa-file-invoice-dollar me-2"></i>  كشف حساب (الكل)
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('accounts.statements.customers') }}">
+                                        <i class="fas fa-users me-2"></i> كشوفات حسابات العملاء
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('accounts.statements.suppliers') }}">
+                                        <i class="fas fa-truck me-2"></i> كشوفات حسابات الموردين
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('accounts.statements.expenses') }}">
+                                        <i class="fas fa-chart-line me-2"></i> كشوفات المصروفات
+                                    </a>
+                                </li>
+
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">🧾 سندات الإيصال</li>
+                                <li class="nav-item dropdown">
+                                        <li>
+                                            <a class="dropdown-item" href="{{ route('vouchers.receipt') }}">
+                                                <i class="fas fa-arrow-circle-down me-2" style="color:#059669;"></i>
+                                                ايصال استلام نقدية
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{{ route('vouchers.payment') }}">
+                                                <i class="fas fa-arrow-circle-up me-2" style="color:#dc2626;"></i>
+                                                ايصال صرف نقدية
+                                            </a>
+                                        </li>
+                                </li>
+                               
+                                <li><hr class="dropdown-divider"></li>
+
+                                <li class="dropdown-header">📋 التقارير الختامية</li>
+
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('financial-reports.trial-balance') }}">
+                                        <i class="fas fa-balance-scale me-2"></i> ميزان المراجعة
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('financial-reports.income-statement') }}">
+                                        <i class="fas fa-file-invoice me-2"></i> قائمة الدخل
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('financial-reports.balance-sheet') }}">
+                                        <i class="fas fa-landmark me-2"></i> الميزانية العمومية
+                                    </a>
+                                </li>
+                                
+                            </ul>
+                        </li>
+                       
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button"
                                 data-bs-toggle="dropdown" aria-expanded="false">

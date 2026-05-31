@@ -9,9 +9,10 @@ class AgentPayment extends Model
     protected $fillable = [
         'agent_id',
         'amount',
-        'currency',  // إضافة حقل العملة
+        'currency',  
         'payment_date',
-        'notes'
+        'notes',
+        'account_id',
     ];
 
     protected $casts = [

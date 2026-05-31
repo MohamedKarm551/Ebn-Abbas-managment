@@ -17,6 +17,7 @@ class Availability extends Model
         'start_date',
         'end_date',
         'status', // مثلاً: 'active', 'inactive', 'expired'
+        'is_auto',  
         'notes',
         'min_nights',  
     ];

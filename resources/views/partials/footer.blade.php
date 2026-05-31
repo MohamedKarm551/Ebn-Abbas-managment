@@ -1,4 +1,4 @@
-<footer class=" py-3 mt-4 border-top">
+<footer class=" py-3 mt-4 border-top no-print">
     <div class="container text-center">
         <p class="mb-0" title="01062168052">
            إنشاء وتطوير المهندس
