@@ -160,6 +160,9 @@ Route::middleware(['auth'])->group(function () {
     // مسار الاقتراحات والبحث التلقائي
     Route::get('/bookings/autocomplete', [BookingsController::class, 'autocomplete'])->name('bookings.autocomplete');
 
+Route::get('/bookings/{id}/financial-data', [BookingsController::class, 'getBookingFinancialData'])
+        ->name('bookings.financial-data');
+
     // مسارات الحجوزات الأساسية
     Route::get('/bookings', [BookingsController::class, 'index'])->name('bookings.index');
     Route::get('/bookings/create', [BookingsController::class, 'create'])->name('bookings.create');
@@ -357,7 +360,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/admin/calculate-profit', [App\Http\Controllers\MonthlyExpenseController::class, 'calculateProfit'])->name('admin.calculate-profit');
         Route::get('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'show'])->name('admin.monthly-expenses.show');
         Route::get('/admin/monthly-expenses/{id}/edit', [App\Http\Controllers\MonthlyExpenseController::class, 'edit'])->name('admin.monthly-expenses.edit');
-        Route::put('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'update'])->name('admin.monthly-expenses.update');
+        Route::get('/admin/monthly-expenses/create', [MonthlyExpenseController::class, 'index'])->name('admin.monthly-expenses.create');       
+         Route::put('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'update'])->name('admin.monthly-expenses.update');
         Route::delete('/admin/monthly-expenses/{id}', [App\Http\Controllers\MonthlyExpenseController::class, 'destroy'])->name('admin.monthly-expenses.destroy');
 
         // المعاملات المالية
@@ -575,3 +579,82 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->group(
 Route::resource('allotments', AllotmentController::class);
 Route::resource('allotment-sales', AllotmentSaleController::class)->except(['index', 'show']);
 Route::get('/allotment/monitor', [AllotmentController::class, 'monitor'])->name('allotments.monitor');
+
+
+use App\Http\Controllers\AccountController;
+
+// =====================================================
+// الـ Routes الكاملة لـ accounts بعد التعديل:
+// =====================================================
+Route::prefix('accounts')->name('accounts.')->middleware('auth')->group(function () {
+    Route::get('/',                    [AccountController::class, 'index'])->name('index');
+    Route::get('/list',                [AccountController::class, 'list'])->name('list');
+    Route::get('/create',              [AccountController::class, 'create'])->name('create');
+    Route::post('/',                   [AccountController::class, 'store'])->name('store');
+    Route::get('/{account}/edit',      [AccountController::class, 'edit'])->name('edit');
+    Route::put('/{account}',           [AccountController::class, 'update'])->name('update');
+    Route::delete('/{account}',        [AccountController::class, 'destroy'])->name('destroy');
+    Route::get('/{account}/ledger',    [AccountController::class, 'ledger'])->name('ledger');
+    Route::get('/select-ledger', [AccountController::class, 'selectLedger'])->name('select.ledger');
+    Route::get('/search', [AccountController::class, 'searchAccounts'])->name('search');
+
+    // معاينة الكود التلقائي (AJAX)
+    Route::get('/preview-code', function (\Illuminate\Http\Request $request) {
+        $parentId = $request->query('parent_id');
+        $code = \App\Http\Controllers\AccountController::generateNextCode($parentId ?: null);
+        return response()->json(['code' => $code]);
+    })->name('preview-code');
+});
+
+
+use App\Http\Controllers\JournalEntryController;
+Route::prefix('journal')->name('journal.')->middleware('auth')->group(function () {
+    Route::get('/',        [JournalEntryController::class, 'index'])->name('index');
+    Route::get('/create',  [JournalEntryController::class, 'create'])->name('create');
+    Route::post('/',       [JournalEntryController::class, 'store'])->name('store');
+    Route::patch('journal/{id}/approve', [JournalEntryController::class, 'approve'])->name('approve');
+    Route::patch('/{id}/reverse', [JournalEntryController::class, 'reverse'])->name('reverse');
+    Route::get('/{id}/history', [JournalEntryController::class, 'history'])->name('history');
+});
+
+
+use App\Http\Controllers\FinancialStatementController;
+
+// كشوفات الحسابات المالية
+Route::prefix('statements')->name('accounts.statements.')->group(function () {
+    Route::get('/customers', [FinancialStatementController::class, 'customersFullLedger'])->name('customers');
+    Route::get('/suppliers', [FinancialStatementController::class, 'suppliersFullLedger'])->name('suppliers');
+    Route::get('/expenses',  [FinancialStatementController::class, 'expensesFullLedger'])->name('expenses');
+});
+
+
+use App\Http\Controllers\AvailabilityDailyStatusController;
+// API Routes for daily availability
+Route::get('/availability-daily-status/{availabilityRoomTypeId}', [AvailabilityDailyStatusController::class, 'getDailyStatus']);
+Route::get('/availability-check-dates/{availabilityRoomTypeId}', [AvailabilityDailyStatusController::class, 'checkAvailableDates']);
+
+
+use App\Http\Controllers\FinancialReportsController;
+// ===== التقارير الختامية =====
+Route::prefix('financial-reports')->name('financial-reports.')->middleware('auth')->group(function () {
+    Route::get('/trial-balance',    [FinancialReportsController::class, 'trialBalance'])->name('trial-balance');
+    Route::get('/income-statement', [FinancialReportsController::class, 'incomeStatement'])->name('income-statement');
+    Route::get('/balance-sheet',    [FinancialReportsController::class, 'balanceSheet'])->name('balance-sheet');
+});
+
+
+Route::get('availabilities/hotel-active', [AvailabilityController::class, 'getHotelActive'])->name('availabilities.hotel-active');
+
+
+Route::get('accounts/{account}/ledger-print', [FinancialReportsController::class, 'printLedger'])->name('accounts.ledger.print');
+Route::get('accounts/{account}/ledger-download-pdf', [FinancialReportsController::class, 'downloadLedgerPdf'])->name('accounts.ledger.download-pdf');
+
+Route::get('/accounts/tree/pdf', [AccountController::class, 'exportTreePdf'])->name('accounts.tree.pdf');
+Route::get('/accounts/tree/excel', [AccountController::class, 'exportTreeExcel'])->name('accounts.tree.excel');
+
+use App\Http\Controllers\VoucherController;
+Route::get('/vouchers/receipt', [VoucherController::class, 'receipt'])->name('vouchers.receipt');
+Route::get('/vouchers/payment', [VoucherController::class, 'payment'])->name('vouchers.payment');
+Route::post('/vouchers/save',   [VoucherController::class, 'save'])->name('vouchers.save');
+Route::get('/vouchers/{entry}/show',       [VoucherController::class, 'showVoucher'])->name('vouchers.show');
+Route::put('/vouchers/{entry}/update',     [VoucherController::class, 'updateVoucher'])->name('vouchers.update');

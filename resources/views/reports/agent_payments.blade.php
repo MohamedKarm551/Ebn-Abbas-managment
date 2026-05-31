@@ -43,6 +43,29 @@
                                     </select>
                                 </div>
                             </div>
+
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-building-columns text-info me-2"></i>
+                                    اختر حساب الدفع (المصدر)
+                                </label>
+                                <select class="form-select" name="payment_account_id" required>
+                                    <option value="">-- اختر حساب الدفع --</option>
+                                    @php
+                                        $paymentAccounts = \App\Models\Account::where('is_leaf', true)
+                                            ->where('is_active', true)->orderBy('code')->get();
+                                    @endphp
+                                    @foreach($paymentAccounts as $acc)
+                                        <option value="{{ $acc->id }}" {{ $acc->code === '1.1.1' ? 'selected' : '' }}>
+                                            {{ $acc->code }} - {{ $acc->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+
+
                             <div class="mb-3">
                                 <label class="form-label">ملاحظات</label>
                                 <textarea class="form-control" name="notes"></textarea>
@@ -82,6 +105,31 @@
                                     </select>
                                 </div>
                             </div>
+
+
+
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                   <i class="fas fa-percent me-1"></i> اختر حساب الخصم (المدين)
+                                </label>
+                                <select class="form-select" name="payment_account_id" required>
+                                    <option value="">-- اختر حساب الدفع --</option>
+                                    @php
+                                        $paymentAccounts = \App\Models\Account::where('is_leaf', true)
+                                            ->where('is_active', true)->orderBy('code')->get();
+                                    @endphp
+                                    @foreach($paymentAccounts as $acc)
+                                        <option value="{{ $acc->id }}" {{ $acc->code === '1.1.1' ? 'selected' : '' }}>
+                                            {{ $acc->code }} - {{ $acc->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+
+
+
                             <div class="mb-3">
                                 <label class="form-label">سبب الخصم</label>
                                 <textarea class="form-control" name="reason" placeholder="اختياري - سبب تطبيق الخصم"></textarea>

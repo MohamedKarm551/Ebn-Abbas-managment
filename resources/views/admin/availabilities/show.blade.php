@@ -11,6 +11,9 @@
             <a href="{{ route('admin.availabilities.edit', $availability->id) }}" class="btn btn-warning">
                 <i class="bi bi-pencil-square"></i> تعديل
             </a>
+            <a href="{{ route('bookings.create', ['availability_room_type_id' => $availability->availabilityRoomTypes->first()->id ?? '']) }}" class="btn btn-success">
+                 <i class="bi bi-calendar-plus"></i> حجز من هذه الإتاحة
+            </a>
             <a href="{{ route('admin.availabilities.index') }}" class="btn btn-secondary">
                 <i class="bi bi-list-ul"></i> العودة للقائمة
             </a>

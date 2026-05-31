@@ -27,7 +27,10 @@ use Carbon\Carbon; // *** استيراد Carbon لمعالجة التواريخ 
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\BookingsExport;
 use Barryvdh\DomPDF\Facade\Pdf as PDF; // تأكد من تثبيت الحزمة
-
+use App\Models\JournalEntry;
+use App\Models\AccountLedger;
+use App\Models\Availability;
+use App\Models\AvailabilityDailyStatus; 
 
 class BookingsController extends Controller
 {
@@ -49,7 +52,7 @@ class BookingsController extends Controller
         // 1. بناء الاستعلام الأساسي وتحميل العلاقات (Eager Loading)
         // --------------------------------------------------
         // سطر 43: بنبدأ نبني الاستعلام لجدول الحجوزات وبنحمل العلاقات عشان الأداء
-        $query = Booking::with(['company', 'employee', 'agent', 'hotel', 'financialTracking']);
+        $query = Booking::with(['company', 'employee', 'agent', 'hotel', 'financialTracking','availabilityRoomType.availability']);
         // ->where('status', 'active'); // بنجيب بس الحجوزات النشطة
 
         // سطر 45-46: بنستبعد الحجوزات المؤرشفة (اللي سعرها صفر)
@@ -482,9 +485,9 @@ class BookingsController extends Controller
         $bookingData = [];
         // *** بداية التعديل: جلب البيانات من الداتابيز بناءً على الـ ID ***
         if ($request->has('availability_room_type_id')) {
-            $availabilityRoomTypeId = $request->input('availability_room_type_id');
-            $roomTypeInfo = AvailabilityRoomType::with(['availability.hotel', 'availability.agent', 'roomType', 'availability.employee'])
-                ->find($availabilityRoomTypeId);
+        $availabilityRoomTypeId = $request->input('availability_room_type_id');
+        $roomTypeInfo = AvailabilityRoomType::with(['availability.hotel', 'availability.agent', 'roomType', 'availability.employee', 'dailyStatus'])
+            ->find($availabilityRoomTypeId);
 
             // --- هنا نتحقق من صلاحية الإتاحة ---
 
@@ -500,6 +503,34 @@ class BookingsController extends Controller
 
                 $isBookingFromAvailability = true;
                 $availability = $roomTypeInfo->availability;
+
+
+
+                $dailyStatuses = $roomTypeInfo->dailyStatus ?? collect();
+                 
+                // ✅ الحل الصحيح: استخدام filter() بدلاً من whereRaw()
+            $availableDates = $dailyStatuses->filter(function($status) {
+                return ($status->available_rooms - $status->booked_rooms) > 0;
+            });
+                
+      // أول يوم متاح
+$firstAvailableDate = $availableDates->min('date');
+
+// ✅ آخر يوم متاح في الإتاحة كلها (بغض النظر عن الفجوات)
+$lastAvailableDateRaw = $availableDates->max('date');
+$lastAvailableDate = $lastAvailableDateRaw
+    ? \Carbon\Carbon::parse($lastAvailableDateRaw)
+    : $availability->end_date;
+
+            // الحد الأقصى للغرف المتاحة في أول يوم متاح
+            $maxRoomsInFirstDay = 0;
+            if ($firstAvailableDate) {
+                $firstDayStatus = $dailyStatuses->firstWhere('date', $firstAvailableDate);
+                if ($firstDayStatus) {
+                    $maxRoomsInFirstDay = $firstDayStatus->available_rooms - $firstDayStatus->booked_rooms;
+                }
+            }
+
 
                 $bookingData = [
                     'availability_room_type_id' => $roomTypeInfo->id,
@@ -521,6 +552,18 @@ class BookingsController extends Controller
                     'company_id' => null, // الشركة المستخدم هيختارها
                     'client_name' => null, // العميل المستخدم هيدخله
                     'notes' => null,
+
+
+                     'first_available_date' => $firstAvailableDate ? $firstAvailableDate->format('Y-m-d') : $availability->start_date->format('Y-m-d'),
+                    'last_available_date' => $lastAvailableDate ? $lastAvailableDate->format('Y-m-d') : $availability->end_date->format('Y-m-d'),
+                    'max_rooms_first_day' => $maxRoomsInFirstDay,
+                    
+                    'check_in' => $firstAvailableDate ? $firstAvailableDate->format('Y-m-d') : $availability->start_date->format('Y-m-d'),
+                    'check_out' => $lastAvailableDate ? $lastAvailableDate->format('Y-m-d') : $availability->end_date->format('Y-m-d'),
+                    
+                    // تواريخ الإتاحة الأصلية للـ min/max في الفيو
+                    'availability_start_date' => $availability->start_date->format('Y-m-d'),
+                    'availability_end_date' => $availability->end_date->format('Y-m-d'),
                 ];
                 Log::info('بيانات الحجز المبدئية من الإتاحة:', $bookingData); // للتأكد
             } else {
@@ -556,11 +599,48 @@ class BookingsController extends Controller
 
         $isBookingFromAvailability = $request->filled('availability_room_type_id');
 
+        if ($isBookingFromAvailability) {
+        $availabilityRoomType = AvailabilityRoomType::with('availability')->find($request->availability_room_type_id);
+        
+        if ($availabilityRoomType && $availabilityRoomType->availability) {
+            $availability = $availabilityRoomType->availability;
+            $checkIn = Carbon::parse($request->check_in);
+            $checkOut = Carbon::parse($request->check_out);
+            
+            // الحد الأدنى للدخول
+            $minCheckIn = $availability->start_date;
+            // الحد الأقصى للدخول (آخر يوم للإتاحة)
+            $maxCheckIn = $availability->end_date;
+            // الحد الأقصى للخروج (نهاية الإتاحة + يوم واحد)
+            $maxCheckOut = $availability->end_date->copy()->addDay();
+            
+            // التحقق من تاريخ الدخول
+            if ($checkIn < $minCheckIn || $checkIn > $maxCheckIn) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['check_in' => "تاريخ الدخول ($checkIn) خارج فترة الإتاحة (" . $minCheckIn->format('Y-m-d') . " - " . $maxCheckIn->format('Y-m-d') . ")"]);
+            }
+            
+            // التحقق من تاريخ الخروج
+           if ($checkOut < $checkIn || $checkOut > $maxCheckOut) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['check_out' => "تاريخ الخروج ($checkOut) غير مسموح به. الحد الأقصى للخروج هو " . $maxCheckOut->format('Y-m-d')]);
+            }
+        }
+        }
+
+
         // 1. التحقق من الإتاحة إذا كان الحجز من إتاحة
-        // تحميل بيانات الإتاحة مع العلاقات مرة واحدة
+        $availabilityData = null;
+        $originalRoomTypeInfo = null;
+        $availability = null;
+
+        if ($isBookingFromAvailability) {
         $availabilityData = $this->verifyAvailability($request, $isBookingFromAvailability);
         $originalRoomTypeInfo = $availabilityData['roomTypeInfo'] ?? null;
         $availability = $availabilityData['availability'] ?? null;
+        }
 
         // 2. التحقق الأساسي للبيانات
         $rules = [
@@ -580,7 +660,7 @@ class BookingsController extends Controller
             'hotel_id' => 'required|exists:hotels,id',
             'room_type' => 'required|string|max:255',
             'check_in' => 'required|date_format:Y-m-d',
-            'check_out' => 'required|date_format:Y-m-d|after:check_in',
+            'check_out' => 'required|date_format:Y-m-d|after_or_equal:check_in',
             'rooms' => 'required|integer|min:1',
             'availability_room_type_id' => 'nullable|sometimes|exists:availability_room_types,id',
             'cost_price' => (Auth::user()->role !== 'Company' ? 'required' : 'nullable') . '|numeric|min:0',
@@ -628,6 +708,27 @@ class BookingsController extends Controller
         }
         Log::info('نجح الـ Validation الأساسي');
 
+        // ===========================================
+        // إذا كان الحجز مباشراً (بدون إتاحة مسبقة)
+        // ===========================================
+        if (!$isBookingFromAvailability) {
+            Log::info('الحجز مباشر (بدون إتاحة مسبقة) – سيتم إنشاء إتاحة تلقائية');
+
+            // إنشاء إتاحة وهمية بناءً على بيانات الحجز
+            $autoAvailability = $this->createAutoAvailabilityFromBooking($validatedData);
+
+            if ($autoAvailability) {
+                // جلب معلومات نوع الغرفة من الإتاحة التي تم إنشاؤها
+                $roomTypeInfo = $autoAvailability->availabilityRoomTypes->first();
+                if ($roomTypeInfo) {
+                    $originalRoomTypeInfo = $roomTypeInfo;
+                    $availability = $autoAvailability;
+                    $isBookingFromAvailability = true;
+                    $validatedData['availability_room_type_id'] = $roomTypeInfo->id;
+                }
+            }
+        }
+
         // 3. التحقق من أقل عدد ليالي (إذا كان الحجز من إتاحة)
         if ($isBookingFromAvailability && $originalRoomTypeInfo) {
             $this->verifyMinimumNights($validatedData, $availability);
@@ -652,6 +753,22 @@ class BookingsController extends Controller
 
         // 7. حفظ الحجز وتحديث الـ Allotment مع تحميل العلاقات مباشرة
         $booking = $this->saveBookingAndUpdateAllotment($validatedData, $isBookingFromAvailability, $originalRoomTypeInfo);
+
+         // مزامنة الشركات وجهات الحجز مع شجرة الحسابات أولاً
+        try {
+            \App\Http\Controllers\AccountController::syncAllWithAccountTree();
+            Log::info('تم مزامنة الشركات وجهات الحجز مع شجرة الحسابات');
+        } catch (\Exception $e) {
+            Log::error('فشل مزامنة شجرة الحسابات: ' . $e->getMessage());
+        }
+ 
+        // تسجيل القيد المحاسبي للحجز
+        try {
+            \App\Http\Controllers\AccountController::createBookingJournalEntry($booking);
+            Log::info('تم تسجيل القيد المحاسبي للحجز ID: ' . $booking->id);
+        } catch (\Exception $e) {
+            Log::error('فشل تسجيل القيد المحاسبي للحجز ID: ' . $booking->id . ' - ' . $e->getMessage());
+        }
 
         // 8. إنشاء ملفات الباك أب وإرسال الإشعارات
         if ($booking) {
@@ -712,7 +829,9 @@ class BookingsController extends Controller
         if ($request->input('hotel_id') != $availability->hotel_id) $errors['hotel_id'] = 'نقدق الإتاحة المحدد غير صحيح.';
         if ($request->input('agent_id') != $availability->agent_id) $errors['agent_id'] = 'جهة حجز الإتاحة المحددة غير صحيحة.';
         if ($request->input('room_type') != $originalRoomTypeInfo->roomType->room_type_name) $errors['room_type'] = 'نوع غرفة الإتاحة المحدد غير صحيح.';
-        if (bccomp((string)$request->input('sale_price'), (string)$originalRoomTypeInfo->sale_price, 2) !== 0) $errors['sale_price'] = 'سعر البيع المحددد لا يطابق سعر الإتاحة الأصلي.';
+        if (strtolower(Auth::user()->role) !== 'admin' && bccomp((string)$request->input('sale_price'), (string)$originalRoomTypeInfo->sale_price, 2) !== 0) {
+            $errors['sale_price'] = 'سعر البيع المحدد لا يطابق سعر الإتاحة الأصلي.';
+        }
         if (bccomp((string)$request->input('cost_price'), (string)$originalRoomTypeInfo->cost_price, 2) !== 0) $errors['cost_price'] = 'سعر التكلفة المحدد لا يطابق سعر الإتاحة الأصلي.';
         if ($request->input('employee_id') != $availability->employee_id) $errors['employee_id'] = 'الموظف المسؤول عن الإتاحة غير صحيح.';
 
@@ -723,10 +842,10 @@ class BookingsController extends Controller
             $availabilityStart = Carbon::parse($availability->start_date);
             $availabilityEnd = Carbon::parse($availability->end_date);
 
-            if ($checkIn->lt($availabilityStart) || $checkOut->gt($availabilityEnd) || $checkIn->gte($checkOut)) {
-                $errors['check_in'] = 'التواريخ المحددة خارج فترة الإتاحة الأصلية (' . $availabilityStart->format('d/m/Y') . ' - ' . $availabilityEnd->format('d/m/Y') . ') أو غير صحيحة.';
-                $errors['check_out'] = 'التواريخ المحددة خارج فترة الإتاحة الأصلية (' . $availabilityStart->format('d/m/Y') . ' - ' . $availabilityEnd->format('d/m/Y') . ') أو غير صحيحة.';
-            }
+            if ($checkIn->lt($availabilityStart) || $checkOut->gt($availabilityEnd) || $checkIn->gt($checkOut)) {
+            $errors['check_in'] = 'التواريخ المحددة خارج فترة الإتاحة الأصلية (' . $availabilityStart->format('d/m/Y') . ' - ' . $availabilityEnd->format('d/m/Y') . ') أو غير صحيحة.';
+            $errors['check_out'] = 'التواريخ المحددة خارج فترة الإتاحة الأصلية (' . $availabilityStart->format('d/m/Y') . ' - ' . $availabilityEnd->format('d/m/Y') . ') أو غير صحيحة.';
+        }
         } catch (\Exception $e) {
             $errors['check_in'] = 'صيغة تاريخ الدخول أو الخروج غير صحيحة.';
             $errors['check_out'] = 'صيغة تاريخ الدخول أو الخروج غير صحيحة.';
@@ -758,49 +877,35 @@ class BookingsController extends Controller
      * @param \App\Models\Availability $availability
      * @throws ValidationException
      */
-    private function verifyMinimumNights(array $validatedData, $availability): void
-    {
-        // ================================================================
-        // التحقق من أقل عدد ليالي الحجز
-        // ================================================================
-        try {
-            $checkInDateForMinNights = Carbon::parse($validatedData['check_in']);
-            $checkOutDateForMinNights = Carbon::parse($validatedData['check_out']);
+   private function verifyMinimumNights(array $validatedData, $availability): void
+{
+    try {
+        $checkInDateForMinNights = Carbon::parse($validatedData['check_in']);
+        $checkOutDateForMinNights = Carbon::parse($validatedData['check_out']);
 
-            if ($checkOutDateForMinNights->lte($checkInDateForMinNights)) {
-                Log::error("خطأ منطقي: تاريخ الخروج ليس بعد تاريخ الدخول عند حساب أقل عدد ليالي.", [
-                    'request_id' => uniqid(), // تحسين: إضافة معرف طلب للتتبع
-                    'check_in' => $validatedData['check_in'],
-                    'check_out' => $validatedData['check_out'],
-                    'availability_id' => $availability->id
-                ]);
-                throw ValidationException::withMessages([
-                    'check_out' => 'تاريخ الخروج يجب أن يكون بعد تاريخ الدخول بشكل صحيح لحساب مدة الإقامة.'
-                ]);
-            }
-
-            $bookedNights = abs($checkOutDateForMinNights->diffInDays($checkInDateForMinNights, false));
-
-            if ($availability->min_nights && $bookedNights < $availability->min_nights) {
-                Log::warning("فشل التحقق من أقل عدد ليالي للإتاحة ID: {$availability->id}. الليالي المحجوزة: {$bookedNights}, الحد الأدنى المطلوب: {$availability->min_nights} ليالي.", [
-                    'request_id' => uniqid(), // تحسين: إضافة معرف طلب للتتبع
-                ]);
-                throw ValidationException::withMessages([
-                    'check_out' => "أقل عدد ليالي مسموح به لهذه الفترة هو {$availability->min_nights} ليالي. عدد الليالي التي اخترتها هو {$bookedNights}"
-                ]);
-            }
-            Log::info("نجح التحقق من أقل عدد ليالي للإتاحة ID: {$availability->id}. عدد الليالي المحجوزة: {$bookedNights}");
-        } catch (\Exception $e) {
-            Log::error("خطأ أثناء التحقق من الحد الأدنى لليالي: " . $e->getMessage(), [
-                'request_id' => uniqid(),
-                'data' => $validatedData
+        if ($checkOutDateForMinNights->lt($checkInDateForMinNights)) {
+            throw ValidationException::withMessages([
+                'check_out' => 'تاريخ الخروج يجب أن يكون بعد تاريخ الدخول.'
             ]);
-            throw ValidationException::withMessages(['check_in' => 'خطأ في تحديد تواريخ الحجز. يرجى التحقق من التواريخ المدخلة.']);
         }
-    }
 
+        $bookedNights = max(1, abs($checkOutDateForMinNights->diffInDays($checkInDateForMinNights, false)));
+
+        if ($availability->min_nights && $bookedNights < $availability->min_nights) {
+            throw ValidationException::withMessages([
+                'check_out' => "أقل عدد ليالي مسموح به هو {$availability->min_nights} ليالي."
+            ]);
+        }
+
+    } catch (ValidationException $e) {
+        throw $e; // ✅ أعد رمي الـ ValidationException كما هي
+    } catch (\Exception $e) {
+        Log::error("خطأ أثناء التحقق من الحد الأدنى لليالي: " . $e->getMessage());
+        throw ValidationException::withMessages(['check_in' => 'خطأ في تحديد تواريخ الحجز.']);
+    }
+}
     /**
-     * Verify the allotment for availability-based bookings.
+     * Verify the allotment for availability-based bookings using daily tracking.
      *
      * @param array $validatedData
      * @param AvailabilityRoomType $originalRoomTypeInfo
@@ -809,28 +914,48 @@ class BookingsController extends Controller
     private function verifyAllotment(array $validatedData, AvailabilityRoomType $originalRoomTypeInfo): void
     {
         // ================================================================
-        // التحقق الدقيق من الـ Allotment
+        // التحقق الدقيق من الـ Allotment يومياً
         // ===============================================================
         $requestRooms = $validatedData['rooms'];
-        $allotment = $originalRoomTypeInfo->allotment;
-
-        if ($allotment === null) {
-            Log::error("الـ Allotment غير معرف لـ AvailabilityRoomType ID: {$originalRoomTypeInfo->id}");
-            throw ValidationException::withMessages(['availability_room_type_id' => 'خطأ: لا يمكن تحديد عدد الغرف المتاح لهذه الإتاحة.']);
-        }
-
-        Log::info("التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}", [
-            'Allotment المتاح حاليًا' => $allotment,
-            'المطلوب جديد' => $requestRooms
+        $checkIn = Carbon::parse($validatedData['check_in']);
+        $checkOut = Carbon::parse($validatedData['check_out']);
+        $days = $checkIn->diffInDays($checkOut);
+        
+        Log::info("التحقق من الـ Allotment اليومي لـ ID: {$originalRoomTypeInfo->id}", [
+            'المطلوب جديد' => $requestRooms,
+            'من تاريخ' => $checkIn->format('Y-m-d'),
+            'إلى تاريخ' => $checkOut->format('Y-m-d'),
+            'عدد الأيام' => $days
         ]);
 
-        if ($requestRooms > $allotment) {
-            Log::warning("فشل التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}. المطلوب: {$requestRooms}, المتاح حاليًا: {$allotment}");
-            throw ValidationException::withMessages([
-                'rooms' => "عدد الغرف المطلوب ({$requestRooms}) يتجاوز العدد المتاح حاليًا ({$allotment} غرفة متاحة).",
-            ]);
+        // التحقق من كل يوم في فترة الحجز
+        for ($i = 0; $i < $days; $i++) {
+            $currentDate = $checkIn->copy()->addDays($i);
+            
+            $dailyStatus = AvailabilityDailyStatus::where('availability_room_type_id', $originalRoomTypeInfo->id)
+                ->whereDate('date', $currentDate)
+                ->first();
+
+            if (!$dailyStatus) {
+                Log::error("لا يوجد سجل يومي لـ AvailabilityRoomType ID: {$originalRoomTypeInfo->id} في تاريخ {$currentDate->format('Y-m-d')}");
+                throw ValidationException::withMessages([
+                    'rooms' => "خطأ: لا توجد بيانات متاحة للتاريخ {$currentDate->format('d/m/Y')}."
+                ]);
+            }
+
+            $remainingRooms = $dailyStatus->available_rooms - $dailyStatus->booked_rooms;
+            
+            Log::info("التحقق من اليوم {$currentDate->format('Y-m-d')}: المتاح {$remainingRooms}, المطلوب {$requestRooms}");
+
+            if ($requestRooms > $remainingRooms) {
+                Log::warning("فشل التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id} في {$currentDate->format('Y-m-d')}. المطلوب: {$requestRooms}, المتاح: {$remainingRooms}");
+                throw ValidationException::withMessages([
+                    'rooms' => "عدد الغرف المطلوب ({$requestRooms}) يتجاوز العدد المتاح في {$currentDate->format('d/m/Y')} ({$remainingRooms} غرفة متاحة).",
+                ]);
+            }
         }
-        Log::info("نجح التحقق من الـ Allotment لـ ID: {$originalRoomTypeInfo->id}");
+        
+        Log::info("نجح التحقق من الـ Allotment اليومي لـ ID: {$originalRoomTypeInfo->id}");
     }
 
     /**
@@ -858,9 +983,18 @@ class BookingsController extends Controller
             }
             $validatedData['days'] = $days;
 
-            $costPrice = ($isBookingFromAvailability && Auth::user()->role === 'Company')
-                ? $originalRoomTypeInfo->cost_price
-                : ($validatedData['cost_price'] ?? 0);
+            if ($isBookingFromAvailability && $originalRoomTypeInfo) {
+                // لو الحجز من إتاحة، خد السعر من الإتاحة
+                $costPrice = $originalRoomTypeInfo->cost_price;
+            } else {
+                // لو مش من إتاحة، خد السعر من الـ request
+                $costPrice = $validatedData['cost_price'] ?? 0;
+            }
+            
+            // ✅ التأكد إن السعر مش صفر
+            if ($costPrice <= 0 && !$isBookingFromAvailability) {
+                Log::warning('سعر التكلفة صفر أو غير موجود للحجز');
+            }
 
             $validatedData['amount_due_to_hotel'] = $costPrice * $validatedData['rooms'] * $days;
             $validatedData['amount_due_from_company'] = $validatedData['sale_price'] * $validatedData['rooms'] * $days;
@@ -883,106 +1017,128 @@ class BookingsController extends Controller
         return $validatedData;
     }
 
-    /**
-     * Save the booking and update allotment within a transaction.
-     *
-     * @param array $validatedData
-     * @param bool $isBookingFromAvailability
-     * @param AvailabilityRoomType|null $originalRoomTypeInfo
-     * @return Booking
-     * @throws ValidationException
-     */
-    private function saveBookingAndUpdateAllotment(array $validatedData, bool $isBookingFromAvailability, ?AvailabilityRoomType $originalRoomTypeInfo): Booking
-    {
-        // ==============================================================
-        // إنشاء الحجز وتحديث الـ Allotment (داخل Transaction)
-        // ==============================================================
-        $booking = null;
-        try {
-            DB::transaction(function () use ($validatedData, $isBookingFromAvailability, $originalRoomTypeInfo, &$booking) {
-                // إنشاء الحجز مع تحميل العلاقات مباشرة لتقليل الاستعلامات لاحقًا
-                $booking = Booking::create($validatedData)->load(['company', 'agent', 'hotel', 'employee']);
-                Log::info("تم إنشاء الحجز ID: {$booking->id}");
+  /**
+ * Save the booking and update daily allotment within a transaction.
+ *
+ * @param array $validatedData
+ * @param bool $isBookingFromAvailability
+ * @param AvailabilityRoomType|null $originalRoomTypeInfo
+ * @return Booking
+ * @throws ValidationException
+ */
+private function saveBookingAndUpdateAllotment(array $validatedData, bool $isBookingFromAvailability, ?AvailabilityRoomType $originalRoomTypeInfo): Booking
+{
+    // ==============================================================
+    // إنشاء الحجز وتحديث الـ Allotment اليومي (داخل Transaction)
+    // ==============================================================
+    $booking = null;
+    try {
+        DB::transaction(function () use ($validatedData, $isBookingFromAvailability, $originalRoomTypeInfo, &$booking) {
+            // إنشاء الحجز مع تحميل العلاقات مباشرة لتقليل الاستعلامات لاحقًا
+            $booking = Booking::create($validatedData)->load(['company', 'agent', 'hotel', 'employee']);
+            Log::info("تم إنشاء الحجز ID: {$booking->id}");
 
-                if ($isBookingFromAvailability && $originalRoomTypeInfo) {
-                    // إعادة التحقق من الـ Allotment داخل المعاملة باستخدام قفل
-                    $currentRoomTypeInfo = AvailabilityRoomType::lockForUpdate()->find($originalRoomTypeInfo->id);
-                    if (!$currentRoomTypeInfo) {
-                        Log::critical("لم يتم العثور على AvailabilityRoomType داخل الـ transaction للحجز ID: {$booking->id}", [
-                            'request_id' => uniqid()
-                        ]);
-                        throw new \Exception("خطأ داخلي حرج: لم يتم العثور على بيانات الإتاحة لتحديثها.");
-                    }
+            if ($isBookingFromAvailability && $originalRoomTypeInfo) {
+                // إعادة التحقق من الـ Allotment داخل المعاملة باستخدام قفل
+                $currentRoomTypeInfo = AvailabilityRoomType::lockForUpdate()->find($originalRoomTypeInfo->id);
+                if (!$currentRoomTypeInfo) {
+                    Log::critical("لم يتم العثور على AvailabilityRoomType داخل الـ transaction للحجز ID: {$booking->id}");
+                    throw new \Exception("خطأ داخلي حرج: لم يتم العثور على بيانات الإتاحة لتحديثها.");
+                }
 
-                    $currentAllotment = $currentRoomTypeInfo->allotment;
-                    $requestedRooms = $validatedData['rooms'];
+                $checkIn = Carbon::parse($validatedData['check_in']);
+                $checkOut = Carbon::parse($validatedData['check_out']);
+                $days = $checkIn->diffInDays($checkOut);
+                $requestedRooms = $validatedData['rooms'];
 
-                    if ($requestedRooms > $currentAllotment) {
-                        Log::error("فشل تحديث الـ Allotment (داخل transaction) للحجز ID: {$booking->id}. المطلوب: {$requestedRooms}, المتاح حاليًا: {$currentAllotment}", [
-                            'request_id' => uniqid()
-                        ]);
-                        throw ValidationException::withMessages(['rooms' => "عفوًا، تم حجز الغرف المطلوبة لتوًا. المتاح حاليًا: {$currentAllotment}"]);
-                    }
+                // التحقق النهائي من كل يوم مع قفل
+                for ($i = 0; $i < $days; $i++) {
+                    $currentDate = $checkIn->copy()->addDays($i);
+                    
+                    $dailyStatus = AvailabilityDailyStatus::where('availability_room_type_id', $currentRoomTypeInfo->id)
+                        ->whereDate('date', $currentDate)
+                        ->lockForUpdate()
+                        ->first();
 
-                    $newAllotment = $currentAllotment - $requestedRooms;
-                    $currentRoomTypeInfo->update(['allotment' => $newAllotment]);
-                    Log::info("تم تحديث allotment للـ AvailabilityRoomType ID: {$currentRoomTypeInfo->id} إلى {$newAllotment} للحجز ID: {$booking->id}");
-
-                    // تحديث حالة الإتاحة الأم
-                    $parentAvailability = $currentRoomTypeInfo->availability()->lockForUpdate()->first();
-                    if ($parentAvailability) {
-                        // تحميل العلاقات مرة واحدة لتقليل الاستعلامات
-                        $parentAvailability->load('availabilityRoomTypes');
-                        $totalRemainingAllotmentInParent = $parentAvailability->availabilityRoomTypes->sum('allotment');
-
-                        Log::info("التحقق من إجمالي الـ allotment المتبقي للإتاحة الأم ID: {$parentAvailability->id}. الإجمالي: {$totalRemainingAllotmentInParent}");
-
-                        if ($totalRemainingAllotmentInParent <= 0) {
-                            if ($parentAvailability->status !== 'inactive' && $parentAvailability->status !== 'expired') {
-                                $parentAvailability->status = 'inactive';
-                                $parentAvailability->save();
-                                Log::info("تم تغيير حالة الإتاحة الأم ID: {$parentAvailability->id} إلى 'inactive' لأن مجموع الغرف المتبقية أصبح {$totalRemainingAllotmentInParent}.");
-
-                                Notification::create([
-                                    'message' => "تم تغيير حالة الإتاحة للفندق: {$parentAvailability->hotel->name} (ID: {$parentAvailability->id}) تلقائيًا إلى 'غير نشطة' لنفاد جميع الغرف.",
-                                    'type' => 'availability_auto_inactive',
-                                    'related_id' => $parentAvailability->id,
-                                    'related_type' => \App\Models\Availability::class,
-                                ]);
-                            } else {
-                                Log::info("الإتاحة الأم ID: {$parentAvailability->id} حالتها بالفعل '{$parentAvailability->status}', لا حاجة للتغيير.");
-                            }
-                        }
-                    } else {
-                        Log::warning("لم يتم العثور على الإتاحة الأم لـ AvailabilityRoomType ID: {$currentRoomTypeInfo->id} داخل الـ transaction.", [
-                            'request_id' => uniqid()
+                    if (!$dailyStatus || ($dailyStatus->available_rooms - $dailyStatus->booked_rooms) < $requestedRooms) {
+                        $remaining = $dailyStatus ? ($dailyStatus->available_rooms - $dailyStatus->booked_rooms) : 0;
+                        Log::error("فشل تحديث الـ Allotment (داخل transaction) للحجز ID: {$booking->id} في {$currentDate->format('Y-m-d')}. المطلوب: {$requestedRooms}, المتاح: {$remaining}");
+                        throw ValidationException::withMessages([
+                            'rooms' => "عفوًا، تم حجز الغرف المطلوبة لتوًا في {$currentDate->format('d/m/Y')}. المتاح حاليًا: {$remaining}"
                         ]);
                     }
                 }
-            });
-        } catch (ValidationException $e) {
-            Log::warning('ValidationException داخل Transaction الحفظ: ' . $e->getMessage(), [
-                'request_id' => uniqid()
-            ]);
-            throw $e;
-        } catch (\Throwable $e) {
-            Log::error('حدث خطأ أثناء Transaction حفظ الحجز وتحديث الـ Allotment: ' . $e->getMessage(), [
-                'request_id' => uniqid(),
-                'exception' => $e,
-                'validated_data' => $validatedData
-            ]);
-            throw ValidationException::withMessages(['db_error' => 'حدث خطأ غير متوقع أثناء حفظ الحجز. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.']);
-        }
 
-        // إذا وصلنا هنا، يعني أن الحجز تم إنشاؤه بنجاح
-        if (!$booking) {
-            Log::critical('لم يتم إنشاء الحجز بنجاح بعد ال Transaction.', [
-                'request_id' => uniqid()
-            ]);
-            throw ValidationException::withMessages(['booking' => 'لم يتم إنشاء الحجز بنجاح. يرجى المحاولة مرة أخرى.']);
-        }
-        return $booking;
+                // تحديث الغرف المحجوزة لكل يوم
+                for ($i = 0; $i < $days; $i++) {
+                    $currentDate = $checkIn->copy()->addDays($i);
+                    
+                    $updated = AvailabilityDailyStatus::where('availability_room_type_id', $currentRoomTypeInfo->id)
+                        ->whereDate('date', $currentDate)
+                        ->increment('booked_rooms', $requestedRooms);
+                    
+                    // ✅ سجل في اللوج للتأكد
+                    Log::info("تحديث booked_rooms لليوم {$currentDate->format('Y-m-d')}: " . ($updated ? "نجح" : "فشل") . " - تم إضافة {$requestedRooms} غرفة");
+                }
+
+                // تحديث حالة الإتاحة الأم - نتحقق لو كل الأيام اتملت
+                $parentAvailability = $currentRoomTypeInfo->availability()->lockForUpdate()->first();
+                if ($parentAvailability) {
+                    $parentAvailability->load('availabilityRoomTypes.dailyStatus');
+                    
+                    // نتحقق لو فيه أيام لسه متاحة في أي نوع غرفة
+                    $hasAvailableDays = false;
+                    foreach ($parentAvailability->availabilityRoomTypes as $roomType) {
+                        $availableDays = AvailabilityDailyStatus::where('availability_room_type_id', $roomType->id)
+                            ->whereRaw('available_rooms > booked_rooms')
+                            ->count();
+                            
+                        if ($availableDays > 0) {
+                            $hasAvailableDays = true;
+                            break;
+                        }
+                    }
+
+                    Log::info("التحقق من إجمالي الأيام المتاحة للإتاحة الأم ID: {$parentAvailability->id}. هل يوجد أيام متاحة: " . ($hasAvailableDays ? 'نعم' : 'لا'));
+
+                    // نغير الحالة لـ inactive فقط لو مفيش أيام متاحة خالص
+                    if (!$hasAvailableDays) {
+                        if ($parentAvailability->status !== 'inactive' && $parentAvailability->status !== 'expired') {
+                            $parentAvailability->status = 'inactive';
+                            $parentAvailability->save();
+                            Log::info("تم تغيير حالة الإتاحة الأم ID: {$parentAvailability->id} إلى 'inactive' لأن جميع الأيام والغرف أصبحت محجوزة.");
+
+                            Notification::create([
+                                'message' => "تم تغيير حالة الإتاحة للفندق: {$parentAvailability->hotel->name} (ID: {$parentAvailability->id}) تلقائيًا إلى 'غير نشطة' لنفاد جميع الغرف في جميع الأيام.",
+                                'type' => 'availability_auto_inactive',
+                                'related_id' => $parentAvailability->id,
+                                'related_type' => \App\Models\Availability::class,
+                            ]);
+                        }
+                    } else {
+                        Log::info("الإتاحة الأم ID: {$parentAvailability->id} لسه فيها أيام متاحة، لم يتم تغيير الحالة.");
+                    }
+                }
+            }
+        });
+    } catch (ValidationException $e) {
+        Log::warning('ValidationException داخل Transaction الحفظ: ' . $e->getMessage());
+        throw $e;
+    } catch (\Throwable $e) {
+        Log::error('حدث خطأ أثناء Transaction حفظ الحجز وتحديث الـ Allotment: ' . $e->getMessage(), [
+            'exception' => $e,
+            'validated_data' => $validatedData
+        ]);
+        throw ValidationException::withMessages(['db_error' => 'حدث خطأ غير متوقع أثناء حفظ الحجز. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.']);
     }
+
+    if (!$booking) {
+        Log::critical('لم يتم إنشاء الحجز بنجاح بعد ال Transaction.');
+        throw ValidationException::withMessages(['booking' => 'لم يتم إنشاء الحجز بنجاح. يرجى المحاولة مرة أخرى.']);
+    }
+    return $booking;
+}
+
 
     /**
      * Create backup files for the booking.
@@ -1299,6 +1455,16 @@ class BookingsController extends Controller
     {
         $booking = Booking::findOrFail($id);
 
+         // ✅ احفظ البيانات القديمة قبل التعديل
+        $oldAvailabilityRoomTypeId = $booking->availability_room_type_id;
+        $oldCheckIn  = $booking->check_in instanceof Carbon 
+            ? $booking->check_in->format('Y-m-d') 
+            : $booking->check_in;
+        $oldCheckOut = $booking->check_out instanceof Carbon 
+            ? $booking->check_out->format('Y-m-d') 
+            : $booking->check_out;
+        $oldRooms    = $booking->rooms;
+
         $validatedData = $request->validate([
             'client_name' => 'required|string|max:255',
             'company_id' => 'required|exists:companies,id',
@@ -1330,6 +1496,85 @@ class BookingsController extends Controller
         // تأكيد أن العملة تم أخذها من النموذج
         $currency = $request->input('currency');
         $validatedData['currency'] = $currency;
+
+
+
+        // ✅ تحديث daily_status لو الحجز من إتاحة
+        if ($oldAvailabilityRoomTypeId) {
+        DB::transaction(function () use (
+            $oldAvailabilityRoomTypeId,
+            $oldCheckIn, $oldCheckOut, $oldRooms,
+            $validatedData,
+            $booking
+        ) {
+            // 1. إرجاع الحجز القديم
+            $this->releaseAvailabilitySlots(
+                $oldAvailabilityRoomTypeId,
+                $oldCheckIn,
+                $oldCheckOut,
+                $oldRooms
+            );
+
+            $this->updateAutoAvailabilityInsideTransaction($booking, $validatedData);
+
+            // 2. تطبيق الحجز الجديد
+            $newStart = Carbon::parse($validatedData['check_in']);
+            $newEnd   = Carbon::parse($validatedData['check_out']);
+            $newDays  = $newStart->diffInDays($newEnd);
+            $newRooms = $validatedData['rooms'];
+
+            for ($i = 0; $i < $newDays; $i++) {
+                $currentDate = $newStart->copy()->addDays($i);
+
+                $dailyStatus = AvailabilityDailyStatus::where('availability_room_type_id', $oldAvailabilityRoomTypeId)
+                    ->whereDate('date', $currentDate)
+                    ->first();
+
+                if (!$dailyStatus) {
+                    Log::warning("لا يوجد daily_status للتاريخ {$currentDate->format('Y-m-d')} عند تعديل الحجز");
+                    throw ValidationException::withMessages([
+                        'check_in' => "لا توجد بيانات متاحة للتاريخ {$currentDate->format('d/m/Y')}"
+                    ]);
+                }
+
+                $remaining = $dailyStatus->available_rooms - $dailyStatus->booked_rooms;
+                if ($remaining < $newRooms) {
+                    throw ValidationException::withMessages([
+                        'rooms' => "لا تتوفر غرف كافية في {$currentDate->format('d/m/Y')} (المتاح: {$remaining})"
+                    ]);
+                }
+
+                $dailyStatus->increment('booked_rooms', $newRooms);
+            }
+
+            Log::info("تم تحديث daily_status بعد تعديل الحجز");
+
+            // 3. إعادة التحقق من حالة الإتاحة الأم
+            $roomTypeInfo = AvailabilityRoomType::find($oldAvailabilityRoomTypeId);
+            if ($roomTypeInfo?->availability) {
+                $parentAvailability = $roomTypeInfo->availability;
+                $hasAvailableDays = AvailabilityDailyStatus::where('availability_room_type_id', $oldAvailabilityRoomTypeId)
+                    ->whereRaw('available_rooms > booked_rooms')
+                    ->exists();
+
+                if ($hasAvailableDays && $parentAvailability->status === 'inactive') {
+                    $parentAvailability->update(['status' => 'active']);
+                } elseif (!$hasAvailableDays && $parentAvailability->status === 'active') {
+                    $parentAvailability->update(['status' => 'inactive']);
+                }
+            }
+        });
+        }
+
+        $booking->update($validatedData);
+
+        try {
+            \App\Http\Controllers\AccountController::updateBookingJournalEntry($booking);
+            Log::info("تم تحديث القيد المحاسبي للحجز بعد تعديله ID: {$booking->id}");
+        } catch (\Exception $e) {
+            Log::error("فشل تحديث القيد المحاسبي بعد تعديل الحجز ID: {$booking->id} - " . $e->getMessage());
+            // لا نمنع تحديث الحجز، فقط نسجل الخطأ
+        }
 
         // تسجيل التعديلات
         foreach ($validatedData as $field => $newValue) {
@@ -1364,6 +1609,7 @@ class BookingsController extends Controller
                 }
             }
         }
+
         // بعد حلقة foreach التي تسجل التعديلات في EditLog
         $changedFields = [];
         foreach ($validatedData as $field => $newValue) {
@@ -1392,9 +1638,7 @@ class BookingsController extends Controller
                 $validatedData[$field] = htmlspecialchars($validatedData[$field], ENT_QUOTES, 'UTF-8');
             }
         }
-        $booking->update($validatedData);
-        // بعد $booking->update($validatedData);
-        // إشعار للادمن
+        
         $isArchived = $booking->cost_price == 0 && $booking->sale_price == 0;
         if ($isArchived) {
             \App\Models\Notification::create([
@@ -1449,53 +1693,91 @@ class BookingsController extends Controller
         return redirect()->route('bookings.index')->with('success', 'تم تحديث الحجز بنجاح!');
     }
 
-    public function destroy($id)
-    {
-        // انا مستخدم أحدث تقنية من لاارافيل 12 عشان أحمل كل العلاقات مرة واحدة لتوفير أداء وسرعة
-        $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
+   public function destroy(Request $request, $id)  // ← أضف $request
+{
+    $booking = Booking::with(['company', 'agent', 'hotel', 'employee'])->findOrFail($id);
+    $deleteAvailability = $request->input('delete_availability') === 'true';
 
-        // تسجيل الحذف في الباك اب
-        $textContent = sprintf(
-            "\n=== حذف حجز بتاريخ %s ===\nرقم الحجز: %d\nاسم العميل: %s\nالشركة: %s\nالفندق: %s\n=====================================\n",
-            now()->format('d/m/Y H:i:s'),
-            $booking->id,
-            $booking->client_name,
-            $booking->company->name,
-            $booking->hotel->name
+    // 1. إرجاع الغرف في daily_status (دائماً)
+    if ($booking->availability_room_type_id) {
+        $this->releaseAvailabilitySlots(
+            $booking->availability_room_type_id,
+            $booking->check_in,
+            $booking->check_out,
+            $booking->rooms
         );
-
-        File::append(storage_path('backups/txt/bookings_deleted.txt'), $textContent);
-
-        // تسجيل الحذف في CSV
-        $csvContent = implode(',', [
-            now()->format('d/m/Y H:i:s'),
-            'محذوف - ' . $booking->client_name,
-            $booking->company->name,
-            $booking->agent->name,
-            $booking->hotel->name,
-            $booking->check_in->format('d/m/Y'),
-            $booking->check_out->format('d/m/Y'),
-            $booking->rooms,
-            $booking->days,
-            $booking->cost_price,
-            $booking->sale_price,
-            $booking->amount_due_to_hotel,
-            $booking->amount_due_from_company,
-            $booking->employee->name,
-            'تم الحذف'
-        ]) . "\n";
-
-        File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
-
-        $booking->delete();
-        // إشعار للأدمن 
-        Notification::create([
-            'user_id' => Auth::user()->id,
-            'message' => 'تم حذف حجز للعميل: ' . $booking->client_name . '، الفندق: ' . $booking->hotel->name . '، الشركة: ' . $booking->company->name,
-            'type' => 'عملية حذف',
-        ]);
-        return redirect()->route('bookings.index')->with('success', 'تم حذف الحجز بنجاح!');
     }
+
+    // 2. حذف القيد المحاسبي للحجز
+    $this->deleteBookingJournalEntry($booking);
+
+    // 3. التحقق من وجود إتاحة تلقائية مرتبطة
+    $autoAvailability = null;
+    $roomTypeInfo = null;
+    if ($booking->availability_room_type_id) {
+        $roomTypeInfo = AvailabilityRoomType::find($booking->availability_room_type_id);
+        if ($roomTypeInfo && $roomTypeInfo->availability && $roomTypeInfo->availability->is_auto) {
+            $autoAvailability = $roomTypeInfo->availability;
+        }
+    }
+
+    // 4. تسجيل الحذف في الباك اب (قبل حذف الحجز)
+    $textContent = sprintf(
+        "\n=== حذف حجز بتاريخ %s ===\nرقم الحجز: %d\nاسم العميل: %s\nالشركة: %s\nالفندق: %s\n=====================================\n",
+        now()->format('d/m/Y H:i:s'),
+        $booking->id,
+        $booking->client_name,
+        $booking->company->name,
+        $booking->hotel->name
+    );
+    File::append(storage_path('backups/txt/bookings_deleted.txt'), $textContent);
+
+    $csvContent = implode(',', [
+        now()->format('d/m/Y H:i:s'),
+        'محذوف - ' . $booking->client_name,
+        $booking->company->name,
+        $booking->agent->name,
+        $booking->hotel->name,
+        $booking->check_in->format('d/m/Y'),
+        $booking->check_out->format('d/m/Y'),
+        $booking->rooms,
+        $booking->days,
+        $booking->cost_price,
+        $booking->sale_price,
+        $booking->amount_due_to_hotel,
+        $booking->amount_due_from_company,
+        $booking->employee->name,
+        'تم الحذف'
+    ]) . "\n";
+    File::append(storage_path('backups/csv/bookings.csv'), $csvContent);
+
+    // 5. حذف الحجز (مرة واحدة فقط)
+    $booking->delete();
+
+    // 6. معالجة الإتاحة التلقائية حسب اختيار المستخدم
+    if ($autoAvailability && $deleteAvailability === true) {
+        $otherBookings = Booking::where('availability_room_type_id', $roomTypeInfo->id)->count();
+        if ($otherBookings == 0) {
+            AccountController::deleteAvailabilityJournalEntry($autoAvailability);
+            $roomTypeInfo->delete();
+            $autoAvailability->delete();
+            Log::info("تم حذف الإتاحة التلقائية مع الحجز {$id}");
+        } else {
+            Log::info("لم يتم حذف الإتاحة التلقائية لأن هناك {$otherBookings} حجوزات أخرى مرتبطة بها");
+        }
+    } elseif ($autoAvailability && $deleteAvailability === false) {
+        Log::info("تم حذف الحجز {$id} فقط، الإتاحة التلقائية بقيت مع تحرير الأماكن");
+    }
+
+    // 7. إشعار للأدمن
+    Notification::create([
+        'user_id' => Auth::user()->id,
+        'message' => 'تم حذف حجز للعميل: ' . $booking->client_name . '، الفندق: ' . $booking->hotel->name . '، الشركة: ' . $booking->company->name,
+        'type' => 'عملية حذف',
+    ]);
+
+    return redirect()->route('bookings.index')->with('success', 'تم حذف الحجز بنجاح!');
+}
 
     public function show($id)
     {
@@ -1527,7 +1809,16 @@ class BookingsController extends Controller
                     ->with('error', 'لا يمكنك الوصول إلى تفاصيل هذا الحجز لأنه لا يخص شركتك.');
             }
         }
-        return view('bookings.show', compact('booking', 'editLogs', 'id'));
+
+         $isAutoAvailability = false;
+        if ($booking->availability_room_type_id) {
+            $roomTypeInfo = AvailabilityRoomType::find($booking->availability_room_type_id);
+            if ($roomTypeInfo && $roomTypeInfo->availability && $roomTypeInfo->availability->is_auto) {
+                $isAutoAvailability = true;
+            }
+        }
+
+        return view('bookings.show', compact('booking', 'editLogs', 'id', 'isAutoAvailability'));
     }
 
     public function getEdits($id)
@@ -1549,6 +1840,7 @@ class BookingsController extends Controller
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'currency' => 'required|in:SAR,KWD',
+            'account_id' => 'required|exists:accounts,id', // ✅ الحساب اللي اختاره المستخدم
             'notes' => 'nullable|string',
         ]);
 
@@ -1560,31 +1852,60 @@ class BookingsController extends Controller
             return redirect()->back()->with('error', 'عملة الدفع يجب أن تتطابق مع عملة الحجز');
         }
 
+        // ✅✅✅ ج1: التأكد إن المبلغ المدفوع مش هيعدي المستحق ✅✅✅
+        $currentPaid = $booking->amount_paid_by_company ?? 0;
+        $maxAllowed = $booking->amount_due_from_company - $currentPaid;
+
+        if ($validated['amount'] > $maxAllowed) {
+                return redirect()->back()->with('error', 
+                "المبلغ المطلوب ({$validated['amount']}) يتجاوز المتبقي المستحق ({$maxAllowed})"
+                );
+            }
+
+        // ✅✅✅ ج2: تسجيل القيد المحاسبي (الأهم!) ✅✅✅
+        try {
+            AccountController::createPaymentJournalEntry($booking, $validated['amount'], $validated['account_id']);
+        } catch (\Exception $e) {
+            Log::error("فشل تسجيل القيد المحاسبي للدفعة: " . $e->getMessage(), [
+                'booking_id' => $booking->id,
+                'amount' => $validated['amount']
+            ]);
+            return redirect()->back()->with('error', 'حدث خطأ في تسجيل الدفعة محاسبيًا. يرجى المحاولة مرة أخرى.');
+        }
+
         // Create a new payment record
         $payment = new Payment();
         $payment->company_id = $booking->company_id;
+        $payment->booking_id = $booking->id;   // مهم للربط
         $payment->amount = $validated['amount'];
         $payment->currency = $validated['currency'];
+        $payment->account_id = $validated['account_id']; // ✅ تسجيل الحساب المستخدم
         $payment->payment_date = now();
         $payment->notes = $validated['notes'] ?? 'تم إضافة الدفعة من صفحة تفاصيل الحجز #' . $bookingId;
         $payment->save();
 
-        // Update the amount_paid_by_company field
-        $booking->increment('amount_paid_by_company', $validated['amount']);
-
-        // Log the payment activity
-        if (Auth::check()) {
-            $user = Auth::user();
-            // activity()
-            //     ->performedOn($booking)
-            //     ->causedBy($user)
-            //     ->withProperties([
-            //         'amount' => $validated['amount'],
-            //         'currency' => $validated['currency'],
-            //         'company' => $booking->company->name ?? 'غير محدد',
-            //     ])
-            //     ->log('تسجيل دفعة للحجز');
+        // ✅✅✅ ج4: تحديث المبلغ المدفوع في الحجز ✅✅✅
+        $newAmountPaid = $currentPaid + $validated['amount'];
+        $paymentStatus = 'partial';
+        
+        if ($newAmountPaid >= $booking->amount_due_from_company) {
+            $paymentStatus = 'paid';
+        } elseif ($newAmountPaid <= 0) {
+            $paymentStatus = 'unpaid';
         }
+    
+        $booking->update([
+            'amount_paid_by_company' => $newAmountPaid,
+            'payment_status' => $paymentStatus,
+        ]);
+
+        Log::info('تم تسجيل الدفعة بنجاح', [
+            'booking_id' => $booking->id,
+            'amount' => $validated['amount'],
+            'total_paid' => $newAmountPaid,
+            'status' => $paymentStatus
+        ]);
+
 
         // Redirect back with success message
         return redirect()->route('bookings.show', $booking->id)->with(
@@ -1664,4 +1985,353 @@ class BookingsController extends Controller
             'isPdf' => true,
         ]);
     }
+
+/**
+ * جلب الرصيد الفعلي للحجز من النظام المحاسبي
+ */
+public function getBookingFinancialData($id)
+{
+    $booking = Booking::findOrFail($id);
+    
+    // جلب الحسابات المرتبطة
+    $cashAccount = Account::where('code', '1.1.1')->first(); // الصندوق
+    $receivableAccount = Account::where('code', '1.1.3')->first(); // ذمم مدينة
+    
+    // جلب القيود المحاسبية الخاصة بهذا الحجز
+    $journalEntries = JournalEntry::where('source_type', 'App\Models\Booking')
+        ->where('source_id', $booking->id)
+        ->with('lines')
+        ->get();
+    
+    $totalPaid = 0;
+    $totalReceivable = 0;
+    
+    foreach ($journalEntries as $entry) {
+        foreach ($entry->lines as $line) {
+            if ($line->account_id == $cashAccount->id) {
+                $totalPaid += $line->debit; // المدفوع من الشركة
+            }
+            if ($line->account_id == $receivableAccount->id) {
+                $totalReceivable += $line->debit; // المستحق
+                $totalReceivable -= $line->credit; // المدفوع يقلل المستحق
+            }
+        }
+    }
+    
+    return response()->json([
+        'total_due_from_company' => $booking->amount_due_from_company,
+        'total_paid_by_company' => $totalPaid,
+        'remaining_from_company' => $booking->amount_due_from_company - $totalPaid,
+        'cash_balance' => $cashAccount ? $cashAccount->balance : 0,
+        'receivable_balance' => $receivableAccount ? $receivableAccount->balance : 0,
+    ]);
+}
+
+
+/**
+ * حذف القيد المحاسبي المرتبط بالحجز (إن وجد)
+ */
+private function deleteBookingJournalEntry(Booking $booking): void
+{
+    $journalEntry = JournalEntry::where('source_type', Booking::class)
+        ->where('source_id', $booking->id)
+        ->first();
+
+    if ($journalEntry) {
+        // حذف سجلات الـ Ledger المرتبطة أولاً
+        \App\Models\AccountLedger::where('journal_entry_id', $journalEntry->id)->delete();
+        // حذف أسطر القيد
+        $journalEntry->lines()->delete();
+        // حذف القيد نفسه
+        $journalEntry->delete();
+        Log::info("تم حذف القيد المحاسبي للحجز ID: {$booking->id}");
+    }
+}
+
+
+private function createAutoAvailabilityFromBooking(array $bookingData): ?\App\Models\Availability
+{
+    try {
+        // التأكد من وجود بيانات أساسية
+        if (empty($bookingData['hotel_id']) || empty($bookingData['agent_id']) || empty($bookingData['employee_id'])) {
+            \Log::error('بيانات الإتاحة التلقائية ناقصة: hotel_id, agent_id, employee_id مطلوبة');
+            return null;
+        }
+
+        // 1. إنشاء الإتاحة الرئيسية
+        $availability = \App\Models\Availability::create([
+            'hotel_id'    => $bookingData['hotel_id'],
+            'agent_id'    => $bookingData['agent_id'],
+            'employee_id' => $bookingData['employee_id'],
+            'start_date'  => $bookingData['check_in'],
+            'end_date'    => $bookingData['check_out'],
+            'status'      => 'active',
+            'is_auto'     => true,
+            'notes'       => 'إتاحة تلقائية تم إنشاؤها من حجز مباشر',
+            'min_nights'  => 1,
+        ]);
+
+        if (!$availability) {
+            \Log::error('فشل إنشاء الإتاحة التلقائية في قاعدة البيانات');
+            return null;
+        }
+
+        // ==========================================================
+        // ✅ التعديل المطلوب: إدارة نوع الغرفة (room_type)
+        // ==========================================================
+        $roomTypeId = null;
+        $roomTypeName = $bookingData['room_type'] ?? null;
+
+        if (!empty($roomTypeName)) {
+            // 1. حاول البحث عن نوع الغرفة بالاسم (case-insensitive)
+            $roomType = \App\Models\RoomType::where('room_type_name', $roomTypeName)->first();
+            
+            if ($roomType) {
+                // موجود -> استخدمه
+                $roomTypeId = $roomType->id;
+                \Log::info('تم العثور على نوع الغرفة الموجود: ' . $roomTypeName . ' (ID: ' . $roomTypeId . ')');
+            } else {
+                // غير موجود -> قم بإنشائه تلقائياً بنفس الاسم
+                $newRoomType = \App\Models\RoomType::create([
+                    'room_type_name' => $roomTypeName,
+                ]);
+                $roomTypeId = $newRoomType->id;
+                \Log::info('✅ تم إنشاء نوع غرفة جديد من الحجز المباشر: ' . $roomTypeName . ' (ID: ' . $roomTypeId . ')');
+            }
+        } else {
+            // إذا لم يرسل المستخدم room_type (حالة نادرة) -> نستخدم أول نوع غرفة أو ننشئ واحداً افتراضياً
+            \Log::warning('لم يتم إرسال room_type في بيانات الحجز المباشر، سيتم استخدام أول نوع غرفة موجود أو إنشاء افتراضي');
+            $firstRoomType = \App\Models\RoomType::first();
+            if ($firstRoomType) {
+                $roomTypeId = $firstRoomType->id;
+            } else {
+                $default = \App\Models\RoomType::create([
+                    'room_type_name' => 'غرفة قياسية (افتراضي)',
+                ]);
+                $roomTypeId = $default->id;
+            }
+        }
+
+        // التأكد النهائي من وجود roomTypeId
+        if (!$roomTypeId) {
+            \Log::error('فشل الحصول على room_type_id للإتاحة التلقائية');
+            $availability->delete();
+            return null;
+        }
+
+        // حساب عدد الأيام
+        $checkIn = \Carbon\Carbon::parse($bookingData['check_in']);
+        $checkOut = \Carbon\Carbon::parse($bookingData['check_out']);
+        $days = max(1, $checkIn->diffInDays($checkOut));
+
+        $costPrice = $bookingData['cost_price'] ?? 0;
+        $salePrice = $bookingData['sale_price'] ?? 0;
+        $rooms = $bookingData['rooms'] ?? 1;
+        $allotment = max(1, $rooms); // allotment على الأقل يساوي عدد الغرف المحجوزة
+
+        // 3. إنشاء سجل AvailabilityRoomType
+        $roomTypeRecord = \App\Models\AvailabilityRoomType::create([
+            'availability_id' => $availability->id,
+            'room_type_id'    => $roomTypeId,
+            'cost_price'      => $costPrice,
+            'sale_price'      => $salePrice,
+            'currency'        => $bookingData['currency'] ?? 'SAR',
+            'allotment'       => $allotment,
+        ]);
+
+        if (!$roomTypeRecord) {
+            \Log::error('فشل إنشاء AvailabilityRoomType للإتاحة ID: ' . $availability->id);
+            $availability->delete();
+            return null;
+        }
+
+        \Log::info('تم إنشاء إتاحة تلقائية من حجز مباشر', [
+            'availability_id' => $availability->id,
+            'room_type_id'    => $roomTypeId,
+            'room_type_name'  => $roomTypeName ?? 'تم تحديده تلقائياً',
+            'allotment'       => $allotment,
+        ]);
+
+        // 4. تحميل العلاقات ثم إنشاء القيد المحاسبي للإتاحة
+        $availability->loadMissing('availabilityRoomTypes.roomType');
+        
+        if ($availability->availabilityRoomTypes->isEmpty()) {
+            \Log::error('لا توجد أنواع غرفة مرتبطة بالإتاحة ID: ' . $availability->id);
+            $availability->delete();
+            return null;
+        }
+        
+        
+        // ✅ إنشاء سجلات الحالة اليومية لتلك الإتاحة
+        $startDate = Carbon::parse($bookingData['check_in']);
+        $endDate   = Carbon::parse($bookingData['check_out']);
+        $current   = $startDate->copy();
+        $allotment = $rooms; // allotment = عدد الغرف المحجوزة (على الأقل)
+        
+        while ($current->lt($endDate)) {
+            \App\Models\AvailabilityDailyStatus::updateOrCreate(
+                [
+                    'availability_room_type_id' => $roomTypeRecord->id,
+                    'date' => $current->toDateString(),
+                ],
+                [
+                    'available_rooms' => $allotment,
+                    'booked_rooms'    => 0, // سيتم تحديثها لاحقاً عند حفظ الحجز
+                ]
+            );
+            $current->addDay();
+        }
+        
+        \Log::info('تم إنشاء سجلات الحالة اليومية للإتاحة التلقائية', [
+            'availability_room_type_id' => $roomTypeRecord->id,
+            'from' => $startDate->toDateString(),
+            'to'   => $endDate->toDateString(),
+        ]);
+
+        try {
+            \App\Http\Controllers\AccountController::createAvailabilityJournalEntry($availability);
+            \Log::info('تم إنشاء القيد المحاسبي للإتاحة التلقائية ID: ' . $availability->id);
+        } catch (\Exception $e) {
+            \Log::error('فشل إنشاء القيد المحاسبي للإتاحة التلقائية: ' . $e->getMessage());
+        }
+
+        return $availability;
+        
+    } catch (\Exception $e) {
+        \Log::error('فشل إنشاء الإتاحة التلقائية من الحجز المباشر: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString()
+        ]);
+        return null;
+    }
+}
+
+private function updateAutoAvailabilityInsideTransaction(Booking $booking, array $newData): void
+{
+    if (!$booking->availability_room_type_id) {
+        return;
+    }
+    $roomTypeInfo = AvailabilityRoomType::lockForUpdate()->find($booking->availability_room_type_id);
+    if (!$roomTypeInfo || !$roomTypeInfo->availability || !$roomTypeInfo->availability->is_auto) {
+        return;
+    }
+    $availability = $roomTypeInfo->availability;
+    
+    // تحديث التواريخ في الإتاحة الأم
+    $newStart = Carbon::parse($newData['check_in']);
+    $newEnd   = Carbon::parse($newData['check_out']);
+    $availability->start_date = $newStart;
+    $availability->end_date   = $newEnd;
+    $availability->save();
+    
+    // تحديث أسعار وعملة و alloment في AvailabilityRoomType
+    $roomTypeInfo->cost_price = $newData['cost_price'] ?? 0;
+    $roomTypeInfo->sale_price = $newData['sale_price'] ?? 0;
+    $roomTypeInfo->currency   = $newData['currency'];
+    $roomTypeInfo->allotment  = $newData['rooms']; // allotment = عدد الغرف الجديد
+    $roomTypeInfo->save();
+    
+    // ==========================================================
+    // إعادة بناء daily_status بناءً على allotment الجديد
+    // (يتم تنفيذها بعد تحرير الأماكن القديمة، لذا booked_rooms حالياً تمثل الحجوزات الأخرى فقط)
+    // ==========================================================
+    $startDate = $newStart->copy();
+    $endDate   = $newEnd->copy();
+    $datesToKeep = [];
+    
+    while ($startDate->lt($endDate)) {
+        $datesToKeep[] = $startDate->toDateString();
+        $daily = AvailabilityDailyStatus::firstOrNew([
+            'availability_room_type_id' => $roomTypeInfo->id,
+            'date' => $startDate->toDateString(),
+        ]);
+        // نحدّث available_rooms بالقيمة الجديدة للـ allotment
+        // booked_rooms تبقى كما هي (بعد تحرير الحجز القديم)
+        $daily->available_rooms = $roomTypeInfo->allotment;
+        $daily->save();
+        $startDate->addDay();
+    }
+    
+    // حذف الأيام التي لم تعد موجودة
+    AvailabilityDailyStatus::where('availability_room_type_id', $roomTypeInfo->id)
+        ->whereNotIn('date', $datesToKeep)
+        ->delete();
+    
+    // تحديث القيد المحاسبي للإتاحة
+    AccountController::updateAvailabilityJournalEntry($availability);
+}
+
+/**
+ * حذف الإتاحة التلقائية المرتبطة بحجز مباشر
+ */
+private function deleteAutoAvailability(Booking $booking): void
+{
+    if (!$booking->availability_room_type_id) {
+        return;
+    }
+
+    $roomTypeInfo = AvailabilityRoomType::find($booking->availability_room_type_id);
+    if (!$roomTypeInfo) {
+        return;
+    }
+
+    $availability = $roomTypeInfo->availability;
+
+    // ✅ الأهم: امسح فقط لو كانت الإتاحة تلقائية (is_auto = true)
+    if (!$availability || !$availability->is_auto) {
+        Log::info("الإتاحة ID: " . ($availability->id ?? 'null') . " ليست تلقائية، لن يتم حذفها مع الحجز {$booking->id}");
+        return;
+    }
+
+    // حذف القيد المحاسبي للإتاحة
+    AccountController::deleteAvailabilityJournalEntry($availability);
+
+    // حذف AvailabilityRoomType
+    $roomTypeInfo->delete();
+
+    // حذف Availability إذا لم يعد له أي AvailabilityRoomTypes
+    if ($availability && $availability->availabilityRoomTypes()->count() === 0) {
+        $availability->delete();
+        Log::info("تم حذف الإتاحة التلقائية Availability ID: {$availability->id} لعدم وجود غرف مرتبطة");
+    }
+
+    Log::info("تم حذف الإتاحة التلقائية المرتبطة بالحجز {$booking->id}");
+}
+
+
+/**
+ * إرجاع الغرف المحجوزة في daily_status عند حذف أو تعديل حجز
+ */
+private function releaseAvailabilitySlots(
+    int $availabilityRoomTypeId,
+    string $checkIn,
+    string $checkOut,
+    int $rooms
+): void {
+    $start = Carbon::parse($checkIn);
+    $end   = Carbon::parse($checkOut);
+    $days  = $start->diffInDays($end);
+
+    for ($i = 0; $i < $days; $i++) {
+        $currentDate = $start->copy()->addDays($i);
+
+        // decrement بس لو booked_rooms >= الغرف المطلوبة (منع السالب)
+        AvailabilityDailyStatus::where('availability_room_type_id', $availabilityRoomTypeId)
+            ->whereDate('date', $currentDate)
+            ->where('booked_rooms', '>=', $rooms)
+            ->decrement('booked_rooms', $rooms);
+    }
+
+    Log::info("تم إرجاع {$rooms} غرفة في daily_status من {$checkIn} إلى {$checkOut}");
+
+    // إعادة تفعيل الإتاحة لو كانت inactive بسبب الامتلاء
+    $roomTypeInfo = AvailabilityRoomType::find($availabilityRoomTypeId);
+    if ($roomTypeInfo?->availability) {
+        $parentAvailability = $roomTypeInfo->availability;
+        if ($parentAvailability->status === 'inactive') {
+            $parentAvailability->update(['status' => 'active']);
+            Log::info("تم إعادة تفعيل الإتاحة ID: {$parentAvailability->id} بعد إرجاع الغرف");
+        }
+    }
+}
+
 }

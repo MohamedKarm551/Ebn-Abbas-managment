@@ -217,6 +217,8 @@
         }
         document.addEventListener('DOMContentLoaded', fetchNotifications);
         setInterval(fetchNotifications, 30000); // Fetch every 30 seconds
+
+
     </script>
 
     {{-- Stack for page specific scripts (Keep only ONE at the very end) --}}

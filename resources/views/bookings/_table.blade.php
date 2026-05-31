@@ -242,12 +242,13 @@
                         @auth
                             @if (auth()->user()->role === 'Admin')
                                 {{-- زر الحذف للأدمن فقط --}}
-                                <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST"
-                                    style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الحجز؟');">
+                                <form action="{{ route('bookings.destroy', $booking->id) }}" method="POST" id="delete-form-{{ $booking->id }}" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i
-                                            class="fas fa-trash"></i></button>
+                                    <button type="button" class="btn btn-danger btn-sm" 
+                                           onclick="confirmDelete({{ $booking->id }}, {{ $booking->availabilityRoomType?->availability?->is_auto ? 'true' : 'false' }})">
+                                        <i class="fas fa-trash-alt"></i> حذف
+                                    </button>
                                 </form>
                             @endif
                         @endauth
@@ -445,4 +446,59 @@
         // Also convert when table is updated via AJAX
         document.addEventListener('ajaxTableUpdated', convertToHijri);
     });
+
+
+
+     function confirmDelete(bookingId, isAutoAvailability) {
+    if (!isAutoAvailability) {
+        // حذف عادي (ليس مرتبط بإتاحة تلقائية)
+        if (confirm('هل أنت متأكد من حذف هذا الحجز؟')) {
+            document.getElementById('delete-form-' + bookingId).submit();
+        }
+        return;
+    }
+
+    // === حذف مرتبط بإتاحة تلقائية: عرض 3 خيارات باستخدام SweetAlert ===
+    Swal.fire({
+        title: 'حذف الحجز',
+        html: `
+            <p>هذا الحجز مرتبط <strong>بإتاحة تلقائية</strong>.</p>
+            <p>اختر الإجراء المناسب:</p>
+            <ul style="text-align: right; direction: rtl;">
+                <li><strong>حذف الحجز فقط</strong> - سيتم تحرير الأماكن في الإتاحة</li>
+                <li><strong>حذف الحجز والإتاحة معاً</strong> - سيتم حذف الحجز والإتاحة بالكامل</li>
+                <li><strong>إلغاء</strong> - بدون حذف</li>
+            </ul>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '🗑️ حذف الحجز فقط',
+        denyButtonText: '🔥 حذف الحجز والإتاحة',
+        cancelButtonText: '❌ إلغاء',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // حذف الحجز فقط (لا تحذف الإتاحة)
+            let form = document.getElementById('delete-form-' + bookingId);
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'delete_availability';
+            input.value = 'false';   // false يعني لا تحذف الإتاحة
+            form.appendChild(input);
+            form.submit();
+        } else if (result.isDenied) {
+            // حذف الحجز والإتاحة معاً
+            let form = document.getElementById('delete-form-' + bookingId);
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'delete_availability';
+            input.value = 'true';    // true يعني احذف الإتاحة أيضاً
+            form.appendChild(input);
+            form.submit();
+        }
+        // else if (result.dismiss === Swal.DismissReason.cancel) -> لا تفعل شيئاً
+    });
+}
+
 </script>

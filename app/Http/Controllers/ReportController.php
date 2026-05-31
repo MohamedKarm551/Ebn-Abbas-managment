@@ -19,7 +19,7 @@ use Illuminate\Support\Str; // لاستخدام دالة Str::limit
 use Illuminate\Support\Facades\Log; // لتسجيل الأخطاء في السجل
 use Barryvdh\DomPDF\Facade\Pdf; // تصدير بي دي اف!
 use Illuminate\Database\Eloquent\Builder; // لاستخدام Builder في الدوال
-
+use App\Http\Controllers\AccountController;
 
 
 /**
@@ -1696,6 +1696,7 @@ class ReportController extends Controller
             'bookings_covered.*' => 'exists:bookings,id',
             // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // Optional, file type, max size 5MB
             'is_discount'      => 'nullable|boolean',
+            'account_id' => 'required|exists:accounts,id',
         ]);
         // // *** بداية كود رفع الملف ***
         // $receiptPath = null; // نهيئ متغير المسار
@@ -1737,7 +1738,30 @@ class ReportController extends Controller
             'bookings_covered' => json_encode($validated['bookings_covered'] ?? []),
             // 'receipt_path'     => $receiptPath, // *** إضافة مسار الإيصال هنا ***
             'employee_id'      => Auth::id(), // إضافة الموظف الذي سجل الدفعة
+            'account_id' => $validated['account_id'],
         ]);
+
+
+        // محاسبة الخصم أو الدفعة
+        if ($isDiscount) {
+            // ✅ الخصم: استخدم حساب الخصم الذي اختاره المستخدم -> مدين الحساب المختار، دائن الشركة
+            AccountController::createCompanyDiscountWithChoice(
+                $payment->company,
+                abs($payment->amount),        // المبلغ موجب
+                $validated['account_id'],     // حساب الخصم الذي اختاره المستخدم
+                $payment->notes,
+                $payment->id  
+            );
+        } else {
+            // ✅ الدفعة العادية: استخدم حساب الدفع المختار
+            AccountController::createCompanyPaymentJournalEntry(
+                $payment->company,
+                $payment->amount,
+                $validated['account_id'],
+                $payment->id 
+            );
+        }
+
 
         // وزع المبلغ على الحجوزات المفتوحة
         // فقط إذا كانت العملة ريال سعودي، نخصص المبلغ على الحجوزات
@@ -1757,7 +1781,7 @@ class ReportController extends Controller
                     $remaining -= $pay;
                 });
         }
-
+    
         // إنشاء إشعار مناسب حسب نوع العملية
         $actionType = $isDiscount ? 'تم تطبيق خصم' : 'تم إضافة دفعة جديدة';
         $notificationType = $isDiscount ? 'خصم مطبق' : 'دفعة جديدة';
@@ -1782,18 +1806,19 @@ class ReportController extends Controller
     }
 
     // إضافة دفعة جديدة لوكيل
-    public function storeAgentPayment(Request $request)
-    {
+    //public function storeAgentPayment(Request $request)
+    //{
         // تحقق من البيانات اللي جاية من الفورم
-        $validated = $request->validate([
-            'agent_id' => 'required|exists:agents,id',
-            'amount'   => 'required|numeric|min:0',
-            'currency' => 'required|in:SAR,KWD',  // التحقق من العملة
-            'notes'    => 'nullable|string',
-            // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // *** إضافة التحقق هنا ***
-            // 'is_discount' => 'nullable|boolean', // جديد: علامة إذا كان خصم
-
-        ]);
+        //$validated = $request->validate([
+        //    'agent_id' => 'required|exists:agents,id',
+        //    'amount'   => 'required|numeric|min:0',
+        //    'currency' => 'required|in:SAR,KWD',  // التحقق من العملة
+        //    'payment_account_id' => 'required|exists:accounts,id',
+        //    'notes'    => 'nullable|string',
+        //    // 'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // *** إضافة التحقق هنا ***
+        //    // 'is_discount' => 'nullable|boolean', // جديد: علامة إذا كان خصم
+        //    'booking_id' => 'nullable|exists:bookings,id',
+        //]);
         // // *** بداية كود رفع الملف ***
         // $receiptPath = null; // نهيئ متغير المسار
 
@@ -1817,40 +1842,97 @@ class ReportController extends Controller
 
 
         // سجل الدفعة في جدول agent_payments
-        $payment = AgentPayment::create([
-            'agent_id' => $validated['agent_id'],
-            'amount' => $validated['amount'],
-            'currency' => $validated['currency'],
-            'payment_date' => now(),
-            'notes' => $validated['notes'],
-            // 'receipt_path' => $receiptPath, // *** تأكد من إضافة هذا السطر هنا ***
-            'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة
-        ]);
+        //$payment = AgentPayment::create([
+        //    'agent_id' => $validated['agent_id'],
+        //    'amount' => $validated['amount'],
+        //    'currency' => $validated['currency'],
+        //    'payment_date' => now(),
+        //    'notes' => $validated['notes'],
+        //    'account_id' => $validated['payment_account_id'], // ✅ تسجيل الحساب المستخدم
+        //    // 'receipt_path' => $receiptPath, // *** تأكد من إضافة هذا السطر هنا ***
+        //    'employee_id' => Auth::id(), // إضافة الموظف الذي سجل الدفعة
+        //]);
         // حدث بيانات الوكيل عشان القيم تتحدث
         // amount_paid_to_hotel تحديث قيمة الدفعة
         // الحجز نفسه : 
         // تحديث حجز واحد فقط إذا تم تمرير booking_id
-        if ($request->filled('booking_id')) {
-            $booking = Booking::find($request->input('booking_id'));
-            if ($booking) {
-                $booking->increment('amount_paid_to_hotel', $payment->amount);
-            }
-        }
+        //if ($request->filled('booking_id')) {
+        //    $booking = Booking::find($request->input('booking_id'));
+        //    if ($booking) {
+        //        // 🔥 إضافة القيد المحاسبي لدفعة الفندق
+        //         AccountController::createHotelPaymentJournalEntry($booking, $payment->amount, $validated['payment_account_id']);
+        //        $booking->increment('amount_paid_to_hotel', $payment->amount);
+        //    }
+        //}
 
 
         // إنشاء إشعار للدفعة العادية
-        Notification::create([
-            'user_id' => Auth::id(),
-            'message' => "تم إضافة دفعة جديدة لجهة الحجز {$payment->agent->name} بمبلغ {$payment->amount} {$payment->currency}",
-            'type' => 'دفعة جديدة',
-        ]);
+       // Notification::create([
+       //     'user_id' => Auth::id(),
+       //     'message' => "تم إضافة دفعة جديدة لجهة الحجز {$payment->agent->name} بمبلغ {$payment->amount} {$payment->currency}",
+       //     'type' => 'دفعة جديدة',
+       // ]);
 
         // رسالة نجاح
-        $successMsg = "تم تسجيل الدفعة بقيمة {$payment->amount} {$validated['currency']} بنجاح";
+        //$successMsg = "تم تسجيل الدفعة بقيمة {$payment->amount} {$validated['currency']} بنجاح";
 
         // رجع للصفحة مع رسالة نجاح
-        return redirect()->back()->with('success', $successMsg);
+       // return redirect()->back()->with('success', $successMsg);
+    //}
+
+
+// إضافة دفعة جديدة لوكيل (تسديد مستحقات الفندق)
+public function storeAgentPayment(Request $request)
+{
+    $validated = $request->validate([
+        'agent_id' => 'required|exists:agents,id',
+        'amount'   => 'required|numeric|min:0',
+        'currency' => 'required|in:SAR,KWD',
+        'payment_account_id' => 'required|exists:accounts,id', // ✅ جديد: حساب الدفع
+        'notes'    => 'nullable|string',
+        'booking_id' => 'nullable|exists:bookings,id', // اختياري لربط الحجز
+    ]);
+
+    // تسجيل الدفعة في جدول agent_payments
+    $payment = AgentPayment::create([
+        'agent_id' => $validated['agent_id'],
+        'amount' => $validated['amount'],
+        'currency' => $validated['currency'],
+        'payment_date' => now(),
+        'notes' => $validated['notes'],
+        'account_id' => $validated['payment_account_id'], // ✅ تسجيل الحساب المستخدم
+        'employee_id' => Auth::id(),
+    ]);
+
+    // إذا تم تمرير booking_id (دفعة مرتبطة بحجز معين)
+    if ($request->filled('booking_id')) {
+        $booking = Booking::find($request->input('booking_id'));
+        if ($booking) {
+            // ✅ استخدام حساب الدفع الذي اختاره المستخدم
+            AccountController::createHotelPaymentJournalEntry($booking, $payment->amount, $validated['payment_account_id']);
+            $booking->increment('amount_paid_to_hotel', $payment->amount);
+        }
+    } else {
+        // إذا لم يتم ربط الحجز، قد تحتاج إلى منطق آخر (مثلاً سداد دين عام لجهة الحجز)
+        // يمكنك استدعاء دالة أخرى لتسجيل قيد محاسبي عام لجهة الحجز
+       AccountController::createAgentPaymentJournalEntry(
+            Agent::find($validated['agent_id']),
+            $validated['amount'],
+            $validated['payment_account_id'],
+            $payment->id   // <-- source_id
+        );
     }
+
+    Notification::create([
+        'user_id' => Auth::id(),
+        'message' => "تم إضافة دفعة جديدة لجهة الحجز {$payment->agent->name} بمبلغ {$payment->amount} {$payment->currency} من حساب " . ($payment->account->name ?? ''),
+        'type' => 'دفعة جديدة',
+    ]);
+
+    return redirect()->back()->with('success', "تم تسجيل الدفعة بقيمة {$payment->amount} {$validated['currency']} بنجاح");
+}
+
+
     /**
      * تطبيق خصم على وكيل كدفعة سالبة (نفس طريقة الشركات)
      */
@@ -1860,6 +1942,7 @@ class ReportController extends Controller
         $validated = $request->validate([
             'discount_amount' => 'required|numeric|min:0.01',
             'currency' => 'required|in:SAR,KWD',
+            'payment_account_id' => 'required|exists:accounts,id',
             'reason' => 'nullable|string|max:500'
         ], [
             'discount_amount.required' => 'مبلغ الخصم مطلوب',
@@ -1892,8 +1975,18 @@ class ReportController extends Controller
                 'currency' => $validated['currency'],
                 'payment_date' => now(),
                 'notes' => 'خصم مطبق: ' . ($validated['reason'] ?: 'خصم'),
+                'account_id'    => $validated['payment_account_id'], // تسجيل الحساب المستخدم
                 'employee_id' => Auth::id(),
             ]);
+
+            AccountController::createAgentDiscountJournalEntry(
+                $agent,
+                $validated['discount_amount'],
+                $validated['payment_account_id'],
+                $validated['reason'] ?? null,
+                $discountPayment->id 
+            );
+
 
             // 7. إنشاء إشعار للمدراء
             Notification::create([
@@ -2020,15 +2113,43 @@ class ReportController extends Controller
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0',
             'notes'  => 'nullable|string',
+            'account_id' => 'required|exists:accounts,id',
         ]);
 
         // هات الدفعة وعدلها
         $payment = AgentPayment::findOrFail($id);
+        $oldAmount = $payment->amount;
+        $oldAccountId = $payment->account_id;
+
+         // 1. حذف القيد المحاسبي القديم
+        AccountController::deletePaymentJournalEntry($payment->id, 'agent');
+
         $payment->update($validated);
 
         // حدث بيانات الوكيل عشان القيم تتحدث
         $agent = $payment->agent;
         $agent->load('payments', 'bookings');
+
+        // 3. إعادة إنشاء القيد المحاسبي الجديد بالمعلومات المحدثة
+    //    لازم نفرق هل هي دفعة عادية (amount موجب) أم خصم (amount سالب)
+    if ($payment->amount < 0) {
+        // خصم من جهة الحجز (إيراد ليك)
+        AccountController::createAgentDiscountJournalEntry(
+            $payment->agent,
+            abs($payment->amount),
+            $payment->account_id,
+            $payment->notes,
+            $payment->id   // source_id
+        );
+    } else {
+        // دفعة عادية لجهة الحجز (بتسدد مستحقات)
+        AccountController::createAgentPaymentJournalEntry(
+            $payment->agent,
+            $payment->amount,
+            $payment->account_id,
+            $payment->id   // source_id
+        );
+    }
 
         // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
         Notification::create([
@@ -2059,15 +2180,40 @@ class ReportController extends Controller
             'amount'       => 'required|numeric|min:0',
             'payment_date' => 'required|date',
             'notes'        => 'nullable|string',
+            'account_id' => 'required|exists:accounts,id'
         ]);
 
         // هات الدفعة وعدلها
         $payment = Payment::findOrFail($id);
+        
+        // 1. امسح القيد القديم
+        AccountController::deletePaymentJournalEntry($payment->id, 'company');
+
         $payment->update([
             'amount'       => $validated['amount'],
             'payment_date' => $validated['payment_date'],
             'notes'        => $validated['notes'],
+            'account_id'   => $validated['account_id'],
         ]);
+
+        // 3. اعمل قيد جديد
+        $isDiscount = ($payment->amount < 0);
+        if ($isDiscount) {
+            AccountController::createCompanyDiscountWithChoice(
+                $payment->company,
+                abs($payment->amount),
+                $payment->account_id,  
+                $payment->notes,
+                $payment->id
+            );
+        } else {
+            AccountController::createCompanyPaymentJournalEntry(
+                $payment->company,
+                $payment->amount,
+                $payment->account_id,
+                $payment->id
+            );
+        }
 
         // هنعمل هنا إشعار للأدمن يشوف إن العملية تمت 
         Notification::create([
@@ -2085,13 +2231,16 @@ class ReportController extends Controller
     public function destroyCompanyPayment($id)
     {
         // *** إضافة تحقق من صلاحية الأدمن ***
-        if (Auth::user()->role !== 'admin') {
+       if (strtolower(Auth::user()->role) !== 'admin') {
             abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء.');
         }
         // *** نهاية التحقق ***
 
         // هات الدفعة المطلوبة
         $payment = Payment::findOrFail($id);
+        // امسح القيد الأول
+        AccountController::deletePaymentJournalEntry($payment->id, 'company');
+
         $remaining = $payment->amount;
         $bookingIds = is_array($payment->bookings_covered)
             ? $payment->bookings_covered
@@ -2129,7 +2278,7 @@ class ReportController extends Controller
     public function destroyAgentPayment($id)
     {
         // *** إضافة تحقق من صلاحية الأدمن ***
-        if (Auth::user()->role !== 'admin') {
+        if (strtolower(Auth::user()->role) !== 'admin') {
             abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء.');
         }
         // *** نهاية التحقق ***
@@ -2137,6 +2286,9 @@ class ReportController extends Controller
         // هات الدفعة المطلوبة
         $payment = AgentPayment::findOrFail($id);
         $agentId = $payment->agent_id;
+
+         // 1. حذف القيد المحاسبي المرتبط بهذه الدفعة
+        AccountController::deletePaymentJournalEntry($payment->id, 'agent');
 
         // احذف الدفعة
         $payment->delete();
