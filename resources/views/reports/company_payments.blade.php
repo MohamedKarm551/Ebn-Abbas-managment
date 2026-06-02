@@ -41,6 +41,28 @@
                                     </select>
                                 </div>
                             </div>
+
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold" for="account_id">
+                                    <i class="fas fa-building-columns text-info me-2"></i>
+                                    اختر حساب الدفع (المصدر)
+                                </label>
+                                <select class="form-select" name="account_id" required>
+                                    <option value="">-- اختر حساب الدفع --</option>
+                                    @php
+                                        $paymentAccounts = \App\Models\Account::where('is_leaf', true)
+                                            ->where('is_active', true)->orderBy('code')->get();
+                                    @endphp
+                                    @foreach($paymentAccounts as $acc)
+                                        <option value="{{ $acc->id }}" {{ $acc->code === '1.1.1' ? 'selected' : '' }}>
+                                            {{ $acc->code }} - {{ $acc->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+
                             {{-- *** أضف حقل رفع الملف مشكلة مع جوجل درايف لسه هتتحل  *** --}}
                             {{-- <div class="mb-3">
                                     <label for="receipt_file_company_{{ $company->id }}" class="form-label">إرفاق إيصال
@@ -721,6 +743,13 @@
                         submitBtn.classList.add('btn-primary');
                         toggleBtn.textContent = "تسجيل خصم";
                         modalTitle.textContent = "تسجيل دفعة - " + companyName;
+                    }
+
+                    const accountLabel = document.querySelector('#paymentModal' + companyId + ' label[for="account_id"]');
+                    if (isDiscountField.value === "1") {
+                        accountLabel.innerHTML = '<i class="fas fa-percent me-1"></i> اختر حساب الخصم (المدين)';
+                    } else {
+                        accountLabel.innerHTML = '<i class="fas fa-building-columns text-info me-2"></i> اختر حساب الدفع (المصدر)';
                     }
                 }
             </script>

@@ -23,7 +23,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use App\Exports\ArchivedBookingsExport;
 use Carbon\Carbon;
-
+use App\Http\Controllers\AccountController;
 
 
 class AdminController extends Controller
@@ -424,6 +424,15 @@ class AdminController extends Controller
         $sanitizedName = strip_tags($request->input('name'));
 
         $company = Company::create(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+        
+         // ✅ مزامنة الشركة الجديدة مع شجرة الحسابات
+        try {
+            AccountController::syncAllWithAccountTree();
+            Log::info('تمت مزامنة الشركة الجديدة مع شجرة الحسابات: ' . $company->name);
+        } catch (\Exception $e) {
+            Log::error('فشل مزامنة الشركة مع شجرة الحسابات: ' . $e->getMessage());
+        }
+        
         // إذا أدخل الأدمن بريد وكلمة مرور، أنشئ مستخدم مرتبط بهذه الشركة
         if (
             $request->filled('company_email') &&
@@ -476,6 +485,14 @@ class AdminController extends Controller
         $sanitizedName = strip_tags($request->input('name'));
 
         $company->update(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+        
+        // ✅ مزامنة التغيير مع شجرة الحسابات
+        try {
+            AccountController::syncAllWithAccountTree();
+        } catch (\Exception $e) {
+            Log::error('فشل تحديث حساب الشركة: ' . $e->getMessage());
+        }
+        
         // إذا أدخل الأدمن بريد وباسورد جديدين، أنشئ مستخدم جديد مرتبط بنفس الشركة
         if (
             $request->filled('new_company_email') &&
@@ -535,6 +552,14 @@ class AdminController extends Controller
 
         $agent = Agent::create(['name' => $sanitizedName]); // استخدام الاسم المنقّى
 
+         // ✅ مزامنة جهة الحجز الجديدة مع شجرة الحسابات
+        try {
+            AccountController::syncAllWithAccountTree();
+            Log::info('تمت مزامنة جهة الحجز الجديدة مع شجرة الحسابات: ' . $agent->name);
+        } catch (\Exception $e) {
+            Log::error('فشل مزامنة جهة الحجز مع شجرة الحسابات: ' . $e->getMessage());
+        }
+
         Notification::create([
             'user_id' => Auth::user()->id,
             'message' => "إضافة جهة حجز: {$agent->name} ,", // استخدام الاسم من الموديل بعد الحفظ
@@ -569,6 +594,13 @@ class AdminController extends Controller
         $sanitizedName = strip_tags($request->input('name'));
 
         $agent->update(['name' => $sanitizedName]); // استخدام الاسم المنقّى
+
+        // ✅ مزامنة التغيير مع شجرة الحسابات
+        try {
+            AccountController::syncAllWithAccountTree();
+        } catch (\Exception $e) {
+            Log::error('فشل تحديث حساب جهة الحجز: ' . $e->getMessage());
+        }
 
         Notification::create([
             'user_id' => Auth::user()->id,

@@ -14,6 +14,25 @@
              value="{{ old('amount', $payment->amount) }}" required>
       @error('amount')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
+        {{-- ✅ الحقل الجديد --}}
+    <div class="mb-3">
+        <label class="form-label fw-semibold">حساب الدفع / الخصم</label>
+        <select name="account_id" class="form-select" required>
+            <option value="">-- اختر حساب --</option>
+            @php
+                $accounts = \App\Models\Account::where('is_leaf', true)
+                            ->where('is_active', true)
+                            ->orderBy('code')
+                            ->get();
+            @endphp
+            @foreach($accounts as $acc)
+                <option value="{{ $acc->id }}" {{ $payment->account_id == $acc->id ? 'selected' : '' }}>
+                    {{ $acc->code }} - {{ $acc->name }}
+                </option>
+            @endforeach
+        </select>
+        @error('account_id')<div class="text-danger small">{{ $message }}</div>@enderror
+    </div>
     <div class="mb-3">
       <label class="form-label">تاريخ الدفع</label>
       <input type="date" name="payment_date" class="form-control" 

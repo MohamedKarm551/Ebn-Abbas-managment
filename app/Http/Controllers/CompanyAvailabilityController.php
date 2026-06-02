@@ -47,9 +47,105 @@ class CompanyAvailabilityController extends Controller
 
         $hotels = Hotel::orderBy('name')->get();
 
+        // *** أولاً: جيب البيانات من الداتابيز ***
+        $hotelsWithActiveAvailabilities = Hotel::whereHas('availabilities', function($q) {
+            $q->where('status', 'active')->whereDate('end_date', '>=', Carbon::today());
+        })->with([
+            'availabilities' => function($q) {
+                $q->where('status', 'active')
+                  ->whereDate('end_date', '>=', Carbon::today());
+            },
+            'availabilities.availabilityRoomTypes',
+            'availabilities.availabilityRoomTypes.roomType',
+            'availabilities.availabilityRoomTypes.dailyStatus',
+        ])->get();
+
+       $hotelsWithActiveAvailabilities = $hotelsWithActiveAvailabilities->map(function($hotel) {
+    $mergedByPrice = [];
+
+    foreach ($hotel->availabilities as $av) {
+        foreach ($av->availabilityRoomTypes as $rt) {
+            $price = $rt->sale_price;
+            $roomTypeName = $rt->roomType->room_type_name ?? 'غير محدد';
+            $key = $roomTypeName . '_' . $price;
+
+            foreach ($rt->dailyStatus as $status) {
+                $date = $status->date->format('Y-m-d');
+                $remaining = max(0, $status->available_rooms - $status->booked_rooms);
+                if (!isset($mergedByPrice[$key][$date])) {
+                    $mergedByPrice[$key][$date] = 0;
+                }
+                $mergedByPrice[$key][$date] += $remaining;
+            }
+
+            if (!isset($mergedByPrice[$key]['meta'])) {
+                $mergedByPrice[$key]['meta'] = [
+                    'room_type' => $roomTypeName,
+                    'price'     => $price,
+                    'currency'  => $rt->currency,
+                ];
+            }
+        }
+    }
+
+    // *** بناء الـ ranges جوه الـ map مباشرة ***
+    $groupDates = function(array $dateRooms): array {
+        if (empty($dateRooms)) return [];
+        ksort($dateRooms);
+        $ranges = [];
+        $dates  = array_keys($dateRooms);
+        $start  = $dates[0];
+        $prev   = $dates[0];
+        $rooms  = $dateRooms[$start];
+
+        for ($i = 1; $i < count($dates); $i++) {
+            $current      = $dates[$i];
+            $currentRooms = $dateRooms[$current];
+            $isNext       = (strtotime($current) === strtotime($prev) + 86400);
+
+            if ($isNext && $currentRooms === $rooms) {
+                $prev = $current;
+            } else {
+                $ranges[] = ['from' => $start, 'to' => $prev, 'rooms' => $rooms];
+                $start = $current;
+                $prev  = $current;
+                $rooms = $currentRooms;
+            }
+        }
+        $ranges[] = ['from' => $start, 'to' => $prev, 'rooms' => $rooms];
+        return $ranges;
+    };
+
+    $finalMerged = [];
+    foreach ($mergedByPrice as $key => $data) {
+        $meta = $data['meta'];
+        unset($data['meta']);
+        $finalMerged[$key] = [
+            'meta'   => $meta,
+            'ranges' => $groupDates($data),
+        ];
+    }
+
+    ksort($finalMerged);
+    $hotel->mergedAvailabilities = $finalMerged;
+    return $hotel;
+});
+
+
         // Start query for active availabilities, eager load necessary relations
-        $query = Availability::with(['hotel', 'availabilityRoomTypes'])
-            ->where('status', "active");
+        //$query = Availability::with(['hotel', 'availabilityRoomTypes'])
+         //   ->where('status', "active");
+
+        // صح - محمل dailyStatus
+        $query = Availability::with([
+            'hotel', 
+            'agent', 
+            'employee',
+            'availabilityRoomTypes.roomType',
+            'availabilityRoomTypes.dailyStatus' // *** إضافة eager loading ***
+        ])
+        ->where('status', "active")
+        ->whereDate('end_date', '>=', Carbon::today());
 
         // --- Optional Filtering (Example: By Hotel) ---
         if ($request->filled('hotel_id')) {
@@ -134,8 +230,7 @@ class CompanyAvailabilityController extends Controller
         $availabilities = $query->paginate(10)->withQueryString();
 
         // Pass data to the view
-        return view('company.availabilities.index', compact('availabilities', 'hotels'));
+        return view('company.availabilities.index', compact('availabilities', 'hotels', 'hotelsWithActiveAvailabilities'));
     }
 
-    // Add other methods if needed (e.g., show details)
 }

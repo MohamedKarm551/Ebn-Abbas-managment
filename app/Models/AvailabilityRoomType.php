@@ -42,4 +42,10 @@ class AvailabilityRoomType extends Model
         // الحجوزات التي تمت بناءً على صف السعر هذا
         return $this->hasMany(Booking::class);
     }
+
+    public function dailyStatus()
+    {
+        return $this->hasMany(AvailabilityDailyStatus::class, 'availability_room_type_id');
+    }
+
 }

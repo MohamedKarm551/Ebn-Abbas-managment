@@ -5,10 +5,10 @@
 @push('styles')
     <style>
         .availability-card {
-            border: 1px solid #dee2e6;
+            border: 1px solid #e0e0e0;
+            transition: box-shadow 0.3s ease-in-out;
+            border-radius: 0.5rem;
             margin-bottom: 1.5rem;
-            border-radius: 0.375rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
 
         .availability-header {
@@ -24,233 +24,167 @@
             padding: 1.25rem;
         }
 
-        /* *** بداية إضافة ستايل للصورة *** */
-        .availability-image-container {
-            margin-bottom: 1rem;
-            /* مسافة تحت الصورة */
-            text-align: center;
-            /* توسيط الصورة لو أصغر من الكونتينر */
-        }
-
-        .availability-image {
-            max-height: 200px;
-            /* تحديد أقصى ارتفاع للصورة */
-            width: auto;
-            /* السماح للعرض بالتغير للحفاظ على النسبة */
-            max-width: 100%;
-            /* ضمان عدم تجاوز عرض الكونتينر */
-            border-radius: 0.25rem;
-            /* حواف دائرية بسيطة */
-            cursor: pointer;
-            /* تغيير شكل المؤشر عند المرور فوق الصورة */
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            /* ظل خفيف */
-        }
-
         .room-type-item {
             border-bottom: 1px dashed #eee;
-            padding: 10px 0;
+            padding: 15px 0;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             flex-wrap: wrap;
-            /* Allow wrapping on small screens */
         }
 
         .room-type-item:last-child {
             border-bottom: none;
         }
 
-        .room-details span {
-            margin-right: 15px;
-            /* Spacing between details */
-            font-size: 0.9em;
-        }
-
         .book-button-container {
             margin-top: 5px;
-            /* Space above button on wrap */
             margin-left: auto;
-            /* Push button to the right */
             padding-left: 10px;
-            /* Space before button */
-        }
-
-        /* Style for hotel filter */
-        .filter-form .form-select,
-        .filter-form .btn {
-            min-width: 150px;
-            /* Ensure dropdowns/buttons have decent width */
-        }
-
-        .availability-card.striped {
-            background-color: #f8f9fa;
-            /* لون رمادي فاتح جداً (ممكن تغيره) */
-        }
-
-        /* Availability Card Enhancements */
-        .availability-card {
-            border: 1px solid #e0e0e0;
-            /* Lighter border */
-            transition: box-shadow 0.3s ease-in-out, transform 0.2s ease-out;
-            border-radius: 0.5rem;
-            /* Slightly more rounded corners */
-        }
-
-        .availability-card:hover {
-            /* box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important; */
-            /* transform: translateY(-3px); */
-        }
-
-        /* Use Bootstrap's bg-light-subtle or bg-white for striping via Blade conditional */
-        /* .availability-card.striped { background-color: #f8f9fa; } */
-
-
-        .availability-header .hotel-name {
-            font-size: 1.15rem;
-            /* Adjust hotel name size */
-            color: #0056b3;
-            /* Darker primary color */
-        }
-
-        .availability-header .date-range {
-            font-size: 0.875rem;
-        }
-
-        .availability-header .badge {
-            min-width: 28px;
-            /* Ensure badge has some width for single digits */
-            min-height: 28px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .availability-image-container .image-popup-link {
-            display: inline-block;
-            overflow: hidden;
-            /* To contain the image scaling effect */
-            border-radius: 0.25rem;
-            /* Match image radius */
         }
 
         .availability-image {
             max-height: 200px;
             width: 100%;
-            /* Make image take full width of its container */
             object-fit: cover;
-            transition: transform 0.35s ease;
-            border: 1px solid #eee;
+            border-radius: 0.25rem;
         }
 
-        .availability-image-container .image-popup-link:hover .availability-image {
-            transform: scale(1.05);
+        /* حاوية التقويم داخل البطاقة */
+        .availability-body {
+            overflow-x: auto;  /* منع الخروج خارج الـ div */
         }
 
-        .availability-notes strong {
-            color: #664d03;
-            /* Match Bootstrap warning text color */
+        /* التقويم نفسه */
+       .availability-calendar{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    width: 100%;
+    gap: 4px;
+}
+
+        /* تنسيق أيام التقويم */
+        .calendar-day {
+            padding: 4px 2px;
+            text-align: center;
+            border-radius: 4px;
+            min-height: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid transparent;
         }
 
-        .availability-notes {
-            background-color: #fff3cdb3;
+        .calendar-day.available {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .calendar-day.booked {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .calendar-day.partial {
+            background-color: #fff3cd;
+            color: #856404;
             border-color: #ffeeba;
         }
 
-
-        .room-types-heading {
-            color: #333;
-            font-weight: 600;
+        .calendar-legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 0.8rem;
         }
 
-        .room-types-list .list-group-item.room-type-item {
-            transition: background-color 0.2s ease-in-out;
-            border-bottom: 1px dashed #e0e0e0 !important;
-            /* Ensure consistent border */
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
-        .room-types-list .list-group-item.room-type-item:last-child {
-            border-bottom: 0 !important;
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
         }
 
-        .room-types-list .list-group-item.room-type-item:hover {
-            background-color: #f8f9fa80;
-            /* Subtle hover for room type item */
+        .room-status-badge {
+            font-size: 0.75rem;
+            padding: 0.25em 0.5em;
         }
 
-        .room-type-item .room-details .room-type-name {
-            font-weight: 600;
-            color: #212529;
-        }
-
-        .room-type-item .room-details .price {
-            font-weight: 700;
-            /* Bolder price */
-        }
-
-        .room-type-item .room-details .allotment {
-            font-weight: 600;
-        }
-
-        .room-pricing-info .price-info,
-        .room-pricing-info .allotment-info {
-            white-space: nowrap;
-            /* Prevent wrapping of price/allotment text */
-        }
-
-        .book-now-btn {
-            min-width: 110px;
-            font-size: 0.875rem;
-            padding: 0.375rem 0.85rem;
-            transition: all 0.2s ease-in-out;
-        }
-
-        .book-now-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3) !important;
-            /* Softer, color-matched shadow */
-        }
-
-        .generic-booking-btn {
-            font-size: 0.875rem;
-        }
-
-        .no-rooms-alert,
-        .availability-notes {
+        .no-rooms-alert {
             font-size: 0.9rem;
         }
 
 
-        /* Responsive adjustments */
-        @media (max-width: 767.98px) {
+        .calendar-day .date-text {
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
 
-            /* Medium screens and down */
-            .availability-header .hotel-name {
-                font-size: 1.1rem;
-            }
-        }
+.calendar-day .remaining-text {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 12px;
+}
+
+
+.room-type-item{
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+}
+
+.room-details{
+    width: 100%;
+}
+
+.book-button-container{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 25px;
+    text-align: center;
+}
+
+.book-button-container .btn{
+    min-width: 200px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.book-button-container .small{
+    margin-top: 8px;
+    font-size: 0.9rem;
+}
+
+.calendar-day.overbooked {
+    background-color: #b71c1c !important;  /* أحمر غامق من Material Design */
+    color: #fff !important;
+    border-color: #8b0000 !important;
+}
+.calendar-day.overbooked .remaining-text {
+    font-weight: bold;
+    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
 
         @media (max-width: 575.98px) {
-
-            /* Extra small screens */
-            .availability-header {
-                text-align: center;
-            }
-
-            .availability-header .header-main-info,
-            .availability-header .header-date-info {
-                width: 100%;
-                justify-content: center;
-                text-align: center;
-            }
-
-            .availability-header .header-date-info {
-                margin-top: 0.5rem;
-            }
-
             .room-type-item .room-details {
                 width: 100%;
-                text-align: center;
                 margin-bottom: 0.75rem;
             }
 
@@ -259,40 +193,10 @@
                 text-align: center;
             }
 
-            .room-pricing-info .price-info,
-            .room-pricing-info .allotment-info {
-                display: block;
-                /* Stack price and allotment */
-                margin-right: 0;
-                margin-bottom: 0.25rem;
+            .availability-calendar {
+                font-size: 0.65rem;
+                max-width: 100%;
             }
-
-            .room-pricing-info .allotment-info {
-                margin-bottom: 0;
-            }
-
-            .availability-image {
-                max-height: 160px;
-            }
-        }
-
-        .carousel-inner {
-            border-radius: 0.5rem;
-            overflow: hidden;
-        }
-
-        .carousel-item img {
-            max-height: 300px;
-            object-fit: cover;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-
-        .carousel-control-prev-icon,
-        .carousel-control-next-icon {
-            background-color: rgba(0, 0, 0, 0.5);
-            border-radius: 50%;
-            padding: 10px;
         }
     </style>
 @endpush
@@ -301,10 +205,9 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1><i class="fas fa-calendar-check me-2"></i> الإتاحات المتاحة للحجز</h1>
-            {{-- Add filters if needed --}}
         </div>
 
-        {{-- Optional Filter Form --}}
+        {{-- Filter Form --}}
         <form method="GET" action="{{ route('company.availabilities.index') }}"
             class="row g-3 align-items-end bg-light p-3 rounded mb-4 shadow-sm filter-form">
             <div class="col-md-4">
@@ -317,114 +220,126 @@
                     @endforeach
                 </select>
             </div>
-            {{-- *** بداية إضافة فلتر التاريخ *** --}}
-            {{-- تاريخ البدء --}}
-            <div class="col-md-3"> {{-- تعديل حجم العمود --}}
+            
+            <div class="col-md-3">
                 <label for="filter_start_date" class="form-label">من تاريخ</label>
                 <input type="date" name="filter_start_date" id="filter_start_date" class="form-control form-control-sm"
                     value="{{ request('filter_start_date') }}">
             </div>
 
-            {{-- تاريخ الانتهاء --}}
-            <div class="col-md-3"> {{-- تعديل حجم العمود --}}
+            <div class="col-md-3">
                 <label for="filter_end_date" class="form-label">إلى تاريخ</label>
                 <input type="date" name="filter_end_date" id="filter_end_date" class="form-control form-control-sm"
                     value="{{ request('filter_end_date') }}">
             </div>
-            {{-- *** نهاية إضافة فلتر التاريخ *** --}}
 
-
-            {{-- Add more filters here (e.g., date range) --}}
             <div class="col-md-auto">
-                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i> تطبيق
-                    الفلتر</button>
-                <a href="{{ route('company.availabilities.index') }}" class="btn btn-secondary btn-sm"><i
-                        class="fas fa-times me-1"></i> مسح الفلتر</a>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i> تطبيق الفلتر</button>
+                <a href="{{ route('company.availabilities.index') }}" class="btn btn-secondary btn-sm"><i class="fas fa-times me-1"></i> مسح الفلتر</a>
                 <a href="{{ route('company.availabilities.index', array_merge(request()->query(), ['sort_price' => 'asc'])) }}"
                     class="btn btn-outline-success btn-sm ms-2 {{ request('sort_price') == 'asc' ? 'active' : '' }}"
                     title="ترتيب حسب السعر الأقل">
                     <i class="fas fa-sort-amount-up-alt"></i> الأقل سعراً
                 </a>
-                {{-- زرار الترتيب التنازلي (الأعلى سعراً) --}}
                 <a href="{{ route('company.availabilities.index', array_merge(request()->query(), ['sort_price' => 'desc'])) }}"
                     class="btn btn-outline-danger btn-sm {{ request('sort_price') == 'desc' ? 'active' : '' }}"
                     title="ترتيب حسب السعر الأعلى">
                     <i class="fas fa-sort-amount-down-alt"></i> الأعلى سعراً
                 </a>
-
             </div>
         </form>
 
-
         @if (session('success'))
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
+            <div class="alert alert-success">{{ session('success') }}</div>
         @endif
         @if (session('error'))
-            <div class="alert alert-danger">
-                {{ session('error') }}
-            </div>
+            <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
+
+
+        <div class="mb-4">
+          <button class="btn btn-info btn-sm mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#hotelsOverview">
+            <i class="fas fa-hotel me-1"></i> عرض ملخص الإتاحات النشطة حسب الفندق
+          </button>
+          <div class="collapse" id="hotelsOverview">
+            <div class="card card-body bg-light">
+              @foreach($hotelsWithActiveAvailabilities as $hotel)
+                <div class="mb-3">
+                  <h6 class="fw-bold text-primary">
+                    <i class="fas fa-building me-1"></i>
+                    {{ $hotel->name }}
+                    <span class="badge bg-success ms-2">{{ $hotel->availabilities->count() }} إتاحة نشطة</span>
+                  </h6>
+                  <ul class="list-group list-group-flush ms-3">
+                  @foreach($hotel->mergedAvailabilities as $key => $data)
+                      @php $meta = $data['meta']; @endphp
+                      <div class="ms-2 mt-2 border rounded p-2">
+                        <span class="fw-bold">{{ $meta['room_type'] }}</span>
+                        — السعر: <span class="text-success fw-bold">
+                          {{ number_format($meta['price'], 2) }}
+                          {{ $meta['currency'] == 'KWD' ? 'د.ك' : 'ر.س' }}
+                        </span>
+                        <div class="mt-1">
+                         @foreach($data['ranges'] as $range)
+                          <span class="badge bg-{{ $range['rooms'] > 0 ? 'success' : 'danger' }} me-1">
+                            {{ \Carbon\Carbon::parse($range['from'])->format('d/m') }}
+                            @if($range['from'] !== $range['to'])
+                              ← {{ \Carbon\Carbon::parse($range['to'])->format('d/m') }}
+                            @endif
+                            : {{ $range['rooms'] }} غرفة
+                          </span>
+                        @endforeach
+                        </div>
+                      </div>
+                    @endforeach
+                  </ul>
+                </div>
+                <hr>
+              @endforeach
+            </div>
+          </div>
+        </div>
+        
         @php $counter = ($availabilities->currentPage() - 1) * $availabilities->perPage() + 1; @endphp
 
         @forelse ($availabilities as $availability)
-            {{-- Card Start --}}
-            <div class="availability-card  shadow-sm mb-4 {{ $loop->odd ? 'bg-light-subtle' : 'bg-white' }}">
+            <div class="availability-card shadow-sm mb-4 {{ $loop->odd ? 'bg-light-subtle' : 'bg-white' }}">
                 {{-- Card Header --}}
-                <div
-                    class="card-header availability-header p-3 border-bottom d-flex flex-column flex-md-row justify-content-md-between align-items-md-center">
+                <div class="card-header availability-header p-3 border-bottom d-flex flex-column flex-md-row justify-content-md-between align-items-md-center">
                     <div class="header-main-info d-flex align-items-center mb-2 mb-md-0">
                         <span class="badge bg-primary me-2 rounded-pill fs-6 lh-1 p-2">{{ $counter++ }}</span>
-                        <h5 class="mb-0 fw-bold text-primary hotel-name">{{ $availability->hotel->name }}</h5>
+                        <h5 class="mb-0 fw-bold text-primary">{{ $availability->hotel->name }}</h5>
                     </div>
                     <div class="header-date-info text-md-end mt-2 mt-md-0">
-                        <small class="text-danger date-range">
+                        <small class="text-danger">
                             <i class="fas fa-calendar-alt me-1"></i>
                             من: <span class="fw-medium">{{ $availability->start_date->format('d/m/Y') }}</span>
                             إلى: <span class="fw-medium">{{ $availability->end_date->format('d/m/Y') }}</span>
-                            <span class="d-block d-sm-inline">(<span
-                                    class="fw-medium">{{ $availability->end_date->diffInDays($availability->start_date) + 1 }}</span>
-                                أيام)</span>
+                            <span class="d-block d-sm-inline">(<span class="fw-medium">{{ $availability->start_date->diffInDays($availability->end_date, true) + 1 }}</span> أيام)</span>
                         </small>
                     </div>
                 </div>
 
                 {{-- Card Body --}}
                 <div class="card-body availability-body p-3">
+                    {{-- Hotel Images --}}
                     <div class="availability-image-container mb-3 text-center">
                         @if ($availability->hotel && $availability->hotel->images->count() > 0)
-                            <div id="carouselHotelImages-{{ $availability->id }}" class="carousel slide"
-                                data-bs-ride="carousel">
-                                <div class="carousel-indicators">
-                                    @foreach ($availability->hotel->images as $index => $image)
-                                        <button type="button"
-                                            data-bs-target="#carouselHotelImages-{{ $availability->id }}"
-                                            data-bs-slide-to="{{ $index }}"
-                                            class="{{ $index == 0 ? 'active' : '' }}"
-                                            aria-current="{{ $index == 0 ? 'true' : 'false' }}"
-                                            aria-label="Slide {{ $index + 1 }}"></button>
-                                    @endforeach
-                                </div>
+                            <div id="carouselHotelImages-{{ $availability->id }}" class="carousel slide" data-bs-ride="carousel">
                                 <div class="carousel-inner">
                                     @foreach ($availability->hotel->images as $index => $image)
                                         <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                                            <img src="{{ $image->image_path }}" class="d-block w-100 rounded shadow-sm"
-                                                alt="صورة {{ $index + 1 }} لفندق {{ $availability->hotel->name }}"
-                                                style="max-height: 300px; object-fit: cover;">
+                                            <img src="{{ $image->image_path }}" class="d-block w-100 rounded shadow-sm availability-image"
+                                                alt="صورة {{ $index + 1 }} لفندق {{ $availability->hotel->name }}">
                                         </div>
                                     @endforeach
                                 </div>
                                 @if ($availability->hotel->images->count() > 1)
-                                    <button class="carousel-control-prev" type="button"
-                                        data-bs-target="#carouselHotelImages-{{ $availability->id }}" data-bs-slide="prev">
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselHotelImages-{{ $availability->id }}" data-bs-slide="prev">
                                         <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                        <span class="visually-hidden">Previous</span>
                                     </button>
-                                    <button class="carousel-control-next" type="button"
-                                        data-bs-target="#carouselHotelImages-{{ $availability->id }}" data-bs-slide="next">
+                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselHotelImages-{{ $availability->id }}" data-bs-slide="next">
                                         <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                        <span class="visually-hidden">Next</span>
                                     </button>
                                 @endif
                             </div>
@@ -434,7 +349,7 @@
                     </div>
 
                     @if ($availability->notes)
-                        <div class="alert alert-warning d-flex align-items-start small p-2 mb-3 availability-notes">
+                        <div class="alert alert-warning d-flex align-items-start small p-2 mb-3">
                             <i class="fas fa-info-circle me-2 fs-5 mt-1"></i>
                             <div>
                                 <strong class="d-block mb-1">ملاحظات:</strong>
@@ -445,36 +360,131 @@
 
                     @php
                         $availableRoomTypes = $availability->availabilityRoomTypes;
-                        // Filter room types based on availability كان في مشكلة هنا لانه بيفلتر لو عدد الغرف المتاحة موجود لغيته خلاص
                     @endphp
 
                     @if ($availableRoomTypes->count() > 0)
-                        <h6 class="mb-2 room-types-heading"><i class="fas fa-door-open me-1"></i> أنواع الغرف والأسعار
-                            المتاحة:</h6>
-                        <ul class="list-group list-group-flush room-types-list">
+                        <h6 class="mb-2 fw-bold"><i class="fas fa-door-open me-1"></i> أنواع الغرف والأسعار المتاحة:</h6>
+                        <ul class="list-group list-group-flush">
                             @foreach ($availableRoomTypes as $roomType)
-                                <li
-                                    class="list-group-item px-0 py-3 room-type-item d-flex flex-column flex-sm-row justify-content-sm-between align-items-sm-center">
-                                    <div class="room-details mb-2 mb-sm-0 text-center text-sm-start">
-                                        <div class="mb-1">
-                                            <strong class="room-type-name fs-6">
+                                @php
+                                    // *** التعديل الرئيسي: حساب التوفر الفعلي من dailyStatus ***
+                                    $dailyStatuses = $roomType->dailyStatus ?? collect();
+                                    
+                                    // حساب عدد الأيام المتاحة (available_rooms > booked_rooms)
+                                    $availableDays = $dailyStatuses->filter(function($status) {
+                                        return ($status->available_rooms - $status->booked_rooms) > 0;
+                                    });
+                                    
+                                    // عدد الأيام المتاحة
+                                    $totalAvailableDays = $availableDays->count();
+                                    
+                                    // أول يوم متاح
+                                    $firstAvailableDate = $availableDays->min('date');
+                                    
+                                    // آخر يوم متاح
+                                    $lastAvailableDate = $availableDays->max('date');
+                                    
+                                    // هل كل الأيام محجوزة؟
+                                    $isFullyBooked = $totalAvailableDays == 0;
+                                    
+                                    // الحد الأقصى للغرف المتاحة في أي يوم
+                                    $maxAvailableRooms = $dailyStatuses->max(function($status) {
+                                        return $status->available_rooms - $status->booked_rooms;
+                                    }) ?? 0;
+                                @endphp
+                                
+                                <li class="list-group-item px-0 py-3 room-type-item d-flex flex-column flex-sm-row justify-content-sm-between align-items-sm-start">
+                                    <div class="room-details mb-2 mb-sm-0">
+                                        <div class="mb-1 d-flex align-items-center flex-wrap gap-2">
+                                            <strong class="fs-6">
                                                 {{ $roomType->roomType ? $roomType->roomType->room_type_name : 'نوع غرفة غير محدد' }}
                                             </strong>
+                                            @if($isFullyBooked)
+                                                <span class="badge bg-danger room-status-badge">محجوز بالكامل</span>
+                                            @else
+                                                <span class="badge bg-success room-status-badge">متاح</span>
+                                                <small class="text-muted">({{ $totalAvailableDays }} يوم متاح)</small>
+                                            @endif
                                         </div>
-                                        <small class="text-muted room-pricing-info">
-                                            <span class="me-3 price-info">السعر: <strong
-                                                    class="text-success price">{{ number_format($roomType->sale_price, 2) }}
-                                                    {{ $roomType->currency == 'KWD' ? 'د.ك' : 'ر.س' }}</strong></span>
-                                            <span class="allotment-info">المتاح: <strong
-                                                    class="text-info allotment">{{ $roomType->allotment }}</strong>
-                                                غرف</span>
+                                        
+                                        <small class="text-muted d-block mb-2">
+                                            <span class="me-3">السعر: <strong class="text-success">{{ number_format($roomType->sale_price, 2) }} {{ $roomType->currency == 'KWD' ? 'د.ك' : 'ر.س' }}</strong></span>
+                                            @if(!$isFullyBooked)
+                                                <span class="me-3">أول تاريخ متاح: <strong class="text-info">{{ $firstAvailableDate ? \Carbon\Carbon::parse($firstAvailableDate)->format('d/m/Y') : 'غير محدد' }}</strong></span>
+                                                <span>الغرف المتاحة: <strong class="text-info">{{ $maxAvailableRooms }}</strong></span>
+                                            @endif
                                         </small>
+                                        
+                                        {{-- Calendar Display - *** التعديل الرئيسي *** --}}
+                                        @if($dailyStatuses->count() > 0)
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block mb-1">تقويم التوفر اليومي:</small>
+                                                <div class="availability-calendar">
+                                                    @foreach ($dailyStatuses as $status)
+                                                       @php
+    $remaining = $status->available_rooms - $status->booked_rooms;
+    $allotment = $roomType->allotment ?? 1;
+    
+    if ($remaining < 0) {
+        $dayClass = 'overbooked';
+        $dayTitle = $status->date->format('d/m/Y') . ' - جرد خطأ: محجوز أكثر من المتاح (' . $status->booked_rooms . '/' . $status->available_rooms . ')';
+    } elseif ($remaining == 0) {
+        $dayClass = 'booked';
+        $dayTitle = $status->date->format('d/m/Y') . ' - محجوز بالكامل (' . $status->booked_rooms . '/' . $status->available_rooms . ')';
+    } elseif ($remaining < $allotment) {
+        $dayClass = 'partial';
+        $dayTitle = $status->date->format('d/m/Y') . ' - متاح جزئياً (' . $remaining . ' من ' . $allotment . ' غرفة)';
+    } else {
+        $dayClass = 'available';
+        $dayTitle = $status->date->format('d/m/Y') . ' - متاح بالكامل (' . $remaining . ' غرفة)';
+    }
+@endphp
+<div class="calendar-day {{ $dayClass }}" title="{{ $dayTitle }}">
+    <div class="date-text">{{ $status->date->format('y/m/d') }}</div>
+    <div class="remaining-text">{{ $remaining < 0 ? $remaining : $remaining }}</div>
+</div>
+                                                    @endforeach
+                                                </div>
+                                                <div class="calendar-legend">
+                                                    <div class="legend-item">
+                                                        <div class="legend-color available"></div>
+                                                        <span>متاح ({{ $dailyStatuses->filter(function($s) use ($roomType) { return ($s->available_rooms - $s->booked_rooms) >= ($roomType->allotment ?? 1); })->count() }} يوم)</span>
+                                                    </div>
+                                                    <div class="legend-item">
+                                                        <div class="legend-color partial"></div>
+                                                        <span>متاح جزئياً ({{ $dailyStatuses->filter(function($s) use ($roomType) { $rem = $s->available_rooms - $s->booked_rooms; return $rem > 0 && $rem < ($roomType->allotment ?? 1); })->count() }} يوم)</span>
+                                                    </div>
+                                                    <div class="legend-item">
+                                                        <div class="legend-color booked"></div>
+                                                        <span>محجوز ({{ $dailyStatuses->filter(function($s) { return ($s->available_rooms - $s->booked_rooms) <= 0; })->count() }} يوم)</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            {{-- لو مفيش dailyStatus (إتاحة قديمة) --}}
+                                            <div class="alert alert-warning small mt-2 py-1 px-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                لم يتم تحديث بيانات التوفر اليومي لهذه الإتاحة. المتاح: {{ $roomType->allotment ?? 'غير محدد' }} غرفة.
+                                            </div>
+                                        @endif
                                     </div>
                                     <div class="book-button-container ms-sm-auto mt-2 mt-sm-0 text-center text-sm-end">
-                                        <a href="{{ route('bookings.create', ['availability_room_type_id' => $roomType->id]) }}"
-                                            class="btn btn-success btn-sm book-now-btn shadow-sm">
-                                            <i class="fas fa-calendar-check me-1"></i> احجز الآن
-                                        </a>
+                                        @if(!$isFullyBooked)
+                                            <a href="{{ route('bookings.create', ['availability_room_type_id' => $roomType->id]) }}"
+                                                class="btn btn-success btn-sm shadow-sm">
+                                                <i class="fas fa-calendar-check me-1"></i> احجز الآن
+                                            </a>
+                                            <div class="small text-muted mt-1">
+                                                متاح من {{ $firstAvailableDate ? \Carbon\Carbon::parse($firstAvailableDate)->format('d/m') : '?' }}
+                                                @if($lastAvailableDate && $firstAvailableDate != $lastAvailableDate)
+                                                    إلى {{ \Carbon\Carbon::parse($lastAvailableDate)->format('d/m') }}
+                                                @endif
+                                            </div>
+                                        @else
+                                            <button class="btn btn-secondary btn-sm" disabled>
+                                                <i class="fas fa-ban me-1"></i> غير متاح
+                                            </button>
+                                        @endif
                                     </div>
                                 </li>
                             @endforeach
@@ -484,66 +494,22 @@
                             <i class="fas fa-exclamation-triangle me-2 fs-5 mt-1"></i>
                             <div>
                                 <p class="mb-1 fw-medium">لا توجد أنواع غرف متاحة حالياً لهذه الإتاحة.</p>
-                                {{-- عرض زر الحجز العام فقط للمستخدمين غير الشركات (مثلاً الأدمن والموظفين) --}}
-                                @if (Auth::check() && Auth::user()->role !== 'Company')
-                                    <small class="d-block mb-2">يمكنك إنشاء حجز عام إذا كنت متأكداً من التفاصيل.</small>
-                                    <a href="{{ route('bookings.create', [
-                                        'hotel_id' => $availability->hotel_id,
-                                        'agent_id' => $availability->agent_id,
-                                        'check_in' => $availability->start_date->format('Y-m-d'),
-                                        'check_out' => $availability->end_date->format('Y-m-d'),
-                                    ]) }}"
-                                        class="btn btn-sm btn-outline-secondary generic-booking-btn">
-                                        <i class="fas fa-plus-circle me-1"></i> إنشاء حجز (عام)
-                                    </a>
-                                @endif
                             </div>
                         </div>
                     @endif
                 </div>
             </div>
-            {{-- Card End --}}
         @empty
             <div class="alert alert-info text-center">
                 <i class="fas fa-info-circle me-2"></i> لا توجد إتاحات متاحة حالياً تطابق معايير البحث.
             </div>
         @endforelse
 
-        {{-- Pagination Links --}}
+        {{-- Pagination --}}
         <div class="d-flex justify-content-center">
             {{ $availabilities->appends(request()->query())->links() }}
         </div>
-        {{-- *** بداية إضافة كود الـ Modal (تأكد من وجوده مرة واحدة في الصفحة أو في layout) *** --}}
-        <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="imageModalLabel">صورة الفندق</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body text-center">
-                        <img id="modalImage" src="" alt="صورة الفندق" class="img-fluid"
-                            style="max-height: 80vh;">
-                    </div>
-                </div>
-            </div>
-        </div>
-        {{-- *** نهاية إضافة كود الـ Modal *** --}}
-
-
     </div>
 @endsection
+
 <script src="{{ asset('js/preventClick.js') }}"></script>
-
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add click event to all images in the carousel
-            const carousels = document.querySelectorAll('.carousel');
-
-            carousels.forEach(carousel => {
-
-            });
-        });
-    </script>
-@endpush

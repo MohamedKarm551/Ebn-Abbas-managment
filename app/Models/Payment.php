@@ -11,6 +11,7 @@ class Payment extends Model
         'amount',
         'currency',  // إضافة حقل العملة
         'payment_date',
+        'account_id',
         'notes',
         'bookings_covered' // سيحتوي على IDs الحجوزات المغطاة بالدفعة
     ];

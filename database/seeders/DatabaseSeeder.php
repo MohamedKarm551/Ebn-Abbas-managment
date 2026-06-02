@@ -11,8 +11,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AgentsTableSeeder::class,
             HotelsTableSeeder::class,
-             CompaniesTableSeeder::class,
+            CompaniesTableSeeder::class,
             UsersTableSeeder::class,
+            AccountSeeder::class,
         ]);
     }
 }
