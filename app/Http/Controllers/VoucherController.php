@@ -104,7 +104,6 @@ class VoucherController extends Controller
             $message = $e->errors()['reference'][0] ?? 'الرقم المرجعي موجود بالفعل.';
             return response()->json(['success' => false, 'message' => $message], 422);
         }
-
         DB::transaction(function () use ($request) {
             $entry = JournalEntry::create([
                 'reference'   => $request->reference,
