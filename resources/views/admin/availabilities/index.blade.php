@@ -323,6 +323,7 @@
             <thead class="table-light">
                 <tr>
                     <th>#</th>
+                    <th>رقم الفاوتشر</th>
                     <th>الفندق</th>
                     <th>جهة الحجز</th>
                     <th>تاريخ البدء</th>
@@ -337,6 +338,7 @@
                 @forelse($availabilities as $availability)
                     <tr>
                         <td>{{ $availability->id }}</td>
+                        <td>{{ $availability->voucher_number ?? '—' }}</td>
                         <td>{{ $availability->hotel->name ?? 'N/A' }}</td>
                         <td>{{ $availability->agent->name ?? 'عام' }}</td>
                         <td>{{ $availability->start_date?->format('d/m/Y') ?? 'N/A' }}</td>

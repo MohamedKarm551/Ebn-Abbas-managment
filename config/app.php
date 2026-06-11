@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'egypt_booking_url' => env('EGYPT_BOOKING_URL'),
+
 ];

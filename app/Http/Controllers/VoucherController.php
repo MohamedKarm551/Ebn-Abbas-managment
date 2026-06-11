@@ -84,22 +84,26 @@ class VoucherController extends Controller
     // ══════════════════════════════════════════
     public function save(Request $request)
     {
-        $request->validate([
-            'voucher_type'      => 'required|in:receipt,payment',
-            'reference'         => 'required|string',
-            'entry_date'        => 'required|date',
-            'amount'            => 'required|numeric|min:0.01',
-            'debit_account_id'  => 'required|exists:accounts,id',
-            'credit_account_id' => 'required|exists:accounts,id',
-            'description'       => 'nullable|string|max:500',
-            'payment_method'    => 'nullable|in:cash,cheque',
-            'cheque_number'     => 'nullable|string|max:100',
-            'cheque_date'       => 'nullable|date',
-            'subject'           => 'nullable|string|max:500',
-            'sig_receiver'      => 'nullable|string|max:100',
-            'sig_accountant'    => 'nullable|string|max:100',
-            'sig_manager'       => 'nullable|string|max:100',
-        ]);
+         try {
+            $request->validate([
+                'voucher_type'      => 'required|in:receipt,payment',
+                'entry_date'        => 'required|date',
+                'amount'            => 'required|numeric|min:0.01',
+                'debit_account_id'  => 'required|exists:accounts,id',
+                'credit_account_id' => 'required|exists:accounts,id',
+                'subject'           => 'nullable|string|max:500',
+                'sig_receiver'      => 'nullable|string|max:100',
+                'sig_accountant'    => 'nullable|string|max:100',
+                'sig_manager'       => 'nullable|string|max:100',
+                'reference'         => 'required|string|unique:journal_entries,reference',
+                'booking_id'        => 'nullable|exists:bookings,id',
+            ], [
+                'reference.unique' => 'الرقم المرجعي :input موجود بالفعل. يرجى تحديث الصفحة والمحاولة مرة أخرى.'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $message = $e->errors()['reference'][0] ?? 'الرقم المرجعي موجود بالفعل.';
+            return response()->json(['success' => false, 'message' => $message], 422);
+        }
 
         DB::transaction(function () use ($request) {
             $entry = JournalEntry::create([
@@ -114,7 +118,7 @@ class VoucherController extends Controller
             $debitAcc  = Account::findOrFail($request->debit_account_id);
             $creditAcc = Account::findOrFail($request->credit_account_id);
             $amount    = (float) $request->amount;
-            $desc      = $request->description
+            $desc      = $request->subject
                 ?: ($request->voucher_type === 'receipt'
                     ? "ايصال استلام - {$creditAcc->name}"
                     : "ايصال صرف - {$debitAcc->name}");
@@ -203,7 +207,6 @@ class VoucherController extends Controller
         'amount'            => 'required|numeric|min:0.01',
         'debit_account_id'  => 'required|exists:accounts,id',
         'credit_account_id' => 'required|exists:accounts,id',
-        'description'       => 'nullable|string|max:500',
         'payment_method'    => 'nullable|in:cash,cheque',
         'cheque_number'     => 'nullable|string|max:100',
         'cheque_date'       => 'nullable|date',
@@ -250,7 +253,7 @@ class VoucherController extends Controller
 
             $detail->update([
                 'subject'        => $request->subject,
-                'description'    => $request->description ?: $detail->description,
+                'description'    =>  $request->subject,
                 'payment_method' => $request->payment_method ?? 'cash',
                 'cheque_number'  => $request->cheque_number,
                 'cheque_date'    => $request->cheque_date,
@@ -258,10 +261,14 @@ class VoucherController extends Controller
                 'sig_accountant' => $request->sig_accountant,
                 'sig_manager'    => $request->sig_manager,
             ]);
+            
+            $entry->lines()->update(['description' => $request->subject]);
+            AccountLedger::where('journal_entry_id', $entry->id)
+                ->update(['description' => $request->subject]);
 
             $newSnapshot = [
                 'subject'        => $request->subject,
-                'description'    => $request->description ?: $detail->description,
+                'description'    =>  $request->subject,
                 'payment_method' => $request->payment_method ?? 'cash',
                 'cheque_number'  => $request->cheque_number,
                 'cheque_date'    => $request->cheque_date,
@@ -290,7 +297,7 @@ class VoucherController extends Controller
 
         $debitAcc  = Account::findOrFail($newDebitId);
         $creditAcc = Account::findOrFail($newCreditId);
-        $desc      = $request->description
+        $desc      = $request->subject
             ?: ($entry->source_type === 'receipt'
                 ? "ايصال استلام - {$creditAcc->name}"
                 : "ايصال صرف - {$debitAcc->name}");

@@ -29,11 +29,20 @@
                 value="{{ $bookingData['availability_room_type_id'] ?? '' }}">
 
             <div class="row g-3">
-                {{-- اسم العميل --}}
+                 {{-- رقم الفاوتشر --}}
+                <div class="col-md-6">
+                    <label for="invoice_number" class="form-label">رقم الفاوتشر <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control @error('invoice_number') is-invalid @enderror" id="invoice_number"
+                        name="invoice_number" value="{{ old('invoice_number', $bookingData['invoice_number'] ?? '') }}" required>
+                    @error('invoice_number')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                 {{-- اسم العميل --}}
                 <div class="col-md-6">
                     <label for="client_name" class="form-label">اسم العميل <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control @error('client_name') is-invalid @enderror" id="client_name"
-                        name="client_name" value="{{ old('client_name', $bookingData['client_name'] ?? '') }}" required>
+                    <input type="text" class="form-control @error('client_name') is-invalid @enderror" id="client_name" title="سيتم دمج اسم العميل مع رقم الفاوتشر عند الحفظ  لابد من كتابة رقم الفاوتشر أولا"
+                        name="client_name" value="{{ old('client_name', $bookingData['client_name'] ?? '') }}" required readonly>
                     @error('client_name')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -274,6 +283,35 @@
     <script src="{{ asset('js/preventClick.js') }}"></script>
 <script>   
 const authUserRole = @json(auth()->user()->role ?? 'guest');
+    // إدارة حقل رقم الفاوتشر واسم العميل
+    const invoiceNumberInput = document.getElementById('invoice_number');
+    const clientNameInput = document.getElementById('client_name');
+    let originalClientName = '';
+
+    // تفعيل حقل اسم العميل عند الكتابة في رقم الفاوتشر
+    invoiceNumberInput.addEventListener('input', function() {
+        if (this.value.trim() !== '') {
+            clientNameInput.removeAttribute('readonly');
+            clientNameInput.style.backgroundColor = '#fff';
+            clientNameInput.style.cursor = 'auto';
+        } else {
+            clientNameInput.setAttribute('readonly', 'readonly');
+            clientNameInput.style.backgroundColor = '#e9ecef';
+            clientNameInput.style.cursor = 'not-allowed';
+            clientNameInput.value = '';
+        }
+    });
+
+    // دمج اسم العميل ورقم الفاوتشر عند الإرسال
+    document.getElementById('bookingForm').addEventListener('submit', function(e) {
+        const invoiceNumber = invoiceNumberInput.value.trim();
+        const clientName = clientNameInput.value.trim();
+        
+        if (invoiceNumber && clientName) {
+            // دمج القيمتين: اسم العميل + رقم الفاوتشر
+            clientNameInput.value = clientName + ' ' + invoiceNumber;
+        }
+    });
 document.addEventListener('DOMContentLoaded', function() {
     $('.select2').select2({ theme: 'bootstrap-5' });
 

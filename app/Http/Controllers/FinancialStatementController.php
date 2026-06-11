@@ -5,6 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use Illuminate\Http\Request;
 use niklasravnsborg\LaravelPdf\Facades\Pdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Font;
 
 class FinancialStatementController extends Controller
 {
@@ -81,7 +87,6 @@ class FinancialStatementController extends Controller
                 'ملخص حسابات العملاء',
                 $fromDate,
                 $toDate,
-                $request->customer_name, 
                 $searchCustomer);
         }
 
@@ -94,7 +99,6 @@ class FinancialStatementController extends Controller
                 'ملخص حسابات العملاء',
                 $fromDate,
                 $toDate,
-                $request->customer_name,
                 $searchCustomer
             );
         }
@@ -296,69 +300,118 @@ class FinancialStatementController extends Controller
     /**
      * تصدير بيانات كشف الحساب الكامل إلى ملف Excel (HTML)
      */
-  private function exportFullLedgerToExcel($accounts, $totalDebit, $totalCredit, $totalBalance, $title, $fromDate, $toDate, $searchTerm)
+private function exportFullLedgerToExcel($accounts, $totalDebit, $totalCredit, $totalBalance, $title, $fromDate, $toDate, $searchTerm)
 {
-    // حدد ترتيب الأعمدة الذي تريده (المفاتيح هي أسماء الأعمدة)
-    $columnsOrder = [
-        'الرصيد النهائي' => fn($account) => number_format(abs($account->balance), 2) . ' ' . $account->balance_type,
-        'إجمالي دائن' => fn($account) => number_format($account->total_credit, 2),
-        'إجمالي مدين' => fn($account) => number_format($account->total_debit, 2),
-        'كود الحساب' => fn($account) => e($account->code),
-        'اسم الحساب' => fn($account) => e($account->name),
-        '#' => fn($account, $index) => $index,
-    ];
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setRightToLeft(true);
+    $sheet->setTitle(mb_substr($title, 0, 31));
+    $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(11);
 
-    // إذا أردت أن يكون الرصيد هو العمود الأول، يمكنك إعادة ترتيب المصفوفة:
-    // $columnsOrder = array_merge(['الرصيد النهائي' => $columnsOrder['الرصيد النهائي']], array_diff_key($columnsOrder, ['الرصيد النهائي' => null]));
+    // عرض الأعمدة
+    foreach (['A' => 6, 'B' => 30, 'C' => 16, 'D' => 18, 'E' => 18, 'F' => 22] as $col => $width) {
+        $sheet->getColumnDimension($col)->setWidth($width);
+    }
 
-    $html = '<html dir="rtl"><meta charset="UTF-8"><body>';
-    $html .= '<h2 style="text-align:center;">' . $title . '</h2>';
-    $html .= '<div style="margin-bottom:15px;">';
+    // ── الصف 1: العنوان ──
+    $sheet->mergeCells('A1:F1');
+    $sheet->setCellValue('A1', $title);
+    $sheet->getStyle('A1')->applyFromArray([
+        'font'      => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F4E79']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+    ]);
+    $sheet->getRowDimension(1)->setRowHeight(24);
+
+    // ── الصف 2: الفترة / البحث / تاريخ الطباعة ──
+    $periodText = '';
     if ($fromDate && $toDate) {
-        $html .= '<p><strong>الفترة:</strong> من ' . \Carbon\Carbon::parse($fromDate)->format('d/m/Y') . ' إلى ' . \Carbon\Carbon::parse($toDate)->format('d/m/Y') . '</p>';
+        $periodText = 'الفترة: من ' . \Carbon\Carbon::parse($fromDate)->format('d/m/Y') . ' إلى ' . \Carbon\Carbon::parse($toDate)->format('d/m/Y');
     } elseif ($fromDate) {
-        $html .= '<p><strong>الفترة:</strong> من ' . \Carbon\Carbon::parse($fromDate)->format('d/m/Y') . '</p>';
+        $periodText = 'الفترة: من ' . \Carbon\Carbon::parse($fromDate)->format('d/m/Y');
     } elseif ($toDate) {
-        $html .= '<p><strong>الفترة:</strong> حتى ' . \Carbon\Carbon::parse($toDate)->format('d/m/Y') . '</p>';
+        $periodText = 'الفترة: حتى ' . \Carbon\Carbon::parse($toDate)->format('d/m/Y');
     }
     if ($searchTerm) {
-        $html .= '<p><strong>بحث:</strong> ' . e($searchTerm) . '</p>';
+        $periodText .= ($periodText ? '   |   ' : '') . 'بحث: ' . $searchTerm;
     }
-    $html .= '<p><strong>تاريخ الطباعة:</strong> ' . now()->format('d/m/Y H:i') . '</p>';
-    $html .= '</div>';
+    $periodText .= ($periodText ? '   |   ' : '') . 'تاريخ الطباعة: ' . now()->format('d/m/Y H:i');
 
-    $html .= '<table border="1" cellpadding="5" style="border-collapse:collapse; width:100%;">';
-    // رأس الجدول حسب الترتيب المحدد
-    $html .= '<thead><tr style="background:#333;color:#fff;">';
-    foreach (array_keys($columnsOrder) as $colName) {
-        $html .= '<th>' . $colName . '</th>';
+    $sheet->mergeCells('A2:F2');
+    $sheet->setCellValue('A2', $periodText);
+    $sheet->getStyle('A2')->applyFromArray([
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EBF3FB']],
+    ]);
+
+    // ── الصف 3: رؤوس الأعمدة ──
+    $headers = ['A3' => '#', 'B3' => 'اسم الحساب', 'C3' => 'كود الحساب', 'D3' => 'إجمالي مدين', 'E3' => 'إجمالي دائن', 'F3' => 'الرصيد النهائي'];
+    foreach ($headers as $cell => $label) {
+        $sheet->setCellValue($cell, $label);
     }
-    $html .= '</tr></thead><tbody>';
+    $sheet->getStyle('A3:F3')->applyFromArray([
+        'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '333333']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+    ]);
+    $sheet->getRowDimension(3)->setRowHeight(18);
 
+    // ── الصفوف ──
+    $row = 4;
     $index = 1;
     foreach ($accounts as $account) {
-        $html .= '<tr>';
-        foreach ($columnsOrder as $colKey => $callback) {
-            $value = ($colKey === '#') ? $callback($account, $index) : $callback($account);
-            $html .= '<td style="text-align:right;">' . $value . '</td>';
+        $sheet->setCellValue("A{$row}", $index);
+        $sheet->setCellValue("B{$row}", $account->name);
+        $sheet->setCellValue("C{$row}", $account->code);
+        $sheet->setCellValue("D{$row}", $account->total_debit);
+        $sheet->setCellValue("E{$row}", $account->total_credit);
+        $sheet->setCellValue("F{$row}", abs($account->balance) . ' ' . $account->balance_type);
+
+        $sheet->getStyle("A{$row}:F{$row}")->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle("A{$row}")->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("D{$row}:E{$row}")->getNumberFormat()
+            ->setFormatCode('#,##0.00');
+
+        // تلوين متناوب
+        if ($index % 2 === 0) {
+            $sheet->getStyle("A{$row}:F{$row}")->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('F5F5F5');
         }
-        $html .= '</tr>';
+
+        $row++;
         $index++;
     }
 
-   $html .= '</tbody><tfoot><tr style="background:#f0f0f0; font-weight:bold;">';
-    $html .= '<td style="text-align:left;">' . number_format(abs($totalBalance), 2) . ' ر.س</td>';
-    $html .= '<td style="text-align:left;">' . number_format($totalCredit, 2) . '</td>';
-    $html .= '<td style="text-align:left;">' . number_format($totalDebit, 2) . '</td>';
-    $html .= '<td></td>';
-    $html .= '<td></td>';
-    $html .= '<td style="text-align:center;">الإجمالي</td>';
-    $html .= '</tr></tfoot>';
+    // ── صف الإجمالي ──
+    $sheet->setCellValue("A{$row}", 'الإجمالي');
+    $sheet->setCellValue("D{$row}", $totalDebit);
+    $sheet->setCellValue("E{$row}", $totalCredit);
+    $sheet->setCellValue("F{$row}", number_format(abs($totalBalance), 2) . ' ر.س');
+    $sheet->mergeCells("A{$row}:C{$row}");
+    $sheet->getStyle("A{$row}:F{$row}")->applyFromArray([
+        'font'      => ['bold' => true],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EEEEEE']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+    ]);
+    $sheet->getStyle("D{$row}:E{$row}")->getNumberFormat()
+        ->setFormatCode('#,##0.00');
 
-    $filename = str_replace(' ', '_', $title) . '_' . now()->format('Ymd_His') . '.xls';
-    return response($html, 200, [
-        'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
-        'Content-Disposition' => "attachment; filename={$filename}",
+    // ── حدود الجدول ──
+    $sheet->getStyle("A1:F{$row}")->applyFromArray([
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
+    ]);
+
+    $filename = str_replace(' ', '_', $title) . '_' . now()->format('Ymd_His') . '.xlsx';
+    $writer = new Xlsx($spreadsheet);
+
+    return response()->streamDownload(function () use ($writer) {
+        $writer->save('php://output');
+    }, $filename, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Cache-Control' => 'max-age=0',
     ]);
 }
 

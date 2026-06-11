@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\Log;
 use niklasravnsborg\LaravelPdf\Facades\Pdf;
 use App\Models\Booking;
 use App\Models\AccountLedger;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Font;
+
 class AccountController extends Controller
 {
     // =============================================
@@ -33,16 +40,73 @@ class AccountController extends Controller
     // CRUD الحسابات
     // =============================================
 
-    public function index()
+    public function index(Request $request)
     {
-        $accounts = Account::with('allChildren.allChildren.allChildren.allChildren')
-            ->roots()
-            ->orderBy('code')
-            ->get();
+        $search = $request->input('search');
 
-        $this->sortAccountsRecursively($accounts);
+        if ($search) {
+            // 1. البحث عن الحسابات التي يطابق اسمها أو كودها نص البحث
+            $matchedAccounts = Account::where('name', 'like', "%{$search}%")
+                ->orWhere('code', 'like', "%{$search}%")
+                ->get();
+        
+            // 2. جمع جميع الآباء والأبناء لهذه الحسابات
+            $allRelevantIds = collect();
+            foreach ($matchedAccounts as $account) {
+                $allRelevantIds->push($account->id);
+                
+                // إضافة الآباء (المباشرين وغير المباشرين)
+                $parent = $account->parent;
+                while ($parent) {
+                    $allRelevantIds->push($parent->id);
+                    $parent = $parent->parent;
+                }
+                
+                // ✅ إضافة الأبناء (جميع الأحفاد)
+                $this->addAllDescendantsIds($account->id, $allRelevantIds);
+            }
+            $allRelevantIds = $allRelevantIds->unique();
+        
+            // 3. جلب كل الحسابات ذات الصلة مع تحميل الأطفال المباشرين
+            $allAccounts = Account::with('children')
+                ->whereIn('id', $allRelevantIds)
+                ->get()
+                ->keyBy('id');
+        
+            // 4. بناء الشجرة: الحسابات التي ليس لها أب ضمن المجموعة
+            $roots = $allAccounts->filter(function ($account) use ($allAccounts) {
+                return !$account->parent_id || !$allAccounts->has($account->parent_id);
+            })->sortBy('code');
+        
+            // 5. إنشاء filteredChildren لكل حساب
+            foreach ($allAccounts as $account) {
+                $children = $allAccounts->where('parent_id', $account->id)->sortBy('code');
+                $account->setRelation('filteredChildren', $children);
+            }
+        
+            $accounts = $roots;
+            $isSearching = true;
+        }
+        else {
+            // الوضع العادي: جلب الشجرة الكاملة
+            $accounts = Account::with('allChildren.allChildren.allChildren.allChildren')
+                ->roots()
+                ->orderBy('code')
+                ->get();
+            $this->sortAccountsRecursively($accounts);
+            $isSearching = false;
+        }
 
-        return view('accounts.index', compact('accounts'));
+        return view('accounts.index', compact('accounts', 'search', 'isSearching'));
+    }
+
+    private function addAllDescendantsIds($accountId, &$ids)
+    {
+        $childrenIds = Account::where('parent_id', $accountId)->pluck('id');
+        foreach ($childrenIds as $childId) {
+            $ids->push($childId);
+            $this->addAllDescendantsIds($childId, $ids);
+        }
     }
 
     public function list()
@@ -939,12 +1003,36 @@ public function ledger(Account $account, Request $request)
         $availabilities = \App\Models\Availability::with(['hotel', 'agent', 'availabilityRoomTypes.roomType'])
             ->whereIn('id', $availabilityIds)->get()->keyBy('id');
         
+            
+        $autoBookingsMap = [];
+        if ($availabilities->isNotEmpty()) {
+            $autoAvailabilityIds = $availabilities->where('is_auto', true)->pluck('id');
+            if ($autoAvailabilityIds->isNotEmpty()) {
+                $roomTypeIds = \App\Models\AvailabilityRoomType::whereIn('availability_id', $autoAvailabilityIds)
+                    ->pluck('id');
+                if ($roomTypeIds->isNotEmpty()) {
+                    $bookingsForAuto = \App\Models\Booking::whereIn('availability_room_type_id', $roomTypeIds)
+                        ->get()
+                        ->keyBy('availability_room_type_id');
+                    $roomTypes = \App\Models\AvailabilityRoomType::whereIn('availability_id', $autoAvailabilityIds)
+                        ->get(['id', 'availability_id']);
+                    foreach ($roomTypes as $rt) {
+                        if (isset($bookingsForAuto[$rt->id])) {
+                            $autoBookingsMap[$rt->availability_id] = $bookingsForAuto[$rt->id];
+                        }
+                    }
+                }
+            }
+        }
+
         $data = [
             'account' => $account,
             'transactions' => $allTransactions,
             'openingBalance' => $openingBalance,
             'bookings' => $bookings,
             'availabilities' => $availabilities,
+            'autoBookingsMap' => $autoBookingsMap,
+            'isPdfExport'      => true,
         ];
         
         if ($exportType === 'pdf') {
@@ -958,11 +1046,17 @@ public function ledger(Account $account, Request $request)
             return $pdf->download("كشف_حساب_{$account->code}_{$account->name}.pdf");
         }
         
-        if ($exportType === 'excel') {
-            $html = $this->generateLedgerExcelHtml($data);
-            return response($html, 200, [
-                'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
-                'Content-Disposition' => "attachment; filename=كشف_حساب_{$account->code}_{$account->name}.xls",
+       if ($exportType === 'excel') {
+            $spreadsheet = $this->generateLedgerSpreadsheet($data);
+            $writer = new Xlsx($spreadsheet);
+
+            $filename = "كشف_حساب_{$account->code}_{$account->name}.xlsx";
+
+            return response()->streamDownload(function () use ($writer) {
+                $writer->save('php://output');
+            }, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Cache-Control' => 'max-age=0',
             ]);
         }
     }
@@ -995,104 +1089,203 @@ public function ledger(Account $account, Request $request)
     
     $availabilities = \App\Models\Availability::with(['hotel', 'agent', 'availabilityRoomTypes.roomType'])
         ->whereIn('id', $availabilityIds)->get()->keyBy('id');
-    
+
+    $autoBookingsMap = [];
+    if ($availabilities->isNotEmpty()) {
+        $autoAvailabilityIds = $availabilities->where('is_auto', true)->pluck('id');
+        if ($autoAvailabilityIds->isNotEmpty()) {
+            $roomTypeIds = \App\Models\AvailabilityRoomType::whereIn('availability_id', $autoAvailabilityIds)
+                ->pluck('id');
+            if ($roomTypeIds->isNotEmpty()) {
+                $bookingsForAuto = \App\Models\Booking::whereIn('availability_room_type_id', $roomTypeIds)
+                    ->get()
+                    ->keyBy('availability_room_type_id');
+                    $roomTypes = \App\Models\AvailabilityRoomType::whereIn('availability_id', $autoAvailabilityIds)
+                    ->get(['id', 'availability_id']);
+                foreach ($roomTypes as $rt) {
+                    if (isset($bookingsForAuto[$rt->id])) {
+                        $autoBookingsMap[$rt->availability_id] = $bookingsForAuto[$rt->id];
+                    }
+                }
+            }
+        }
+    }
+
     return view('accounts.ledger', compact(
-        'account', 'transactions', 'openingBalance', 'bookings', 'availabilities'
+        'account', 'transactions', 'openingBalance', 'bookings', 'availabilities', 'autoBookingsMap'
     ));
 }
 
-private function generateLedgerExcelHtml($data)
+    private function generateLedgerSpreadsheet(array $data): Spreadsheet
 {
     extract($data);
+
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setRightToLeft(true);
+    $sheet->setTitle('كشف الحساب');
+
+    // ── الخط الافتراضي ──
+    $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(11);
+
+    // ── عرض الأعمدة ──
+    $colWidths = ['A' => 6, 'B' => 14, 'C' => 12, 'D' => 40, 'E' => 12, 'F' => 14, 'G' => 18];
+    foreach ($colWidths as $col => $width) {
+        $sheet->getColumnDimension($col)->setWidth($width);
+    }
+
+    // ─────────────────────────────────────────
+    // الصف 1: عنوان الحساب
+    // ─────────────────────────────────────────
+    $sheet->mergeCells('A1:G1');
+    $sheet->setCellValue('A1', 'كشف حساب: ' . $account->name . ' (' . $account->code . ')');
+    $sheet->getStyle('A1')->applyFromArray([
+        'font'      => ['bold' => true, 'size' => 13],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F4E79']],
+        'font'      => ['bold' => true, 'size' => 13, 'color' => ['rgb' => 'FFFFFF']],
+    ]);
+    $sheet->getRowDimension(1)->setRowHeight(24);
+
+    // ─────────────────────────────────────────
+    // الصف 2: رؤوس الأعمدة
+    // ─────────────────────────────────────────
+    $headers = [
+        'A2' => '#', 
+        'B2' => 'التاريخ', 
+        'C2' => 'رقم القيد', 
+        'D2' => 'البيان', 
+        'E2' => 'مدين', 
+        'F2' => 'دائن', 
+        'G2' => 'الرصيد'
+    ];
+    foreach ($headers as $cell => $label) {
+        $sheet->setCellValue($cell, $label);
+    }
+    $sheet->getStyle('A2:G2')->applyFromArray([
+        'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '333333']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+    ]);
+    $sheet->getRowDimension(2)->setRowHeight(18);
+
+    // ─────────────────────────────────────────
+    // دالة مساعدة لتنسيق الرصيد
+    // ─────────────────────────────────────────
+    $balanceText = fn($bal) => number_format(abs($bal), 2) . ' ' . ($bal >= 0 ? 'مدين' : 'دائن');
+
+    $row     = 3;
     $balance = $openingBalance;
-    
-    $html = '<html dir="rtl"><meta charset="UTF-8"><body>';
-    $html .= '<table border="1" cellpadding="5" style="border-collapse:collapse; width:100%; direction: rtl; margin-right: 0; margin-left: auto;" align="right">';
-    
-    // عنوان الحساب
-    $html .= '<tr><th colspan="7" style="text-align: center;">كشف حساب: ' . $data['account']->name . ' (' . $data['account']->code . ')</th></tr>';
-    
-    // عناوين الأعمدة (معكوسة)
-    $html .= '<tr>
-                <th style="text-align: right;background:#333;color:#fff;">الرصيد</th>
-                <th style="text-align: right;background:#333;color:#fff;">دائن</th>
-                <th style="text-align: right;background:#333;color:#fff;">مدين</th>
-                <th style="text-align: right;background:#333;color:#fff;">البيان</th>
-                <th style="text-align: right;background:#333;color:#fff;">التاريخ</th>
-                <th style="text-align: right;background:#333;color:#fff;">رقم القيد</th>
-                <th style="text-align: right;background:#333;color:#fff;">#</th>
-               </tr>';
-    
-    $balanceText = function($bal) {
-        return number_format(abs($bal), 2) . ' ' . ($bal >= 0 ? 'مدين' : 'دائن');
-    };
-    
+
+    // ─────────────────────────────────────────
     // الرصيد الافتتاحي
-    $html .= '<tr>
-                <td style="text-align: right;">' . $balanceText($balance) . '</td>
-                <td style="text-align: right;">' . ($balance < 0 ? number_format(abs($balance), 2) : '-') . '</td>
-                <td style="text-align: right;">' . ($balance > 0 ? number_format($balance, 2) : '-') . '</td>
-                <td style="text-align: right;">الرصيد الافتتاحي</td>
-                <td style="text-align: right;">—</td>
-                <td style="text-align: right;">—</td>
-                <td style="text-align: right;">1</td>
-               </tr>';
-    
+    // ─────────────────────────────────────────
+    $sheet->setCellValue("A{$row}", 1);
+    $sheet->setCellValue("B{$row}", '—');
+    $sheet->setCellValue("C{$row}", '—');
+    $sheet->setCellValue("D{$row}", 'الرصيد الافتتاحي'); 
+    $sheet->setCellValue("E{$row}", $balance > 0 ? $balance : 0);  
+    $sheet->setCellValue("F{$row}", $balance < 0 ? abs($balance) : 0); 
+    $sheet->setCellValue("G{$row}", $balanceText($balance));
+
+    $sheet->getStyle("E{$row}:F{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+    $sheet->getStyle("A{$row}:G{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+    $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $row++;
+
+    // ─────────────────────────────────────────
+    // الحركات
+    // ─────────────────────────────────────────
     $counter = 2;
     foreach ($transactions as $trans) {
         $balance += $trans->debit - $trans->credit;
         $entry = $trans->journalEntry;
-        
-        // ✅ نفس المنطق الموجود في ledger.blade.php
+
+        // البيان التفصيلي
         $detailedDescription = null;
-        
-        if ($entry->source_type === 'App\Models\Booking' && $entry->source_id) {
+
+        if ($entry->source_type === \App\Models\Booking::class && $entry->source_id) {
             $booking = $bookings[$entry->source_id] ?? null;
             if ($booking) {
                 $checkIn  = $booking->check_in  ? \Carbon\Carbon::parse($booking->check_in)->format('d-m-y')  : '—';
                 $checkOut = $booking->check_out ? \Carbon\Carbon::parse($booking->check_out)->format('d-m-y') : '—';
                 $detailedDescription =
                     "{$booking->id} {$booking->client_name} - " . ($booking->hotel->name ?? '—') . "\n" .
-                    "{$booking->rooms} غرفة : {$checkIn} → {$checkOut}\n" .
-                    number_format($booking->sale_price, 2) . " " . ($booking->currency === 'KWD' ? 'د.ك' : 'ر.س');
+                    "{$booking->rooms} غرفة : {$checkOut} → {$checkIn}\n" .
+                    number_format($booking->sale_price, 2) . ' ' . ($booking->currency === 'KWD' ? 'د.ك' : 'ر.س');
             }
-        } elseif ($entry->source_type === 'App\Models\Availability' && $entry->source_id) {
+        } elseif ($entry->source_type === \App\Models\Availability::class && $entry->source_id) {
             $availability = $availabilities[$entry->source_id] ?? null;
             if ($availability) {
                 $startDate = $availability->start_date ? \Carbon\Carbon::parse($availability->start_date)->format('d-m-y') : '—';
                 $endDate   = $availability->end_date   ? \Carbon\Carbon::parse($availability->end_date)->format('d-m-y')   : '—';
-                $roomsSummary = $availability->availabilityRoomTypes->map(function($rt) {
-                    return ($rt->roomType->room_type_name ?? '—') . ': ' . $rt->allotment . ' غرفة بـ ' . number_format($rt->cost_price, 2);
-                })->implode(' | ');
+                $roomsSummary = $availability->availabilityRoomTypes->map(
+                    fn($rt) => ($rt->roomType->room_type_name ?? '—') . ': ' . $rt->allotment . ' غرفة بـ ' . number_format($rt->cost_price, 2)
+                )->implode(' | ');
                 $detailedDescription =
                     "{$availability->id} - " . ($availability->hotel->name ?? '—') . "\n" .
                     "{$startDate} → {$endDate}\n" .
                     $roomsSummary;
             }
         }
-        
+
         $descriptionText = $detailedDescription ?: ($trans->description ?: '—');
-        
-        $html .= '<tr>
-                    <td style="text-align: right;">' . $balanceText($balance) . '</td>
-                    <td style="text-align: right;">' . ($trans->credit > 0 ? number_format($trans->credit, 2) : '-') . '</td>
-                    <td style="text-align: right;">' . ($trans->debit > 0 ? number_format($trans->debit, 2) : '-') . '</td>
-                    <td style="text-align: right; white-space: pre-line;">' . nl2br(e($descriptionText)) . '</td>
-                    <td style="text-align: right;">' . $entry->entry_date->format('d/m/Y') . '</td>
-                    <td style="text-align: right;">' . $entry->id . '</td>
-                    <td style="text-align: right;">' . $counter . '</td>
-                   </tr>';
+
+       $sheet->setCellValue("A{$row}", $counter);
+        $sheet->setCellValue("B{$row}", $entry->entry_date->format('d/m/Y')); 
+        $sheet->setCellValue("C{$row}", $entry->id);                           
+        $sheet->setCellValue("D{$row}", $descriptionText);                   
+        $sheet->setCellValue("E{$row}", $trans->debit  > 0 ? $trans->debit  : 0); 
+        $sheet->setCellValue("F{$row}", $trans->credit > 0 ? $trans->credit : 0);  
+        $sheet->setCellValue("G{$row}", $balanceText($balance));               
+
+        // تنسيق الأرقام للمدين والدائن
+        $sheet->getStyle("E{$row}:F{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+
+        // تنسيق الصف
+        $sheet->getStyle("A{$row}:G{$row}")->applyFromArray([
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
+        ]);
+        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("D{$row}:F{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+
+        // تلوين صفوف متناوبة
+        if ($counter % 2 === 0) {
+            $sheet->getStyle("A{$row}:G{$row}")->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('F5F5F5');
+        }
+
+        $row++;
         $counter++;
     }
-    
+
+    // ─────────────────────────────────────────
     // الرصيد النهائي
-    $html .= '<tr style="background:#eee;">
-                <td style="text-align: right;"><strong>' . $balanceText($balance) . '</strong></td>
-                <td colspan="6" style="text-align: right;"><strong>الرصيد النهائي</strong></td>
-               </tr>';
-    
-    $html .= '</table></body></html>';
-    return $html;
+    // ─────────────────────────────────────────
+    $sheet->mergeCells("A{$row}:F{$row}");
+    $sheet->setCellValue("A{$row}", 'الرصيد النهائي');
+    $sheet->setCellValue("G{$row}", $balanceText($balance));
+    $sheet->getStyle("A{$row}:G{$row}")->applyFromArray([
+        'font'      => ['bold' => true],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EEEEEE']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+    ]);
+
+    // ─────────────────────────────────────────
+    // حدود لكل الجدول
+    // ─────────────────────────────────────────
+    $lastRow = $row;
+    $sheet->getStyle("A1:G{$lastRow}")->applyFromArray([
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => Border::BORDER_THIN,
+                'color'       => ['rgb' => 'CCCCCC'],
+            ],
+        ],
+    ]);
+
+    return $spreadsheet;
 }
 
 
@@ -1410,18 +1603,91 @@ public function exportTreeExcel()
     $accounts = Account::with('allChildren')->roots()->orderBy('code')->get();
     $this->sortAccountsRecursively($accounts);
 
-    $html = '<html dir="rtl"><meta charset="UTF-8"><body>';
-    $html .= '<h2 style="text-align:center;">شجرة الحسابات</h2>';
-    $html .= '<p>تاريخ التصدير: ' . now()->format('d/m/Y H:i') . '</p>';
-    $html .= '<table border="1" cellpadding="5" style="border-collapse:collapse; width:100%; direction:rtl;">';
-    $html .= '<thead><tr style="background:#333;color:#fff;"><th>الرصيد</th><th>الفئة</th><th>النوع</th><th>اسم الحساب</th><th>الكود</th></tr></thead><tbody>';
-    $html .= $this->generateTreeExcelRows($accounts);
-    $html .= '</tbody></table></body></html>';
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setRightToLeft(true);
+    $sheet->setTitle('شجرة الحسابات');
+    $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(11);
 
-    return response($html, 200, [
-        'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
-        'Content-Disposition' => "attachment; filename=شجرة_الحسابات_" . now()->format('Y-m-d') . ".xls",
+    // عرض الأعمدة
+    foreach (['A' => 8, 'B' => 18, 'C' => 14, 'D' => 35, 'E' => 14] as $col => $width) {
+        $sheet->getColumnDimension($col)->setWidth($width);
+    }
+
+    // العنوان
+    $sheet->mergeCells('A1:E1');
+    $sheet->setCellValue('A1', 'شجرة الحسابات');
+    $sheet->getStyle('A1')->applyFromArray([
+        'font'      => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F4E79']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
     ]);
+
+    // تاريخ التصدير
+    $sheet->mergeCells('A2:E2');
+    $sheet->setCellValue('A2', 'تاريخ التصدير: ' . now()->format('d/m/Y'));
+    $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+    // رؤوس الأعمدة
+    foreach (['A3' => 'الكود', 'B3' => 'اسم الحساب', 'C3' => 'النوع', 'D3' => 'الفئة', 'E3' => 'الرصيد'] as $cell => $label) {
+        $sheet->setCellValue($cell, $label);
+    }
+    $sheet->getStyle('A3:E3')->applyFromArray([
+        'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '333333']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+    ]);
+
+    // الصفوف
+    $row = 4;
+    $this->fillTreeSpreadsheetRows($sheet, $accounts, $row, 0);
+
+    // حدود الجدول
+    $sheet->getStyle("A1:E" . ($row - 1))->applyFromArray([
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
+    ]);
+
+    $filename = 'شجرة_الحسابات_' . now()->format('Y-m-d') . '.xlsx';
+    $writer = new Xlsx($spreadsheet);
+
+    return response()->streamDownload(function () use ($writer) {
+        $writer->save('php://output');
+    }, $filename, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Cache-Control' => 'max-age=0',
+    ]);
+}
+
+private function fillTreeSpreadsheetRows($sheet, $accounts, &$row, int $depth): void
+{
+    foreach ($accounts as $account) {
+        $indent = str_repeat('    ', $depth);
+
+        $sheet->setCellValue("A{$row}", $account->code);
+        $sheet->setCellValue("B{$row}", $indent . $account->name);
+        $sheet->setCellValue("C{$row}", $account->type ?? '—');
+        $sheet->setCellValue("D{$row}", $account->category ?? '—');
+        $sheet->setCellValue("E{$row}", $account->balance ?? 0);
+
+        $sheet->getStyle("A{$row}:E{$row}")->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle("E{$row}")->getNumberFormat()
+            ->setFormatCode('#,##0.00');
+
+        // تمييز حسابات المستوى الأول
+        if ($depth === 0) {
+            $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F0FE']],
+            ]);
+        }
+
+        $row++;
+
+        if ($account->allChildren && $account->allChildren->isNotEmpty()) {
+            $this->fillTreeSpreadsheetRows($sheet, $account->allChildren, $row, $depth + 1);
+        }
+    }
 }
 
 private function sortAccountsRecursively($accounts)
@@ -1434,31 +1700,6 @@ private function sortAccountsRecursively($accounts)
         }
     }
 }
-
-private function generateTreeExcelRows($accounts, $level = 0)
-{
-    $html = '';
-    foreach ($accounts as $account) {
-        $balance = $account->getTotalBalance();
-        $balanceText = $balance > 0 ? number_format($balance,2).' مدين' : ($balance < 0 ? number_format(abs($balance),2).' دائن' : '0.00');
-        $typeName = ['asset'=>'أصول','liability'=>'خصوم','equity'=>'حقوق ملكية','revenue'=>'إيرادات','expense'=>'مصروفات'][$account->type] ?? $account->type;
-        $parentInfo = $account->parent ? $account->parent->code.' - '.$account->parent->name : '—';
-        $padding = $level * 20;
-        $html .= '<tr>';
-        $html .= '<td style="text-align:right;">'.e($balanceText).'</td>';
-        $html .= '<td style="text-align:right;">'.e($parentInfo).'</td>';
-        $html .= '<td style="text-align:right;">'.e($typeName).'</td>';
-        $html .= '<td style="padding-right:'.$padding.'px;text-align:right;">'.str_repeat('—', $level).' '.e($account->name).'</td>';
-        $html .= '<td style="text-align:right;">'.e($account->code).'</td>';
-        $html .= '</tr>';
-        if ($account->allChildren->isNotEmpty()) {
-            $html .= $this->generateTreeExcelRows($account->allChildren, $level + 1);
-        }
-    }
-    return $html;
-}
-
-
 
     /**
  * بحث AJAX في الحسابات النهائية (is_leaf)

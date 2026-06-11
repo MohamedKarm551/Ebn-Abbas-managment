@@ -11,6 +11,7 @@
 <table class="table table-bordered table-hover table-striped">
     <thead class="table-dark"> {{-- Use a dark header for better contrast striped يعني مخطط عشان العين تلاحظ كل صف لوحده بلون --}}
         <tr>
+            <th class="text-center" style="width: 3%;">#</th>
             <th class="text-center" style="width: 3%;">م</th>
             <th>العميل</th>
             <th>الشركة</th>
@@ -49,6 +50,7 @@
         @foreach ($bookings as $booking)
             <tr>
                 <td class="text-center align-middle">{{ $loop->iteration }}</td> <!-- رقم الصف -->
+                <td class="text-center align-middle">{{ $booking->id }}</td> <!-- رقم الصف -->
                 <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط التفاصيل *** --}}
                     @if (auth()->user()->role !== 'Company')
@@ -206,7 +208,8 @@
                     {{ $booking->currency == 'SAR' ? 'ريال' : 'دينار' }}
                 </td> --}}
                 {{-- الموظف المسؤول | ولا يظهر للشركات  --}}
-                {{-- <td class="text-center align-middle">
+                {{-- 
+                <td class="text-center align-middle">
                     {{-- *** تعديل: الشركة لا ترى رابط فلترة الموظف *** --}}
                 {{-- @if (auth()->user()->role !== 'Company')
                         <a href="{{ route('bookings.index', ['employee_id' => $booking->employee->id]) }}"
@@ -247,7 +250,7 @@
                                     @method('DELETE')
                                     <button type="button" class="btn btn-danger btn-sm" 
                                            onclick="confirmDelete({{ $booking->id }}, {{ $booking->availabilityRoomType?->availability?->is_auto ? 'true' : 'false' }})">
-                                        <i class="fas fa-trash-alt"></i> حذف
+                                        <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </form>
                             @endif
