@@ -252,7 +252,17 @@
 
     </div>{{-- /payment-canvas --}}
   </div>
+   <div class="linkToSave" style="top:70%; right:25%; width:50%; font-size:1.15vw; text-align:center;">
+            <label for="link" style="font-size: larger;font-weight: bold;color: red;"> لينك صورة الدفع
+                (اختياري):</label>
+            <br>
+            <input type="text" name="link" id="link">
+
+        </div>
 </div>
+
+<!-- حقل مخفي لحفظ اللينك -->
+<input type="hidden" id="hiddenPaymentLink">
 
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script>
@@ -434,6 +444,17 @@ document.getElementById('btnSave').addEventListener('click',async function(){
         alert('يرجى تعبئة جميع الحقول المطلوبة');return;
     }
 
+    // ✅ ضم اللينك مع subjectField عند الحفظ
+    let subjectValue = document.getElementById('subjectField').value.trim();
+    const paymentLink = document.getElementById('link').value.trim();
+    let finalSubject = subjectValue;
+    
+    if (paymentLink) {
+        finalSubject = subjectValue 
+            ? subjectValue + ' | لينك الدفع: ' + paymentLink 
+            : 'لينك الدفع: ' + paymentLink;
+    }
+
     const body=new FormData();
     body.append('_token',           CSRF);
     body.append('voucher_type',     VOUCHER_TYPE);
@@ -442,7 +463,7 @@ document.getElementById('btnSave').addEventListener('click',async function(){
     body.append('amount',           amount);
     body.append('debit_account_id', debitId);
     body.append('credit_account_id',creditId);
-    body.append('subject',          document.getElementById('subjectField').value);
+    body.append('subject',          finalSubject);
     body.append('payment_method',   method);
     body.append('sig_receiver',     document.getElementById('sigReceiver').value);
     body.append('sig_accountant',   document.getElementById('sigAccountant').value);
