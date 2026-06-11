@@ -96,6 +96,12 @@ class BookingsController extends Controller
             $query->where(function ($q) use ($searchTerm) {
                 // البحث في اسم العميل مباشرة في جدول الحجوزات.
                 $q->where('client_name', 'like', "%{$searchTerm}%")
+                 // البحث في رقم الحجز (ID) - إذا كان المدخل أرقام فقط
+                    ->orWhere(function ($q) use ($searchTerm) {
+                        if (is_numeric($searchTerm)) {
+                            $q->where('id', '=', (int)$searchTerm);
+                        }
+                    })
                     // البحث في اسم الموظف المرتبط (عبر العلاقة 'employee').
                     ->orWhereHas('employee', function ($subQ) use ($searchTerm) {
                         $subQ->where('name', 'like', "%{$searchTerm}%");
@@ -108,6 +114,7 @@ class BookingsController extends Controller
                     ->orWhereHas('agent', function ($subQ) use ($searchTerm) {
                         $subQ->where('name', 'like', "%{$searchTerm}%");
                     })
+                   
                     // البحث في اسم الفندق المرتبط (عبر العلاقة 'hotel').
                     ->orWhereHas('hotel', function ($subQ) use ($searchTerm) {
                         $subQ->where('name', 'like', "%{$searchTerm}%");
