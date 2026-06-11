@@ -19,4 +19,8 @@ class VoucherDetail extends Model
     public function journalEntry()  { return $this->belongsTo(JournalEntry::class); }
     public function debitAccount()  { return $this->belongsTo(Account::class, 'debit_account_id'); }
     public function creditAccount() { return $this->belongsTo(Account::class, 'credit_account_id'); }
+    public function booking()
+    {
+        return $this->belongsTo(Booking::class);
+    }
 }

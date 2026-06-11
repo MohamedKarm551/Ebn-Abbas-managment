@@ -708,6 +708,8 @@ $lastAvailableDate = $lastAvailableDateRaw
         }
         Log::info('نجح الـ Validation الأساسي');
 
+        $validatedData['created_by'] = Auth::id();
+
         // ===========================================
         // إذا كان الحجز مباشراً (بدون إتاحة مسبقة)
         // ===========================================
@@ -1442,28 +1444,47 @@ private function saveBookingAndUpdateAllotment(array $validatedData, bool $isBoo
         }
         // *** نهاية التحقق الجديد ***
 
-        $booking = Booking::findOrFail($id); // جلب بيانات الحجز
+        $booking = Booking::with('availabilityRoomType.availability')->findOrFail($id);
+
+        $isLinkedToAutoAvailability = false;
+        if ($booking->availabilityRoomType && $booking->availabilityRoomType->availability) {
+            $isLinkedToAutoAvailability = $booking->availabilityRoomType->availability->is_auto == true;
+        }
+
         $agents = Agent::orderBy('name', 'asc')->get(); // جلب بيانات جهات الحجز
         $hotels = Hotel::orderBy('name', 'asc')->get(); // جلب بيانات الفنادق
         $companies = Company::orderBy('name', 'asc')->get(); // جلب بيانات الشركات
         $employees = Employee::orderBy('name', 'asc')->get(); // جلب بيانات الموظفين
 
-        return view('bookings.edit', compact('booking', 'agents', 'hotels', 'companies', 'employees'));
+        return view('bookings.edit', compact('booking', 'agents', 'hotels', 'companies', 'employees', 'isLinkedToAutoAvailability'));
     }
 
     public function update(Request $request, $id)
     {
         $booking = Booking::findOrFail($id);
 
-         // ✅ احفظ البيانات القديمة قبل التعديل
+         $oldAttributes = $booking->getAttributes();
+
+        $oldValues = [
+        'client_name' => $booking->client_name,
+        'company_id'  => $booking->company_id,
+        'agent_id'    => $booking->agent_id,
+        'hotel_id'    => $booking->hotel_id,
+        'room_type'   => $booking->room_type,
+        'check_in'    => $booking->check_in instanceof Carbon ? $booking->check_in->format('Y-m-d') : $booking->check_in,
+        'check_out'   => $booking->check_out instanceof Carbon ? $booking->check_out->format('Y-m-d') : $booking->check_out,
+        'rooms'       => $booking->rooms,
+        'cost_price'  => $booking->cost_price,
+        'sale_price'  => $booking->sale_price,
+        'currency'    => $booking->currency,
+        'employee_id' => $booking->employee_id,
+        'notes'       => $booking->notes,
+        ];
+
         $oldAvailabilityRoomTypeId = $booking->availability_room_type_id;
-        $oldCheckIn  = $booking->check_in instanceof Carbon 
-            ? $booking->check_in->format('Y-m-d') 
-            : $booking->check_in;
-        $oldCheckOut = $booking->check_out instanceof Carbon 
-            ? $booking->check_out->format('Y-m-d') 
-            : $booking->check_out;
-        $oldRooms    = $booking->rooms;
+        $oldCheckIn = $booking->check_in instanceof Carbon ? $booking->check_in->format('Y-m-d') : $booking->check_in;
+        $oldCheckOut = $booking->check_out instanceof Carbon ? $booking->check_out->format('Y-m-d') : $booking->check_out;
+        $oldRooms = $booking->rooms;
 
         $validatedData = $request->validate([
             'client_name' => 'required|string|max:255',
@@ -1568,46 +1589,45 @@ private function saveBookingAndUpdateAllotment(array $validatedData, bool $isBoo
 
         $booking->update($validatedData);
 
+        foreach ($validatedData as $field => $newValue) {
+        if (in_array($field, ['amount_due_to_hotel', 'amount_due_from_company', 'days'])) {
+            continue;
+        }
+
+        $oldValue = $oldValues[$field] ?? null;
+
+        if (in_array($field, ['check_in', 'check_out'])) {
+            $oldDate = $oldValue ? Carbon::parse($oldValue)->format('Y-m-d') : null;
+            $newDate = Carbon::parse($newValue)->format('Y-m-d');
+            if ($oldDate != $newDate) {
+                EditLog::create([
+                    'booking_id' => $booking->id,
+                    'field'      => $field,
+                    'old_value'  => $oldDate ?? '',
+                    'new_value'  => $newDate,
+                ]);
+            }
+        }
+        else {
+            $oldStr = is_scalar($oldValue) ? (string)$oldValue : '';
+            $newStr = is_scalar($newValue) ? (string)$newValue : '';
+            if ($oldStr !== $newStr) {
+                EditLog::create([
+                    'booking_id' => $booking->id,
+                    'field'      => $field,
+                    'old_value'  => $oldStr,
+                    'new_value'  => $newStr,
+                ]);
+            }
+        }
+    }
+
         try {
             \App\Http\Controllers\AccountController::updateBookingJournalEntry($booking);
             Log::info("تم تحديث القيد المحاسبي للحجز بعد تعديله ID: {$booking->id}");
         } catch (\Exception $e) {
             Log::error("فشل تحديث القيد المحاسبي بعد تعديل الحجز ID: {$booking->id} - " . $e->getMessage());
             // لا نمنع تحديث الحجز، فقط نسجل الخطأ
-        }
-
-        // تسجيل التعديلات
-        foreach ($validatedData as $field => $newValue) {
-            $oldValue = $booking->getOriginal($field); // <-- استخدم getOriginal
-
-            // تجاهل الحقول المحسوبة ديناميكيًا مهم 
-
-            if (in_array($field, ['amount_due_to_hotel', 'amount_due_from_company', 'days'])) {
-                continue;
-            }
-            //لو الحقل اللي تعدل هو التاريخ ابقا قارنه بعد التنسيق لانه كان بيعتبر كل مرة تغيير في التاريخ حتى لو انا معملتش تعديل
-            if (in_array($field, ['check_in', 'check_out'])) {
-                $oldValueFormatted = \Carbon\Carbon::parse($oldValue)->format('Y-m-d');
-                $newValueFormatted = \Carbon\Carbon::parse($newValue)->format('Y-m-d');
-
-                if ($oldValueFormatted != $newValueFormatted) {
-                    \App\Models\EditLog::create([
-                        'booking_id' => $booking->id,
-                        'field' => $field,
-                        'old_value' => $oldValueFormatted,
-                        'new_value' => $newValueFormatted,
-                    ]);
-                }
-            } else {
-                if ($oldValue != $newValue) {
-                    \App\Models\EditLog::create([
-                        'booking_id' => $booking->id,
-                        'field' => $field,
-                        'old_value' => $oldValue ?? '', // <-- لو null يبقى نص فاضي
-                        'new_value' => $newValue ?? '', // <-- لو null يبقى نص فاضي
-                    ]);
-                }
-            }
         }
 
         // بعد حلقة foreach التي تسجل التعديلات في EditLog
@@ -2221,6 +2241,8 @@ private function updateAutoAvailabilityInsideTransaction(Booking $booking, array
     $newEnd   = Carbon::parse($newData['check_out']);
     $availability->start_date = $newStart;
     $availability->end_date   = $newEnd;
+    $availability->agent_id   = $newData['agent_id'];  
+    $availability->hotel_id   = $newData['hotel_id'];  
     $availability->save();
     
     // تحديث أسعار وعملة و alloment في AvailabilityRoomType

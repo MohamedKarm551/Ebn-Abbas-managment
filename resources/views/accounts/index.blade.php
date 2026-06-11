@@ -335,11 +335,26 @@
 
     </div>
 
+    {{-- Search Bar --}}
+<div class="search-bar no-print" style="padding: 12px 20px; background:#fff; border-bottom:1px solid #e5e7eb;">
+    <form method="GET" action="{{ route('accounts.index') }}" style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" name="search" value="{{ request('search') }}" 
+               placeholder="بحث باسم الحساب أو رقم الكود..." 
+               style="flex:1; padding: 8px 12px; border:1px solid #d1d5db; border-radius:6px;">
+        <button type="submit" class="btn btn-primary btn-sm" style="background:#f59e0b; border:none; padding:8px 16px; border-radius:6px; color:#fff;">بحث</button>
+        @if(request('search'))
+            <a href="{{ route('accounts.index') }}" class="btn btn-secondary btn-sm" style="background:#6b7280; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none;">إلغاء البحث</a>
+        @endif
+    </form>
+</div>
+
     {{-- Expand/Collapse --}}
     <div class="tree-actions no-print">
         <button class="btn-tree-action" onclick="expandAll()">توسيع الكل</button>
         <button class="btn-tree-action" onclick="collapseAll()">طي الكل</button>
     </div>
+
+    
 
     {{-- Alerts --}}
     @if(session('success'))
@@ -366,6 +381,7 @@
                 @include('accounts._tree_node', [
                     'account' => $account,
                     'level'   => 0,
+                    'isSearching' => $isSearching ?? false,
                 ])
             @endforeach
         </tbody>

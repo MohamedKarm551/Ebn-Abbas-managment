@@ -32,7 +32,7 @@
                             <div class="row justify-content-center g-3">
                                 <div class="col-12 col-lg-12">
                                     <div class="row g-3">
-                                        <!-- الزر الأول -->
+                                        <!-- الزر الأول  -->
                                         <div class="col-12 col-md-6">
                                             <button type="button"
                                                 class="btn btn-info w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2"
@@ -51,6 +51,7 @@
                                                 <span>تسجيل دفعة لـ{{ $booking->agent->name }}</span>
                                             </button>
                                         </div>
+                                        
                                         <!-- الزر الثالث -->
                                         <div class="col-12 col-md-6">
                                            @if($companyAccount)
@@ -233,6 +234,11 @@
                     <td>18</td>
                     <td> الموظف المسؤول <i class="fas fa-user text-primary"></i> </td>
                     <td>{{ $booking->employee->name ?? 'غير محدد' }}</td>
+                </tr>
+                <tr>
+                    <td>19</td>
+                    <td>تم الإضافة بواسطة <i class="fas fa-user-check text-info"></i></td>
+                    <td>{{ $booking->createdBy->name ?? 'غير معروف' }}</td>
                 </tr>
                 <tr>
                     <td>19</td>

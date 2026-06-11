@@ -93,6 +93,21 @@
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
         </div>
+        <div class="col-md-4">
+    <label for="voucher_number" class="form-label">
+        رقم الفاوتشر <span class="text-danger">*</span>
+    </label>
+    <input type="text"
+           name="voucher_number"
+           id="voucher_number"
+           class="form-control @error('voucher_number') is-invalid @enderror"
+           value="{{ old('voucher_number', $availability?->voucher_number) }}"
+           required
+           placeholder="أدخل رقم الفاوتشر">
+    @error('voucher_number')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
         {{-- *** بداية الإضافة: حقل أقل عدد ليالي *** --}}
         <div class="col-md-6">
             <label for="min_nights" class="form-label">أقل عدد ليالي للحجز (اختياري)</label>

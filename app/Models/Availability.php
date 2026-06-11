@@ -16,6 +16,7 @@ class Availability extends Model
         'employee_id',
         'start_date',
         'end_date',
+        'voucher_number',
         'status', // مثلاً: 'active', 'inactive', 'expired'
         'is_auto',  
         'notes',
