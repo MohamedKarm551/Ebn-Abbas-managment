@@ -48,7 +48,33 @@
 </style>
 <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm no-print">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/">نظام إدارة الحجوزات</a>
+
+
+    <a class="navbar-brand fw-bold d-inline-block" href="/">
+         نظام إدارة الحجوزات
+    </a>
+<!--
+        <div class="dropdown d-inline-block">
+            <a class="navbar-brand fw-bold" href="#" id="bookingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                نظام إدارة الحجوزات
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="bookingDropdown">
+                <li>
+                    <a class="dropdown-item" href="/">  
+                        <i class="fas fa-kaaba me-2"></i>  حجوزات السعودية   
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ config('app.egypt_booking_url') }}" target="_blank">
+                         <i class="fas fa-landmark me-2"></i> حجوزات مصر
+                    </a>
+                </li>
+            </ul>
+        </div>
+-->
+
+
+
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -214,6 +240,7 @@
                                             class="fas fa-bell me-1"></i></a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.monthly-expenses.index') }}">المصاريف
                                         الشهرية <i class="fas fa-money-bill-wave me-1"></i></a></li>
+
                                 <!-- إضافة زر تقارير العمليات للموظفين والأدمن -->
                                 <li class="dropdown-divider"></li>
                                 <li>

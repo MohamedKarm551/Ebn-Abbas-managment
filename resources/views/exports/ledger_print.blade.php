@@ -185,23 +185,48 @@
                     $checkOut = $booking->check_out ? \Carbon\Carbon::parse($booking->check_out)->format('d-m-y') : '—';
                     $detailedDescription =
                         "{$booking->id} {$booking->client_name} - " . ($booking->hotel->name ?? '—') . "\n" .
-                        "{$booking->rooms} غرفة : {$checkIn} → {$checkOut}\n" .
+                        "{$booking->rooms} غرفة : {$checkIn} ← {$checkOut}\n" .
                         number_format($booking->sale_price, 2) . " " . ($booking->currency === 'KWD' ? 'د.ك' : 'ر.س');
                 }
-            } elseif ($entry->source_type === 'App\Models\Availability' && $entry->source_id) {
-                $availability = $availabilities[$entry->source_id] ?? null;
-                if ($availability) {
-                    $startDate = $availability->start_date ? \Carbon\Carbon::parse($availability->start_date)->format('d-m-y') : '—';
-                    $endDate   = $availability->end_date   ? \Carbon\Carbon::parse($availability->end_date)->format('d-m-y')   : '—';
-                    $roomsSummary = $availability->availabilityRoomTypes->map(function($rt) {
-                        return ($rt->roomType->room_type_name ?? '—') . ': ' . $rt->allotment . ' غرفة بـ ' . number_format($rt->cost_price, 2);
-                    })->implode(' | ');
-                    $detailedDescription =
-                        "{$availability->id} - " . ($availability->hotel->name ?? '—') . "\n" .
-                        "{$startDate} → {$endDate}\n" .
-                        $roomsSummary;
+            } 
+            elseif ($entry->source_type === 'App\Models\Availability' && $entry->source_id) {
+    $availability = $availabilities[$entry->source_id] ?? null;
+    if ($availability) {
+        $startDate = $availability->start_date ? \Carbon\Carbon::parse($availability->start_date)->format('d-m-y') : '—';
+        $endDate   = $availability->end_date   ? \Carbon\Carbon::parse($availability->end_date)->format('d-m-y')   : '—';
+        
+        $roomsSummary = $availability->availabilityRoomTypes->map(function($rt) {
+            return ($rt->roomType->room_type_name ?? '—') . ': ' . $rt->allotment . ' غرفة بـ ' . number_format($rt->cost_price, 2);
+        })->implode(' | ');
+
+        // ✅ البحث عن اسم العميل للإتاحة التلقائية
+        $clientName = null;
+        if ($availability->is_auto) {
+            // محاولة 1: من autoBookingsMap إن وجد
+            if (isset($autoBookingsMap[$availability->id])) {
+                $clientName = $autoBookingsMap[$availability->id]->client_name;
+            } else {
+                // محاولة 2: البحث المباشر عن الحجز المرتبط بأول room type
+                $roomType = $availability->availabilityRoomTypes->first();
+                if ($roomType) {
+                    $booking = \App\Models\Booking::where('availability_room_type_id', $roomType->id)->first();
+                    if ($booking) {
+                        $clientName = $booking->client_name;
+                    }
                 }
             }
+        }
+
+        $line1 = "{$availability->id} - " . ($availability->hotel->name ?? '—');
+        if ($clientName) {
+            $line1 .= " | عميل: {$clientName}";
+        }
+
+        $detailedDescription = $line1 . "\n" .
+                               "{$endDate} → {$startDate}\n" .
+                               $roomsSummary;
+    }
+}
 
             $descriptionText = $detailedDescription ?: ($trans->description ?: '—');
         @endphp

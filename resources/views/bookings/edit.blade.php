@@ -28,30 +28,52 @@
                     @endforeach
                 </select>
             </div>
-            <div class="mb-3">
+
+
+           <div class="mb-3">
                 <label for="agent_id" class="form-label">جهة الحجز</label>
-                <select class="form-control" id="agent_id" name="agent_id" required>
-                    <option value="" disabled selected>اختر جهة الحجز</option>
-                    @foreach ($agents as $agent)
-                        <option value="{{ $agent->id }}"
-                            {{ isset($booking) && $agent->id == $booking->agent_id ? 'selected' : '' }}>
-                            {{ $agent->name }}
-                        </option>
-                    @endforeach
-                </select>
+                @if(!$isLinkedToAutoAvailability)
+                    @php
+                        $selectedAgentName = $booking->agent->name ?? '';
+                    @endphp
+                    <div class="form-control" style="background-color: #e9ecef; cursor: not-allowed;" readonly>
+                        {{ $selectedAgentName }}
+                    </div>
+                    <input type="hidden" name="agent_id" value="{{ $booking->agent_id }}">
+                @else
+                    <select class="form-control" id="agent_id" name="agent_id" required>
+                        <option value="" disabled selected>اختر جهة الحجز</option>
+                        @foreach ($agents as $agent)
+                            <option value="{{ $agent->id }}" {{ $booking->agent_id == $agent->id ? 'selected' : '' }}>
+                                {{ $agent->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @endif
             </div>
-            <div class="mb-3">
+
+           <div class="mb-3">
                 <label for="hotel_id" class="form-label">اسم الفندق</label>
-                <select class="form-control" id="hotel_id" name="hotel_id" required>
-                    <option value="" disabled selected>اختر الفندق</option>
-                    @foreach ($hotels as $hotel)
-                        <option value="{{ $hotel->id }}"
-                            {{ isset($booking) && $hotel->id == $booking->hotel_id ? 'selected' : '' }}>
-                            {{ $hotel->name }}
-                        </option>
-                    @endforeach
-                </select>
+                @if(!$isLinkedToAutoAvailability)
+                    @php
+                        $selectedHotelName = $booking->hotel->name ?? '';
+                    @endphp
+                    <div class="form-control" style="background-color: #e9ecef; cursor: not-allowed;" readonly>
+                        {{ $selectedHotelName }}
+                    </div>
+                    <input type="hidden" name="hotel_id" value="{{ $booking->hotel_id }}">
+                @else
+                    <select class="form-control" id="hotel_id" name="hotel_id" required>
+                        <option value="" disabled selected>اختر الفندق</option>
+                        @foreach ($hotels as $hotel)
+                            <option value="{{ $hotel->id }}" {{ $booking->hotel_id == $hotel->id ? 'selected' : '' }}>
+                                {{ $hotel->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @endif
             </div>
+
             <div class="mb-3">
                 <label for="room_type" class="form-label">نوع الغرفة</label>
                 <input type="text" class="form-control" id="room_type" name="room_type"
@@ -82,10 +104,11 @@
                 <input type="number" class="form-control" id="rooms" name="rooms" value="{{ $booking->rooms }}"
                     required>
             </div>
-            <div class="mb-3">
+           <div class="mb-3">
                 <label for="cost_price" class="form-label">السعر من الفندق</label>
                 <input type="number" step="0.01" class="form-control" id="cost_price" name="cost_price"
-                    value="{{ $booking->cost_price }}" required>
+                    value="{{ $booking->cost_price }}" required
+                    @if(!$isLinkedToAutoAvailability) readonly style="background-color: #e9ecef; cursor: not-allowed;" @endif>
             </div>
             <div class="mb-3">
                 <label for="sale_price" class="form-label">سعر البيع للشركة</label>
@@ -106,15 +129,24 @@
     </div>
     <div class="mb-3">
         <label for="employee_id" class="form-label">الموظف المسؤول</label>
-        <select class="form-control" id="employee_id" name="employee_id" required>
-            <option value="" disabled selected>اختر الموظف</option>
-            @foreach ($employees as $employee)
-                <option value="{{ $employee->id }}"
-                    {{ isset($booking) && $employee->id == $booking->employee_id ? 'selected' : '' }}>
-                    {{ $employee->name }}
-                </option>
-            @endforeach
-        </select>
+        @if(!$isLinkedToAutoAvailability)
+            @php
+                $selectedEmployeeName = $booking->employee->name ?? '';
+            @endphp
+            <div class="form-control" style="background-color: #e9ecef; cursor: not-allowed;" readonly>
+                {{ $selectedEmployeeName }}
+            </div>
+            <input type="hidden" name="employee_id" value="{{ $booking->employee_id }}">
+        @else
+            <select class="form-control" id="employee_id" name="employee_id" required>
+                <option value="" disabled selected>اختر الموظف</option>
+                @foreach ($employees as $employee)
+                    <option value="{{ $employee->id }}" {{ $booking->employee_id == $employee->id ? 'selected' : '' }}>
+                        {{ $employee->name }}
+                    </option>
+                @endforeach
+            </select>
+        @endif
     </div>
     <div class="mb-3">
         <label for="notes" class="form-label">الملاحظات</label>

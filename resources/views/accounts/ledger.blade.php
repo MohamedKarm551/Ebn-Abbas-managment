@@ -369,7 +369,7 @@
                 $detailedDescription = [
                     'type'    => 'booking',
                     'line1'   => "{$booking->id} {$booking->client_name} - " . ($booking->hotel->name ?? '—'),
-                    'line2'   => "{$booking->rooms} غرفة : {$checkIn} → {$checkOut}",
+                    'line2'   => "{$booking->rooms} غرفة : {$checkIn} ← {$checkOut}",
                     'line3'   => number_format($booking->sale_price, 2) . " " . ($booking->currency === 'KWD' ? 'د.ك' : 'ر.س'),
                     'url'     => route('bookings.show', $booking->id),
                 ];
@@ -382,10 +382,18 @@
                 $roomsSummary = $availability->availabilityRoomTypes->map(function($rt) {
                     return ($rt->roomType->room_type_name ?? '—') . ': ' . $rt->allotment . ' غرفة بـ ' . number_format($rt->cost_price, 2);
                 })->implode(' | ');
+
+                $clientName = null;
+                if ($availability->is_auto && isset($autoBookingsMap[$availability->id])) {
+                    $booking = $autoBookingsMap[$availability->id];
+                    $clientName = $booking->client_name;
+                }
+
                 $detailedDescription = [
                     'type'  => 'availability',
-                    'line1' => "{$availability->id} - " . ($availability->hotel->name ?? '—'),
-                    'line2' => "{$startDate} → {$endDate}",
+                    'line1' => "{$availability->id} - " . ($availability->hotel->name ?? '—') 
+                       . ($clientName ? " | عميل: {$clientName}" : ''),
+                    'line2' => "{$endDate} → {$startDate}",
                     'line3' => $roomsSummary,
                     'url'   => route('admin.availabilities.show', $availability->id),
                 ];

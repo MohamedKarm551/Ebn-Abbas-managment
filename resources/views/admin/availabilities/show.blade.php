@@ -26,12 +26,12 @@
         </div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <p><strong>الفندق:</strong> {{ $availability->hotel->name ?? 'غير محدد' }}</p>
                     <p><strong>جهة الحجز:</strong> {{ $availability->agent->name ?? 'غير محدد' }}</p>
                     <p><strong>الموظف المسؤول:</strong> {{ $availability->employee->name ?? 'غير محدد' }}</p>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <p><strong>تاريخ البداية:</strong> {{ $availability->start_date->format('d/m/Y') }}</p>
                     <p><strong>تاريخ النهاية:</strong> {{ $availability->end_date->format('d/m/Y') }}</p>
                     <p><strong>الحالة:</strong>
@@ -45,6 +45,9 @@
                             <span class="badge bg-warning">{{ $availability->status }}</span>
                         @endif
                     </p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>رقم الفاوتشر:</strong> {{ $availability->voucher_number ?? 'غير محدد' }}</p>
                 </div>
                 @if($availability->notes)
                 <div class="col-12">

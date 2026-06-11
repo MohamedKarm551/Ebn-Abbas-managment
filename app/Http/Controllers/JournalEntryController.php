@@ -166,8 +166,8 @@ class JournalEntryController extends Controller
         return back()->with('success', 'تم اعتماد القيد ✅');
     }
 
-public function reverse($id)
-{
+    public function reverse($id)
+    {
     $originalEntry = JournalEntry::with('lines')->findOrFail($id);
 
     // منع عكس القيد إذا كان غير معتمد (draft)
@@ -234,7 +234,7 @@ public function reverse($id)
     });
 
     return redirect()->route('journal.index')->with('success', 'تم عكس القيد بنجاح. تم إنشاء قيد عكسي: ' . ($reverseReference ?? 'غير معروف'));
-}
+    }
 
 
     public function history($id)

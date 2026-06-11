@@ -33,6 +33,7 @@ class Booking extends Model
         'availability_room_type_id', // *** إضافة الحقل الجديد ***
         'amount_paid_by_company', // تأكد من وجود هذا الحقل في المايجريشن
         'amount_paid_to_hotel', // تأكد من وجود هذا الحقل في المايجريشن
+        'created_by',
     ];
 
     protected $casts = [
@@ -78,13 +79,16 @@ class Booking extends Model
         return $this->belongsTo(AvailabilityRoomType::class);
     }
 
-    // *** علاقة مساعدة للوصول للإتاحة مباشرة ***
-    public function availability()
+   public function availability()
     {
-        // نستخدم optional() للتعامل مع حالة null بأمان
-        return optional($this->availabilityRoomType)->availability();
-        // أو الطريقة الأحدث باستخدام Nullsafe operator (PHP 8+)
-        // return $this->availabilityRoomType?->availability();
+        return $this->hasOneThrough(
+            Availability::class,          // النموذج النهائي
+            AvailabilityRoomType::class,  // النموذج الوسيط
+            'id',                         // المفتاح الأجنبي في الوسيط (AvailabilityRoomType) المرتبط بـ Availability
+            'id',                         // المفتاح الأجنبي في النموذج النهائي (Availability)
+            'availability_room_type_id', // المفتاح المحلي في Booking
+            'availability_id'             // المفتاح المحلي في AvailabilityRoomType المرتبط بـ Availability
+        );
     }
 
     /** 
@@ -213,4 +217,10 @@ class Booking extends Model
     {
         return $this->hasMany(AgentPayment::class);
     }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+    
 }

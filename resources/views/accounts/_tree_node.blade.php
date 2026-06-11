@@ -1,6 +1,11 @@
 {{-- resources/views/accounts/_tree_node.blade.php --}}
 @php
-    $hasChildren = $account->allChildren->isNotEmpty();
+    $childrenCollection = isset($isSearching) && $isSearching 
+        ? ($account->filteredChildren ?? collect()) 
+        : ($account->allChildren ?? collect());
+    
+    $hasChildren = $childrenCollection->isNotEmpty();
+    
     $balance     = $account->getTotalBalance();
     $safeCode    = str_replace('.', '_', $account->code);
     $isFrozen    = !$account->is_active;
@@ -143,7 +148,7 @@
 @if($hasChildren)
     @php
         // ترتيب الأبناء حسب الكود عدديًا (مثال: 1.1.3.1.1 ثم 1.1.3.1.2 ... ثم 1.1.3.1.10)
-        $sortedChildren = $account->allChildren->sortBy(function($child) {
+        $sortedChildren = $childrenCollection->sortBy(function($child) {
             return array_map('intval', explode('.', $child->code));
         });
     @endphp
@@ -151,6 +156,7 @@
         @include('accounts._tree_node', [
             'account' => $child,
             'level'   => $level + 1,
+            'isSearching' => $isSearching ?? false,
         ])
     @endforeach
 @endif
