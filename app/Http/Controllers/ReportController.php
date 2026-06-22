@@ -1882,55 +1882,92 @@ class ReportController extends Controller
 
 
 // إضافة دفعة جديدة لوكيل (تسديد مستحقات الفندق)
-public function storeAgentPayment(Request $request)
-{
-    $validated = $request->validate([
-        'agent_id' => 'required|exists:agents,id',
-        'amount'   => 'required|numeric|min:0',
-        'currency' => 'required|in:SAR,KWD',
-        'payment_account_id' => 'required|exists:accounts,id', // ✅ جديد: حساب الدفع
-        'notes'    => 'nullable|string',
-        'booking_id' => 'nullable|exists:bookings,id', // اختياري لربط الحجز
-    ]);
+    public function storeAgentPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'agent_id' => 'required|exists:agents,id',
+            'amount'   => 'required|numeric|min:0',
+            'currency' => 'required|in:SAR,KWD',
+            'payment_account_id' => 'required|exists:accounts,id', // ✅ جديد: حساب الدفع
+            'notes'    => 'nullable|string',
+            'booking_id' => 'nullable|exists:bookings,id', // اختياري لربط الحجز
+        ]);
 
-    // تسجيل الدفعة في جدول agent_payments
-    $payment = AgentPayment::create([
-        'agent_id' => $validated['agent_id'],
-        'amount' => $validated['amount'],
-        'currency' => $validated['currency'],
-        'payment_date' => now(),
-        'notes' => $validated['notes'],
-        'account_id' => $validated['payment_account_id'], // ✅ تسجيل الحساب المستخدم
-        'employee_id' => Auth::id(),
-    ]);
+        // تسجيل الدفعة في جدول agent_payments
+        $payment = AgentPayment::create([
+            'agent_id' => $validated['agent_id'],
+            'amount' => $validated['amount'],
+            'currency' => $validated['currency'],
+            'payment_date' => now(),
+            'notes' => $validated['notes'],
+            'account_id' => $validated['payment_account_id'], // ✅ تسجيل الحساب المستخدم
+            'employee_id' => Auth::id(),
+        ]);
 
-    // إذا تم تمرير booking_id (دفعة مرتبطة بحجز معين)
-    if ($request->filled('booking_id')) {
-        $booking = Booking::find($request->input('booking_id'));
-        if ($booking) {
-            // ✅ استخدام حساب الدفع الذي اختاره المستخدم
-            AccountController::createHotelPaymentJournalEntry($booking, $payment->amount, $validated['payment_account_id']);
-            $booking->increment('amount_paid_to_hotel', $payment->amount);
+        // إذا تم تمرير booking_id (دفعة مرتبطة بحجز معين)
+        if ($request->filled('booking_id')) {
+            $booking = Booking::find($request->input('booking_id'));
+            if ($booking) {
+                // ✅ استخدام حساب الدفع الذي اختاره المستخدم
+                AccountController::createHotelPaymentJournalEntry($booking, $payment->amount, $validated['payment_account_id']);
+                $booking->increment('amount_paid_to_hotel', $payment->amount);
+            }
+        } else {
+            // إذا لم يتم ربط الحجز، قد تحتاج إلى منطق آخر (مثلاً سداد دين عام لجهة الحجز)
+            // يمكنك استدعاء دالة أخرى لتسجيل قيد محاسبي عام لجهة الحجز
+            AccountController::createAgentPaymentJournalEntry(
+                Agent::find($validated['agent_id']),
+                $validated['amount'],
+                $validated['payment_account_id'],
+                $payment->id   // <-- source_id
+            );
         }
-    } else {
-        // إذا لم يتم ربط الحجز، قد تحتاج إلى منطق آخر (مثلاً سداد دين عام لجهة الحجز)
-        // يمكنك استدعاء دالة أخرى لتسجيل قيد محاسبي عام لجهة الحجز
-       AccountController::createAgentPaymentJournalEntry(
-            Agent::find($validated['agent_id']),
-            $validated['amount'],
-            $validated['payment_account_id'],
-            $payment->id   // <-- source_id
-        );
+        // تحديث الحالة المالية المتابعة المالية 
+        $booking = Booking::find($request->input('booking_id'));
+        // $booking = Booking::with('financialTracking')->find($booking->id);
+
+        $financialTracking = $booking->financialTracking();
+        // dd($booking->financialTracking->agent_payment_status);
+        if (floatval($booking->amount_due_to_hotel) == floatval($booking->amount_paid_to_hotel)) {
+            $booking->financialTracking->agent_payment_status = "fully_paid";
+        }
+
+
+        $agent_payment_status = $booking->financialTracking->agent_payment_status;
+        $agent_payment_amount = $booking->financialTracking->agent_payment_amount;
+        // convert agent_payment_amount to num )(floatval)
+        $newPay = (floatval($payment->amount)); // الدفعة الجديدة 
+        $total_amount = floatval($booking->amount_paid_to_hotel);
+        //  dd($newPay); // اجمالي المدفوع حاليا بعد الدفعة الجديدة
+        //  dd($agent_payment_status,$agent_payment_amount);
+        // dd($total_amount);
+        if ($total_amount == floatval($booking->amount_due_to_hotel) || floatval($booking->amount_due_to_hotel) == floatval($booking->amount_paid_to_hotel)) {
+            $booking->financialTracking->agent_payment_status = "fully_paid";
+        } elseif ($total_amount > 0 && $total_amount < floatval($booking->amount_due_to_hotel)) {
+            $booking->financialTracking->agent_payment_status = "partially_paid";
+        }
+
+
+        $booking->financialTracking->save();
+        // dd($booking->financialTracking->agent_payment_status);
+        // تحديث في حالة مالية الحجز أيضا 
+        // ✅ احسب المبلغ الجديد
+        // $newCompanyAmount = ($financialTracking->company_payment_amount ?? 0) + $validated['amount'];
+
+        // ✅ حدّثه في الـ database باستخدام update()
+        $financialTracking->update([
+            'agent_payment_amount' => $booking->amount_paid_to_hotel,  // ← المبلغ الجديد
+            'agent_payment_notes' => $validated['notes'] ?? null,
+            'last_updated_by' => Auth::id(),
+        ]);
+        Notification::create([
+            'user_id' => Auth::id(),
+            'message' => "تم إضافة دفعة جديدة لجهة الحجز {$payment->agent->name} بمبلغ {$payment->amount} {$payment->currency} من حساب " . ($payment->account->name ?? ''),
+            'type' => 'دفعة جديدة',
+        ]);
+
+        return redirect()->back()->with('success', "تم تسجيل الدفعة بقيمة {$payment->amount} {$validated['currency']} بنجاح");
     }
-
-    Notification::create([
-        'user_id' => Auth::id(),
-        'message' => "تم إضافة دفعة جديدة لجهة الحجز {$payment->agent->name} بمبلغ {$payment->amount} {$payment->currency} من حساب " . ($payment->account->name ?? ''),
-        'type' => 'دفعة جديدة',
-    ]);
-
-    return redirect()->back()->with('success', "تم تسجيل الدفعة بقيمة {$payment->amount} {$validated['currency']} بنجاح");
-}
 
 
     /**

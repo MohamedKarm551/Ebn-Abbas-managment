@@ -32,7 +32,7 @@
                             <div class="row justify-content-center g-3">
                                 <div class="col-12 col-lg-12">
                                     <div class="row g-3">
-                                        <!-- الزر الأول  -->
+                                        <!-- الزر الأول  
                                         <div class="col-12 col-md-6">
                                             <button type="button"
                                                 class="btn btn-info w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2"
@@ -41,7 +41,8 @@
                                                 <span>تسجيل دفعة للشركة</span>
                                             </button>
                                         </div>
-                                        <!-- الزر الثاني -->
+                                        -->
+                                        <!-- الزر الثاني 
                                         <div class="col-12 col-md-6">
                                             <button type="button"
                                                 class="btn btn-success w-100 px-4 py-2 d-flex justify-content-center align-items-center rounded-3 shadow-sm gap-2"
@@ -51,7 +52,7 @@
                                                 <span>تسجيل دفعة لـ{{ $booking->agent->name }}</span>
                                             </button>
                                         </div>
-                                        
+                                        -->
                                         <!-- الزر الثالث -->
                                         <div class="col-12 col-md-6">
                                            @if($companyAccount)

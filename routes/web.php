@@ -658,3 +658,4 @@ Route::get('/vouchers/payment', [VoucherController::class, 'payment'])->name('vo
 Route::post('/vouchers/save',   [VoucherController::class, 'save'])->name('vouchers.save');
 Route::get('/vouchers/{entry}/show',       [VoucherController::class, 'showVoucher'])->name('vouchers.show');
 Route::put('/vouchers/{entry}/update',     [VoucherController::class, 'updateVoucher'])->name('vouchers.update');
+Route::get('/vouchers/open-bookings', [VoucherController::class, 'getOpenBookings'])->name('vouchers.open-bookings');
