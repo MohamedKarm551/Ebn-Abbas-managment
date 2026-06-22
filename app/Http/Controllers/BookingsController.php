@@ -1884,10 +1884,11 @@ private function saveBookingAndUpdateAllotment(array $validatedData, bool $isBoo
         $maxAllowed = $booking->amount_due_from_company - $currentPaid;
 
         if ($validated['amount'] > $maxAllowed) {
-                return redirect()->back()->with('error', 
+            return redirect()->back()->with(
+                'error',
                 "المبلغ المطلوب ({$validated['amount']}) يتجاوز المتبقي المستحق ({$maxAllowed})"
-                );
-            }
+            );
+        }
 
         // ✅✅✅ ج2: تسجيل القيد المحاسبي (الأهم!) ✅✅✅
         try {
@@ -1914,13 +1915,51 @@ private function saveBookingAndUpdateAllotment(array $validatedData, bool $isBoo
         // ✅✅✅ ج4: تحديث المبلغ المدفوع في الحجز ✅✅✅
         $newAmountPaid = $currentPaid + $validated['amount'];
         $paymentStatus = 'partial';
-        
+
         if ($newAmountPaid >= $booking->amount_due_from_company) {
             $paymentStatus = 'paid';
         } elseif ($newAmountPaid <= 0) {
             $paymentStatus = 'unpaid';
         }
-    
+        // هنقل الكود هنا قبل التحديث في الداتا بيز تحديث الحالة المالية برضو
+        $booking = Booking::with('financialTracking')->find($booking->id);
+
+        $financialTracking = $booking->financialTracking();
+        // تحديث حالة الدفع في financial tracking بناءً على المبلغ المدفوع
+        // $booking->financialTracking->company_payment_status="fully_paid";
+        if (floatval($booking->amount_due_from_company) == floatval($booking->amount_paid_by_company)) {
+            $booking->financialTracking->company_payment_status = "fully_paid";
+        }
+
+
+        $company_payment_status = $booking->financialTracking->company_payment_status;
+        $company_payment_amount = $booking->financialTracking->company_payment_amount;
+        // convert company_payment_amount to num )(floatval)
+        $newPay = (floatval($payment->amount)); // الدفعة الجديدة 
+        $total_amount = floatval($booking->amount_paid_by_company) + floatval($newPay);
+        // dd($total_amount); // اجمالي المدفوع حاليا بعد الدفعة الجديدة
+        //  dd($company_payment_status,$company_payment_amount);
+        // dd($total_amount);
+        if ($total_amount == floatval($booking->amount_due_from_company) || floatval($booking->amount_due_from_company) == floatval($booking->amount_paid_by_company)) {
+            $booking->financialTracking->company_payment_status = "fully_paid";
+        } elseif ($total_amount > 0 && $total_amount < floatval($booking->amount_due_from_company)) {
+            $booking->financialTracking->company_payment_status = "partially_paid";
+        }
+
+
+        $booking->financialTracking->save();
+        // dd($booking->financialTracking->company_payment_status);
+        // تحديث في حالة مالية الحجز أيضا 
+        // ✅ احسب المبلغ الجديد
+        // $newCompanyAmount = ($financialTracking->company_payment_amount ?? 0) + $validated['amount'];
+
+        // ✅ حدّثه في الـ database باستخدام update()
+        $financialTracking->update([
+            'company_payment_amount' => $total_amount,  // ← المبلغ الجديد
+            'company_payment_notes' => $validated['notes'] ?? null,
+            'last_updated_by' => Auth::id(),
+        ]);
+
         $booking->update([
             'amount_paid_by_company' => $newAmountPaid,
             'payment_status' => $paymentStatus,
@@ -1932,7 +1971,10 @@ private function saveBookingAndUpdateAllotment(array $validatedData, bool $isBoo
             'total_paid' => $newAmountPaid,
             'status' => $paymentStatus
         ]);
-
+        // تحديث الحالة المالية
+        // $financialTracking = $booking->financialTracking();
+        // dd($financialTracking);
+        // نهاية تحديث الحالة المالية 
 
         // Redirect back with success message
         return redirect()->route('bookings.show', $booking->id)->with(
