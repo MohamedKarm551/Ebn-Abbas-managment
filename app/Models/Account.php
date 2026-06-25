@@ -70,37 +70,32 @@ class Account extends Model
     }
 
    
-    /**
- * الرصيد الإجمالي (مدين - دائن) مع مراعاة طبيعة الحساب
- */
-public function getTotalBalance(): float
-{
-    // لو حساب نهائي (leaf) → اجيب رصيده من الـ ledger مباشرة
-    if ($this->is_leaf) {
-        $debit  = (float) $this->ledger()->sum('debit');
-        $credit = (float) $this->ledger()->sum('credit');
-        
-        return $this->normal_balance === 'debit'
-            ? $debit - $credit
-            : $credit - $debit;
-    }
-
-    // لو حساب أب → اجمع أرصدة كل أبنائه recursively
-    $total = 0;
-    foreach ($this->allChildren as $child) {
-        $total += $child->getTotalBalance();
-    }
-    return $total;
-}
-
-    public function getBalanceAttribute()
+    public function getTotalBalance(): float
     {
-        $debit = $this->journalLines()->sum('debit');
-        $credit = $this->journalLines()->sum('credit');
+        if ($this->is_leaf) {
+            $row = $this->ledger()
+                ->whereHas('journalEntry', fn($q) => $q->where('status', 'posted'))
+                ->selectRaw('SUM(debit) as total_debit, SUM(credit) as total_credit')
+                ->first();
+    
+            $debit  = (float) ($row->total_debit  ?? 0);
+            $credit = (float) ($row->total_credit ?? 0);
+    
+            return $this->normal_balance === 'debit'
+                ? $debit - $credit
+                : $credit - $debit;
+        }
+    
+        $total = 0;
+        foreach ($this->allChildren as $child) {
+            $total += $child->getTotalBalance();
+        }
+        return $total;
+    }
 
-        return $this->normal_balance === 'debit' 
-            ? $debit - $credit 
-            : $credit - $debit;
+    public function getBalanceAttribute(): float
+    {
+        return $this->getTotalBalance();
     }
 
     // =====================
