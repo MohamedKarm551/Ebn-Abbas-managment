@@ -35,7 +35,7 @@
         width: 900px;         
         max-width: 100%;
         margin: 0 auto;
-        background-image: url('{{ asset('images/cash_receipt.jpg') }}');
+        background-image: url('{{ asset('images/cash_exchange.jpg') }}');
         background-size: 100% 100%;  
         background-repeat: no-repeat;
         background-position: top center;
