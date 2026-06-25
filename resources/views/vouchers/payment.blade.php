@@ -61,12 +61,12 @@
 .acc-trigger-inline:hover, .acc-trigger-inline.open { border-bottom-color: #2563eb; }
 .acc-trigger-inline .arr { font-size: 9px; color: #9ca3af; flex-shrink: 0; margin-left: 4px; }
 .acc-trigger-inline .acc-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.acc-popup-inline {
-    display: none; position: absolute; top: calc(100% + 2px); right: 0;
-    z-index: 9999; background: #fff; border: 1px solid #e5e7eb;
-    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.13);
-    min-width: 260px; max-width: 360px; overflow: hidden;
-}
+ .acc-popup-inline {
+        display: none; position: absolute; bottom: calc(100% + 4px);top: auto;right: 0;
+        z-index: 9999; background: #fff; border: 1px solid #e5e7eb;
+        border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.13);
+        min-width: 260px; max-width: 360px; max-height: 250px; overflow: hidden;
+    }
 .acc-popup-inline.open { display: block; }
 .acc-search-box-inline { padding: 8px; border-bottom: 1px solid #f3f4f6; }
 .acc-search-box-inline input {

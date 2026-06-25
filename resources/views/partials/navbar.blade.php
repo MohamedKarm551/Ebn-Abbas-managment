@@ -49,11 +49,11 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm no-print">
     <div class="container">
 
-
+<!--
     <a class="navbar-brand fw-bold d-inline-block" href="/">
          نظام إدارة الحجوزات
     </a>
-<!--
+-->
         <div class="dropdown d-inline-block">
             <a class="navbar-brand fw-bold" href="#" id="bookingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 نظام إدارة الحجوزات
@@ -71,7 +71,7 @@
                 </li>
             </ul>
         </div>
--->
+
 
 
 
