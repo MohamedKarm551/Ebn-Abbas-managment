@@ -180,22 +180,9 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($accounts as $i => $account)
-            <tr>
-                <td class="td-code">{{ $account->code }}</td>
-                <td class="td-name">{{ $account->name }}</td>
-                <td class="td-num td-debit">{{ number_format($account->total_debit, 2) }}</td>
-                <td class="td-num td-credit">{{ number_format($account->total_credit, 2) }}</td>
-                <td class="td-num td-balance">
-                    {{ number_format(abs($account->balance), 2) }}
-                    <small style="font-size:9px; color:#555555;">{{ $account->balance >= 0 ? 'مدين' : 'دائن' }}</small>
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="5" style="text-align:center; padding:20px; color:#666666;">لا توجد بيانات</td>
-            </tr>
-            @endforelse
+            @foreach($accounts as $account)
+                @include('financial-reports._trial_balance_node', ['account' => $account, 'level' => 0])
+            @endforeach
         </tbody>
         <tfoot>
             <tr>
