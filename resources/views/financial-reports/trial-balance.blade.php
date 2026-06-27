@@ -131,16 +131,7 @@
                 </thead>
                 <tbody>
                     @foreach($accounts as $account)
-                    <tr>
-                        <td><code>{{ $account->code }}</code></td>
-                        <td class="text-start">{{ $account->name }}</td>
-                        <td class="text-success">{{ number_format($account->total_debit, 2) }}</td>
-                        <td class="text-danger">{{ number_format($account->total_credit, 2) }}</td>
-                        <td class="{{ $account->balance >= 0 ? 'text-success' : 'text-danger' }}">
-                            {{ number_format(abs($account->balance), 2) }}
-                            <small>{{ $account->balance >= 0 ? 'مدين' : 'دائن' }}</small>
-                        </td>
-                    </tr>
+                        @include('financial-reports._trial_balance_node', ['account' => $account, 'level' => 0])
                     @endforeach
                 </tbody>
                 <tfoot style="background:#2d2d2d; font-weight:bold;">

@@ -17,32 +17,20 @@ class FinancialReportsController extends Controller
     public function trialBalance(Request $request)
     {
         $dateFrom = $request->input('date_from', Carbon::now()->startOfYear()->format('Y-m-d'));
-        $dateTo   = $request->input('date_to',   Carbon::now()->format('Y-m-d'));
+        $dateTo   = $request->input('date_to', Carbon::now()->format('Y-m-d'));
 
-        // جلب كل الحسابات النهائية (is_leaf)
-        $accounts = Account::where('is_leaf', true)
+        $rootAccounts = Account::with('allChildren')
+            ->whereNull('parent_id')
             ->where('is_active', true)
             ->orderBy('code')
-            ->get()
-            ->map(function ($account) use ($dateFrom, $dateTo) {
-                // مجموع المدين والدائن من سطور القيود
-                $lines = JournalEntryLine::where('account_id', $account->id)
-                    ->whereHas('journalEntry', function ($q) use ($dateFrom, $dateTo) {
-                        $q->whereBetween('entry_date', [$dateFrom, $dateTo]);
-                    })
-                    ->selectRaw('SUM(debit) as total_debit, SUM(credit) as total_credit')
-                    ->first();
+            ->get();
 
-                $account->total_debit  = $lines->total_debit  ?? 0;
-                $account->total_credit = $lines->total_credit ?? 0;
-                $account->balance      = $account->total_debit - $account->total_credit;
+        $accounts = $this->buildTrialBalanceTree($rootAccounts, $dateFrom, $dateTo);
 
-                return $account;
-            })
-            ->filter(fn($a) => $a->total_debit > 0 || $a->total_credit > 0);
+        $accounts = $this->filterNonZero($accounts);
 
-        $totalDebit  = $accounts->sum('total_debit');
-        $totalCredit = $accounts->sum('total_credit');
+        $totalDebit  = $this->sumTree($accounts, 'total_debit');
+        $totalCredit = $this->sumTree($accounts, 'total_credit');
 
         if ($request->query('export') === 'excel') {
             return $this->exportToExcel($accounts, 'ميزان_المراجعة', $dateFrom, $dateTo); 
@@ -57,6 +45,43 @@ class FinancialReportsController extends Controller
         return view('financial-reports.trial-balance', compact(
             'accounts', 'totalDebit', 'totalCredit', 'dateFrom', 'dateTo'
         ));
+    }
+
+    private function buildTrialBalanceTree($accounts, $dateFrom, $dateTo): \Illuminate\Support\Collection
+    {
+        return $accounts->map(function ($account) use ($dateFrom, $dateTo) {
+            if ($account->is_leaf) {
+                $data = $this->calcBalance($account, $dateFrom, $dateTo);
+                $account->total_debit  = $data['total_debit'];
+                $account->total_credit = $data['total_credit'];
+                $account->balance      = $data['balance'];
+                $account->children_data = collect();
+            } else {
+                $account->children_data = $this->buildTrialBalanceTree(
+                    $account->allChildren, $dateFrom, $dateTo
+                );
+                $account->total_debit  = $this->sumTree($account->children_data, 'total_debit');
+                $account->total_credit = $this->sumTree($account->children_data, 'total_credit');
+                $account->balance      = $account->total_debit - $account->total_credit;
+            }
+            return $account;
+        });
+    }
+
+    private function sumTree($accounts, string $field): float
+    {
+        return $accounts->sum(fn($a) => $a->$field ?? 0);
+    }
+
+    private function filterNonZero($accounts): \Illuminate\Support\Collection
+    {
+        return $accounts->filter(function ($account) {
+            if ($account->is_leaf) {
+                return $account->total_debit > 0 || $account->total_credit > 0;
+            }
+            $account->children_data = $this->filterNonZero($account->children_data);
+            return $account->children_data->isNotEmpty();
+        })->values();
     }
 
     public function incomeStatement(Request $request)
@@ -466,20 +491,7 @@ private function calcBalance(Account $account, ?string $dateFrom, ?string $dateT
     
     $html .= '<tbody>';
     
-    // صفوف البيانات
-    foreach ($data as $row) {
-        // تحديد الرصيد مع الاتجاه
-        $balanceDirection = ($row->balance >= 0) ? 'مدين' : 'دائن';
-        $balanceDisplay = number_format(abs($row->balance), 2) . ' ' . $balanceDirection;
-        
-        $html .= '<tr>';
-        $html .= '<td style="text-align: right;">' . $balanceDisplay . '</td>';
-        $html .= '<td style="text-align: right;">' . number_format($row->total_credit, 2) . '</td>';
-        $html .= '<td style="text-align: right;">' . number_format($row->total_debit, 2) . '</td>';
-        $html .= '<td style="text-align: right;">' . $row->name . '</td>';
-        $html .= '<td style="text-align: right;">' . $row->code . '</td>';
-        $html .= '</tr>';
-    }
+    $html .= $this->renderTreeRows($data, 0);
     
     // صف الإجمالي
     $status = ($totalDebit == $totalCredit) ? 'متوازن' : 'غير متوازن';
@@ -495,6 +507,32 @@ private function calcBalance(Account $account, ?string $dateFrom, ?string $dateT
     $html .= '</body></html>';
     
     return response($html, 200, $headers);
+}
+
+private function renderTreeRows($accounts, int $level): string
+{
+    $html = '';
+    $padding = str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $level);
+    
+    foreach ($accounts as $account) {
+        $bgColor = $level === 0 ? '#e8e8e8' : ($level === 1 ? '#f5f5f5' : '#ffffff');
+        $fontWeight = $level <= 1 ? 'bold' : 'normal';
+        
+        $balanceDir = $account->balance >= 0 ? 'مدين' : 'دائن';
+        
+        $html .= "<tr style='background:{$bgColor}; font-weight:{$fontWeight};'>";
+        $html .= "<td style='text-align:right;'>" . number_format(abs($account->balance), 2) . " {$balanceDir}</td>";
+        $html .= "<td style='text-align:right;'>" . number_format($account->total_credit, 2) . "</td>";
+        $html .= "<td style='text-align:right;'>" . number_format($account->total_debit, 2) . "</td>";
+        $html .= "<td style='text-align:right;'>{$padding}{$account->name}</td>";
+        $html .= "<td>{$account->code}</td>";
+        $html .= "</tr>";
+        
+        if (!$account->is_leaf && $account->children_data->isNotEmpty()) {
+            $html .= $this->renderTreeRows($account->children_data, $level + 1);
+        }
+    }
+    return $html;
 }
 
 
