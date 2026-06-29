@@ -327,7 +327,7 @@
 {{-- بعد الـ </thead> مباشرة --}}
 <tbody>
     @php
-        $counter = 1;
+        $counter = ($transactions->currentPage() - 1) * $transactions->perPage() + 1;
         $runningBalance = $openingBalance;
     @endphp
 

@@ -81,16 +81,25 @@
                             placeholder="اسم العميل، الموظف، الشركة، جهة حجز، فندق" pattern="[^<>\(\){}\[\];]*"
                             title="لا يسمح بإدخال رموز خاصة مثل: <> () {} []" value="{{ request('search') }}" />
                     </div>
-                    <div class="col-md-4 mb-2">
+                    <div class="col-md-2 mb-2">
+                        <label class="form-label">حالة الدفع</label>
+                        <select name="payment_status" class="form-select">
+                            <option value="">-- كل الحالات --</option>
+                            <option value="not_paid"    {{ request('payment_status') == 'not_paid'  ? 'selected' : '' }}>غير مدفوع</option>
+                            <option value="partially_paid"   {{ request('payment_status') == 'partially_paid' ? 'selected' : '' }}>مدفوع جزئياً</option>
+                            <option value="fully_paid"      {{ request('payment_status') == 'fully_paid'    ? 'selected' : '' }}>مدفوع بالكامل</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
                         <label for="start_date" class="form-label">من تاريخ</label>
                         <input type="text" name="start_date" id="start_date" class="form-control datepicker"
                             value="{{ request('start_date') }}" placeholder="يوم/شهر/سنة">
                     </div>
-                    <div class="col-md-4 mb-2">
+                    <div class="col-md-3 mb-2">
                         <label for="end_date" class="form-label">إلى تاريخ</label>
                         <input type="text" name="end_date" id="end_date" class="form-control datepicker"
                             value="{{ request('end_date') }}" placeholder="يوم/شهر/سنة">
-                    </div>
+                    </div>                   
                 </div>
                 <div class="text-center mt-3">
                     <button type="submit" class="btn btn-primary glow-hover">فلترة</button>
