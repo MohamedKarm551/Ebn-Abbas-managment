@@ -426,6 +426,19 @@ class AvailabilityController extends Controller
             'voucher_number' => $validatedData['voucher_number'],
         ]);
 
+        $oldVoucher = $originalData['voucher_number'] ?? null;
+        $newVoucher = $availability->voucher_number;
+        if ($oldVoucher !== $newVoucher) {
+            \App\Models\Booking::whereIn('availability_room_type_id', $roomTypeIds)
+                ->get()
+                ->each(function ($booking) use ($newVoucher) {
+                    $cleanName = trim(preg_replace('/\s+\d+$/', '', $booking->client_name));
+                    $booking->update([
+                        'client_name' => $cleanName . ' ' .  $newVoucher
+                    ]);
+                });
+        }
+
         // Sync room types and daily status
         $submittedRoomTypes = collect($validatedData['room_types'] ?? []);
         $existingRoomTypeIds = $availability->availabilityRoomTypes()->pluck('id')->all();

@@ -64,6 +64,10 @@
         <form action="{{ route('accounts.store') }}" method="POST">
             @csrf
 
+            @if(isset($preset))
+                <input type="hidden" name="account_kind" value="leaf">
+            @endif
+
             <div class="grid-2">
                 {{-- اسم الحساب --}}
                 <div class="form-group">
@@ -79,8 +83,8 @@
                     <label>نوع الحساب <span class="required">*</span></label>
                     <select name="type" class="form-control @error('type') is-invalid @enderror" required>
                         <option value="">-- اختر النوع --</option>
-                        @foreach($types as $key => $label)
-                            <option value="{{ $key }}" {{ old('type') == $key ? 'selected' : '' }}>
+                        @foreach($types as $key => $label) {{ old('type', $presetType ?? '') == $key ? 'selected' : '' }}>
+                             <option value="{{ $key }}" {{ old('type', $presetType ?? '') == $key ? 'selected' : '' }}>
                                 {{ $label }}
                             </option>
                         @endforeach
@@ -98,7 +102,7 @@
                         <option value="{{ $parent->id }}"
                                 data-leaf="{{ $parent->is_leaf ? '1' : '0' }}"
                                 data-active="{{ $parent->is_active ? '1' : '0' }}"
-                                {{ old('parent_id') == $parent->id ? 'selected' : '' }}>
+                                {{ old('parent_id', $presetParentId ?? '') == $parent->id ? 'selected' : '' }}>
                             {{ $parent->code }} - {{ $parent->name }}
                             @if(!$parent->is_active) (مجمد) @endif
                         </option>

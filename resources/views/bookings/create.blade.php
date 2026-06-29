@@ -51,6 +51,8 @@
                 {{-- الشركة --}}
                 <div class="col-md-6">
                     <label for="company_id" class="form-label">اسم الشركة <span class="text-danger">*</span></label>
+                     <a href="{{ route('accounts.create', ['preset' => 'company']) }}" 
+                        class="btn btn-success btn-sm" title="إضافة شركة جديدة">+</a>
                     <select class="form-select select2 @error('company_id') is-invalid @enderror" id="company_id"
                         name="company_id" required {{ auth()->user()->role == 'Company' ? 'disabled' : '' }}>
                         @foreach ($companies as $company)
@@ -72,6 +74,8 @@
                 @if (auth()->user()->role != 'Company')
                     <div class="col-md-6">
                         <label for="agent_id" class="form-label">جهة الحجز <span class="text-danger">*</span></label>
+                        <a href="{{ route('accounts.create', ['preset' => 'agent']) }}" 
+                            class="btn btn-success btn-sm" title="إضافة جهة حجز جديدة">+</a>
                         <select class="form-select select2 @error('agent_id') is-invalid @enderror" id="agent_id"
                             name="agent_id" required
                             {{ isset($isBookingFromAvailability) && $isBookingFromAvailability ? 'disabled' : '' }}>

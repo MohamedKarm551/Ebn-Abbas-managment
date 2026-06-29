@@ -122,6 +122,15 @@ class BookingsController extends Controller
             });
         }
 
+        if ($request->filled('payment_status')) {
+            $status = $request->input('payment_status');
+
+            $query->whereHas('financialTracking', function ($q) use ($status) {
+                $q->where('company_payment_status', $status)
+                  ->orWhere('agent_payment_status', $status);
+            });
+        }
+
         // --------------------------------------------------
         // 3 & 4. تطبيق فلترة التواريخ (بالمنطق الجديد)
         // --------------------------------------------------
@@ -520,14 +529,14 @@ class BookingsController extends Controller
                 return ($status->available_rooms - $status->booked_rooms) > 0;
             });
                 
-      // أول يوم متاح
-$firstAvailableDate = $availableDates->min('date');
+            // أول يوم متاح
+            $firstAvailableDate = $availableDates->min('date');
 
-// ✅ آخر يوم متاح في الإتاحة كلها (بغض النظر عن الفجوات)
-$lastAvailableDateRaw = $availableDates->max('date');
-$lastAvailableDate = $lastAvailableDateRaw
-    ? \Carbon\Carbon::parse($lastAvailableDateRaw)
-    : $availability->end_date;
+            // ✅ آخر يوم متاح في الإتاحة كلها (بغض النظر عن الفجوات)
+            $lastAvailableDateRaw = $availableDates->max('date');
+            $lastAvailableDate = $lastAvailableDateRaw
+                ? \Carbon\Carbon::parse($lastAvailableDateRaw)
+                : $availability->end_date;
 
             // الحد الأقصى للغرف المتاحة في أول يوم متاح
             $maxRoomsInFirstDay = 0;
@@ -2127,6 +2136,14 @@ private function createAutoAvailabilityFromBooking(array $bookingData): ?\App\Mo
             return null;
         }
 
+        // فصل اسم العميل عن رقم الفاوتشر
+        $clientName = $bookingData['client_name'] ?? '';
+        $voucherNumber = null;
+        
+        if (preg_match('/^(.+?)\s+(\d+)$/', trim($clientName), $matches)) {
+            $voucherNumber = trim($matches[2]); // "56575"
+        }
+
         // 1. إنشاء الإتاحة الرئيسية
         $availability = \App\Models\Availability::create([
             'hotel_id'    => $bookingData['hotel_id'],
@@ -2138,6 +2155,7 @@ private function createAutoAvailabilityFromBooking(array $bookingData): ?\App\Mo
             'is_auto'     => true,
             'notes'       => 'إتاحة تلقائية تم إنشاؤها من حجز مباشر',
             'min_nights'  => 1,
+            'voucher_number' => $voucherNumber,
         ]);
 
         if (!$availability) {
@@ -2284,6 +2302,14 @@ private function updateAutoAvailabilityInsideTransaction(Booking $booking, array
         return;
     }
     $availability = $roomTypeInfo->availability;
+
+    // فصل اسم العميل عن رقم الفاوتشر من البيانات الجديدة
+    $clientName = $newData['client_name'] ?? '';
+    $voucherNumber = null;
+
+    if (preg_match('/^(.+?)\s+(\d+)$/', trim($clientName), $matches)) {
+        $voucherNumber = trim($matches[2]);
+    }
     
     // تحديث التواريخ في الإتاحة الأم
     $newStart = Carbon::parse($newData['check_in']);
@@ -2292,6 +2318,7 @@ private function updateAutoAvailabilityInsideTransaction(Booking $booking, array
     $availability->end_date   = $newEnd;
     $availability->agent_id   = $newData['agent_id'];  
     $availability->hotel_id   = $newData['hotel_id'];  
+    $availability->voucher_number = $voucherNumber;
     $availability->save();
     
     // تحديث أسعار وعملة و alloment في AvailabilityRoomType

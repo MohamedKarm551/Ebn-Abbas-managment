@@ -115,15 +115,28 @@ class AccountController extends Controller
         return view('accounts.list', compact('accounts'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        // فقط الحسابات الرئيسية (غير المجمدة وغير الـ leaf) تظهر كآباء
+        $preset = $request->input('preset'); 
+        $presetParentId = null;
+        $presetType = null;
+
+        if ($preset === 'company') {
+            $parent = Account::where('code', AccountController::CODE_CUSTOMERS)->first();
+            $presetParentId = $parent?->id;
+            $presetType = 'asset';
+        } elseif ($preset === 'agent') {
+            $parent = Account::where('code', AccountController::CODE_SUPPLIERS)->first();
+            $presetParentId = $parent?->id;
+            $presetType = 'liability';
+        }
+
         $parents = Account::where('is_active', true)
             ->orderBy('code')
             ->get();
         $types = $this->accountTypes();
 
-        return view('accounts.create', compact('parents', 'types'));
+        return view('accounts.create', compact('parents', 'types', 'presetParentId', 'presetType', 'preset'));
     }
 
     public function store(Request $request)
@@ -158,6 +171,33 @@ class AccountController extends Controller
 
         $account = Account::create($data);
 
+        $customersAccount = Account::where('code', self::CODE_CUSTOMERS)->first();
+        $suppliersAccount = Account::where('code', self::CODE_SUPPLIERS)->first();
+
+        if ($customersAccount && $data['parent_id'] == $customersAccount->id) {
+            \App\Models\Company::firstOrCreate(
+                ['name' => $account->name],
+                ['name' => $account->name]
+            );
+            $company = \App\Models\Company::where('name', $account->name)->first();
+            if ($company) {
+                $account->update(['company_id' => $company->id]);
+            }
+        }
+
+        if ($suppliersAccount && $data['parent_id'] == $suppliersAccount->id) {
+            \App\Models\Agent::firstOrCreate(
+                ['name' => $account->name],
+                ['name' => $account->name, 'color' => '#000000']
+            );
+            // اربط الحساب بجهة الحجز
+            $agent = \App\Models\Agent::where('name', $account->name)->first();
+            if ($agent) {
+                $account->update(['agent_id' => $agent->id]);
+            }
+        }
+
+
         return redirect()->route('accounts.index')
             ->with('success', "تم إنشاء الحساب [{$account->code}] {$account->name} بنجاح");
     }
@@ -173,40 +213,112 @@ class AccountController extends Controller
         return view('accounts.edit', compact('account', 'parents', 'types'));
     }
 
-public function update(Request $request, Account $account)
-{
-    $rules = [
-        'name'        => 'required|string|max:255',
-        'type'        => ['required', Rule::in(array_keys($this->accountTypes()))],
-        'parent_id'   => ['nullable', 'exists:accounts,id', Rule::notIn([$account->id])],
-        'is_active'   => 'nullable|boolean',
-        'description' => 'nullable|string',
-        'account_kind'=> 'sometimes|in:parent,leaf',
-    ];
+    public function update(Request $request, Account $account)
+    {
+        $rules = [
+            'name'        => 'required|string|max:255',
+            'type'        => ['required', Rule::in(array_keys($this->accountTypes()))],
+            'parent_id'   => ['nullable', 'exists:accounts,id', Rule::notIn([$account->id])],
+            'is_active'   => 'nullable|boolean',
+            'description' => 'nullable|string',
+            'account_kind'=> 'sometimes|in:parent,leaf',
+        ];
+    
+        $data = $request->validate($rules);
+    
+        // منع تحويل حساب له أبناء إلى حساب فرعي
+        if ($request->has('account_kind') && $request->account_kind === 'leaf' && $account->children()->exists()) {
+            return back()->withErrors(['account_kind' => 'لا يمكن تحويل حساب له حسابات فرعية إلى حساب فرعي (leaf). احذف الفروع أولاً.']);
+        }
+    
+        // تعيين is_leaf بناءً على account_kind إذا ورد
+        if ($request->has('account_kind')) {
+            $data['is_leaf'] = ($request->account_kind === 'leaf');
+        }
+    
+        $data['is_active'] = $request->has('is_active');
+    
+        // إزالة account_kind من المصفوفة لأنه ليس عموداً في الجدول
+        unset($data['account_kind']);
+    
+        // ============================================================
+        // 1. التحقق من أن الأب الجديد (إن وجد) ليس حساباً نهائياً
+        // ============================================================
+        $newParentId = $data['parent_id'] ?? null;
+        if ($newParentId) {
+            $newParent = Account::find($newParentId);
+            if ($newParent && $newParent->is_leaf) {
+                return back()->withErrors(['parent_id' => 'لا يمكن نقل حساب تحت حساب نهائي (leaf). هذا الحساب لا يقبل أبناء.']);
+            }
+        }
+    
+        // ============================================================
+        // 2. إذا تغير الأب، قم بتوليد كود جديد
+        // ============================================================
+        $oldParentId = $account->parent_id;
+        if ($newParentId != $oldParentId) {
+            // توليد الكود الجديد بناءً على الأب الجديد
+            $data['code'] = $this->generateNextCode($newParentId);
+        }
+    
+        // ============================================================
+        // 3. تحديث الحساب (بما في ذلك الكود الجديد إن وُلد)
+        // ============================================================
+        $account->update($data);
+        $account->refresh();
+    
+        // ============================================================
+        // 4. معالجة العلاقة مع الشركة / جهة الحجز (كما هو موجود)
+        // ============================================================
+        $customersAccount = Account::where('code', self::CODE_CUSTOMERS)->first();
+        $suppliersAccount = Account::where('code', self::CODE_SUPPLIERS)->first();
+    
+        if ($newParentId && $customersAccount && $newParentId == $customersAccount->id) {
+            $company = \App\Models\Company::firstOrCreate(
+                ['name' => $account->name],
+                ['name' => $account->name]
+            );
+            $account->company_id = $company->id;
+            $account->save();
+        } elseif ($newParentId && $suppliersAccount && $newParentId == $suppliersAccount->id) {
+            $agent = \App\Models\Agent::firstOrCreate(
+                ['name' => $account->name],
+                ['name' => $account->name, 'color' => '#000000']
+            );
+            $account->agent_id = $agent->id;
+            $account->save();
+        } else {
+            if ($account->company_id) {
+                $account->company_id = null;
+                $account->save();
+            }
+            if ($account->agent_id) {
+                $account->agent_id = null;
+                $account->save();
+            }
+        }
+    
+        // ============================================================
+        // 5. تحديث اسم الكيان المرتبط (إن وجد)
+        // ============================================================
+        if ($account->company_id) {
+            $company = \App\Models\Company::find($account->company_id);
+            if ($company && $company->name != $account->name) {
+                $company->name = $account->name;
+                $company->save();
+            }
+        }
+        if ($account->agent_id) {
+            $agent = \App\Models\Agent::find($account->agent_id);
+            if ($agent && $agent->name != $account->name) {
+                $agent->name = $account->name;
+                $agent->save();
+            }
+        }
 
-    $data = $request->validate($rules);
-
-    // منع تحويل حساب له أبناء إلى حساب فرعي
-    if ($request->has('account_kind') && $request->account_kind === 'leaf' && $account->children()->exists()) {
-        return back()->withErrors(['account_kind' => 'لا يمكن تحويل حساب له حسابات فرعية إلى حساب فرعي (leaf). احذف الفروع أولاً.']);
+        return redirect()->route('accounts.index')
+            ->with('success', 'تم تحديث الحساب بنجاح');
     }
-
-    // تعيين is_leaf بناءً على account_kind إذا ورد
-    if ($request->has('account_kind')) {
-        $data['is_leaf'] = ($request->account_kind === 'leaf');
-    }
-
-    $data['is_active'] = $request->has('is_active');
-
-    // إزالة account_kind من المصفوفة لأنه ليس عموداً في الجدول
-    unset($data['account_kind']);
-
-    // تحديث الحساب
-    $account->update($data);
-
-    return redirect()->route('accounts.index')
-        ->with('success', 'تم تحديث الحساب بنجاح');
-}
 
     public function destroy(Account $account)
     {
@@ -1062,19 +1174,19 @@ public function ledger(Account $account, Request $request)
     }
     
     // ========== 3. العرض العادي مع Pagination ==========
-    // حساب الرصيد الافتتاحي للصفحة (قبل أول حركة في النتائج بعد الفلاتر)
-    $firstTransaction = (clone $baseQuery)->orderBy('created_at', 'asc')->first();
-    $openingBalance = 0;
-    if ($firstTransaction) {
-        $openingBalance = $account->ledger()
-            ->whereHas('journalEntry', fn($q) => $q->where('status', 'posted'))
-            ->where('created_at', '<', $firstTransaction->created_at)
-            ->sum(DB::raw('debit - credit'));
-    }
     
     // Pagination
     $transactions = $baseQuery->orderBy('created_at', 'asc')->paginate(20)->withQueryString();
     
+    $openingBalance = 0;
+    $firstOnPage = $transactions->first();
+    if ($firstOnPage) {
+        $openingBalance = $account->ledger()
+            ->whereHas('journalEntry', fn($q) => $q->where('status', 'posted'))
+            ->where('id', '<', $firstOnPage->id)
+            ->sum(DB::raw('debit - credit'));
+    }
+
     // جلب الحجوزات والإتاحات للصفحة المعروضة فقط
     $bookingIds = $transactions->filter(
         fn($t) => $t->journalEntry?->source_type === \App\Models\Booking::class
